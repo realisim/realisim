@@ -1,3 +1,20 @@
+/*-----------------------------------------------------------------------------
+WorkspaceUi.h
+
+Cette classe sert de classe de base a tout les workspaces  ( edition, animation
+etc.. )
+
+Elle possede une réference sur RealEditController ( qui créé tout l'interface 
+graphique de RealEdit ).
+
+Le but d'avoir une réference sur realEditController est d'offrir la pssibilité
+aux workspaces d'instancier des widgets qui doivent appartenir a la MainWindow.
+
+example:
+	QDockWidget* pDockWidget = mController.addDockWidget( this );
+	QMenuItem* pMenuItem = mController.addMenuItem( this, 'tools', 'extrude' );
+
+-----------------------------------------------------------------------------*/
 
 #ifndef RealEdit_WorkspaceUi_hh
 #define RealEdit_WorkspaceUi_hh
@@ -15,7 +32,6 @@ public:
 	~WorkspaceUi();
 
 protected:
-	//The reference is given by RealEditController
 	RealEditController& mController; 
 
 private:
