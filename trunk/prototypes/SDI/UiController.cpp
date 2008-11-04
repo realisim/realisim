@@ -25,7 +25,7 @@ using namespace RealEdit;
 
 UiController::UiController( QWidget* ipParent /* = 0*/ )
 : QMainWindow( ipParent )
-//, mItemToProjectType()
+, mItemToProjectType()
 {
 	show();
 	
@@ -112,6 +112,8 @@ UiController::projectSelected( QListWidgetItem* ipSelectedItem )
 				pEditionUi->show();
 				break;
 			case ANIMATION:
+				AnimationUi* pAnimationUi = new AnimationUi();
+				pAnimationUi->show();
 				break;
 			default:
 				break;
