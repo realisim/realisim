@@ -14,6 +14,8 @@ class RealEdit::AnimationUi : public QMainWindow
 public:
 	AnimationUi();
 	~AnimationUi();
+	
+	void addMenuBar();
 
 protected:
 private:

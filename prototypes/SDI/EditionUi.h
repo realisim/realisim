@@ -14,6 +14,8 @@ class RealEdit::EditionUi : public QMainWindow
 public:
 	EditionUi();
 	~EditionUi();
+	
+	void addMenuBar();
 
 protected:
 private:
