@@ -10,39 +10,22 @@
 #ifndef UiController_hh
 #define UiController_hh
 
-#include <QMainWindow>
+#include <QObject>
 
-#include <map>
-
-class QWidget;
-class QListWidgetItem;
-
-class UiController : public QMainWindow
+class UiController : public QObject
 {
 	Q_OBJECT
 public:
-	UiController( QWidget* ipParent = 0 );
+	UiController();
 	~UiController();
 	
-	enum ProjectType
-	{
-		EDITION = 0,
-		ANIMATION
-	};
-	
-public slots:
-	void handleNewProject();
+	void newProject();
+	void openProject();
 	
 protected:
-	
-private slots:
-	void projectSelected( QListWidgetItem* ipSelectedItem );
-	
+		
 private:
-	void addMenuBar();
 	
-	typedef std::map< QListWidgetItem*, ProjectType > ItemToProjectType;
-	ItemToProjectType mItemToProjectType;
 };
 
 #endif
