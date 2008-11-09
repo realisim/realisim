@@ -76,14 +76,18 @@ ProjectSelectionUi::projectSelected( QListWidgetItem* ipSelectedItem )
 		switch (it->second) 
 		{
 			case EDITION:
+			{
 				EditionUi* pEditionUi = new EditionUi( mUiController );
 				pEditionUi->show();
 				close();
+			}
 				break;
 			case ANIMATION:
+			{
 				AnimationUi* pAnimationUi = new AnimationUi( mUiController );
 				pAnimationUi->show();
 				close();
+			}
 				break;
 			default:
 				break;
