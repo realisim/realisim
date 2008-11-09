@@ -5,14 +5,15 @@
 namespace RealEdit{ class EditionUi; }
 namespace Realisim{ class Widget3d; }
 
-#include <QMainWindow>
+#include "MainWindow.h"
 
+class UiController;
 class QListWidget;
 
-class RealEdit::EditionUi : public QMainWindow
+class RealEdit::EditionUi : public MainWindow
 {
 public:
-	EditionUi();
+	EditionUi( UiController& iUiController );
 	~EditionUi();
 	
 	void addMenuBar();

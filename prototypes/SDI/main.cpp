@@ -1,5 +1,6 @@
 
 #include "UiController.h"
+#include "ProjectSelectionUi.h"
 
 #include <iostream>
 #include <QApplication>
@@ -24,7 +25,7 @@ int startMainApp()
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
-		
+	
 	UiController uiController;
 	
     if ( startMainApp() == 0 )
