@@ -5,23 +5,42 @@
 namespace RealEdit{ class EditionUi; }
 namespace Realisim{ class Widget3d; }
 
-#include "WorkspaceUi.h"
+#include <QMainWindow.h>
+
+class QMenuBar;
+
+namespace RealEdit{ class RealEditController; }
 
 class QListWidget;
 
-class RealEdit::EditionUi : public RealEdit::WorkspaceUi
+class RealEdit::EditionUi : public QMainWindow
 {
+	Q_OBJECT
 public:
-	EditionUi( QWidget* ipParent, RealEditController& iController, Qt::WindowFlags iFlags = 0 );
+	EditionUi();
 	~EditionUi();
+	
 
+	
 protected:
+	
+private slots:
+	void newProject();
+	//void openProject();
+	
 private:
+	void addMenuBar();
 	void addObjectNavigator();
-
+	
+	void createFileMenu( QMenuBar* ipMenuBar );
+	void createEditMenu( QMenuBar* ipMenuBar );
+	void createToolMenu( QMenuBar* ipMenuBar );
+	
+	RealEditController* mpController; //created and deleted within the class
+	
 	Realisim::Widget3d* mpWidget3d_1;
 	Realisim::Widget3d* mpWidget3d_2;
-
+	
 	QListWidget* mpObjectNavigator;
 };
 

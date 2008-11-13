@@ -1,6 +1,6 @@
 
 
-#include "RealEditController.h"
+#include "EditionUi.h"
 
 #include <iostream>
 #include <QApplication>
@@ -33,8 +33,7 @@ int main(int argc, char** argv)
 
  	app.setWindowIcon( QIcon( ":/images/RealEdit_icon.png" ) );
 
-	RealEditController realEditController;
- 
+	EditionUi* pEditionUi = new EditionUi(); 
     if ( startMainApp() == 0 )
     {
         //we are closing!
