@@ -7,6 +7,7 @@ using namespace RealEdit;
 
 RealEditController::RealEditController()
 {
+  
 }
 
 RealEditController::~RealEditController()
