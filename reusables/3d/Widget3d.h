@@ -9,7 +9,10 @@
 #ifndef Realisim_Widget3d_hh
 #define Realisim_Widget3d_hh
 
-namespace Realisim{ class Widget3d; }
+namespace Realisim
+{ 
+  class Widget3d;
+}
 
 #include <QGLWidget>
 
@@ -27,24 +30,20 @@ signals:
     void clicked();
 
 protected:
-    void rotateBy(int xAngle, int yAngle, int zAngle);
-    QSize minimumSizeHint() const;
-    QSize sizeHint() const;
+
     void initializeGL();
-    void paintGL();
+    virtual void paintGL();
     void resizeGL(int iWidth, int iHeight);
 
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
 
+  QSize minimumSizeHint() const;
+  QSize sizeHint() const;
+  
 private:
 
-    QColor clearColor;
-    QPoint lastPos;
-    int xRot;
-    int yRot;
-    int zRot;
 };
 
 #endif //Realisim_Widget3d_hh

@@ -1,7 +1,6 @@
 
 #include "EditionUi.h"
-#include "Widget3d.h"
-#include "RealEditController.h"
+#include "RealEdit3d.h"
 
 #include <QMenuBar>
 #include <QDockWidget>
@@ -14,13 +13,11 @@ using namespace RealEdit;
 
 EditionUi::EditionUi() 
 : QMainWindow()
-, mpController()
+, mController()
 , mpWidget3d_1( 0 )
 , mpWidget3d_2( 0 )
 , mpObjectNavigator( 0 )
-{
-	mpController = new RealEditController();
-	
+{	
 	resize(800, 600);
 	QFrame* pMainFrame = new QFrame( this );
 	setCentralWidget( pMainFrame );
@@ -29,8 +26,8 @@ EditionUi::EditionUi()
 	
 	QVBoxLayout* pVLyt = new QVBoxLayout( pMainFrame );	
 	
-	mpWidget3d_1 = new Widget3d( this, mpWidget3d_1 );
-	mpWidget3d_2 = new Widget3d( this, mpWidget3d_2 );
+	mpWidget3d_1 = new RealEdit3d( this, mpWidget3d_1, mController.getObjectNode() );
+	mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController.getObjectNode() );
 	
 	pVLyt->addWidget( mpWidget3d_1 );
 	pVLyt->addWidget( mpWidget3d_2 );
@@ -44,7 +41,6 @@ EditionUi::EditionUi()
 
 EditionUi::~EditionUi()
 {
-	delete mpController;
 }
 
 void
@@ -78,7 +74,7 @@ EditionUi::addMenuBar()
 	//create a menu bar
 	QMenuBar* pMenuBar = new QMenuBar();
 	//add a menu to the mainWindow
-    setMenuBar( pMenuBar );
+  setMenuBar( pMenuBar );
 	
 	createFileMenu( pMenuBar );
 	createEditMenu( pMenuBar );
@@ -120,5 +116,5 @@ EditionUi::createToolMenu( QMenuBar* ipMenuBar )
 void
 EditionUi::newProject()
 {
-	mpController->newProject();
+	mController.newProject();
 }

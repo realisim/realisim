@@ -2,15 +2,20 @@
 #ifndef RealEdit_EditionUi_hh
 #define RealEdit_EditionUi_hh
 
-namespace RealEdit{ class EditionUi; }
-namespace Realisim{ class Widget3d; }
+
+#include "RealEditController.h"
 
 #include <QMainWindow.h>
 
 class QMenuBar;
 
 namespace RealEdit{ class RealEditController; }
+//namespace Realisim{ class Widget3d; }
 
+
+namespace RealEdit{ class EditionUi; }
+
+class RealEdit3d;
 class QListWidget;
 
 class RealEdit::EditionUi : public QMainWindow
@@ -19,9 +24,7 @@ class RealEdit::EditionUi : public QMainWindow
 public:
 	EditionUi();
 	~EditionUi();
-	
 
-	
 protected:
 	
 private slots:
@@ -36,10 +39,10 @@ private:
 	void createEditMenu( QMenuBar* ipMenuBar );
 	void createToolMenu( QMenuBar* ipMenuBar );
 	
-	RealEditController* mpController; //created and deleted within the class
+	RealEditController mController; //created and deleted within the class
 	
-	Realisim::Widget3d* mpWidget3d_1;
-	Realisim::Widget3d* mpWidget3d_2;
+  RealEdit3d* mpWidget3d_1;
+  RealEdit3d* mpWidget3d_2;
 	
 	QListWidget* mpObjectNavigator;
 };
