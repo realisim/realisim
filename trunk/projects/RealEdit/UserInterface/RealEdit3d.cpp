@@ -13,9 +13,9 @@ using namespace RealEdit;
 
 RealEdit3d::RealEdit3d( QWidget* ipParent, 
                         const QGLWidget* iSharedWidget, 
-                        const ObjectNode& iObjectNode ) : 
+                        const EditionData& iEditionData ) : 
 Widget3d(ipParent, iSharedWidget),
-mObjectNode( iObjectNode )
+mEditionData( iEditionData )
 {
 }
 

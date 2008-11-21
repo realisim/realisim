@@ -31,19 +31,14 @@ RealEditPoint::~RealEditPoint()
 {}
 
 //--------------------------RealEditPolygon-----------------------------------------
-RealEditPolygon::RealEditPolygon( RealEditPoint* ipP1,
-                                  RealEditPoint* ipP2,
-                                  RealEditPoint* ipP3 ) :
+RealEditPolygon::RealEditPolygon( const std::vector<RealEditPoint*>& iP ) :
 DataModelBase(),
 mPoints(),
 mNormals()
 {
-  assert( ipP1 && ipP2 && ipP3 );
-  mPoints.push_back(ipP1);
-  mPoints.push_back(ipP2);
-  mPoints.push_back(ipP3);
+  mPoints = iP;
   
-  Polygon poly( *ipP1, *ipP2, *ipP3 );
+  Polygon poly( *mPoints[0], *mPoints[1], *mPoints[2] );
   
   mNormals.push_back( poly.getNormal() );
   mNormals.push_back( poly.getNormal() );
@@ -69,4 +64,16 @@ RealEditModel::RealEditModel( const RealEditModel& iModel )
 
 RealEditModel::~RealEditModel()
 {
+}
+
+void
+RealEditModel::addPoint( const RealEditPoint* ipPoint )
+{
+  mPoints.push_back( ipPoint );
+}
+
+void
+RealEditModel::addPolygon( const RealEditPolygon* ipPoly )
+{
+  mPolygons.push_back( ipPoly );
 }

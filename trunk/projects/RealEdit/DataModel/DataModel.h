@@ -38,7 +38,7 @@ private:
 class RealEdit::RealEditPoint : public RealEdit::DataModelBase,
                                 public Realisim::Point3f
 {
-public:
+public:  
   RealEditPoint( const Realisim::Point3f& iPos );
   ~RealEditPoint();
     
@@ -60,7 +60,8 @@ private:
 class RealEdit::RealEditPolygon : public RealEdit::DataModelBase
 {
 public:
-  RealEditPolygon( RealEditPoint* ipP1, RealEditPoint* ipP2, RealEditPoint* ipP3 );
+  //Le vecteur de point ne doit JAMAIS contenir de pointeur NULL
+  RealEditPolygon( const std::vector<RealEditPoint*>& iP );
   RealEditPolygon( const RealEditPolygon& iP );
   ~RealEditPolygon();
 
@@ -77,22 +78,32 @@ private:
 //-----------------------------------------------------------------------------
 class RealEdit::RealEditModel : public RealEdit::DataModelBase
 {
-public:
+public:  
 	RealEditModel( const std::string& iString );
   RealEditModel( const RealEditModel& iModel );
 	~RealEditModel();
 	
-  //virtual void draw( bool iPickingDraw = false );
-  const std::vector<RealEdit::RealEditPoint*>& getPoints() const{ return mPoints; }
-  const std::vector<RealEdit::RealEditPolygon*>& getPolygons() const{ return mPolygons; }
+  void addPoint( const RealEditPoint* ipPoint );
+  void addPolygon( const RealEditPolygon* ipPoly );
+  
+  const std::vector<const RealEditPoint*>& getPoints() const
+    { return mPoints; }
+  
+  const std::vector<const RealEditPolygon*>& getPolygons() const
+    { return mPolygons; }
 
   
 protected:
 private:
   
-  std::vector<RealEdit::RealEditPoint*> mPoints;
+  std::vector<const RealEditPoint*> mPoints;
   //  std::vector<Realisim::DataModel::LineSegment*> mLineSegments;
-  std::vector<RealEdit::RealEditPolygon*> mPolygons;
+  std::vector<const RealEditPolygon*> mPolygons;
   
   std::string mName;
 };
+
+typedef unsigned int RealEditPointId;
+typedef unsigned int RealEditPolygonId;
+typedef unsigned int RealEditModelId;
+
