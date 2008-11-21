@@ -26,8 +26,8 @@ EditionUi::EditionUi()
 	
 	QVBoxLayout* pVLyt = new QVBoxLayout( pMainFrame );	
 	
-	mpWidget3d_1 = new RealEdit3d( this, mpWidget3d_1, mController.getObjectNode() );
-	mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController.getObjectNode() );
+	mpWidget3d_1 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
+	mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
 	
 	pVLyt->addWidget( mpWidget3d_1 );
 	pVLyt->addWidget( mpWidget3d_2 );

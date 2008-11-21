@@ -14,20 +14,22 @@
 
 namespace RealEdit 
 {
-  class ObjectNode;
+  class RealEdit3d;
+  class EditionData;
 }
 
-class RealEdit3d : public Realisim::Widget3d
+class RealEdit::RealEdit3d : public Realisim::Widget3d
 {
 public:
   RealEdit3d( QWidget* ipParent, 
               const QGLWidget* iSharedWidget,
-             const RealEdit::ObjectNode& iObjectNode );
+             const EditionData& iEditionData );
   
   virtual void paintGL();
   
 private:
-  const RealEdit::ObjectNode& mObjectNode;
+  //reference sur le EditionData de RealEditController
+  const EditionData& mEditionData;  
   
 };
 

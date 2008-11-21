@@ -13,9 +13,13 @@ namespace RealEdit{ class RealEditController; }
 //namespace Realisim{ class Widget3d; }
 
 
-namespace RealEdit{ class EditionUi; }
+namespace RealEdit
+{ 
+  class EditionUi; 
+  class RealEdit3d;
 
-class RealEdit3d;
+}
+
 class QListWidget;
 
 class RealEdit::EditionUi : public QMainWindow
