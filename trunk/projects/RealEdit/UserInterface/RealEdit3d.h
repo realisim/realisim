@@ -16,6 +16,7 @@ namespace RealEdit
 {
   class RealEdit3d;
   class EditionData;
+  class ObjectNode;
 }
 
 class RealEdit::RealEdit3d : public Realisim::Widget3d
@@ -23,13 +24,17 @@ class RealEdit::RealEdit3d : public Realisim::Widget3d
 public:
   RealEdit3d( QWidget* ipParent, 
               const QGLWidget* iSharedWidget,
-             const EditionData& iEditionData );
+              const EditionData& iEditionData );
+  ~RealEdit3d();
   
   virtual void paintGL();
   
 private:
+  void drawScene( const RealEdit::ObjectNode* iObjectNode );
+  void drawCube();
+  
   //reference sur le EditionData de RealEditController
-  const EditionData& mEditionData;  
+  const EditionData& mEditionData;
   
 };
 

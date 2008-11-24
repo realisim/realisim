@@ -7,24 +7,33 @@
  *
  */
 
+#ifndef RealEdit_EditionData_hh
+#define RealEdit_EditionData_hh
+
 #include "ObjectNode.h"
+#include "Point.h"
 
 #include <map>
 
 namespace RealEdit
 {
-  class ObjectNode;
-  
-  class Scene;
   class EditionData;
+  class ObjectNode;
+  class RealEditPoint;
+  class RealEditPolygon;
+  class Scene;
+
 }
 
 //------------------------------------------------------------------------------
 class RealEdit::Scene
 {
 public:
-  Scene(){;}
-  ~Scene(){;}
+  Scene();
+  ~Scene();
+  
+  const ObjectNode* getObjectNode() const;
+  ObjectNode* getObjectNode();
   
 private:
   ObjectNode mNodes;
@@ -39,16 +48,34 @@ public:
   ~EditionData();
   
   void addPoint( const Realisim::Point3f& iPoint );
-  void addPolygon( const std::vector<RealEditPointId>& iPoints );
+  
+  //on ajoute un polygon en passant un vecteur de id de point
+  void addPolygon( const std::vector<int>& iPoints );
+  
+  const Scene& getScene() const;
+  Scene& getScene();
+  
+  const RealEditModel* getCurrentModel() const;
+  
+  void setCurrentModel( RealEditModel* ipModel );
   
 private:
   Scene mScene;
   
   RealEditModel* mpCurrentModel;
+  std::vector<RealEditPoint*> mSelectedPoints;
+  std::vector<RealEditPolygon*> mSelectedPolygons;
   
-  typedef std::map<RealEditPointId, RealEditPoint*>::iterator PointsIt;
-  std::map<RealEditPointId, RealEditPoint*> mPoints; //Propriétaire du pointeur
+  //une map de id de point
+  typedef std::map<int, RealEditPoint*> PointMap;
+  typedef PointMap::iterator PointMapIt;
+  PointMap mPoints; //Propriétaire du pointeur
   
-  typedef std::map<RealEditPolygonId, RealEditPolygon*>::iterator PolygonsIt;
-  std::map<RealEditPolygonId, RealEditPolygon*> mPolygons;  //Propriétaire du pointeur
+  //une map de id de polygon
+  
+  typedef std::map<int, RealEditPolygon*> PolygonMap;
+  typedef PolygonMap::iterator PolygonMapIt;
+  PolygonMap mPolygons;  //Propriétaire du pointeur
 };
+
+#endif

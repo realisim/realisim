@@ -9,9 +9,16 @@
 #ifndef Realisim_Widget3d_hh
 #define Realisim_Widget3d_hh
 
+#include <map>
+
 namespace Realisim
 { 
   class Widget3d;
+  
+  namespace Primitive3d
+  {
+    class Primitive3dBase;
+  }
 }
 
 #include <QGLWidget>
@@ -43,7 +50,9 @@ protected:
   QSize sizeHint() const;
   
 private:
-
+  
+  typedef std::map<int, Primitive3d::Primitive3dBase*> IdToPrimitiveMap;
+  IdToPrimitiveMap mIdToPrimitiveMap;
 };
 
 #endif //Realisim_Widget3d_hh

@@ -2,6 +2,9 @@
  
  */
 
+#ifndef RealEdit_DataModel_hh
+#define RealEdit_DataModel_hh
+
 #include "Point.h"
 #include "Vect.h"
 
@@ -85,12 +88,9 @@ public:
 	
   void addPoint( const RealEditPoint* ipPoint );
   void addPolygon( const RealEditPolygon* ipPoly );
-  
-  const std::vector<const RealEditPoint*>& getPoints() const
-    { return mPoints; }
-  
-  const std::vector<const RealEditPolygon*>& getPolygons() const
-    { return mPolygons; }
+
+  unsigned int getNumPoint() const;
+  const RealEditPoint* getPoint( int iIndex ) const;
 
   
 protected:
@@ -103,7 +103,9 @@ private:
   std::string mName;
 };
 
-typedef unsigned int RealEditPointId;
-typedef unsigned int RealEditPolygonId;
-typedef unsigned int RealEditModelId;
+//typedef unsigned int RealEditDataId;
+//typedef unsigned int RealEditPointId;
+//typedef unsigned int RealEditPolygonId;
+//typedef unsigned int RealEditModelId;
 
+#endif
