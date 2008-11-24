@@ -3,8 +3,7 @@
 #ifndef OBJECTNODE_H
 #define OBJECTNODE_H
 
-#include "DataModel.h"
-
+#include <cassert>
 #include <vector>
 
 namespace RealEdit
@@ -16,10 +15,21 @@ namespace RealEdit
 class RealEdit::ObjectNode
 {
 public:
+  ObjectNode();
+  ~ObjectNode();
+  
+  ObjectNode( const ObjectNode& iObjectNode ){ assert(0); }
+  const ObjectNode& operator=( const ObjectNode& iObjectNode ){ assert(0); }
+  
+  const RealEditModel* getModel() const;
+  RealEditModel* getModel();
+  
+  unsigned int getNumChild() const;
+  const ObjectNode* getChild( int iChildNumber ) const;
   
 private:
   RealEditModel* mpModel;
-  ObjectNode* mParentNode;
+  ObjectNode* mpParentNode;
   std::vector<ObjectNode*> mChilds;
 };
 

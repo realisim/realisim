@@ -78,9 +78,14 @@ Widget3d::initializeGL()
 void
 Widget3d::paintGL()
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-    glTranslated(0.0, 0.0, -10.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glLoadIdentity();
+  
+  //this should be replaced by a camera
+  glTranslated(0.0, 0.0, -10.0);
+  
+  //Ici on dessine les objets graphiques de la scene privée du widget.
+  //drawPrivateScene();
 }
 
 void

@@ -77,3 +77,15 @@ RealEditModel::addPolygon( const RealEditPolygon* ipPoly )
 {
   mPolygons.push_back( ipPoly );
 }
+
+unsigned int
+RealEditModel::getNumPoint() const
+{
+  return mPoints.size();
+}
+
+const RealEditPoint*
+RealEditModel::getPoint( int iIndex ) const
+{
+  return mPoints[iIndex];
+}
