@@ -51,7 +51,7 @@ RealEdit3d::drawScene( const RealEdit::ObjectNode* ipObjectNode )
     //appliquer la transfo du noeud
   
     //dessiner les points du modele
-    for( unsigned int i = 0; i < pModel->getNumPoint(); ++i )
+    for( unsigned int i = 0; i < pModel->getPointCount(); ++i )
     {
       glPushMatrix();
       {
@@ -65,7 +65,7 @@ RealEdit3d::drawScene( const RealEdit::ObjectNode* ipObjectNode )
     //dessiner les polys du modele
   
     //dessiner les enfants du noeud
-    for( unsigned int i = 0; i < ipObjectNode->getNumChild(); i++ )
+    for( unsigned int i = 0; i < ipObjectNode->getChildCount(); i++ )
     {
       drawScene( ipObjectNode->getChild( i ) );
     }

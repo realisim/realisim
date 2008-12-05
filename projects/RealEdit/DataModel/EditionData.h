@@ -35,6 +35,8 @@ public:
   const ObjectNode* getObjectNode() const;
   ObjectNode* getObjectNode();
   
+  ObjectNode* addNode( ObjectNode* ipParent, const std::string& iName );
+  
 private:
   ObjectNode mNodes;
   //std::vector<Lights> mLights;
@@ -47,6 +49,7 @@ public:
   EditionData();
   ~EditionData();
   
+  ObjectNode* addNode( ObjectNode* ipParent, const std::string iName );
   void addPoint( const Realisim::Point3f& iPoint );
   
   //on ajoute un polygon en passant un vecteur de id de point
@@ -72,7 +75,6 @@ private:
   PointMap mPoints; //Propriétaire du pointeur
   
   //une map de id de polygon
-  
   typedef std::map<int, RealEditPolygon*> PolygonMap;
   typedef PolygonMap::iterator PolygonMapIt;
   PolygonMap mPolygons;  //Propriétaire du pointeur

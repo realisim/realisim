@@ -10,17 +10,13 @@
 class QMenuBar;
 
 namespace RealEdit{ class RealEditController; }
-//namespace Realisim{ class Widget3d; }
-
 
 namespace RealEdit
 { 
   class EditionUi; 
   class RealEdit3d;
-
+  class ObjectNavigator;
 }
-
-class QListWidget;
 
 class RealEdit::EditionUi : public QMainWindow
 {
@@ -48,7 +44,7 @@ private:
   RealEdit3d* mpWidget3d_1;
   RealEdit3d* mpWidget3d_2;
 	
-	QListWidget* mpObjectNavigator;
+	ObjectNavigator* mpObjectNavigator;
 };
 
 #endif //Realisim_RealEdit_UserInterface_MainWindow_hh

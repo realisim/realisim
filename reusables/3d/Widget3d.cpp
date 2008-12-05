@@ -82,7 +82,9 @@ Widget3d::paintGL()
   glLoadIdentity();
   
   //this should be replaced by a camera
-  glTranslated(0.0, 0.0, -10.0);
+  gluLookAt( 0.0, 0.0, 10.0,
+             0.0, 0.0, 0.0,
+             0.0, 1.0, 0.0 );
   
   //Ici on dessine les objets graphiques de la scene privée du widget.
   //drawPrivateScene();

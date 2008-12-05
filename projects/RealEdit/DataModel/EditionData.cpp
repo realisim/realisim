@@ -18,11 +18,13 @@ using namespace Realisim;
 using namespace RealEdit;
 
 //------------------------Scene-------------------------------------------------
-Scene::Scene() : mNodes()
-{}
+Scene::Scene() : mNodes( "Root" )
+{
+}
 
 Scene::~Scene()
-{}
+{
+}
 
 const ObjectNode*
 Scene::getObjectNode() const
@@ -37,6 +39,12 @@ Scene::getObjectNode()
     static_cast<const Scene&> (*this).getObjectNode() );
 }
 
+ObjectNode*
+Scene::addNode( ObjectNode* ipParent, const std::string& iName )
+{
+  return mNodes.addNode( ipParent, iName );
+}
+
 //------------------------EditionData-------------------------------------------
 EditionData::EditionData() : mScene(),
                              mpCurrentModel( 0 ),
@@ -47,6 +55,12 @@ EditionData::EditionData() : mScene(),
 
 EditionData::~EditionData()
 {
+}
+
+ObjectNode*
+EditionData::addNode( ObjectNode* ipParent, const std::string iName )
+{
+  return mScene.addNode( ipParent, iName );
 }
 
 void

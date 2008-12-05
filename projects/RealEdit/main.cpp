@@ -1,5 +1,4 @@
 
-
 #include "EditionUi.h"
 
 #include <iostream>
@@ -26,9 +25,8 @@ int startMainApp()
 
 int main(int argc, char** argv)
 {
-    //startApp( argc, argv );
-    //QApplication::setStyle( new RsQtWindowsXPStyle );
-    QApplication app(argc, argv);
+
+  QApplication app(argc, argv);
 	Q_INIT_RESOURCE(images);
 
  	app.setWindowIcon( QIcon( ":/images/RealEdit_icon.png" ) );
