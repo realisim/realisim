@@ -8,7 +8,6 @@
 #include "Point.h"
 #include "Vect.h"
 
-#include <string>
 #include <vector>
 
 namespace RealEdit 
@@ -82,14 +81,14 @@ private:
 class RealEdit::RealEditModel : public RealEdit::DataModelBase
 {
 public:  
-	RealEditModel( const std::string& iString );
-  RealEditModel( const RealEditModel& iModel );
+	RealEditModel();
+  RealEditModel( const RealEditModel& iModel ){assert(0);}
 	~RealEditModel();
 	
   void addPoint( const RealEditPoint* ipPoint );
   void addPolygon( const RealEditPolygon* ipPoly );
 
-  unsigned int getNumPoint() const;
+  unsigned int getPointCount() const;
   const RealEditPoint* getPoint( int iIndex ) const;
 
   
@@ -97,15 +96,8 @@ protected:
 private:
   
   std::vector<const RealEditPoint*> mPoints;
-  //  std::vector<Realisim::DataModel::LineSegment*> mLineSegments;
+  //std::vector<Realisim::DataModel::LineSegment*> mLineSegments;
   std::vector<const RealEditPolygon*> mPolygons;
-  
-  std::string mName;
 };
-
-//typedef unsigned int RealEditDataId;
-//typedef unsigned int RealEditPointId;
-//typedef unsigned int RealEditPolygonId;
-//typedef unsigned int RealEditModelId;
 
 #endif

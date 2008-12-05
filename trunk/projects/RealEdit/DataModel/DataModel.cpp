@@ -50,15 +50,10 @@ RealEditPolygon::~RealEditPolygon()
 }
 
 //------------------------RealEditModel--------------------------------------------
-RealEditModel::RealEditModel( const std::string& iString ) : 
+RealEditModel::RealEditModel() : 
 DataModelBase(),
 mPoints(),
-mPolygons(),
-mName( iString )
-{
-}
-
-RealEditModel::RealEditModel( const RealEditModel& iModel )
+mPolygons()
 {
 }
 
@@ -79,7 +74,7 @@ RealEditModel::addPolygon( const RealEditPolygon* ipPoly )
 }
 
 unsigned int
-RealEditModel::getNumPoint() const
+RealEditModel::getPointCount() const
 {
   return mPoints.size();
 }

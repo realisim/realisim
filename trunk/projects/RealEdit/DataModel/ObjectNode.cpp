@@ -6,17 +6,22 @@
 
 using namespace RealEdit;
 
-ObjectNode::ObjectNode() : mpModel( 0 ),
+ObjectNode::ObjectNode( const std::string& iName ) : mpModel( 0 ),
   mpParentNode( 0 ),
-  mChilds()
+  mChilds(),
+  mName( iName )
 {
-  mpModel = new RealEditModel( "object 1" );
+  mpModel = new RealEditModel();
 }
 
 ObjectNode::~ObjectNode()
 {
   //il faut delete toute l'arboresence
   delete mpModel;
+  for( unsigned int i = 0; i < getChildCount(); ++i )
+  {
+    delete getChild(i);
+  }
 }
 
 const RealEditModel*
@@ -33,7 +38,7 @@ ObjectNode::getModel()
 }
 
 unsigned int
-ObjectNode::getNumChild() const
+ObjectNode::getChildCount() const
 {
   return mChilds.size();
 }
@@ -42,4 +47,20 @@ const ObjectNode*
 ObjectNode::getChild( int iChildNumber ) const
 {
   return mChilds[iChildNumber];
+}
+
+const std::string&
+ObjectNode::getName() const
+{
+  return mName;
+}
+
+ObjectNode*
+ObjectNode::addNode( ObjectNode* ipParent, const std::string& iName )
+{
+  ObjectNode* pNode = new ObjectNode( iName );
+  ipParent->mChilds.push_back( pNode );
+  pNode->mpParentNode = ipParent;
+  
+  return pNode;
 }

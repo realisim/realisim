@@ -1,6 +1,7 @@
 
 #include "EditionUi.h"
 #include "RealEdit3d.h"
+#include "ObjectNavigator.h"
 
 #include <QMenuBar>
 #include <QDockWidget>
@@ -58,7 +59,7 @@ EditionUi::addObjectNavigator()
 	pDockWidget->setWidget( pFrame );
 	QVBoxLayout* vLyt = new QVBoxLayout( pFrame );
 	{
-		mpObjectNavigator = new QListWidget( pFrame );
+		mpObjectNavigator = new ObjectNavigator( pFrame, mController.getEditionData() );
 		
 		QFontMetrics dockWidgetFontMetric( pDockWidget->font() );
 		int a = dockWidgetFontMetric.width( pDockWidget->windowTitle() );
