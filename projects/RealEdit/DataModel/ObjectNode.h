@@ -29,7 +29,7 @@ public:
   const ObjectNode* getChild( int iChildNumber ) const;
   const std::string& getName() const;
   
-  ObjectNode* addNode( ObjectNode* ipParent, const std::string& iName );
+  ObjectNode* addNode( const std::string& iName );
   
 private:
   RealEditModel* mpModel;

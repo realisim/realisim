@@ -41,11 +41,6 @@ RealEdit3d::drawScene( const RealEdit::ObjectNode* ipObjectNode )
 {
   const RealEditModel* pModel = ipObjectNode->getModel();
   
-  if( !pModel )
-  {
-    return;  //early out
-  }
-  
   glPushMatrix();
   {
     //appliquer la transfo du noeud

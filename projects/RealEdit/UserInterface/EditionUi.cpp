@@ -25,7 +25,9 @@ EditionUi::EditionUi()
 	
 	addMenuBar();
 	
-	QVBoxLayout* pVLyt = new QVBoxLayout( pMainFrame );	
+	QVBoxLayout* pVLyt = new QVBoxLayout( pMainFrame );
+  pVLyt->setMargin( 0 );
+  pVLyt->setSpacing( 2 );
 	
 	mpWidget3d_1 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
 	mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );

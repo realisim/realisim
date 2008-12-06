@@ -17,21 +17,26 @@
 using namespace Realisim;
 using namespace RealEdit;
 
-//------------------------Scene-------------------------------------------------
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//                    Scene
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Scene::Scene() : mNodes( "Root" )
 {
 }
 
+//-----------------------------------------------------------------------------
 Scene::~Scene()
 {
 }
 
+//-----------------------------------------------------------------------------
 const ObjectNode*
 Scene::getObjectNode() const
 {
   return &mNodes;
 }
 
+//-----------------------------------------------------------------------------
 ObjectNode*
 Scene::getObjectNode()
 {
@@ -39,30 +44,31 @@ Scene::getObjectNode()
     static_cast<const Scene&> (*this).getObjectNode() );
 }
 
-ObjectNode*
-Scene::addNode( ObjectNode* ipParent, const std::string& iName )
-{
-  return mNodes.addNode( ipParent, iName );
-}
-
-//------------------------EditionData-------------------------------------------
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//                    EditionData
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 EditionData::EditionData() : mScene(),
                              mpCurrentModel( 0 ),
+                             mpCurrentNode( 0 ),
                              mSelectedPoints(),
                              mSelectedPolygons()
 {
+  setCurrentNode( getScene().getObjectNode() );
 }
 
+//-----------------------------------------------------------------------------
 EditionData::~EditionData()
 {
 }
 
+//-----------------------------------------------------------------------------
 ObjectNode*
-EditionData::addNode( ObjectNode* ipParent, const std::string iName )
+EditionData::addNode( const std::string iName )
 {
-  return mScene.addNode( ipParent, iName );
+  return mpCurrentNode->addNode( iName );
 }
 
+//-----------------------------------------------------------------------------
 void
 EditionData::addPoint( const Point3f& iPoint )
 {
@@ -82,6 +88,7 @@ EditionData::addPoint( const Point3f& iPoint )
   mpCurrentModel->addPoint( pPoint );
 }
 
+//-----------------------------------------------------------------------------
 void
 EditionData::addPolygon( const std::vector<int>& iPointsId )
 {
@@ -108,12 +115,21 @@ EditionData::addPolygon( const std::vector<int>& iPointsId )
   mpCurrentModel->addPolygon(pPoly);
 }
 
+//-----------------------------------------------------------------------------
+const ObjectNode*
+EditionData::getCurrentNode() const
+{
+  return mpCurrentNode;
+}
+
+//-----------------------------------------------------------------------------
 const Scene&
 EditionData::getScene() const
 { 
   return mScene;
 }
 
+//-----------------------------------------------------------------------------
 Scene&
 EditionData::getScene()
 {
@@ -121,14 +137,10 @@ EditionData::getScene()
    static_cast<const EditionData&>(*this).getScene() );
 }
 
-const RealEditModel*
-EditionData::getCurrentModel() const
-{
-  return mpCurrentModel;
-}
-
+//-----------------------------------------------------------------------------
 void
-EditionData::setCurrentModel( RealEditModel* ipModel )
+EditionData::setCurrentNode( ObjectNode* ipNode )
 {
-  mpCurrentModel = ipModel;
+  mpCurrentNode = ipNode;
+  mpCurrentModel = mpCurrentNode->getModel();
 }
