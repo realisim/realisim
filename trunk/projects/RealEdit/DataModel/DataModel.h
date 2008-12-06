@@ -9,16 +9,13 @@
 #include "Vect.h"
 
 #include <vector>
+#include <cassert>
 
-namespace RealEdit 
-{
-  class DataModelBase;
-  
-  class RealEditPoint;
-  //class LineSegment;
-  class RealEditPolygon;
-  class RealEditModel;
-}
+namespace RealEdit { class DataModelBase; }
+namespace RealEdit { class RealEditPoint; }
+namespace RealEdit { class LineSegment; }
+namespace RealEdit { class RealEditPolygon; }
+namespace RealEdit { class RealEditModel; }
 
 class RealEdit::DataModelBase
 {
@@ -26,10 +23,10 @@ public:
 	DataModelBase();
 	virtual ~DataModelBase() = 0;
 	  
-  int getId() const{ return mId; }
+  unsigned int getId() const{ return mId; }
 	
 protected:
-	int mId;  //identificateur unique a l'intérieur d'un projet
+	unsigned int mId;  //identificateur unique a l'intérieur d'un projet
 	
 private:
   static unsigned int mIdCounter;

@@ -6,12 +6,11 @@
 
 using namespace RealEdit;
 
-ObjectNode::ObjectNode( const std::string& iName ) : mpModel( 0 ),
+ObjectNode::ObjectNode( const std::string& iName ) : mpModel( new RealEditModel() ),
   mpParentNode( 0 ),
   mChilds(),
   mName( iName )
 {
-  mpModel = new RealEditModel();
 }
 
 ObjectNode::~ObjectNode()
@@ -56,11 +55,11 @@ ObjectNode::getName() const
 }
 
 ObjectNode*
-ObjectNode::addNode( ObjectNode* ipParent, const std::string& iName )
+ObjectNode::addNode( const std::string& iName )
 {
   ObjectNode* pNode = new ObjectNode( iName );
-  ipParent->mChilds.push_back( pNode );
-  pNode->mpParentNode = ipParent;
+  this->mChilds.push_back( pNode );
+  pNode->mpParentNode = this;
   
   return pNode;
 }
