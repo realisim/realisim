@@ -9,6 +9,8 @@
 #ifndef Realisim_Widget3d_hh
 #define Realisim_Widget3d_hh
 
+#include "Camera.h"
+
 #include <map>
 
 namespace Realisim
@@ -27,12 +29,17 @@ class Realisim::Widget3d : public QGLWidget
 {
     Q_OBJECT
 public:
-    Widget3d( QWidget* ipParent = 0,
-              const QGLWidget* shareWidget = 0,
-              Qt::WindowFlags iFlags = 0 );
+  Widget3d( QWidget* ipParent = 0,
+            const QGLWidget* shareWidget = 0,
+            Qt::WindowFlags iFlags = 0 );
 
-    virtual ~Widget3d();
+  virtual ~Widget3d();
 
+  const Camera& getCamera() const { return mCam; }
+
+  void setCamera( const Camera& iCam );
+  void setCameraMode( Camera::Mode iMode );
+  
 signals:
     void clicked();
 
@@ -50,6 +57,7 @@ protected:
   QSize sizeHint() const;
   
 private:
+  Camera mCam;
   
   typedef std::map<int, Primitive3d::Primitive3dBase*> IdToPrimitiveMap;
   IdToPrimitiveMap mIdToPrimitiveMap;
