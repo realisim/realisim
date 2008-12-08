@@ -15,7 +15,8 @@ using namespace Realisim;
 Widget3d::Widget3d( QWidget* ipParent /*= 0*/,
                     const QGLWidget* shareWidget /*= 0*/,
                     Qt::WindowFlags  iFlags /*= 0*/ )
-: QGLWidget( ipParent, shareWidget, iFlags)
+: QGLWidget( ipParent, shareWidget, iFlags),
+mCam()
 {
 }
 
@@ -27,6 +28,13 @@ QSize
 Widget3d::minimumSizeHint() const
 {
     return QSize(50, 50);
+}
+
+
+void
+Widget3d::setCamera( const Camera& iCam )
+{
+  mCam = iCam;
 }
 
 QSize
@@ -75,6 +83,12 @@ Widget3d::initializeGL()
     glEnable(GL_LIGHTING);
 }
 
+void Widget3d::setCameraMode( Camera::Mode iMode )
+{
+  mCam.setMode( iMode );
+  updateGL();
+}
+
 void
 Widget3d::paintGL()
 {
@@ -82,9 +96,7 @@ Widget3d::paintGL()
   glLoadIdentity();
   
   //this should be replaced by a camera
-  gluLookAt( 0.0, 0.0, 10.0,
-             0.0, 0.0, 0.0,
-             0.0, 1.0, 0.0 );
+  mCam.lookAt();
   
   //Ici on dessine les objets graphiques de la scene privée du widget.
   //drawPrivateScene();
@@ -93,39 +105,9 @@ Widget3d::paintGL()
 void
 Widget3d::resizeGL(int iWidth, int iHeight)
 {
-  bool horiz = iWidth >= iHeight;
-  
-  int windowShortSide = qMin(iWidth, iHeight);
-  int windowLongSide = qMax(iWidth, iHeight);
-  
-  float projectionShortSide = 10.0;
-  float projectionLongSide = windowLongSide * projectionShortSide / windowShortSide; 
-  
-  if( horiz )
-  {
-    glViewport(0, 0, windowLongSide, windowShortSide);
-    
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-projectionLongSide, projectionLongSide,
-            projectionShortSide, -projectionShortSide, 
-            4.0, 15.0);
-    glMatrixMode(GL_MODELVIEW);
-  }
-  else //vertical
-  {
-    glViewport(0, 0, windowShortSide, windowLongSide );
-    
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-projectionShortSide, projectionShortSide,
-            projectionLongSide, -projectionLongSide, 
-            4.0, 15.0);
-    glMatrixMode(GL_MODELVIEW);
-  }
-  
+  mCam.projectionGL(iWidth, iHeight);
+
   updateGL();
-  
 }
 
 void Widget3d::mousePressEvent(QMouseEvent *event)
