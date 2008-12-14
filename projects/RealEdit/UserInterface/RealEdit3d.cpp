@@ -16,12 +16,20 @@
 using namespace Realisim;
 using namespace RealEdit;
 
+namespace
+{
+  const int kInvalidDisplayList = 0;
+}
+
+int RealEdit3d::mCube = kInvalidDisplayList;
+
 RealEdit3d::RealEdit3d( QWidget* ipParent, 
                         const QGLWidget* iSharedWidget, 
                         const EditionData& iEditionData ) : 
 Widget3d(ipParent, iSharedWidget),
 mEditionData( iEditionData )
 {
+  initDisplayList();
 }
 
 RealEdit3d::~RealEdit3d()
@@ -72,34 +80,50 @@ RealEdit3d::drawScene( const RealEdit::ObjectNode* ipObjectNode )
 void
 RealEdit3d::drawCube()
 {
+  glPushAttrib( GL_CURRENT_BIT | GL_POLYGON_BIT | GL_ENABLE_BIT );
+
+  glDisable( GL_LIGHTING );
+  glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+  glColor3f( 0, 85/255.0, 176/255.0);
+  glCallList( mCube );
+  
+  glPopAttrib();
+}
+
+void
+RealEdit3d::initDisplayList()
+{
+  if ( mCube != kInvalidDisplayList )
+  { return; }
+  
   float hs = 0.5;
   
-  //mDisplayList = glGenLists(1);
-  //glNewList(mDisplayList, GL_COMPILE );
-  glBegin(GL_QUADS);
-  glNormal3f( 0.0F, 0.0F, 1.0F);
-  glVertex3f( hs, hs, hs); glVertex3f(-hs, hs, hs);
-  glVertex3f(-hs,-hs, hs); glVertex3f( hs,-hs, hs);
-  
-  glNormal3f( 0.0F, 0.0F,-1.0F);
-  glVertex3f(-hs,-hs,-hs); glVertex3f(-hs, hs,-hs);
-  glVertex3f( hs, hs,-hs); glVertex3f( hs,-hs,-hs);
-  
-  glNormal3f( 0.0F, 1.0F, 0.0F);
-  glVertex3f( hs, hs, hs); glVertex3f( hs, hs,-hs);
-  glVertex3f(-hs, hs,-hs); glVertex3f(-hs, hs, hs);
-  
-  glNormal3f( 0.0F,-1.0F, 0.0F);
-  glVertex3f(-hs,-hs,-hs); glVertex3f( hs,-hs,-hs);
-  glVertex3f( hs,-hs, hs); glVertex3f(-hs,-hs, hs);
-  
-  glNormal3f( 1.0F, 0.0F, 0.0F);
-  glVertex3f( hs, hs, hs); glVertex3f( hs,-hs, hs);
-  glVertex3f( hs,-hs,-hs); glVertex3f( hs, hs,-hs);
-  
-  glNormal3f(-1.0F, 0.0F, 0.0F);
-  glVertex3f(-hs,-hs,-hs); glVertex3f(-hs,-hs, hs);
-  glVertex3f(-hs, hs, hs); glVertex3f(-hs, hs,-hs);
-  glEnd();
-  //glEndList();
+  mCube = glGenLists(1);
+  glNewList( mCube, GL_COMPILE );
+    glBegin(GL_QUADS);
+      glNormal3f( 0.0F, 0.0F, 1.0F);
+      glVertex3f( hs, hs, hs); glVertex3f(-hs, hs, hs);
+      glVertex3f(-hs,-hs, hs); glVertex3f( hs,-hs, hs);
+      
+      glNormal3f( 0.0F, 0.0F,-1.0F);
+      glVertex3f(-hs,-hs,-hs); glVertex3f(-hs, hs,-hs);
+      glVertex3f( hs, hs,-hs); glVertex3f( hs,-hs,-hs);
+      
+      glNormal3f( 0.0F, 1.0F, 0.0F);
+      glVertex3f( hs, hs, hs); glVertex3f( hs, hs,-hs);
+      glVertex3f(-hs, hs,-hs); glVertex3f(-hs, hs, hs);
+      
+      glNormal3f( 0.0F,-1.0F, 0.0F);
+      glVertex3f(-hs,-hs,-hs); glVertex3f( hs,-hs,-hs);
+      glVertex3f( hs,-hs, hs); glVertex3f(-hs,-hs, hs);
+      
+      glNormal3f( 1.0F, 0.0F, 0.0F);
+      glVertex3f( hs, hs, hs); glVertex3f( hs,-hs, hs);
+      glVertex3f( hs,-hs,-hs); glVertex3f( hs, hs,-hs);
+      
+      glNormal3f(-1.0F, 0.0F, 0.0F);
+      glVertex3f(-hs,-hs,-hs); glVertex3f(-hs,-hs, hs);
+      glVertex3f(-hs, hs, hs); glVertex3f(-hs, hs,-hs);
+    glEnd();
+  glEndList();
 }

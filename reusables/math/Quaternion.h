@@ -10,7 +10,7 @@
 #include <iostream>
 
 #include "MathDef.h"
-#include "Matrix.h"
+#include "Matrix4x4.h"
 #include "Point.h"
 
 //!-----------------------------------------------------------------------------
@@ -48,7 +48,7 @@ namespace Realisim
     inline void getQuat(T &w, T &x, T &y, T &z) const;
     inline Quaternion<T> getConjugate() const;
     template<class U>
-    inline void getUnitRotationMatrix(Matrix<U>& unitRotationMatrix);
+    inline void getUnitRotationMatrix(Matrix4<U>& unitRotationMatrix);
 
     // --------------- fonction utiles -----------------------------------------
     inline void Print() const;
@@ -220,7 +220,7 @@ namespace Realisim
   template<class T>
   template<class U>
   inline void
-  Quaternion<T>::getUnitRotationMatrix(Matrix<U>& unitRotationMatrix)
+  Quaternion<T>::getUnitRotationMatrix(Matrix4<U>& unitRotationMatrix)
   {
     unitRotationMatrix.setRow1(
           1-(2*y_*y_)-(2*z_*z_), (2*x_*y_)+(2*w_*z_), (2*x_*z_)-(2*w_*y_), 0);

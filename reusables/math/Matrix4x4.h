@@ -4,15 +4,15 @@
 //!
 //! AUTHOR:  Pierre-Olivier Beaudoin & David Pinson
 //!-----------------------------------------------------------------------------
-#ifndef MATRIX_4x4_H
-#define MATRIX_4x4_H
+#ifndef MATRIX_4_H
+#define MATRIX_4_H
 
 #include <iostream>
 
 //!-----------------------------------------------------------------------------
 //! \brief Classe gÈrant les fonctionalitÈs associÈes a une matrice 4x4 ou 3x3
 //!-----------------------------------------------------------------------------
-namespace realisim
+namespace Realisim
 {
   template<class T>
   class Matrix4
