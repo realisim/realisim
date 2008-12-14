@@ -33,14 +33,14 @@ EditionUi::EditionUi()
   Camera cam = mpWidget3d_1->getCamera();
   cam.set( Point3d( 0, 0, 10 ),
            Point3d( 0, 0, 0 ),
-          Vector3d( 0, 1, 0 ) );
+           Vector3d( 0, 1, 0 ) );
   mpWidget3d_1->setCamera( cam );
   
 	mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
   Camera cam2 = mpWidget3d_2->getCamera();
   cam2.set( Point3d( 10, 10, 10 ),
-          Point3d( 0, 0, 0 ),
-          Vector3d( 0, 1, 0 ) );
+            Point3d( 0, 0, 0 ),
+            Vector3d( 0, 1, 0 ) );
   mpWidget3d_2->setCamera( cam2 );
 	
 	pVLyt->addWidget( mpWidget3d_1 );

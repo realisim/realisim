@@ -12,37 +12,24 @@
 
 using namespace Realisim;
 
+//-----------------------------------------------------------------------------
 Widget3d::Widget3d( QWidget* ipParent /*= 0*/,
                     const QGLWidget* shareWidget /*= 0*/,
                     Qt::WindowFlags  iFlags /*= 0*/ )
 : QGLWidget( ipParent, shareWidget, iFlags),
-mCam()
+mCam(),
+mpInputHandler( 0 ),
+mDefaultHandler( mCam )
 {
+  setInputHandler( mDefaultHandler );
 }
 
+//-----------------------------------------------------------------------------
 Widget3d::~Widget3d()
 {
 }
 
-QSize
-Widget3d::minimumSizeHint() const
-{
-    return QSize(50, 50);
-}
-
-
-void
-Widget3d::setCamera( const Camera& iCam )
-{
-  mCam = iCam;
-}
-
-QSize
-Widget3d::sizeHint() const
-{
-    return QSize(200, 200);
-}
-
+//-----------------------------------------------------------------------------
 void
 Widget3d::initializeGL()
 {
@@ -83,12 +70,39 @@ Widget3d::initializeGL()
     glEnable(GL_LIGHTING);
 }
 
-void Widget3d::setCameraMode( Camera::Mode iMode )
+//-----------------------------------------------------------------------------
+QSize
+Widget3d::minimumSizeHint() const
 {
-  mCam.setMode( iMode );
+  return QSize(50, 50);
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::mouseDoubleClickEvent( QMouseEvent* e )
+{
+  mpInputHandler->mouseDoubleClickEvent( e );
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::mouseMoveEvent(QMouseEvent *e)
+{
+  mpInputHandler->mouseMoveEvent( e );
   updateGL();
 }
 
+//-----------------------------------------------------------------------------
+void Widget3d::mousePressEvent(QMouseEvent *e)
+{
+  mpInputHandler->mousePressEvent( e );
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::mouseReleaseEvent(QMouseEvent *e)
+{
+  mpInputHandler->mouseReleaseEvent( e );
+}
+
+//-----------------------------------------------------------------------------
 void
 Widget3d::paintGL()
 {
@@ -102,23 +116,43 @@ Widget3d::paintGL()
   //drawPrivateScene();
 }
 
+//-----------------------------------------------------------------------------
 void
 Widget3d::resizeGL(int iWidth, int iHeight)
 {
   mCam.projectionGL(iWidth, iHeight);
-
+  
   updateGL();
 }
 
-void Widget3d::mousePressEvent(QMouseEvent *event)
+//-----------------------------------------------------------------------------
+void
+Widget3d::setCamera( const Camera& iCam )
 {
+  mCam = iCam;
 }
 
-void Widget3d::mouseMoveEvent(QMouseEvent *event)
+//-----------------------------------------------------------------------------
+void Widget3d::setCameraMode( Camera::Mode iMode )
 {
+  mCam.setMode( iMode );
+  updateGL();
 }
 
-void Widget3d::mouseReleaseEvent(QMouseEvent * /* event */)
+//-----------------------------------------------------------------------------
+void Widget3d::setInputHandler( InputHandler& iHandler )
 {
-    emit clicked();
+  mpInputHandler = &iHandler;
+}
+
+//-----------------------------------------------------------------------------
+QSize
+Widget3d::sizeHint() const
+{
+  return QSize(200, 200);
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::wheelEvent ( QWheelEvent * event )
+{
 }

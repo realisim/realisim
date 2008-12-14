@@ -19,18 +19,21 @@ class Realisim::Camera
 {
 public:
   
-  enum Mode{ ORTHOGONAL = 0, PROJECTION };
+  enum Mode{ ORTHOGONAL = 0, PERSPECTIVE };
 
-  Camera( Mode iMode = PROJECTION );
+  Camera( Mode iMode = PERSPECTIVE );
   Camera( const Camera& iCam );
   virtual ~Camera();
   
+  const Vector3d& getLat() const { return mLat; }
   const Point3d& getLook() const { return mLook; } 
   Mode getMode() const { return mMode; }
   const Point3d& getPos() const { return mPos; }
   const Vector3d& getUp() const { return mUp; }
   
   void lookAt();
+  
+  void move( int iDeltaX, int iDeltaY );
   
   Camera& operator=( const Camera& iCam );
   
@@ -45,14 +48,16 @@ public:
   void setPos( const Point3d& iPos );
   void setUp( const Vector3d& iUp );
   
-  
 protected:
 private:
+  void computeLatAndUp();
+  
   Mode mMode;
   
-  Point3d mPos;
-  Point3d mLook;
-  Vector3d mUp;
+  Point3d mPos;  //position de la caméra
+  Vector3d mLat;  //vecteur latéral normalisé
+  Point3d mLook;  //point visé
+  Vector3d mUp;  //vecteur up normalisé
 };
 
 #endif
