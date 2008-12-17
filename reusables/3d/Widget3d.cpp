@@ -111,6 +111,7 @@ Widget3d::paintGL()
   
   //this should be replaced by a camera
   mCam.lookAt();
+  //glTranslatef(0, 0, 10);
   
   //Ici on dessine les objets graphiques de la scene privée du widget.
   //drawPrivateScene();

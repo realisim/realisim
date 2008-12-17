@@ -20,7 +20,7 @@ mPos(),
 mLat(),
 mLook(),
 mUp(),
-mVisibleGLUnit( 20 ),
+mVisibleGLUnit( 80 ),
 mZoomFactor( 1.0 )
 {
 }

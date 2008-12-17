@@ -28,15 +28,16 @@ public:
   ~RealEdit3d();
   
   virtual void paintGL();
-  
+  void initDisplayList();
+
 private:
   void drawCube();
   void drawScene( const RealEdit::ObjectNode* iObjectNode );
 
-  void initDisplayList();
+  
   
   //index de display list
-  static int mCube;
+  static GLuint mCube;
   
   //reference sur le EditionData de RealEditController
   const EditionData& mEditionData;
