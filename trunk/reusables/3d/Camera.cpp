@@ -19,17 +19,22 @@ Camera::Camera( Mode iMode /*= PERSPECTIVE*/ ) : mMode( iMode ),
 mPos(),
 mLat(),
 mLook(),
-mUp()
+mUp(),
+mVisibleGLUnit( 20 ),
+mZoomFactor( 1.0 )
 {
 }
 
 //-----------------------------------------------------------------------------
 Camera::Camera( const Camera& iCam ) : mMode( iCam.getMode() ),
-mPos( iCam.getPos() ),
-mLat( iCam.getLat() ),
-mLook( iCam.getLook() ),
-mUp( iCam.getUp() )
+mPos(),
+mLat(),
+mLook(),
+mUp(),
+mVisibleGLUnit()
 {
+  //TODO: regarder si on peut implanter le constructeur copie en fonction de l'operateur �gale.
+  operator=( iCam );
 }
 
 //-----------------------------------------------------------------------------
@@ -67,16 +72,13 @@ void Camera::lookAt()
 }
 
 //-----------------------------------------------------------------------------
-void Camera::move( int iDeltaX, int iDeltaY )
+void Camera::move( int iX, int iY )
 {
   switch ( getMode() ) 
   {
     case ORTHOGONAL:
     {
-      Vector3d x = getLat() * iDeltaX;
-      Vector3d y = getUp() * iDeltaY;
-      Vector3d delta = x + y;
-      
+      Point3d delta = pixelToGL( iX, iY );
       //On n'utilise pas les méthode setPos et setLook ici parce
       //qu'on ne veut pas recalculer le vecteur latérale et up, car
       //on sait qu'il sont inchangés puisque la pos et le look
@@ -95,6 +97,19 @@ void Camera::move( int iDeltaX, int iDeltaY )
     break;
       
     case PERSPECTIVE:
+    {      
+      Point3d newPos = 
+        rotatePoint( (double)iX / 20.0,
+                     getPos(),
+                     getUp(),
+                     getLook() );
+      newPos =
+        rotatePoint( (double)iY / 20.0,
+                     newPos,
+                     getLat(),
+                     getLook() );
+      setPos( newPos );
+    }
       break;
       
     default:
@@ -111,8 +126,29 @@ Camera::operator=( const Camera& iCam )
   mLat = iCam.getLat();
   mLook = iCam.getLook();
   mUp = iCam.getUp();
+  mVisibleGLUnit = iCam.getVisibleGLUnit();
+  mZoomFactor = iCam.getZoom();
   
   return *this;
+}
+
+//-----------------------------------------------------------------------------
+Point3d Camera::pixelToGL( int iX, int iY ) const
+{
+  int* viewport = new int[4];
+  glGetIntegerv( GL_VIEWPORT, viewport );
+  
+  //le coté le plus long montre la valeur mVisibleGLUnit unité GL
+  int windowLongSide = qMax( viewport[2], viewport[3] );
+
+  double onePixelInGLUnit = 1 * mVisibleGLUnit / windowLongSide;
+  
+  //on va faire un point sur un plan parallele au plan de projection de la
+  //camera.
+  Vector3d x = getLat() * iX * onePixelInGLUnit;
+  Vector3d y = getUp() * iY * onePixelInGLUnit;
+  Vector3d result = x + y;
+  return Point3d( result.getX(), result.getY(), result.getZ() );
 }
 
 //-----------------------------------------------------------------------------
@@ -120,11 +156,18 @@ void Camera::projectionGL( int iWidth, int iHeight ) const
 {
   bool horiz = iWidth >= iHeight;
   
+  //le coté le plus long montre la valeur mVisibleGLUnit unité GL
   int windowShortSide = qMin(iWidth, iHeight);
   int windowLongSide = qMax(iWidth, iHeight);
   
-  float projectionShortSide = 10.0; //on veut un carré de 20 unités de coté
-  float projectionLongSide = windowLongSide * projectionShortSide / windowShortSide; 
+  float projectionLongSide = mVisibleGLUnit * mZoomFactor;
+  float projectionShortSide = windowShortSide * projectionLongSide / windowLongSide; 
+  
+  //puisque le viewport est de -projectionLongSide a projectionLongSide et
+  //que projectionLongSide represente mVisibleUnitGL, on doit diviser en 2 afin de 
+  //conserver les proportions.
+  projectionShortSide /= 2.0;
+  projectionLongSide /= 2.0;
   
   if( horiz )
   {

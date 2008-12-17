@@ -1,6 +1,6 @@
 //!-----------------------------------------------------------------------------
 //! \file
-//! \brief Classe \c Vect permet de représenter un vecteur a trois dimensions
+//! \brief Classe \c Vect permet de reprÃˆsenter un vecteur a trois dimensions
 //!
 //! AUTHOR:  Pierre-Olivier Beaudoin & David Pinson
 //!-----------------------------------------------------------------------------
@@ -12,7 +12,7 @@
 #include "MathDef.h"
 
 //!-----------------------------------------------------------------------------
-//! \brief Classe gérant les fonctionalités associées a un vecteur
+//! \brief Classe gÃˆrant les fonctionalitÃˆs associÃˆes a un vecteur
 //!-----------------------------------------------------------------------------
 namespace Realisim
 {
@@ -52,9 +52,9 @@ namespace Realisim
     inline void getXYZ(T &x, T &y, T &z) const;
     
     // --------------- fonction utiles -----------------------------------------
-    inline T norm();
+    inline T norm() const;
     inline Vect<T> normalise();
-    inline T fastNorm();
+    inline T fastNorm() const;
     
     // --------------- Overload: operateurs unitaires --------------------------
     inline bool operator== (const Vect &vect) const;
@@ -68,7 +68,7 @@ namespace Realisim
     
     inline Vect<T>  operator-  (const Vect &vect) const;
     inline Vect<T>  operator-  (const T &val) const;
-    inline Vect<T>  operator-  ();
+    inline Vect<T>& operator-  ();
     inline Vect<T>& operator-= (const Vect &vect);
     inline Vect<T>& operator-= (const T &val);
     
@@ -93,7 +93,7 @@ namespace Realisim
     T z_;
   };
   
-  //! constructeur par défaut.
+  //! constructeur par dÃˆfaut.
   template<class T>
   inline Vect<T>::Vect()
   {
@@ -105,7 +105,7 @@ namespace Realisim
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametre.
   //!
-  //! Construit un objet de type \c Vect ou chacune des valeurs cartésiennes 
+  //! Construit un objet de type \c Vect ou chacune des valeurs cartÃˆsiennes 
   //! vaut la meme valeur.
   //! 
   //! \param val valeur d'initialisation
@@ -121,8 +121,8 @@ namespace Realisim
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametres.
   //!
-  //! Construit un objet de type \c Vect avec chacune des valeurs cartésiennes 
-  //! passées en parametre.
+  //! Construit un objet de type \c Vect avec chacune des valeurs cartÃˆsiennes 
+  //! passÃˆes en parametre.
   //! 
   //! \param x valeur d'initialisation pour x_
   //! \param y valeur d'initialisation pour y_
@@ -175,7 +175,7 @@ namespace Realisim
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du vecteur.
   //!
-  //! Égale le vecteur a celui passé en parametre.
+  //! â€¦gale le vecteur a celui passÃˆ en parametre.
   //! 
   //! \param &vect
   //!---------------------------------------------------------------------------
@@ -190,7 +190,7 @@ namespace Realisim
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du vecteur.
   //!
-  //! Égale le vecteur a la valeur passée en parametre.
+  //! â€¦gale le vecteur a la valeur passÃˆe en parametre.
   //! 
   //! \param &val
   //!---------------------------------------------------------------------------
@@ -238,7 +238,7 @@ namespace Realisim
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du vecteur.
   //!
-  //! Égale le vecteur a chacune des valeurs passéees en parametre.
+  //! â€¦gale le vecteur a chacune des valeurs passÃˆees en parametre.
   //! 
   //! \param &x
   //! \param &y
@@ -265,7 +265,7 @@ namespace Realisim
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir le vecteur.
   //!
-  //! Permet d'obtenir la valeur du vecteur dans celui passé en parametre.
+  //! Permet d'obtenir la valeur du vecteur dans celui passÃˆ en parametre.
   //! 
   //! \param &vecteur Le vecteur qui va etre comme le celui que l'on veut
   //!---------------------------------------------------------------------------
@@ -313,7 +313,7 @@ namespace Realisim
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir le vecteur.
   //! 
-  //! Le vecteur est transféré dans les variables passées en parametres
+  //! Le vecteur est transfÃˆrÃˆ dans les variables passÃˆes en parametres
   //!
   //! \param &x
   //! \param &y
@@ -333,15 +333,15 @@ namespace Realisim
   //! \return la norme du vecteur
   //!---------------------------------------------------------------------------
   template<class T>
-  inline T Vect<T>::norm()
+  inline T Vect<T>::norm() const
   {
     return std::sqrt(x_*x_ + y_*y_ + z_*z_);
   }
   
   //!---------------------------------------------------------------------------
-  //! \brief  Calcule et retourne un vecteur normalisé
+  //! \brief  Calcule et retourne un vecteur normalisÃˆ
   //!
-  //! \return un vecteur normalisé
+  //! \return un vecteur normalisÃˆ
   //!---------------------------------------------------------------------------
   template<class T>
   inline Vect<T> Vect<T>::normalise()
@@ -359,7 +359,7 @@ namespace Realisim
   //! \return une approximation de la norme
   //!---------------------------------------------------------------------------
   template<class T>
-  inline T Vect<T>::fastNorm()
+  inline T Vect<T>::fastNorm() const
   {
     T max, med, min, mom;
     
@@ -383,7 +383,7 @@ namespace Realisim
     return( max + (11.0/32.0)*med + (1.0/4.0)*min );
   }
   
-  //! surcharge opérateur ==
+  //! surcharge opÃˆrateur ==
   template<class T>
   inline bool Vect<T>::operator== (const Vect &vect) const
   {
@@ -404,7 +404,7 @@ namespace Realisim
       return false;
   }
   
-  //! surcharge opérateur = Vect
+  //! surcharge opÃˆrateur = Vect
   template<class T>
   inline Vect<T>& Vect<T>::operator= (const Vect &vect)
   {
@@ -414,7 +414,7 @@ namespace Realisim
     return *this;
   }
   
-  //! surcharge opérateur = T
+  //! surcharge opÃˆrateur = T
   template<class T>
   inline Vect<T>& Vect<T>::operator= (const T &val)
   {
@@ -424,7 +424,7 @@ namespace Realisim
     return *this;
   }
     
-  //! surcharge opérateur + avec un vecteur
+  //! surcharge opÃˆrateur + avec un vecteur
   template<class T>
   inline Vect<T> Vect<T>::operator+ (const Vect &vect) const
   {
@@ -437,7 +437,7 @@ namespace Realisim
     return vectResult;
   }
   
-  //! surcharge opérateur + avec T
+  //! surcharge opÃˆrateur + avec T
   template<class T>
   inline Vect<T> Vect<T>::operator+ (const T &val) const
   {
@@ -450,7 +450,7 @@ namespace Realisim
     return vect;
   }
   
-  //! surcharge opérateur += avec un vecteur
+  //! surcharge opÃˆrateur += avec un vecteur
   template<class T>
   inline Vect<T>& Vect<T>::operator+= (const Vect &vect)
   {
@@ -460,7 +460,7 @@ namespace Realisim
     return *this;
   }
     
-  //! surcharge opérateur += avec T
+  //! surcharge opÃˆrateur += avec T
   template<class T>
   inline Vect<T>& Vect<T>::operator+= (const T &val)
   {
@@ -470,7 +470,7 @@ namespace Realisim
     return *this;
   }
   
-  //! surcharge opérateur - avec un vecteur
+  //! surcharge opÃˆrateur - avec un vecteur
   template<class T>  
   inline Vect<T> Vect<T>::operator- (const Vect &vect) const
   {
@@ -483,7 +483,7 @@ namespace Realisim
     return vectResult;
   }
   
-  //! surcharge opérateur - avec T
+  //! surcharge opÃˆrateur - avec T
   template<class T>
   inline Vect<T> Vect<T>::operator- (const T &val) const
   {
@@ -496,20 +496,18 @@ namespace Realisim
     return vect;
   }
   
-  //! surcharge opérateur -
+  //! surcharge opÃˆrateur -
   template<class T>
-  inline Vect<T> Vect<T>::operator- ()
-  {
-    Vect<T> vect;
+  inline Vect<T>& Vect<T>::operator- ()
+  {    
+    x_ = -x_;
+    y_ = -y_;
+    z_ = -z_;
     
-    vect.x_=-x_;
-    vect.y_=-y_;
-    vect.z_=-z_;
-    
-    return this;
+    return *this;
   }
   
-  //! surcharge opérateur -= avec un vecteur
+  //! surcharge opÃˆrateur -= avec un vecteur
   template<class T>
   inline Vect<T>& Vect<T>::operator-= (const Vect &vect)
   {
@@ -519,7 +517,7 @@ namespace Realisim
     return *this;
   }
   
-  //! surcharge opérateur -= avec T
+  //! surcharge opÃˆrateur -= avec T
   template<class T>
   inline Vect<T>& Vect<T>::operator-= (const T &val)
   {
@@ -529,7 +527,7 @@ namespace Realisim
     return *this;
   }
     
-  //! surcharge opérateur * avec T
+  //! surcharge opÃˆrateur * avec T
   template<class T>
   inline Vect<T> Vect<T>::operator* (const T &val) const
   {
@@ -542,7 +540,7 @@ namespace Realisim
     return vect;
   }
   
-  //! surcharge opérateur *= avec T
+  //! surcharge opÃˆrateur *= avec T
   template<class T>
   inline Vect<T>& Vect<T>::operator*= (const T &val)
   {
@@ -552,7 +550,7 @@ namespace Realisim
     return *this;
   }
   
-  //! surcharge opérateur / avec T
+  //! surcharge opÃˆrateur / avec T
   template<class T>  
   inline Vect<T> Vect<T>::operator/ (const T &val) const
   {
