@@ -21,7 +21,7 @@ namespace
   const unsigned int kInvalidDisplayList = -1;
 }
 
-int RealEdit3d::mCube = kInvalidDisplayList;
+GLuint RealEdit3d::mCube = kInvalidDisplayList;
 
 RealEdit3d::RealEdit3d( QWidget* ipParent, 
                         const QGLWidget* iSharedWidget, 
@@ -83,7 +83,7 @@ RealEdit3d::drawCube()
 
   glDisable( GL_LIGHTING );
   glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-  glColor3f( 0, 85/255.0, 176/255.0);
+  glColor3d( 0, 85/255.0, 176/255.0);
   glCallList( mCube );
   
   glPopAttrib();
