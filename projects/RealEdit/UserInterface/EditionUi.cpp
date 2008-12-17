@@ -17,6 +17,7 @@ EditionUi::EditionUi()
 , mController()
 , mpWidget3d_1( 0 )
 , mpWidget3d_2( 0 )
+, mpWidget3d_3( 0 )
 , mpObjectNavigator( 0 )
 {	
 	resize(800, 600);
@@ -36,15 +37,24 @@ EditionUi::EditionUi()
            Vector3d( 0, 1, 0 ) );
   mpWidget3d_1->setCamera( cam );
   
-	mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
+  mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
+  mpWidget3d_2->setCameraMode( Camera::ORTHOGONAL );
   Camera cam2 = mpWidget3d_2->getCamera();
-  cam2.set( Point3d( 10, 10, 10 ),
+  cam2.set( Point3d( 0, 10, 0 ),
+           Point3d( 0, 0, 0 ),
+           Vector3d( 1, 0, 0 ) );
+  mpWidget3d_2->setCamera( cam2 );
+  
+	mpWidget3d_3 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
+  Camera cam3 = mpWidget3d_3->getCamera();
+  cam3.set( Point3d( 10, 0, 0 ),
             Point3d( 0, 0, 0 ),
             Vector3d( 0, 1, 0 ) );
-  mpWidget3d_2->setCamera( cam2 );
+  mpWidget3d_3->setCamera( cam3 );
 	
 	pVLyt->addWidget( mpWidget3d_1 );
 	pVLyt->addWidget( mpWidget3d_2 );
+	pVLyt->addWidget( mpWidget3d_3 );
 	
 	//add the Object Navigator
 	addObjectNavigator();

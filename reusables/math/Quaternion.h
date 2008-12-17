@@ -28,7 +28,7 @@ namespace Realisim
     // --------------- constructeurs -------------------------------------------
     inline Quaternion();
     inline Quaternion(const T &w, const T &x, const T &y, const T &z);
-    inline Quaternion(const Quaternion &quat);
+    inline Quaternion(const Quaternion<T> &quat);
 
     // --------------- destructeurs --------------------------------------------
     inline ~Quaternion();
@@ -51,16 +51,16 @@ namespace Realisim
     inline void getUnitRotationMatrix(Matrix4<U>& unitRotationMatrix);
 
     // --------------- fonction utiles -----------------------------------------
-    inline void Print() const;
-    inline void Conjugate();
+    inline void print() const;
+    inline void conjugate();
     inline void setRot(const T &angle, const T &axisX, const T &axisY,
                        const T &axisZ);
-    inline Point<T> MultRotation(const Quaternion &quat) const;
+    inline Point<T> multRotation( const Quaternion<T> &quat ) const;
 
     // --------------- Overload: operateurs unitaires --------------------------
-    inline Quaternion<T>& operator=  (const Quaternion &quat);
+    inline Quaternion<T>& operator=  (const Quaternion<T> &quat);
 
-    inline Quaternion<T>  operator*  (const Quaternion &quat) const;
+    inline Quaternion<T>  operator*  (const Quaternion<T> &quat) const;
 
   protected:
   private:
@@ -86,7 +86,7 @@ namespace Realisim
 
   //! constructeur copie
   template<class T>
-  inline Quaternion<T>::Quaternion(const Quaternion &quat)
+  inline Quaternion<T>::Quaternion(const Quaternion<T> &quat)
   {
     w_ = quat.w_;
     x_ = quat.x_;
@@ -168,13 +168,13 @@ namespace Realisim
   }
 
   template<class T>
-  inline void Quaternion<T>::Print() const
+  inline void Quaternion<T>::print() const
   {
     std::cout<<"q = "<<w_<<" + "<<x_<<"i + "<<y_<<"j + "<<z_<<"k"<<std::endl;
   }
 
   template<class T>
-  inline Quaternion<T>& Quaternion<T>::operator= (const Quaternion &quat)
+  inline Quaternion<T>& Quaternion<T>::operator= (const Quaternion<T> &quat)
   {
     w_ = quat.w_;
     x_ = quat.x_;
@@ -184,7 +184,7 @@ namespace Realisim
   }
 
   template<class T>
-  inline Point<T> Quaternion<T>::MultRotation(const Quaternion &quat) const
+  inline Point<T> Quaternion<T>::multRotation(const Quaternion<T> &quat) const
   {
     Point<T> result;
 
@@ -196,7 +196,7 @@ namespace Realisim
   }
 
   template<class T>
-  inline Quaternion<T>  Quaternion<T>::operator*  (const Quaternion &quat) const
+  inline Quaternion<T>  Quaternion<T>::operator*  (const Quaternion<T> &quat) const
   {
     Quaternion<T> result;
 
@@ -233,7 +233,7 @@ namespace Realisim
 
   //Cette fonction est a utiliser seulement si le quaternion est unitaire
   template<class T>
-  inline void Quaternion<T>::Conjugate()
+  inline void Quaternion<T>::conjugate()
   {
     x_ = -x_;
     y_ = -y_;

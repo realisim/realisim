@@ -43,7 +43,8 @@ private:
 	
   RealEdit3d* mpWidget3d_1;
   RealEdit3d* mpWidget3d_2;
-	
+  RealEdit3d* mpWidget3d_3;
+
 	ObjectNavigator* mpObjectNavigator;
 };
 

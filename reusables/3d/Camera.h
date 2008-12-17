@@ -30,13 +30,17 @@ public:
   Mode getMode() const { return mMode; }
   const Point3d& getPos() const { return mPos; }
   const Vector3d& getUp() const { return mUp; }
+  const double getZoom() const { return mZoomFactor; }
   
   void lookAt();
   
+  //déplace la caméra
+  //les paramètres sont en pixel
   void move( int iDeltaX, int iDeltaY );
   
   Camera& operator=( const Camera& iCam );
   
+  Point3d pixelToGL( int iX, int iY ) const;
   void projectionGL( int iWidth, int iHeight ) const;
   
   void set( const Point3d& iPos,
@@ -51,6 +55,8 @@ public:
 protected:
 private:
   void computeLatAndUp();
+  const double getVisibleGLUnit() const { return mVisibleGLUnit; }
+
   
   Mode mMode;
   
@@ -58,6 +64,16 @@ private:
   Vector3d mLat;  //vecteur latéral normalisé
   Point3d mLook;  //point visé
   Vector3d mUp;  //vecteur up normalisé
+  
+  //Sert a définir le nombre d'unité GL minimale visible 
+  //dans le viewPort. Par exemple, si on met 20, le viewport sera une fenêtre
+  //sur un rectangle d'ou moins 20 unités GL sur son coté le plus long. 
+  //C'est en modifiant ce paramètre qu'on
+  //peut zoomer ou dezoomer. Plus le chiffre est gros plus on voit de la 
+  //scene donc moins on est zoomé.
+  double mVisibleGLUnit;
+  
+  double mZoomFactor;
 };
 
 #endif

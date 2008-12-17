@@ -1,6 +1,6 @@
 //!-----------------------------------------------------------------------------
 //! \file
-//! \brief Fichier contenant des fonctions math�matique utile.
+//! \brief Fichier contenant des fonctions mathÈmatique utile.
 //!
 //! AUTHOR:  Pierre-Olivier Beaudoin & David Pinson
 //!-----------------------------------------------------------------------------
@@ -12,6 +12,7 @@
 
 namespace Realisim
 {
+  //---------------------------------------------------------------------------
   template<class V>
   inline Quaternion<V> operator* (const Quaternion<V> &quat,
                                   const Point<V> &point)
@@ -33,6 +34,7 @@ namespace Realisim
     return result;
   }
 
+  //---------------------------------------------------------------------------
   template<class V>
   inline Point<V> operator+ (const Point<V> &point, const Vect<V> &vect)
   {
@@ -45,6 +47,7 @@ namespace Realisim
     return result;
   }
 
+  //---------------------------------------------------------------------------
   template<class V>
   inline Point<V> operator- (const Point<V> &point, const Vect<V> &vect)
   {
@@ -57,37 +60,42 @@ namespace Realisim
     return result;
   }
 
+  //---------------------------------------------------------------------------
+  //axis doit être normalisé
   template<class T>
   inline Point<T> rotatePoint(const T &angle, const Point<T> &point,
                               const Vect<T> axis)
   {
-    Quat4f quatRot;
-    Quat4f quatResult;
+    Quaternion<T> quatRot;
+    Quaternion<T> quatResult;
 
-    quatRot.setRot(angle, axis.getX(), axis.getY(), axis.getZ());
+    quatRot.setRot( angle, axis.getX(), axis.getY(), axis.getZ() );
 
     //! TODO mettre une explication sur les quaternions...
     //quatResult = (quatRot*point)*quatRot.getConjugate();
     //point.setXYZ(quatResult.getX(), quatResult.getY(), quatResult.getZ());
 
-    return (quatRot*point).multRotation(quatRot.getConjugate());
+    return ( quatRot*point ).multRotation( quatRot.getConjugate() );
   }
 
+  //---------------------------------------------------------------------------
   template<class T>
   inline Point<T> rotatePoint(const Quaternion<T> &quat, const Point<T> &point)
   {
     return (quat*point).multRotation(quat.getConjugate());
   }
 
+  //---------------------------------------------------------------------------
+  //axis doit être normalisé
   template<class T>
   inline Point<T> rotatePoint(const T &angle, const Point<T> &point,
                               const Vect<T> axis, const Point<T> &axisPos)
   {
     //On trouve la position relative du Point a tourner par rapport a l'axe
-    Point3f relPos, rotatedPoint;
+    Point<T> relPos, rotatedPoint;
 
     relPos = point - axisPos;
-    rotatedPoint = RotatePoint(angle, relPos, axis);
+    rotatedPoint = rotatePoint(angle, relPos, axis);
 
     //On retranslate le point rotater
     rotatedPoint += axisPos;
