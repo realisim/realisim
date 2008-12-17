@@ -36,6 +36,7 @@ EditionUi::EditionUi()
            Point3d( 0, 0, 0 ),
            Vector3d( 0, 1, 0 ) );
   mpWidget3d_1->setCamera( cam );
+  mpWidget3d_1->initDisplayList();
   
   mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
   mpWidget3d_2->setCameraMode( Camera::ORTHOGONAL );
