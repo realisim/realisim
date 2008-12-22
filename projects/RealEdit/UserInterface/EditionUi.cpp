@@ -48,7 +48,7 @@ EditionUi::EditionUi()
   
 	mpWidget3d_3 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
   Camera cam3 = mpWidget3d_3->getCamera();
-  cam3.set( Point3d( 10, 0, 0 ),
+  cam3.set( Point3d( 10, 10, 10 ),
             Point3d( 0, 0, 0 ),
             Vector3d( 0, 1, 0 ) );
   mpWidget3d_3->setCamera( cam3 );

@@ -20,7 +20,8 @@ mPos(),
 mLat(),
 mLook(),
 mUp(),
-mVisibleGLUnit( 80 ),
+mVisibleGLUnit( 20 ),
+mPixelPerGLUnit( 0.0 ),
 mZoomFactor( 1.0 )
 {
 }
@@ -31,9 +32,11 @@ mPos(),
 mLat(),
 mLook(),
 mUp(),
-mVisibleGLUnit()
+mVisibleGLUnit(),
+mPixelPerGLUnit( 0.0 ),
+mZoomFactor()
 {
-  //TODO: regarder si on peut implanter le constructeur copie en fonction de l'operateur �gale.
+  //TODO: regarder si on peut implanter le constructeur copie en fonction de l'operateur égale.
   operator=( iCam );
 }
 
@@ -45,10 +48,10 @@ Camera::~Camera()
 //-----------------------------------------------------------------------------
 void Camera::computeLatAndUp()
 {
-  //on commence par calculer le vecteur latérale parce que le vecteur up
-  //final est dépendant du vecteur latéral
+  //on commence par calculer le vecteur lat√©rale parce que le vecteur up
+  //final est d√©pendant du vecteur lat√©ral
   
-  Vector3d lookVect( getLook(), getPos() );
+  Vector3d lookVect( getPos(), getLook()  );
   
   mLat = lookVect ^ getUp();
   mLat.normalise();
@@ -72,43 +75,88 @@ void Camera::lookAt()
 }
 
 //-----------------------------------------------------------------------------
-void Camera::move( int iX, int iY )
+void Camera::move( Vector3d iDelta )
 {
   switch ( getMode() ) 
   {
     case ORTHOGONAL:
     {
-      Point3d delta = pixelToGL( iX, iY );
-      //On n'utilise pas les méthode setPos et setLook ici parce
-      //qu'on ne veut pas recalculer le vecteur latérale et up, car
-      //on sait qu'il sont inchangés puisque la pos et le look
-      //se déplace d'une valeur égale.
-      //Si on utilisait les méthodes set, les valeurs du vecteur latéral
-      // et up serait modifiées ( due aux erreurs d'arrondissement ).
-      mPos = Point3d( getPos().getX() + delta.getX(),
-                      getPos().getY() + delta.getY(), 
-                      getPos().getZ() + delta.getZ() );
+      //On n'utilise pas les m√©thode setPos et setLook ici parce
+      //qu'on ne veut pas recalculer le vecteur lat√©rale et up, car
+      //on sait qu'il sont inchang√©s puisque la pos et le look
+      //se d√©place d'une valeur √©gale.
+      //Si on utilisait les m√©thodes set, les valeurs du vecteur lat√©ral
+      // et up serait modifi√©es ( due aux erreurs d'arrondissement ).
+      mPos = Point3d( getPos().getX() + iDelta.getX(),
+                      getPos().getY() + iDelta.getY(), 
+                      getPos().getZ() + iDelta.getZ() );
       
-      mLook = Point3d( getLook().getX() + delta.getX(),
-                       getLook().getY() + delta.getY(), 
-                       getLook().getZ() + delta.getZ() );
+      mLook = Point3d( getLook().getX() + iDelta.getX(),
+                       getLook().getY() + iDelta.getY(), 
+                       getLook().getZ() + iDelta.getZ() );
       
     }
     break;
       
     case PERSPECTIVE:
-    {      
+    {
+      //un delta de mVisiblGLUnit represente 360 degrée de rotation...
+      //donc 2*Pi Rad
+      
+      //Le vecteur iDelta est un vecteur qui est dans le plan Lat-Up
+      //On projecte le vecteur iDelta sur chacune des composentes du plan
+      //afin de déterminer l'angle de ratation pour chaque axe
+      Vector3d projDeltaOnLat = getLat() * ( getLat() & iDelta );
+      Vector3d projDeltaOnUp = getUp() * ( getUp() & iDelta );
+      
+      //ROTATION PAR RAPPORT AU VECTEUR UP
+      double angle1 = projDeltaOnLat.norm() * DEUX_PI / getVisibleGLUnit();
+            
+      //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
+      //est dans le même sens que ce dernier ou non... Si ce n'est pas le
+      //cas, on change la direction de l'angle.
+      if( ( projDeltaOnLat + ( getLat() * projDeltaOnLat.norm() ) ) ==
+            Vector3d(0.0, 0.0, 0.0) )
+      {
+        angle1 *= -1;
+      }
+      
+      //on effectur la rotation autour de l'axe Up
       Point3d newPos = 
-        rotatePoint( (double)iX / 20.0,
+        rotatePoint( angle1,
                      getPos(),
                      getUp(),
                      getLook() );
+      
+      
+      //ROTATION PAR RAPPORT AU VECTEUR LAT
+      double angle2 = projDeltaOnUp.norm() * DEUX_PI / getVisibleGLUnit() * -1;
+            
+      if( ( projDeltaOnUp + ( getUp() * projDeltaOnUp.norm() ) ) ==
+         Vector3d(0.0, 0.0, 0.0) )
+      {
+        angle2 *= -1;
+      }
+      
+      //on effectue la rotation par rapport a l'axe Latérale
       newPos =
-        rotatePoint( (double)iY / 20.0,
+        rotatePoint( angle2,
                      newPos,
                      getLat(),
                      getLook() );
+      
+      //On force le vecteur UP a etre parallele a l'axe Y. Cette technique
+      //facilite beaucoup l'usage de la caméra      
+      setUp( Vector3d( 0.0, getUp().getY() ? getUp().getY():1.0, 0.0 ) );
+      
       setPos( newPos );
+      
+//      Vector3d up( 0.0, getUp().getY(), 0.0 );
+//      if ( getUp().getY() >= 0.0 && getUp().getY() <= 0.009 )
+//      {
+//        up.set( getUp() );
+//      }
+//      setUp( up );
     }
       break;
       
@@ -127,6 +175,7 @@ Camera::operator=( const Camera& iCam )
   mLook = iCam.getLook();
   mUp = iCam.getUp();
   mVisibleGLUnit = iCam.getVisibleGLUnit();
+  mPixelPerGLUnit = iCam.getPixelPerGLUnit();
   mZoomFactor = iCam.getZoom();
   
   return *this;
@@ -138,17 +187,28 @@ Point3d Camera::pixelToGL( int iX, int iY ) const
   int* viewport = new int[4];
   glGetIntegerv( GL_VIEWPORT, viewport );
   
-  //le coté le plus long montre la valeur mVisibleGLUnit unité GL
-  int windowLongSide = qMax( viewport[2], viewport[3] );
-
-  double onePixelInGLUnit = 1 * mVisibleGLUnit / windowLongSide;
+  int width = viewport[2];
+  int heigth = viewport[3];
   
-  //on va faire un point sur un plan parallele au plan de projection de la
-  //camera.
-  Vector3d x = getLat() * iX * onePixelInGLUnit;
-  Vector3d y = getUp() * iY * onePixelInGLUnit;
-  Vector3d result = x + y;
-  return Point3d( result.getX(), result.getY(), result.getZ() );
+  Point3d result = getPos() - ( getLat() * (width/2.0) / mPixelPerGLUnit ) + 
+    ( getUp() * (heigth/2.0) / mPixelPerGLUnit ) +
+    getLat() * iX / mPixelPerGLUnit +
+    getUp() * iY / mPixelPerGLUnit;
+  
+//  std::cout<<"x: "<<iX<<" y: "<<iY<<std::endl;
+//  result.print();
+  
+  return result;
+}
+
+//-----------------------------------------------------------------------------
+Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY ) const
+{
+  Vector3d result =
+    getLat() * iDeltaX / mPixelPerGLUnit +
+    getUp() * iDeltaY / mPixelPerGLUnit;
+  
+  return result;
 }
 
 //-----------------------------------------------------------------------------
@@ -156,11 +216,12 @@ void Camera::projectionGL( int iWidth, int iHeight ) const
 {
   bool horiz = iWidth >= iHeight;
   
-  //le coté le plus long montre la valeur mVisibleGLUnit unité GL
+  //le cot√© le plus long montre la valeur mVisibleGLUnit unit√© GL
   int windowShortSide = qMin(iWidth, iHeight);
   int windowLongSide = qMax(iWidth, iHeight);
   
-  float projectionLongSide = mVisibleGLUnit * mZoomFactor;
+  float projectionLongSide = getVisibleGLUnit();
+  mPixelPerGLUnit = windowLongSide / projectionLongSide;
   float projectionShortSide = windowShortSide * projectionLongSide / windowLongSide; 
   
   //puisque le viewport est de -projectionLongSide a projectionLongSide et
@@ -233,6 +294,20 @@ void Camera::set( const Point3d& iPos,
   mUp = iUp;
   
   computeLatAndUp();
+}
+
+//-----------------------------------------------------------------------------
+void Camera::setLat( const Vector3d& iLat )
+{
+  //TODO: cette fonction n'est pas vraiment testée...
+  mLat = iLat;
+  mLat.normalise();
+  
+  mUp = ( mLat ^ Vector3d( getPos(), getLook() ) ).normalise();
+  //on ne doit pas utiliser computeLatAndUp parce que cette
+  //derniere recalcule le vecteur Lat basé sur le Up... étant donné
+  //que c'est le vecteur Lat qu'on désire setter on ne veut pas l'écraser
+  //avec les valeures calculées par computeLatAndUp
 }
 
 //-----------------------------------------------------------------------------
