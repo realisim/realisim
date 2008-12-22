@@ -31,12 +31,17 @@ void DefaultInputHandler::mouseMoveEvent( QMouseEvent* e )
     int deltaX = e->x() - mMousePosX;
     int deltaY = e->y() - mMousePosY;
     
+    //on met un - devant le deltaY parce que le systeme de fenetrage QT
+    //a laxe Y vers le bas et notre systeme de fenetrage GL a l'axe y vers le
+    //haut.
+    Vector3d delta = mCam.pixelDeltaToGLDelta( deltaX, -deltaY );
+    
     //On met un - devant le delta pour donner l'impression qu'on ne 
     //déplace pas la camera, mais le model. Si on ne mettait pas de -,
     //la caméra se déplacerait en suivant la souris et ce qu'on voit a l'écran
     //s'en irait dans le sens contraire de la souris. En mettant le - on
     //donne l'impression de déplacer le contenu de l'écran.
-    mCam.move( deltaX, deltaY );
+    mCam.move( -delta );
   }
   
   mMousePosX = e->x();

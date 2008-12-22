@@ -9,6 +9,7 @@
 #define POINT_H
 
 #include "MathDef.h"
+#include <iostream>
 
 //!-----------------------------------------------------------------------------
 //! \brief Classe gÈrant les fonctionalitÈs associÈes a un point
@@ -52,6 +53,7 @@ namespace Realisim
     inline U dist(const Point &point) const;
     inline U distSqr(const Point &point) const;
     inline U fastDist(const Point &point) const;
+    inline void print() const;
 
     // --------------- Overload: operateurs ------------------------------------
     inline bool  operator== (const Point &point) const;
@@ -339,6 +341,13 @@ namespace Realisim
 
     return( max + (11.0/32.0)*med + (1.0/4.0)*min );
   }
+  
+  template<class U>
+  inline void Point<U>::print() const
+  {
+    std::cout<<getX()<<" "<<getY()<<" "<<getZ()<<std::endl;
+  }
+  
 
   //! surcharge opÈrateur = Point
   template<class U>

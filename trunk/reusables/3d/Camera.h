@@ -32,31 +32,36 @@ public:
   const Vector3d& getUp() const { return mUp; }
   const double getZoom() const { return mZoomFactor; }
   
+  //appel de la fonction gluLookAt...
   void lookAt();
   
   //déplace la caméra
-  //les paramètres sont en pixel
-  void move( int iDeltaX, int iDeltaY );
+  //le delta est en coord GL
+  void move( Vector3d iDelta );
   
   Camera& operator=( const Camera& iCam );
   
+  //Les paramètres sont en pixels
   Point3d pixelToGL( int iX, int iY ) const;
+  //Les paramètres sont en pixels
+  Vector3d pixelDeltaToGLDelta( int iDeltaX, int iDeltaY ) const;
+  
   void projectionGL( int iWidth, int iHeight ) const;
   
   void set( const Point3d& iPos,
             const Point3d& iLook,
             const Vector3d& iUp );
   
+  void setLat( const Vector3d& iLat );
   void setLook( const Point3d& iLook );
   void setMode( Mode iMode );
   void setPos( const Point3d& iPos );
   void setUp( const Vector3d& iUp );
   
 protected:
-private:
   void computeLatAndUp();
-  const double getVisibleGLUnit() const { return mVisibleGLUnit; }
-
+  const double getPixelPerGLUnit() const { return mPixelPerGLUnit; }
+  const double getVisibleGLUnit() const { return mVisibleGLUnit * mZoomFactor; }
   
   Mode mMode;
   
@@ -72,6 +77,9 @@ private:
   //peut zoomer ou dezoomer. Plus le chiffre est gros plus on voit de la 
   //scene donc moins on est zoomé.
   double mVisibleGLUnit;
+  
+  //le rapport entre les pixel d'écran et les unité GL
+  double mutable mPixelPerGLUnit;
   
   double mZoomFactor;
 };
