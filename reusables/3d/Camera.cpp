@@ -106,10 +106,12 @@ void Camera::move( Vector3d iDelta )
       //Le vecteur iDelta est un vecteur qui est dans le plan Lat-Up
       //On projecte le vecteur iDelta sur chacune des composentes du plan
       //afin de déterminer l'angle de ratation pour chaque axe
-      Vector3d projDeltaOnLat = getLat() * ( getLat() & iDelta );
-      Vector3d projDeltaOnUp = getUp() * ( getUp() & iDelta );
       
-      //ROTATION PAR RAPPORT AU VECTEUR UP
+      //La projection sur l'axe laterale reprentera la rotation par rapport
+      //a l'axe vertical (y) de la base
+      Vector3d projDeltaOnLat = getLat() * ( getLat() & iDelta );
+      
+      //ROTATION PAR RAPPORT A LA COMPOSANTE Y DE LA TRANSFO DE LA CAMERA
       double angle1 = projDeltaOnLat.norm() * DEUX_PI / getVisibleGLUnit();
             
       //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
@@ -121,42 +123,74 @@ void Camera::move( Vector3d iDelta )
         angle1 *= -1;
       }
       
+      //TODO: remplacer le vecteur hardcoder par la composante
+      //y de la transfo de la camera
+      Vector3d upRotAxis( 0.0, 1.0, 0.0 );
+      
       //on effectur la rotation autour de l'axe Up
       Point3d newPos = 
         rotatePoint( angle1,
-                     getPos(),
-                     getUp(),
+                  getPos(),
+                  upRotAxis,
+                  getLook() );
+      
+      //on calcul le nouveau vecteur lateral. Ceci permet de controler un des
+      //axes de la camera. Ceci empêche la caméra de basculer sur les cotés
+      //ce qui donne comme effet que la caméra garde la tête droite. En controlant
+      //le vecteur latéral, on controle aussi le vecteur up.
+      
+      //un point a l'extrémité du vecteur latéral
+      Point3d latPos = getPos() + getLat();
+      //on le fait tourner
+      latPos = 
+        rotatePoint( angle1,
+                     latPos,
+                     upRotAxis,
                      getLook() );
       
+      //on crée le nouveau vecteur latérale
+      Vector3d newLat( newPos, latPos ); 
+      
+      //on projete le nouveau vecteur latérale sur la composante x et z de
+      //la transfo, ce qui a pour effet de garder la caméra stable. On ne peut
+      //pas directement seter le vecteur up parce que ce dernier varie dans 2
+      //plan distincts
+      
+      //TODO: chnager les vecteur x et z hardcoder pour les composantes de
+      //x et z de la transfo
+      Vector3d x( 1.0, 0.0, 0.0 );
+      Vector3d z( 0.0, 0.0, 1.0 );
+      Vector3d projLatOnX = x * ( x & newLat );
+      Vector3d projLatOnZ = z * ( z & newLat );
+      Vector3d projXZ = projLatOnX + projLatOnZ;
+      setLat( projXZ );
+ 
       
       //ROTATION PAR RAPPORT AU VECTEUR LAT
+      //La projection de iDelta sur l'axe Up représente la rotation autour
+      //de l'axe latérale
+      Vector3d projDeltaOnUp = getUp() * ( getUp() & iDelta );
+
       double angle2 = projDeltaOnUp.norm() * DEUX_PI / getVisibleGLUnit() * -1;
             
+      //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
+      //est dans le même sens que ce dernier ou non... Si ce n'est pas le
+      //cas, on change la direction de l'angle.
       if( ( projDeltaOnUp + ( getUp() * projDeltaOnUp.norm() ) ) ==
          Vector3d(0.0, 0.0, 0.0) )
       {
         angle2 *= -1;
       }
-      
-      //on effectue la rotation par rapport a l'axe Latérale
+
+      //On effectue la rotation autour de l'axe latérale
       newPos =
         rotatePoint( angle2,
                      newPos,
                      getLat(),
                      getLook() );
       
-      //On force le vecteur UP a etre parallele a l'axe Y. Cette technique
-      //facilite beaucoup l'usage de la caméra      
-      setUp( Vector3d( 0.0, getUp().getY() ? getUp().getY():1.0, 0.0 ) );
-      
-      setPos( newPos );
-      
-//      Vector3d up( 0.0, getUp().getY(), 0.0 );
-//      if ( getUp().getY() >= 0.0 && getUp().getY() <= 0.009 )
-//      {
-//        up.set( getUp() );
-//      }
-//      setUp( up );
+      //on applique la nouvelle position.
+      mPos = newPos;
     }
       break;
       

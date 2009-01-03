@@ -25,7 +25,7 @@ namespace Realisim
     inline Vect();
     inline Vect(const T &val);
     inline Vect(const T &x, const T &y, const T &z);
-    inline Vect(const Vect &vect);
+    inline Vect(const Vect<T> &vect);
     
     template<class U>
     inline Vect(const Point<U> &pt1, const Point<U> &pt2);
@@ -34,7 +34,7 @@ namespace Realisim
     virtual ~Vect();
     
     // --------------- fonction set --------------------------------------------
-    inline void set(const Vect &vect);
+    inline void set(const Vect<T> &vect);
     inline void set(const T &val);
     inline void setX(const T &x);
     inline void setY(const T &y);
@@ -48,7 +48,7 @@ namespace Realisim
     inline T getX() const;
     inline T getY() const;
     inline T getZ() const;
-    inline void get(Vect &vect) const;
+    inline void get(Vect<T> &vect) const;
     inline void getXYZ(T &x, T &y, T &z) const;
     
     // --------------- fonction utiles -----------------------------------------
@@ -57,19 +57,19 @@ namespace Realisim
     inline T fastNorm() const;
     
     // --------------- Overload: operateurs unitaires --------------------------
-    inline bool operator== (const Vect &vect) const;
-    inline Vect<T>&  operator=  (const Vect &vect);
+    inline bool operator== (const Vect<T> &vect) const;
+    inline Vect<T>&  operator=  (const Vect<T> &vect);
     inline Vect<T>&  operator=  (const T &val);
     
-    inline Vect<T>  operator+  (const Vect &vect) const;
+    inline Vect<T>  operator+  (const Vect<T> &vect) const;
     inline Vect<T>  operator+  (const T &val) const;
-    inline Vect<T>& operator+= (const Vect &vect);
+    inline Vect<T>& operator+= (const Vect<T> &vect);
     inline Vect<T>& operator+= (const T &val);
     
-    inline Vect<T>  operator-  (const Vect &vect) const;
+    inline Vect<T>  operator-  (const Vect<T> &vect) const;
     inline Vect<T>  operator-  (const T &val) const;
     inline Vect<T>& operator-  ();
-    inline Vect<T>& operator-= (const Vect &vect);
+    inline Vect<T>& operator-= (const Vect<T> &vect);
     inline Vect<T>& operator-= (const T &val);
     
     inline Vect<T>  operator*  (const T &val) const;
@@ -80,10 +80,10 @@ namespace Realisim
     inline Vect<T>& operator/= (const T &val);  
   
     // -------------- Overload: produit vectoriel ------------------------------
-    inline Vect<T>  operator^  (const Vect &vect) const;
+    inline Vect<T>  operator^  (const Vect<T> &vect) const;
     
     // -------------- Overload: produit scalaire -------------------------------
-    inline T          operator&  (const Vect &vect) const;
+    inline T          operator&  (const Vect<T> &vect) const;
     
   protected:
   private:
@@ -138,7 +138,7 @@ namespace Realisim
   
   //! constructeur copie
   template<class T>
-  inline Vect<T>::Vect(const Vect &vect)
+  inline Vect<T>::Vect(const Vect<T> &vect)
   {
     x_=vect.x_;
     y_=vect.y_;
@@ -180,7 +180,7 @@ namespace Realisim
   //! \param &vect
   //!---------------------------------------------------------------------------
   template<class T>
-  inline void Vect<T>::set(const Vect &vect)
+  inline void Vect<T>::set(const Vect<T> &vect)
   {
     x_=vect.x_;
     y_=vect.y_;
@@ -270,7 +270,7 @@ namespace Realisim
   //! \param &vecteur Le vecteur qui va etre comme le celui que l'on veut
   //!---------------------------------------------------------------------------
   template<class T>
-  inline void Vect<T>::get(Vect &vect) const
+  inline void Vect<T>::get(Vect<T> &vect) const
   {
     vect.x_=x_;
     vect.y_=y_;
@@ -385,7 +385,7 @@ namespace Realisim
   
   //! surcharge opÈrateur ==
   template<class T>
-  inline bool Vect<T>::operator== (const Vect &vect) const
+  inline bool Vect<T>::operator== (const Vect<T> &vect) const
   {
     T dx = x_ - vect.x_;
     T dy = y_ - vect.y_;
@@ -406,7 +406,7 @@ namespace Realisim
   
   //! surcharge opÈrateur = Vect
   template<class T>
-  inline Vect<T>& Vect<T>::operator= (const Vect &vect)
+  inline Vect<T>& Vect<T>::operator= (const Vect<T> &vect)
   {
     x_=vect.x_;
     y_=vect.y_;
@@ -426,7 +426,7 @@ namespace Realisim
     
   //! surcharge opÈrateur + avec un vecteur
   template<class T>
-  inline Vect<T> Vect<T>::operator+ (const Vect &vect) const
+  inline Vect<T> Vect<T>::operator+ (const Vect<T> &vect) const
   {
     Vect<T> vectResult;
     
@@ -452,7 +452,7 @@ namespace Realisim
   
   //! surcharge opÈrateur += avec un vecteur
   template<class T>
-  inline Vect<T>& Vect<T>::operator+= (const Vect &vect)
+  inline Vect<T>& Vect<T>::operator+= (const Vect<T> &vect)
   {
     x_+=vect.x_;
     y_+=vect.y_;
@@ -472,7 +472,7 @@ namespace Realisim
   
   //! surcharge opÈrateur - avec un vecteur
   template<class T>  
-  inline Vect<T> Vect<T>::operator- (const Vect &vect) const
+  inline Vect<T> Vect<T>::operator- (const Vect<T> &vect) const
   {
     Vect<T> vectResult;
     
@@ -509,7 +509,7 @@ namespace Realisim
   
   //! surcharge opÈrateur -= avec un vecteur
   template<class T>
-  inline Vect<T>& Vect<T>::operator-= (const Vect &vect)
+  inline Vect<T>& Vect<T>::operator-= (const Vect<T> &vect)
   {
     x_-=vect.x_;
     y_-=vect.y_;
@@ -589,7 +589,7 @@ namespace Realisim
   
   //! Overload: produit vectoriel
   template<class T>
-  inline Vect<T> Vect<T>::operator^ (const Vect &vect) const
+  inline Vect<T> Vect<T>::operator^ (const Vect<T> &vect) const
   {
     Vect<T> vectResult;
     
@@ -602,7 +602,7 @@ namespace Realisim
     
   //! Overload: produit scalaire
   template<class T>
-  inline T Vect<T>::operator& (const Vect &vect) const
+  inline T Vect<T>::operator& (const Vect<T> &vect) const
   {
     T res = x_*vect.x_ + y_*vect.y_ + z_*vect.z_;
     return res;
