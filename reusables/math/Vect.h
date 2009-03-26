@@ -25,10 +25,8 @@ namespace Realisim
     inline Vect();
     inline Vect(const T &val);
     inline Vect(const T &x, const T &y, const T &z);
-    inline Vect(const Vect<T> &vect);
-    
-    template<class U>
-    inline Vect(const Point<U> &pt1, const Point<U> &pt2);
+    inline Vect(const Vect<T> &vect);    
+    inline Vect(const Point<T> &pt1, const Point<T> &pt2);
     
     // --------------- destructeurs --------------------------------------------
     virtual ~Vect();
@@ -39,10 +37,10 @@ namespace Realisim
     inline void setX(const T &x);
     inline void setY(const T &y);
     inline void setZ(const T &z);
-    inline void setXYZ(const T &x, const T &y, const T &z);
+    inline void setXYZ(const T &x, const T &y, const T &z);    
+    inline void set(const Point<T> &pt1, const Point<T> &pt2);
     
-    template<class U>
-    inline void set(const Point<U> &pt1, const Point<U> &pt2);
+    inline Point<T> toPoint() const;
     
     // --------------- fonction get --------------------------------------------
     inline T getX() const;
@@ -74,7 +72,6 @@ namespace Realisim
     
     inline Vect<T>  operator*  (const T &val) const;
     inline Vect<T>& operator*= (const T &val);
-    //inline  Vect&  operator*= (const Matrix&) ; TODO ???
     
     inline Vect<T>  operator/  (const T &val) const;
     inline Vect<T>& operator/= (const T &val);  
@@ -149,19 +146,14 @@ namespace Realisim
   //! \brief  Constructeur avec parametres.
   //!
   //! Construit un objet de type \c Vect a partir de 2 points.
-  //! 1--------2  vecteur = 2 - 1
+  //! 1--------->2  vecteur = 2 - 1
   //! 
   //! \param &pt1 le premier point
   //! \param &pt2 le deuxieme point
   //!---------------------------------------------------------------------------
   template<class T>
-  template<class U>
-  inline Vect<T>::Vect(const Point<U> &pt1, const Point<U> &pt2)
+  inline Vect<T>::Vect(const Point<T> &pt1, const Point<T> &pt2)
   {
-    //x_ = (T)(pt2.getX() - pt1.getX());
-    //y_ = (T)(pt2.getY() - pt1.getY());
-    //z_ = (T)(pt2.getZ() - pt1.getZ());
-
     set(pt1, pt2);
   }
   
@@ -252,14 +244,30 @@ namespace Realisim
     z_=z;
   }
   
-  //! fonction permettant de setter un vecteur avec 2 points
+  //!---------------------------------------------------------------------------
+  //! \brief  Constructeur avec parametres.
+  //!
+  //! Construit un objet de type \c Vect a partir de 2 points.
+  //! 1--------->2  vecteur = 2 - 1
+  //! 
+  //! \param &pt1 le premier point
+  //! \param &pt2 le deuxieme point
+  //!---------------------------------------------------------------------------
   template<class T>
-  template<class U>
-  inline void Vect<T>::set(const Point<U> &pt1, const Point<U> &pt2)
+  inline void Vect<T>::set(const Point<T> &pt1, const Point<T> &pt2)
   {
-    x_ = (T)(pt2.getX() - pt1.getX());
-    y_ = (T)(pt2.getY() - pt1.getY());
-    z_ = (T)(pt2.getZ() - pt1.getZ());
+    x_ = (pt2.getX() - pt1.getX());
+    y_ = (pt2.getY() - pt1.getY());
+    z_ = (pt2.getZ() - pt1.getZ());
+  }
+  
+  //!---------------------------------------------------------------------------
+  //! \brief  Convertit un vecteur en point
+  //!---------------------------------------------------------------------------
+  template<class T>
+  inline Point<T> Vect<T>::toPoint() const
+  {
+    return Point<T>( getX(), getY(), getZ() );
   }
   
   //!---------------------------------------------------------------------------
@@ -527,6 +535,7 @@ namespace Realisim
     return *this;
   }
     
+  //----------------------------------------------------------------------------
   //! surcharge opÈrateur * avec T
   template<class T>
   inline Vect<T> Vect<T>::operator* (const T &val) const
@@ -540,6 +549,7 @@ namespace Realisim
     return vect;
   }
   
+  //----------------------------------------------------------------------------
   //! surcharge opÈrateur *= avec T
   template<class T>
   inline Vect<T>& Vect<T>::operator*= (const T &val)
@@ -550,6 +560,18 @@ namespace Realisim
     return *this;
   }
   
+  //----------------------------------------------------------------------------
+//  template<class T>
+//  inline Vect<T> Vect<T>::operator* (const Matrix4<T>& iMat) const
+//  {
+//    Vect<T> vect;
+//    vect.setX( x_ * iMat[0][0] + y_ * iMat[1][0] + z_ * iMat[2][0] );
+//    vect.setY( x_ * iMat[0][1] + y_ * iMat[1][1] + z_ * iMat[2][1] );
+//    vect.setZ( x_ * iMat[0][2] + y_ * iMat[1][2] + z_ * iMat[2][2] );
+//    return vect;
+//  }
+  
+  //----------------------------------------------------------------------------
   //! surcharge opÈrateur / avec T
   template<class T>  
   inline Vect<T> Vect<T>::operator/ (const T &val) const

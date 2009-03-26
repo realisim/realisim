@@ -27,12 +27,13 @@ public:
               const EditionData& iEditionData );
   ~RealEdit3d();
   
+  void currentNodeChanged();
   virtual void paintGL();
   void initDisplayList();
 
 private:
-  void drawCube();
-  void drawScene( const RealEdit::ObjectNode* iObjectNode );
+  void drawCube() const;
+  void drawScene( const RealEdit::ObjectNode* iObjectNode ) const;
 
   
   

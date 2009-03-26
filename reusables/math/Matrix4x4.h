@@ -7,6 +7,9 @@
 #ifndef MATRIX_4_H
 #define MATRIX_4_H
 
+#include "Point.h"
+#include "Vect.h"
+#include <vector>
 #include <iostream>
 
 //!-----------------------------------------------------------------------------
@@ -35,42 +38,14 @@ namespace Realisim
     inline void setRow2(const T &a21, const T &a22, const T &a23, const T &a24);
     inline void setRow3(const T &a31, const T &a32, const T &a33, const T &a34);
     inline void setRow4(const T &a41, const T &a42, const T &a43, const T &a44);
-
-    inline void setColumn1(const T &a11, const T &a21,
-                           const T &a31, const T &a41);
-    inline void setColumn2(const T &a12, const T &a22,
-                           const T &a32, const T &a42);
-    inline void setColumn3(const T &a13, const T &a23,
-                           const T &a33, const T &a43);
-    inline void setColumn4(const T &a14, const T &a24,
-                           const T &a34, const T &a44);
-
-    inline void setRow1_3(const T &a11, const T &a12, const T &a13);
-    inline void setRow2_3(const T &a21, const T &a22, const T &a23);
-    inline void setRow3_3(const T &a31, const T &a32, const T &a33);
-
-    inline void setColumn1_3(const T &a11, const T &a21, const T &a31);
-    inline void setColumn2_3(const T &a12, const T &a22, const T &a32);
-    inline void setColumn3_3(const T &a13, const T &a23, const T &a33);
+    
+    inline void setTranslation( const Point<T>& iTrans );
 
     // --------------- fonction get --------------------------------------------
-    inline void getRow1(T &a11, T &a12, T &a13, T &a14) const;
-    inline void getRow2(T &a21, T &a22, T &a23, T &a24) const;
-    inline void getRow3(T &a31, T &a32, T &a33, T &a34) const;
-    inline void getRow4(T &a41, T &a42, T &a43, T &a44) const;
-
-    inline void getColumn1(T &a11, T &a21, T &a31, T &a41) const;
-    inline void getColumn2(T &a12, T &a22, T &a32, T &a42) const;
-    inline void getColumn3(T &a13, T &a23, T &a33, T &a43) const;
-    inline void getColumn4(T &a14, T &a24, T &a34, T &a44) const;
-
-    inline void getRow1_3(T &a11, T &a12, T &a13) const;
-    inline void getRow2_3(T &a21, T &a22, T &a23) const;
-    inline void getRow3_3(T &a31, T &a32, T &a33) const;
-
-    inline void getColumn1_3(T &a11, T &a21, T &a31) const;
-    inline void getColumn2_3(T &a12, T &a22, T &a32) const;
-    inline void getColumn3_3(T &a13, T &a23, T &a33) const;
+    inline Vect<T> getBaseX() const;
+    inline Vect<T> getBaseY() const;
+    inline Vect<T> getBaseZ() const;
+    inline Point<T> getTranslation() const;
 
     // --------------- fonction utiles -----------------------------------------
     inline void multEquMat3(const Matrix4 &matrix);
@@ -88,7 +63,9 @@ namespace Realisim
     inline Matrix4<T>& operator-= (const Matrix4 &matrix);
 
     inline Matrix4<T>  operator*  (const Matrix4 &matrix) const;
-    inline Matrix4<T>& operator*= (const Matrix4 &matrix);
+    inline void operator*= (const Matrix4 &matrix);
+    
+    inline const std::vector<T> operator[] ( unsigned int iIndex ) const;
 
   protected:
   private:
@@ -100,8 +77,7 @@ namespace Realisim
   template<class T>
   inline Matrix4<T>::Matrix4()
   {
-    // TODO utile? memset
-    memset( (void*)mat_, 0, 16*sizeof(T) );
+    loadIdentity();
   }
 
   //! constructeur avec parametre
@@ -162,177 +138,40 @@ namespace Realisim
   {
     mat_[12] = a41; mat_[13] = a42; mat_[14] = a43; mat_[15] = a44;
   }
-
-  //! permet de setter la 1er colonne
+  
+  //! permet de setter la 4e ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
-  inline void Matrix4<T>::setColumn1(const T &a11, const T &a21, const T &a31,
-    const T &a41)
+  inline void Matrix4<T>::setTranslation(const Point<T>& iTrans)
   {
-    mat_[0] = a11; mat_[4] = a21; mat_[8] = a31; mat_[12] = a41;
-  }
-
-  //! permet de setter la 2e colonne
-  template<class T>
-  inline void Matrix4<T>::setColumn2(const T &a12, const T &a22, const T &a32,
-    const T &a42)
-  {
-    mat_[1] = a12; mat_[5] = a22; mat_[9] = a32; mat_[13] = a42;
-  }
-
-  //! permet de setter la 3e colonne
-  template<class T>
-  inline void Matrix4<T>::setColumn3(const T &a13, const T &a23, const T &a33,
-    const T &a43)
-  {
-    mat_[2] = a13; mat_[6] = a23; mat_[10] = a33; mat_[14] = a43;
-  }
-
-  //! permet de setter la 4e colonne
-  template<class T>
-  inline void Matrix4<T>::setColumn4(const T &a14, const T &a24, const T &a34,
-    const T &a44)
-  {
-    mat_[3] = a14; mat_[7] = a24; mat_[11] = a34; mat_[15] = a44;
-  }
-
-  //! permet de setter la 1er ligne de la sous matrice 3x3 ("coin" sup gauche)
-  template<class T>
-  inline void Matrix4<T>::setRow1_3(const T &a11, const T &a12, const T &a13)
-  {
-    mat_[0] = a11; mat_[1] = a12; mat_[2] = a13;
-  }
-
-  //! permet de setter la 2e ligne de la sous matrice 3x3 ("coin" sup gauche)
-  template<class T>
-  inline void Matrix4<T>::setRow2_3(const T &a21, const T &a22, const T &a23)
-  {
-    mat_[4] = a21; mat_[5] = a22; mat_[6] = a23;
-  }
-
-  //! permet de setter la 3e ligne de la sous matrice 3x3 ("coin" sup gauche)
-  template<class T>
-  inline void Matrix4<T>::setRow3_3(const T &a31, const T &a32, const T &a33)
-  {
-    mat_[8] = a31; mat_[9] = a32; mat_[10] = a33;
-  }
-
-  //! permet de setter la 1er colonne de la sous matrice 3x3 ("coin" sup gauche)
-  template<class T>
-  inline void Matrix4<T>::setColumn1_3(const T &a11, const T &a21, const T &a31)
-  {
-    mat_[0] = a11; mat_[4] = a21; mat_[8] = a31;
-  }
-
-  //! permet de setter la 2e colonne de la sous matrice 3x3 ("coin" sup gauche)
-  template<class T>
-  inline void Matrix4<T>::setColumn2_3(const T &a12, const T &a22, const T &a32)
-  {
-    mat_[1] = a12; mat_[5] = a22; mat_[9] = a32;
-  }
-
-  //! permet de setter la 3e colonne de la sous matrice 3x3 ("coin" sup gauche)
-  template<class T>
-  inline void Matrix4<T>::setColumn3_3(const T &a13, const T &a23, const T &a33)
-  {
-    mat_[2] = a13; mat_[6] = a23; mat_[10] = a33;
-  }
-
-  //! permet d'obtenir la 1er ligne
-  template<class T>
-  inline void Matrix4<T>::getRow1(T &a11, T &a12, T &a13, T &a14) const
-  {
-    a11 = mat_[0]; a12 = mat_[1]; a13 = mat_[2]; a14 = mat_[3];
-  }
-
-  //! permet d'obtenir la 2e ligne
-  template<class T>
-  inline void Matrix4<T>::getRow2(T &a21, T &a22, T &a23, T &a24) const
-  {
-    a21 = mat_[4]; a22 = mat_[5]; a23 = mat_[6]; a24 = mat_[7];
-  }
-
-  //! permet d'obtenir la 3e ligne
-  template<class T>
-  inline void Matrix4<T>::getRow3(T &a31, T &a32, T &a33, T &a34) const
-  {
-    a31 = mat_[8]; a32 = mat_[9]; a33 = mat_[10]; a34 = mat_[11];
-  }
-
-  //! permet d'obtenir la 4e ligne
-  template<class T>
-  inline void Matrix4<T>::getRow4(T &a41, T &a42, T &a43, T &a44) const
-  {
-    a41 = mat_[12]; a42 = mat_[13]; a43 = mat_[14]; a44 = mat_[15];
-  }
-
-  //! permet d'obtenir la 1er colonne
-  template<class T>
-  inline void Matrix4<T>::getColumn1(T &a11, T &a21, T &a31, T &a41) const
-  {
-    a11 = mat_[0]; a21 = mat_[4]; a31 = mat_[8]; a41 = mat_[12];
-  }
-
-  //! permet d'obtenir la 2e colonne
-  template<class T>
-  inline void Matrix4<T>::getColumn2(T &a12, T &a22, T &a32, T &a42) const
-  {
-    a12 = mat_[1]; a22 = mat_[5]; a32 = mat_[9]; a42 = mat_[13];
-  }
-
-  //! permet d'obtenir la 3e colonne
-  template<class T>
-  inline void Matrix4<T>::getColumn3(T &a13, T &a23, T &a33, T &a43) const
-  {
-    a13 = mat_[2]; a23 = mat_[6]; a33 = mat_[10]; a43 = mat_[14];
-  }
-
-  //! permet d'obtenir la 4e colonne
-  template<class T>
-  inline void Matrix4<T>::getColumn4(T &a14, T &a24, T &a34, T &a44) const
-  {
-    a14 = mat_[3]; a24 = mat_[7]; a34 = mat_[11]; a44 = mat_[15];
+    mat_[12] = iTrans.getX(); mat_[13] = iTrans.getY(); mat_[14] = iTrans.getZ();
   }
 
   //! permet d'obtenir la 1er ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
-  inline void Matrix4<T>::getRow1_3(T &a11, T &a12, T &a13) const
+  inline Vect<T> Matrix4<T>::getBaseX() const
   {
-    a11 = mat_[0]; a12 = mat_[1]; a13 = mat_[2];
+    return Vect<T>( mat_[0], mat_[1], mat_[2]);
   }
 
   //! permet d'obtenir la 2e ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
-  inline void Matrix4<T>::getRow2_3(T &a21, T &a22, T &a23) const
+  inline Vect<T> Matrix4<T>::getBaseY() const
   {
-    a21 = mat_[4]; a22 = mat_[5]; a23 = mat_[6];
+    return Vect<T>( mat_[4], mat_[5], mat_[6]);
   }
 
   //! permet d'obtenir la 3e ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
-  inline void Matrix4<T>::getRow3_3(T &a31, T &a32, T &a33) const
+  inline Vect<T> Matrix4<T>::getBaseZ() const
   {
-    a31 = mat_[8]; a32 = mat_[9]; a33 = mat_[10];
+   return Vect<T>( mat_[8], mat_[9], mat_[10]);
   }
-
-  //! permet d'obtenir la 1er colonne de la sous matrice 3x3 ("coin" sup gauche)
+  
+  //! permet d'obtenir la 3e ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
-  inline void Matrix4<T>::getColumn1_3(T &a11, T &a21, T &a31) const
+  inline Point<T> Matrix4<T>::getTranslation() const
   {
-    a11 = mat_[0]; a21 = mat_[4]; a31 = mat_[8];
-  }
-
-  //! permet d'obtenir la 2e colonne de la sous matrice 3x3 ("coin" sup gauche)
-  template<class T>
-  inline void Matrix4<T>::getColumn2_3(T &a12, T &a22, T &a32) const
-  {
-    a12 = mat_[1]; a22 = mat_[5]; a32 = mat_[9];
-  }
-
-  //! permet d'obtenir la 3e colonne de la sous matrice 3x3 ("coin" sup gauche)
-  template<class T>
-  inline void Matrix4<T>::getColumn3_3(T &a13, T &a23, T &a33) const
-  {
-    a13 = mat_[2]; a23 = mat_[6]; a33 = mat_[10];
+    return Point<T>( mat_[12], mat_[13], mat_[14]);
   }
 
   template<class T>
@@ -458,8 +297,28 @@ namespace Realisim
 
   //! TODO surchage operateur *=
   template<class T>
-  inline Matrix4<T>& Matrix4<T>::operator*= (const Matrix4 &matrix)
+  inline void Matrix4<T>::operator*= (const Matrix4 &matrix)
   {
+    *this = *this * matrix;
+  }
+  
+  //----------------------------------------------------------------------------
+  //Retourne une rangé de la matrice. EX:
+  // matrice[2] => retourne la rangée 3 de la matrice.
+  // matrice[2][2] => retourne l'item 3,3 de la matrice ( ou mat_[10] ).
+  template<class T>
+  inline const std::vector<T>
+  Matrix4<T>::operator[] ( unsigned int iIndex ) const
+  {
+    assert( iIndex < 4 );
+    std::vector<T> subVector;
+    
+    for( unsigned int i = 0; i < 4; ++i )
+    {
+      subVector.push_back( mat_[ iIndex*4 + i ] );
+    }
+    
+    return subVector;
   }
 
   typedef Matrix4<int>    Matrix4i;

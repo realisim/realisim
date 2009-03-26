@@ -64,6 +64,8 @@ namespace Realisim
     inline Point<U>      operator+  (const Point &point) const;
     inline Point<U>&     operator-= (const Point &point);
     inline Point<U>&     operator+= (const Point &point);
+    inline Point<U> operator*  (const U &val) const;
+    inline Point<U>& operator*= (const U &val);
   //   inline Point&        operator*= (const Point &point);
   //
   //   inline Point operator* (const Point &point) const;
@@ -413,7 +415,32 @@ namespace Realisim
 
     return *this;
   }
+  
+  //----------------------------------------------------------------------------
+  //! surcharge opÈrateur * avec T
+  template<class U>
+  inline Point<U> Point<U>::operator* (const U &val) const
+  {
+    Point<U> point;
+    
+    point.x_=x_*val;
+    point.y_=y_*val;
+    point.z_=z_*val;
+    
+    return point;
+  }
+  
+  //----------------------------------------------------------------------------
+  template<class U>
+  inline Point<U>& Point<U>::operator*= (const U &val)
+  {
+    x_*=val;
+    y_*=val;
+    z_*=val;
+    return *this;
+  }
 
+  //----------------------------------------------------------------------------
   template<class U>
   inline Point<U> Point<U>::operator- (const U &val) const
   {

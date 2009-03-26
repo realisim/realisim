@@ -52,16 +52,12 @@ public:
   ~EditionData();
   
   void addPoint( const Realisim::Point3f& iPoint );
-
-  //on ajoute un polygon en passant un vecteur de id de point
   void addPolygon( const std::vector<int>& iPoints );
-
   ObjectNode* addNode( const std::string iName );
-  
   const ObjectNode* getCurrentNode() const;
+  ObjectNode* getCurrentNode();
   const Scene& getScene() const;
   Scene& getScene();
-  
   void setCurrentNode( ObjectNode* ipNode );
   
 private:

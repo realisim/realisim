@@ -11,25 +11,33 @@
 #define RealEdit_ObjectNavigator_hh
 
 #include <QTreeWidget>
+#include <map>
 
 namespace RealEdit
 {
   class ObjectNavigator;
-  class EditionData;
+  class RealEditController;
   class ObjectNode;
 }
 
 class RealEdit::ObjectNavigator : public QTreeWidget
 {
+  Q_OBJECT
 public:
-  ObjectNavigator( QWidget* ipParent, const EditionData& iEditionData );
+  ObjectNavigator( QWidget* ipParent, RealEditController& iC );
   ~ObjectNavigator();
+  
+private slots:
+  void doItemChanged(QTreeWidgetItem* ipItem, QTreeWidgetItem* ipPreviousItem);
   
 private:
   template<class TreeItem>
-  void createTree( TreeItem ipItem, const ObjectNode* ipNode );
+  void createTree( TreeItem ipItem, ObjectNode* ipNode );
   
-  const EditionData& mEditionData;
+  RealEditController& mController;
+  
+  typedef std::map<QTreeWidgetItem*, ObjectNode*> TreeItemToNode;
+  TreeItemToNode mTreeItemToNode;
 };
 
 #endif RealEdit_ObjectNavigator_hh

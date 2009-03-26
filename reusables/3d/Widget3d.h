@@ -14,6 +14,7 @@
 #include "InputHandler.h"
 
 #include <map>
+#include <QTime>
 
 namespace Realisim { class Widget3d; }
 namespace Realisim { namespace Primitive3d { class Primitive3dBase; } }
@@ -32,8 +33,9 @@ public:
 
   const Camera& getCamera() const { return mCam; }
 
-  void setCamera( const Camera& iCam );
+  void setCamera( const Camera& iCam, bool iAnimate = true );
   void setCameraMode( Camera::Mode iMode );
+  void setCameraOrientation( Camera::Orientation iO );
   
 signals:
     void clicked();
@@ -57,11 +59,18 @@ protected:
   QSize sizeHint() const;
   
 protected:
+  virtual void timerEvent( QTimerEvent* ipE );
+
   Camera mCam;
+  Camera mOldCam; //used to interpolate camera during animation
+  Camera mNewCam; //used to interpolate camera during animation
 
   typedef std::map<int, Primitive3d::Primitive3dBase*> IdToPrimitiveMap;
   IdToPrimitiveMap mIdToPrimitiveMap;
+  
 private:  
+  QTime mAnimationTimer;
+  int mAnimationTimerId;
   InputHandler* mpInputHandler; //jamais null
   DefaultInputHandler mDefaultHandler;
 };

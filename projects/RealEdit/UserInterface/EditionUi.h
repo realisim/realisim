@@ -24,6 +24,8 @@ class RealEdit::EditionUi : public QMainWindow
 public:
 	EditionUi();
 	~EditionUi();
+  
+  void currentNodeChanged();
 
 protected:
 	
@@ -44,6 +46,7 @@ private:
   RealEdit3d* mpWidget3d_1;
   RealEdit3d* mpWidget3d_2;
   RealEdit3d* mpWidget3d_3;
+  RealEdit3d* mpWidget3d_4;
 
 	ObjectNavigator* mpObjectNavigator;
 };

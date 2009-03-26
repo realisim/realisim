@@ -14,10 +14,11 @@ using namespace RealEdit;
 
 EditionUi::EditionUi() 
 : QMainWindow()
-, mController()
+, mController( *this )
 , mpWidget3d_1( 0 )
 , mpWidget3d_2( 0 )
 , mpWidget3d_3( 0 )
+, mpWidget3d_4( 0 )
 , mpObjectNavigator( 0 )
 {	
 	resize(800, 600);
@@ -26,36 +27,29 @@ EditionUi::EditionUi()
 	
 	addMenuBar();
 	
-	QVBoxLayout* pVLyt = new QVBoxLayout( pMainFrame );
-  pVLyt->setSpacing( 2 );
+	QGridLayout* pGLyt = new QGridLayout( pMainFrame );
+  pGLyt->setSpacing( 1 );
 	
 	mpWidget3d_1 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
   mpWidget3d_1->setCameraMode( Camera::ORTHOGONAL );
-  Camera cam = mpWidget3d_1->getCamera();
-  cam.set( Point3d( 0, 0, 10 ),
-           Point3d( 0, 0, 0 ),
-           Vector3d( 0, 1, 0 ) );
-  mpWidget3d_1->setCamera( cam );
+  mpWidget3d_1->setCameraOrientation( Camera::XY );
   mpWidget3d_1->initDisplayList();
   
   mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
   mpWidget3d_2->setCameraMode( Camera::ORTHOGONAL );
-  Camera cam2 = mpWidget3d_2->getCamera();
-  cam2.set( Point3d( 0, 10, 0 ),
-           Point3d( 0, 0, 0 ),
-           Vector3d( 1, 0, 0 ) );
-  mpWidget3d_2->setCamera( cam2 );
+  mpWidget3d_2->setCameraOrientation( Camera::ZY );
   
 	mpWidget3d_3 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
-  Camera cam3 = mpWidget3d_3->getCamera();
-  cam3.set( Point3d( 10, 10, 10 ),
-            Point3d( 0, 0, 0 ),
-            Vector3d( 0, 1, 0 ) );
-  mpWidget3d_3->setCamera( cam3 );
+  mpWidget3d_3->setCameraMode( Camera::ORTHOGONAL );
+  mpWidget3d_3->setCameraOrientation( Camera::XZ );
+
+	mpWidget3d_4 = new RealEdit3d( this, mpWidget3d_1, mController.getEditionData() );
+  mpWidget3d_4->setCameraOrientation( Camera::FREE );
 	
-	pVLyt->addWidget( mpWidget3d_1 );
-	pVLyt->addWidget( mpWidget3d_2 );
-	pVLyt->addWidget( mpWidget3d_3 );
+	pGLyt->addWidget( mpWidget3d_1, 0, 0 );
+	pGLyt->addWidget( mpWidget3d_2, 0, 1 );
+	pGLyt->addWidget( mpWidget3d_3, 1, 0 );
+ 	pGLyt->addWidget( mpWidget3d_4, 1, 1 );
 	
 	//add the Object Navigator
 	addObjectNavigator();
@@ -68,6 +62,7 @@ EditionUi::~EditionUi()
 {
 }
 
+//------------------------------------------------------------------------------
 void
 EditionUi::addObjectNavigator()
 {
@@ -83,7 +78,7 @@ EditionUi::addObjectNavigator()
 	pDockWidget->setWidget( pFrame );
 	QVBoxLayout* vLyt = new QVBoxLayout( pFrame );
 	{
-		mpObjectNavigator = new ObjectNavigator( pFrame, mController.getEditionData() );
+		mpObjectNavigator = new ObjectNavigator( pFrame, mController );
 		
 		QFontMetrics dockWidgetFontMetric( pDockWidget->font() );
 		int a = dockWidgetFontMetric.width( pDockWidget->windowTitle() );
@@ -93,6 +88,7 @@ EditionUi::addObjectNavigator()
 	vLyt->addWidget( mpObjectNavigator );
 }
 
+//------------------------------------------------------------------------------
 void
 EditionUi::addMenuBar()
 {
@@ -107,6 +103,7 @@ EditionUi::addMenuBar()
 	
 }
 
+//------------------------------------------------------------------------------
 void
 EditionUi::createFileMenu( QMenuBar* ipMenuBar )
 {
@@ -122,12 +119,14 @@ EditionUi::createFileMenu( QMenuBar* ipMenuBar )
 //	pOpenProject->setShortcut( QKeySequence( Qt::CTRL + Qt::Key_O ) );
 }
 
+//------------------------------------------------------------------------------
 void
 EditionUi::createEditMenu( QMenuBar* ipMenuBar )
 {
 	QMenu* pEditMenu = ipMenuBar->addMenu( QObject::tr( "&Edit" ) );
 }
 
+//------------------------------------------------------------------------------
 void
 EditionUi::createToolMenu( QMenuBar* ipMenuBar )
 {
@@ -138,6 +137,16 @@ EditionUi::createToolMenu( QMenuBar* ipMenuBar )
 	QAction* pTools3 = pToolsMenu->addAction( "tool 3" );
 }
 
+//------------------------------------------------------------------------------
+void EditionUi::currentNodeChanged()
+{
+  mpWidget3d_1->currentNodeChanged();
+  mpWidget3d_2->currentNodeChanged();
+  mpWidget3d_3->currentNodeChanged();
+  mpWidget3d_4->currentNodeChanged();
+}
+
+//------------------------------------------------------------------------------
 void
 EditionUi::newProject()
 {

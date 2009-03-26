@@ -7,10 +7,16 @@
 ******************************************************************************/
 
 #include "Widget3d.h"
-
+#include "MathUtils.h"
 #include <QMouseEvent>
 
 using namespace Realisim;
+using namespace std;
+
+namespace
+{
+  const int kCameraAnimationTime = 1000; //ms
+}
 
 //-----------------------------------------------------------------------------
 Widget3d::Widget3d( QWidget* ipParent /*= 0*/,
@@ -18,6 +24,10 @@ Widget3d::Widget3d( QWidget* ipParent /*= 0*/,
                     Qt::WindowFlags  iFlags /*= 0*/ )
 : QGLWidget( ipParent, shareWidget, iFlags),
 mCam(),
+mOldCam(),
+mNewCam(),
+mAnimationTimer(),
+mAnimationTimerId(),
 mpInputHandler( 0 ),
 mDefaultHandler( mCam )
 {
@@ -110,9 +120,21 @@ Widget3d::paintGL()
   glLoadIdentity();
   
   //this should be replaced by a camera
-  mCam.lookAt();
-  //glTranslatef(0, 0, 10);
-  
+  Point3d absolutePos = mCam.getPos() * mCam.getTransformation();
+  absolutePos += mCam.getTransformation().getTranslation();
+  Point3d absoluteLook = mCam.getLook() * mCam.getTransformation();
+  absoluteLook += mCam.getTransformation().getTranslation();
+  Vector3d absoluteUp = mCam.getUp() * mCam.getTransformation();
+  gluLookAt( absolutePos.getX(),
+             absolutePos.getY(), 
+             absolutePos.getZ(),
+             absoluteLook.getX(),
+             absoluteLook.getY(),
+             absoluteLook.getZ(),
+             absoluteUp.getX(),
+             absoluteUp.getY(),
+             absoluteUp.getZ() );
+            
   //Ici on dessine les objets graphiques de la scene privée du widget.
   //drawPrivateScene();
 }
@@ -128,15 +150,37 @@ Widget3d::resizeGL(int iWidth, int iHeight)
 
 //-----------------------------------------------------------------------------
 void
-Widget3d::setCamera( const Camera& iCam )
+Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/ )
 {
-  mCam = iCam;
+  mOldCam = mCam;
+  mNewCam = iCam;
+  
+  if( iAnimate )
+  {
+    //we use a QTime to track animation time
+    mAnimationTimer.start();
+    //start a timer that will timeout as quick as possible which will trigger
+    //the overloaded method timerEvent( QTimerEvent* )
+    mAnimationTimerId = startTimer( 0 );
+  }
+  else
+  {
+    mCam = mNewCam;
+    updateGL();
+  }
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::setCameraMode( Camera::Mode iMode )
 {
   mCam.setMode( iMode );
+  updateGL();
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::setCameraOrientation( Camera::Orientation iO )
+{
+  mCam.setOrientation( iO );
   updateGL();
 }
 
@@ -151,6 +195,46 @@ QSize
 Widget3d::sizeHint() const
 {
   return QSize(200, 200);
+}
+
+//-----------------------------------------------------------------------------
+//Animate the camera in the timer event function
+void Widget3d::timerEvent( QTimerEvent* ipE )
+{
+  if ( ipE->timerId() == mAnimationTimerId )
+  {
+    double animationTime = min( kCameraAnimationTime, mAnimationTimer.elapsed() );
+    double t = animationTime / (double)kCameraAnimationTime;
+    t = inversePower(t, 3);
+    
+    Quat4d q1( mOldCam.getTransformation() );
+    Quat4d q2( mNewCam.getTransformation() );
+    //on compare avec le conjugate pour prendre le plus petit angle
+    if( (-q2-q1).getLength() < (q2-q1).getLength() )
+    {
+      q2 = -q2;
+    }
+    
+    q2 = q1*( 1 - t ) + q2*t;
+    Matrix4d iterationMatrix = q2.getUnitRotationMatrix();
+    
+    //trouver la translation totale a effectuer
+    iterationMatrix.setTranslation( mOldCam.getTransformation().getTranslation()*( 1 - t ) + 
+      mNewCam.getTransformation().getTranslation()*( t ) );
+    
+    mCam.setTransformation(iterationMatrix,false);
+    
+    updateGL();
+    
+    if ( animationTime >= kCameraAnimationTime )
+    {
+      killTimer( mAnimationTimerId );
+    }
+  }
+  else
+  {
+    QWidget::timerEvent( ipE );
+  }
 }
 
 //-----------------------------------------------------------------------------

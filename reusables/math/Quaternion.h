@@ -12,6 +12,7 @@
 #include "MathDef.h"
 #include "Matrix4x4.h"
 #include "Point.h"
+#include "Vect.h"
 
 //!-----------------------------------------------------------------------------
 //! \brief Classe gÈrant les fonctionalitÈs associÈes a un quaternion
@@ -29,6 +30,7 @@ namespace Realisim
     inline Quaternion();
     inline Quaternion(const T &w, const T &x, const T &y, const T &z);
     inline Quaternion(const Quaternion<T> &quat);
+    inline Quaternion(const Matrix4<T>& iMat);
 
     // --------------- destructeurs --------------------------------------------
     inline ~Quaternion();
@@ -47,20 +49,26 @@ namespace Realisim
     inline T getZ() const;
     inline void getQuat(T &w, T &x, T &y, T &z) const;
     inline Quaternion<T> getConjugate() const;
-    template<class U>
-    inline void getUnitRotationMatrix(Matrix4<U>& unitRotationMatrix);
+    inline double getLength() const;
+    inline Matrix4<T> getUnitRotationMatrix() const;
 
     // --------------- fonction utiles -----------------------------------------
     inline void print() const;
     inline void conjugate();
-    inline void setRot(const T &angle, const T &axisX, const T &axisY,
-                       const T &axisZ);
+    inline void setRot(const T &angle, const Vect<T>& iAxis);
     inline Point<T> multRotation( const Quaternion<T> &quat ) const;
 
     // --------------- Overload: operateurs unitaires --------------------------
     inline Quaternion<T>& operator=  (const Quaternion<T> &quat);
-
+    inline Quaternion<T>  operator+  (const Quaternion<T> &quat) const;
+    inline Quaternion<T>&  operator+=  (const Quaternion<T> &quat);
+    inline Quaternion<T>  operator-  (const Quaternion<T> &quat) const;
+    inline Quaternion<T>&  operator-=  (const Quaternion<T> &quat);
+    inline Quaternion<T>  operator-  () const;
+    inline Quaternion<T>  operator*  (T iValue) const;
+    inline Quaternion<T>&  operator*=  (T iValue);
     inline Quaternion<T>  operator*  (const Quaternion<T> &quat) const;
+    inline Quaternion<T>&  operator*=  (const Quaternion<T> &quat);
 
   protected:
   private:
@@ -93,7 +101,17 @@ namespace Realisim
     y_ = quat.y_;
     z_ = quat.z_;
   }
-
+  
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline Quaternion<T>::Quaternion(const Matrix4<T>& iMat)
+  {
+    w_ = 0.5 * ( sqrt( iMat[0][0] + iMat[1][1] + iMat[2][2] + iMat[3][3] ) );
+    x_ = ( iMat[1][2] - iMat[2][1] ) / ( 4 * w_ );
+    y_ = ( iMat[2][0] - iMat[0][2] ) / ( 4 * w_ );
+    z_ = ( iMat[0][1] - iMat[1][0]) / ( 4 * w_ );
+  }
+  
   //! destructeur
   template<class T>
   inline Quaternion<T>::~Quaternion()
@@ -195,40 +213,146 @@ namespace Realisim
     return result;
   }
 
+  //----------------------------------------------------------------------------
+  //addition de quaternion
   template<class T>
-  inline Quaternion<T>  Quaternion<T>::operator*  (const Quaternion<T> &quat) const
+  inline Quaternion<T> Quaternion<T>::operator+  (const Quaternion<T> &quat) const
   {
-    Quaternion<T> result;
-
-    result.w_ = w_*quat.w_ - x_*quat.x_ - y_*quat.y_ - z_*quat.z_;
-    result.x_ = w_*quat.x_ + x_*quat.w_ + y_*quat.z_ - z_*quat.y_;
-    result.y_ = w_*quat.y_ - x_*quat.z_ + y_*quat.w_ + z_*quat.x_;
-    result.z_ = w_*quat.z_ + x_*quat.y_ - y_*quat.x_ + z_*quat.w_;
-
+    
+    Quaternion<T> result(*this);
+    result += quat;
     return result;
   }
 
+  //----------------------------------------------------------------------------
+  //addition de quaternion
+  template<class T>
+  inline Quaternion<T>& Quaternion<T>::operator+=  (const Quaternion<T> &quat)
+  {
+    w_ += quat.w_;
+    x_ += quat.x_;
+    y_ += quat.y_;
+    z_ += quat.z_;
+    return *this;
+  }
+
+  //----------------------------------------------------------------------------
+  //soustraction de quaternion
+  template<class T>
+  inline Quaternion<T> Quaternion<T>::operator-  (const Quaternion<T> &quat) const
+  {
+    
+    Quaternion<T> result(*this);
+    result -= quat;
+    return result;
+  }
+  
+  //----------------------------------------------------------------------------
+  //soustraction de quaternion
+  template<class T>
+  inline Quaternion<T>& Quaternion<T>::operator-=  (const Quaternion<T> &quat)
+  {
+    w_ -= quat.w_;
+    x_ -= quat.x_;
+    y_ -= quat.y_;
+    z_ -= quat.z_;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------------------
+  //inversion du quaternion
+  template<class T>
+  inline Quaternion<T> Quaternion<T>::operator-  () const
+  {
+    
+    Quaternion<T> result(*this);
+    result *= -1;
+    return result;
+  }
+  
+  //----------------------------------------------------------------------------
+  //multiplication par un scalaire
+  template<class T>
+  inline Quaternion<T> Quaternion<T>::operator*  (T iValue) const
+  {
+    Quaternion<T> result(*this);
+    return result *= iValue;
+  }
+  
+  //----------------------------------------------------------------------------
+  //multiplication par un scalaire
+  template<class T>
+  inline Quaternion<T>& Quaternion<T>::operator*=  (T iValue)
+  {    
+    w_ = w_ * iValue;
+    x_ = x_ * iValue;
+    y_ = y_ * iValue;
+    z_ = z_ * iValue;
+    return *this;
+  }
+
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline Quaternion<T>  Quaternion<T>::operator*  (const Quaternion<T> &quat) const
+  {
+    Quaternion<T> result(*this);
+    return result *= quat;
+  }
+
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline Quaternion<T>&  Quaternion<T>::operator*=  (const Quaternion<T> &quat)
+  {    
+    w_ = w_*quat.w_ - x_*quat.x_ - y_*quat.y_ - z_*quat.z_;
+    x_ = w_*quat.x_ + x_*quat.w_ + y_*quat.z_ - z_*quat.y_;
+    y_ = w_*quat.y_ - x_*quat.z_ + y_*quat.w_ + z_*quat.x_;
+    z_ = w_*quat.z_ + x_*quat.y_ - y_*quat.x_ + z_*quat.w_;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------------------
   template<class T>
   inline Quaternion<T> Quaternion<T>::getConjugate() const
   {
     return Quaternion<T>(w_, -x_, -y_, -z_);
+  }
+  
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline double Quaternion<T>::getLength() const
+  {
+    return (double)sqrt(w_*w_ + x_*x_ + y_*y_ + z_*z_);
   }
 
 
   //Cette fonction remplie la matrice unitRotationMatrix avec la matrice de
   //rotation correspondant au quaternion.
   template<class T>
-  template<class U>
-  inline void
-  Quaternion<T>::getUnitRotationMatrix(Matrix4<U>& unitRotationMatrix)
+  inline Matrix4<T>
+  Quaternion<T>::getUnitRotationMatrix() const
   {
-    unitRotationMatrix.setRow1(
-          1-(2*y_*y_)-(2*z_*z_), (2*x_*y_)+(2*w_*z_), (2*x_*z_)-(2*w_*y_), 0);
-    unitRotationMatrix.setRow2(
-          (2*x_*y_)-(2*w_*z_), 1-(2*x_*x_)-(2*z_*z_), (2*y_*z_)+(2*w_*x_), 0);
-    unitRotationMatrix.setRow3(
-          (2*x_*z_)+(2*w_*y_), (2*y_*z_)-(2*w_*x_), 1-(2*x_*x_)-(2*y_*y_), 0);
-    unitRotationMatrix.setRow4(0.0, 0.0, 0.0, 1.0);
+    Matrix4<T> mat; //matrice identité
+    mat.setRow1(
+          1-(2*y_*y_)-(2*z_*z_),
+          (2*x_*y_)+(2*w_*z_),
+          (2*x_*z_)-(2*w_*y_),
+          0 );
+    mat.setRow2(
+          (2*x_*y_)-(2*w_*z_),
+          1-(2*x_*x_)-(2*z_*z_),
+          (2*y_*z_)+(2*w_*x_),
+          0 );
+    mat.setRow3(
+          (2*x_*z_)+(2*w_*y_),
+          (2*y_*z_)-(2*w_*x_),
+          1-(2*x_*x_)-(2*y_*y_),
+          0 );
+    mat.setRow4(
+          0,
+          0,
+          0,
+          1 );
+    return mat;
   }
 
   //Cette fonction est a utiliser seulement si le quaternion est unitaire
@@ -252,20 +376,19 @@ namespace Realisim
   //! \param axisZ
   //!---------------------------------------------------------------------------
   template<class T>
-  inline void Quaternion<T>::setRot(const T &angle, const T &axisX,
-                                    const T &axisY, const T &axisZ)
+  inline void Quaternion<T>::setRot(const T &angle, const Vect<T>& iAxis)
   {
     T sinTmp = std::sin(angle/(T)(2.0));
 
-    x_ = axisX * sinTmp;
-    y_ = axisY * sinTmp;
-    z_ = axisZ * sinTmp;
+    x_ = iAxis.getX() * sinTmp;
+    y_ = iAxis.getY() * sinTmp;
+    z_ = iAxis.getZ() * sinTmp;
     w_ = std::cos(angle/(T)(2.0));
   }
 
   typedef Quaternion<float>   Quat4f;
   typedef Quaternion<double>  Quat4d;
-  typedef Quaternion<int>     Quat4i;
+  //NE PAS FAIRE DE QUATERNION DE INT!!
 
 } // fin du namespace realisim
 

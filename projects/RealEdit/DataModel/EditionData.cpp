@@ -123,6 +123,13 @@ EditionData::getCurrentNode() const
 }
 
 //-----------------------------------------------------------------------------
+ObjectNode* EditionData::getCurrentNode()
+{
+  return const_cast<ObjectNode*>(
+    static_cast<const EditionData&> (*this).getCurrentNode() );
+}
+
+//-----------------------------------------------------------------------------
 const Scene&
 EditionData::getScene() const
 { 
