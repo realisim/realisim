@@ -8,6 +8,12 @@ RealEditController.h
 
 #include "EditionData.h"
 
+/* 
+
+  invariants:
+  mpEditionUi != 0
+*/
+
 namespace RealEdit
 { 
   class RealEditController;
@@ -17,16 +23,20 @@ namespace RealEdit
 class RealEdit::RealEditController 
 {
 public:
-	RealEditController();
+	RealEditController( EditionUi& ipEditionUi );
 	~RealEditController();
 	
 	void newProject();
+  void setCurrentNode( ObjectNode* ipNode );
   
   const EditionData& getEditionData() const{return mEditionData;}
+  EditionData& getEditionData() {return mEditionData;}
+
 
 protected:
 
 private:
+  EditionUi& mEditionUi;
   EditionData mEditionData;
 };
 

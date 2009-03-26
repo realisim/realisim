@@ -9,7 +9,7 @@
 
 #include "ObjectNavigator.h"
 
-#include "EditionData.h"
+#include "RealEditController.h"
 #include "ObjectNode.h"
 #include "DataModel.h"
 
@@ -17,32 +17,53 @@
 #include <QTreeWidgetItem>
 
 using namespace RealEdit;
+using namespace std;
 
-ObjectNavigator::ObjectNavigator( QWidget* ipParent, const EditionData& iEditionData ) :
+ObjectNavigator::ObjectNavigator( QWidget* ipParent, RealEditController& iC ) :
 QTreeWidget( ipParent ),
-mEditionData( iEditionData )
+mController( iC ),
+mTreeItemToNode()
 {
   header()->hide();
   
   //create the object tree
-  createTree( this, mEditionData.getScene().getObjectNode() );
+  createTree( this, mController.getEditionData().getScene().getObjectNode() );
+  
+  connect( this, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*) ),
+           this, SLOT(doItemChanged(QTreeWidgetItem*, QTreeWidgetItem*) ) );
 }
 
 ObjectNavigator::~ObjectNavigator()
 {
 }
 
+//------------------------------------------------------------------------------
 template<class TreeItem>
 void
 ObjectNavigator::createTree( TreeItem ipItem,
-                             const ObjectNode* ipNode )
+                             ObjectNode* ipNode )
 {
+  //create a new tree item
   QTreeWidgetItem* pItem = new QTreeWidgetItem( ipItem );
+  //add the tree item and its corresponding ObjectNode to the map.
+  mTreeItemToNode.insert( 
+    make_pair<QTreeWidgetItem*, ObjectNode*>(pItem, ipNode) );
   pItem->setText( 0, ipNode->getName().c_str() );
   
   for( unsigned int i = 0; i < ipNode->getChildCount(); ++i )
   {
     createTree( pItem, ipNode->getChild( i ) );
+  }
+}
+
+//------------------------------------------------------------------------------
+void ObjectNavigator::doItemChanged(QTreeWidgetItem* ipItem,
+  QTreeWidgetItem* ipPreviousItem)
+{
+  TreeItemToNode::const_iterator it = mTreeItemToNode.find( ipItem );
+  if( it != mTreeItemToNode.end() )
+  {
+    mController.setCurrentNode( it->second );
   }
 }
 

@@ -7,101 +7,172 @@
 #ifndef MATH_UTILE_H
 #define MATH_UTILE_H
 
-#include "Quaternion.h"
+#include "Matrix4x4.h"
 #include "Point.h"
+#include "Quaternion.h"
 
 namespace Realisim
 {
+
   //---------------------------------------------------------------------------
   template<class V>
   inline Quaternion<V> operator* (const Quaternion<V> &quat,
                                   const Point<V> &point)
   {
     Quaternion<V> result;
-
+    
     result.setW(- (quat.getX() * point.getX()) - (quat.getY() * point.getY()) -
-                  (quat.getZ() * point.getZ()) );
-
+                (quat.getZ() * point.getZ()) );
+    
     result.setX( (quat.getW() * point.getX()) + (quat.getY() * point.getZ()) -
-                 (quat.getZ() * point.getY()) );
-
+                (quat.getZ() * point.getY()) );
+    
     result.setY( (quat.getW() * point.getY()) - (quat.getX() * point.getZ()) +
-                 (quat.getZ() * point.getX()) );
-
+                (quat.getZ() * point.getX()) );
+    
     result.setZ( (quat.getW() * point.getZ()) + (quat.getX() * point.getY()) -
-                 (quat.getY() * point.getX()) );
-
+                (quat.getY() * point.getX()) );
+    
     return result;
   }
-
+  
+  //---------------------------------------------------------------------------
+  template<class T>
+  inline Vect<T> operator* ( const Vect<T>& iVect, const Matrix4<T>& iMat)
+  {
+    Vect<T> vect;
+    vect.setX( iVect.getX() * iMat[0][0] + iVect.getY() * iMat[1][0] + iVect.getZ() * iMat[2][0] );
+    vect.setY( iVect.getX() * iMat[0][1] + iVect.getY() * iMat[1][1] + iVect.getZ() * iMat[2][1] );
+    vect.setZ( iVect.getX() * iMat[0][2] + iVect.getY() * iMat[1][2] + iVect.getZ() * iMat[2][2] );
+    return vect;
+  }
+  
+  //---------------------------------------------------------------------------
+  template<class T>
+  inline Point<T> operator* ( const Point<T>& iPoint, const Matrix4<T>& iMat)
+  {
+    Point<T> result;
+    result.setX( iPoint.getX() * iMat[0][0] + iPoint.getY() * iMat[1][0] + iPoint.getZ() * iMat[2][0] );
+    result.setY( iPoint.getX() * iMat[0][1] + iPoint.getY() * iMat[1][1] + iPoint.getZ() * iMat[2][1] );
+    result.setZ( iPoint.getX() * iMat[0][2] + iPoint.getY() * iMat[1][2] + iPoint.getZ() * iMat[2][2] );
+    return result;
+  }
+  
   //---------------------------------------------------------------------------
   template<class V>
   inline Point<V> operator+ (const Point<V> &point, const Vect<V> &vect)
   {
     Point<V> result;
-
+    
     result.setX(point.getX() + vect.getX());
     result.setY(point.getY() + vect.getY());
     result.setZ(point.getZ() + vect.getZ());
-
+    
     return result;
   }
-
+  
   //---------------------------------------------------------------------------
   template<class V>
   inline Point<V> operator- (const Point<V> &point, const Vect<V> &vect)
   {
     Point<V> result;
-
+    
     result.setX(point.getX() - vect.getX());
     result.setY(point.getY() - vect.getY());
     result.setZ(point.getZ() - vect.getZ());
-
+    
     return result;
   }
-
+  
   //---------------------------------------------------------------------------
-  //axis doit être normalisé
+  //retourne la matrice de rotation correpondant a la rotation de iAngle
+  //radian autour de l'axe iAxis
+  template<class T>
+  inline Matrix4<T> getRotationMatrix( double iAngle,
+                                       Vect<T> iAxis )
+  {
+    iAxis.normalise();
+    Quaternion<T> quat;
+    quat.setRot(iAngle, iAxis);
+    
+    return quat.getUnitRotationMatrix();
+  }
+  
+  //---------------------------------------------------------------------------
   template<class T>
   inline Point<T> rotatePoint(const T &angle, const Point<T> &point,
-                              const Vect<T> axis)
+                              Vect<T> axis)
   {
     Quaternion<T> quatRot;
     Quaternion<T> quatResult;
-
-    quatRot.setRot( angle, axis.getX(), axis.getY(), axis.getZ() );
-
+    
+    axis.normalise();
+    quatRot.setRot( angle, axis );
+    
     //! TODO mettre une explication sur les quaternions...
     //quatResult = (quatRot*point)*quatRot.getConjugate();
     //point.setXYZ(quatResult.getX(), quatResult.getY(), quatResult.getZ());
-
+    
     return ( quatRot*point ).multRotation( quatRot.getConjugate() );
   }
-
+  
   //---------------------------------------------------------------------------
   template<class T>
   inline Point<T> rotatePoint(const Quaternion<T> &quat, const Point<T> &point)
   {
     return (quat*point).multRotation(quat.getConjugate());
   }
-
+  
   //---------------------------------------------------------------------------
-  //axis doit être normalisé
   template<class T>
   inline Point<T> rotatePoint(const T &angle, const Point<T> &point,
-                              const Vect<T> axis, const Point<T> &axisPos)
+                              Vect<T> axis, const Point<T> &axisPos)
   {
+    axis.normalise();
+    
     //On trouve la position relative du Point a tourner par rapport a l'axe
     Point<T> relPos, rotatedPoint;
-
+    
     relPos = point - axisPos;
     rotatedPoint = rotatePoint(angle, relPos, axis);
-
+    
     //On retranslate le point rotater
     rotatedPoint += axisPos;
-
+    
     return rotatedPoint;
   }
+  
+  //----------------------------------------------------------------------------
+  //Interpolation
+  //iValue must be between 0-1
+  //http://sol.gfxile.net/interpolation/
+  template<class T>
+  T smoothStep( T iValue )
+  { return (iValue) * (iValue) * (3 - 2 * (iValue) ); }
+  
+  //----------------------------------------------------------------------------
+  //Interpolation
+  //iValue must be between 0-1
+  //http://sol.gfxile.net/interpolation/
+  template<class T>
+  T smoothStep2( T iValue )
+  { return smoothStep( smoothStep( iValue ) ); }
+  
+  //----------------------------------------------------------------------------
+  //Interpolation
+  //iValue must be between 0-1
+  //http://sol.gfxile.net/interpolation/
+  template<class T>
+  T inversePower( T iValue, unsigned int iPower = 1 )
+  {
+    T result = 1;
+    for( unsigned int i = 0; i < iPower; ++i  )
+    {
+       result *= (1 - iValue) ;
+    }
+    return 1 - result; 
+  }
+    
 } // fin du namespace realisim
 
 #endif // MATH_UTILE_H

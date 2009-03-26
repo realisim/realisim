@@ -35,23 +35,41 @@ RealEdit3d::~RealEdit3d()
 {
 }
 
-void
-RealEdit3d::paintGL()
+//------------------------------------------------------------------------------
+void RealEdit3d::currentNodeChanged()
 {
-  Widget3d::paintGL();
-  
-  drawScene( mEditionData.getScene().getObjectNode() );
+  Camera cam = getCamera();
+  Matrix4d nodeTransfo = mEditionData.getCurrentNode()->getTransformation();
+  cam.setTransformation(nodeTransfo);
+  setCamera( cam );
 }
 
+
+//------------------------------------------------------------------------------
 void
-RealEdit3d::drawScene( const RealEdit::ObjectNode* ipObjectNode )
+RealEdit3d::drawCube() const
+{
+  glPushAttrib( GL_CURRENT_BIT | GL_POLYGON_BIT | GL_ENABLE_BIT );
+  
+  glDisable( GL_LIGHTING );
+  glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+  glColor3d( 0, 85/255.0, 176/255.0);
+  glCallList( mCube );
+  
+  glPopAttrib();
+}
+
+//------------------------------------------------------------------------------
+void
+RealEdit3d::drawScene(const RealEdit::ObjectNode* ipObjectNode) const
 {
   const RealEditModel* pModel = ipObjectNode->getModel();
   
   glPushMatrix();
   {
     //appliquer la transfo du noeud
-  
+    glMultMatrixd( ipObjectNode->getTransformation().getPtr() );
+    
     //dessiner les points du modele
     for( unsigned int i = 0; i < pModel->getPointCount(); ++i )
     {
@@ -65,7 +83,7 @@ RealEdit3d::drawScene( const RealEdit::ObjectNode* ipObjectNode )
     }
     
     //dessiner les polys du modele
-  
+    
     //dessiner les enfants du noeud
     for( unsigned int i = 0; i < ipObjectNode->getChildCount(); i++ )
     {
@@ -75,20 +93,7 @@ RealEdit3d::drawScene( const RealEdit::ObjectNode* ipObjectNode )
   glPopMatrix();
 }
 
-
-void
-RealEdit3d::drawCube()
-{
-  glPushAttrib( GL_CURRENT_BIT | GL_POLYGON_BIT | GL_ENABLE_BIT );
-
-  glDisable( GL_LIGHTING );
-  glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-  glColor3d( 0, 85/255.0, 176/255.0);
-  glCallList( mCube );
-  
-  glPopAttrib();
-}
-
+//------------------------------------------------------------------------------
 void
 RealEdit3d::initDisplayList()
 {
@@ -126,3 +131,14 @@ RealEdit3d::initDisplayList()
     glEnd();
   glEndList();
 }
+
+//------------------------------------------------------------------------------
+void
+RealEdit3d::paintGL()
+{
+  Widget3d::paintGL();
+  
+  drawScene( mEditionData.getScene().getObjectNode() );
+}
+
+

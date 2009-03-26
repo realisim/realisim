@@ -13,9 +13,11 @@
 #include <qgl.h>
 
 using namespace Realisim;
-
 //-----------------------------------------------------------------------------
-Camera::Camera( Mode iMode /*= PERSPECTIVE*/ ) : mMode( iMode ),
+Camera::Camera( Mode iMode /*= PERSPECTIVE*/ ) : 
+mMode( iMode ),
+mOrientation( FREE ),
+mTransformation(),
 mPos(),
 mLat(),
 mLook(),
@@ -27,7 +29,10 @@ mZoomFactor( 1.0 )
 }
 
 //-----------------------------------------------------------------------------
-Camera::Camera( const Camera& iCam ) : mMode( iCam.getMode() ),
+Camera::Camera( const Camera& iCam ) : 
+mMode(),
+mOrientation(),
+mTransformation(),
 mPos(),
 mLat(),
 mLook(),
@@ -36,7 +41,6 @@ mVisibleGLUnit(),
 mPixelPerGLUnit( 0.0 ),
 mZoomFactor()
 {
-  //TODO: regarder si on peut implanter le constructeur copie en fonction de l'operateur égale.
   operator=( iCam );
 }
 
@@ -46,40 +50,30 @@ Camera::~Camera()
 }
 
 //-----------------------------------------------------------------------------
-void Camera::computeLatAndUp()
-{
-  //on commence par calculer le vecteur lat√©rale parce que le vecteur up
-  //final est d√©pendant du vecteur lat√©ral
-  
-  Vector3d lookVect( getPos(), getLook()  );
-  
-  mLat = lookVect ^ getUp();
-  mLat.normalise();
-  
-  mUp = getLat() ^lookVect;
-  mUp.normalise();
-}
+//void Camera::computeLatAndUp()
+//{
+//  //on commence par calculer le vecteur lat√©rale parce que le vecteur up
+//  //final est d√©pendant du vecteur lat√©ral
+//  
+//  Vector3d lookVect( getPos(), getLook()  );
+//  
+//  mLat = lookVect ^ getUp();
+//  mLat.normalise();
+//  
+//  mUp = getLat() ^lookVect;
+//  mUp.normalise();
+//}
 
 //-----------------------------------------------------------------------------
-void Camera::lookAt()
-{
-  gluLookAt( getPos().getX(),
-             getPos().getY(), 
-             getPos().getZ(),
-             getLook().getX(),
-             getLook().getY(),
-             getLook().getZ(),
-             getUp().getX(),
-             getUp().getY(),
-             getUp().getZ() );
-}
-
-//-----------------------------------------------------------------------------
+//déplace la caméra
+//le delta est en coord GL
 void Camera::move( Vector3d iDelta )
 {
-  switch ( getMode() ) 
+  switch ( getOrientation() ) 
   {
-    case ORTHOGONAL:
+    case XY:
+    case ZY:
+    case XZ:
     {
       //On n'utilise pas les m√©thode setPos et setLook ici parce
       //qu'on ne veut pas recalculer le vecteur lat√©rale et up, car
@@ -87,18 +81,20 @@ void Camera::move( Vector3d iDelta )
       //se d√©place d'une valeur √©gale.
       //Si on utilisait les m√©thodes set, les valeurs du vecteur lat√©ral
       // et up serait modifi√©es ( due aux erreurs d'arrondissement ).
-      mPos = Point3d( getPos().getX() + iDelta.getX(),
-                      getPos().getY() + iDelta.getY(), 
-                      getPos().getZ() + iDelta.getZ() );
-      
-      mLook = Point3d( getLook().getX() + iDelta.getX(),
-                       getLook().getY() + iDelta.getY(), 
-                       getLook().getZ() + iDelta.getZ() );
+//      mPos = Point3d( getPos().getX() + iDelta.getX(),
+//                      getPos().getY() + iDelta.getY(), 
+//                      getPos().getZ() + iDelta.getZ() );
+//      
+//      mLook = Point3d( getLook().getX() + iDelta.getX(),
+//                       getLook().getY() + iDelta.getY(), 
+//                       getLook().getZ() + iDelta.getZ() );
+      Point3d trans = mTransformation.getTranslation() + iDelta * mTransformation;
+      mTransformation.setTranslation(trans);
       
     }
     break;
       
-    case PERSPECTIVE:
+    case FREE:
     {
       //un delta de mVisiblGLUnit represente 360 degrée de rotation...
       //donc 2*Pi Rad
@@ -123,9 +119,8 @@ void Camera::move( Vector3d iDelta )
         angle1 *= -1;
       }
       
-      //TODO: remplacer le vecteur hardcoder par la composante
       //y de la transfo de la camera
-      Vector3d upRotAxis( 0.0, 1.0, 0.0 );
+      Vector3d upRotAxis = Vector3d( 0.0, 1.0, 0.0 );//mTransformation.getBaseY();
       
       //on effectur la rotation autour de l'axe Up
       Point3d newPos = 
@@ -149,17 +144,17 @@ void Camera::move( Vector3d iDelta )
                      getLook() );
       
       //on crée le nouveau vecteur latérale
-      Vector3d newLat( newPos, latPos ); 
+      Vector3d newLat( newPos, latPos );
       
       //on projete le nouveau vecteur latérale sur la composante x et z de
       //la transfo, ce qui a pour effet de garder la caméra stable. On ne peut
       //pas directement seter le vecteur up parce que ce dernier varie dans 2
       //plan distincts
       
-      //TODO: chnager les vecteur x et z hardcoder pour les composantes de
       //x et z de la transfo
-      Vector3d x( 1.0, 0.0, 0.0 );
-      Vector3d z( 0.0, 0.0, 1.0 );
+      Vector3d x = Vector3d(1.0, 0.0, 0.0);//mTransformation.getBaseX();
+      Vector3d z = Vector3d(0.0, 0.0, 1.0);//mTransformation.getBaseZ();
+
       Vector3d projLatOnX = x * ( x & newLat );
       Vector3d projLatOnZ = z * ( z & newLat );
       Vector3d projXZ = projLatOnX + projLatOnZ;
@@ -204,6 +199,8 @@ Camera&
 Camera::operator=( const Camera& iCam )
 {
   mMode = iCam.getMode();
+  mOrientation = iCam.getOrientation();
+  mTransformation = iCam.getTransformation();
   mPos = iCam.getPos();
   mLat = iCam.getLat();
   mLook = iCam.getLook();
@@ -216,6 +213,8 @@ Camera::operator=( const Camera& iCam )
 }
 
 //-----------------------------------------------------------------------------
+//Convertie une position pixel a l'écran en coordonnée GL
+//Les paramètres sont en pixels
 Point3d Camera::pixelToGL( int iX, int iY ) const
 {
   int* viewport = new int[4];
@@ -236,6 +235,8 @@ Point3d Camera::pixelToGL( int iX, int iY ) const
 }
 
 //-----------------------------------------------------------------------------
+//Convertie une delta en pixel d'écran en delta GL
+//Les paramètres sont en pixels
 Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY ) const
 {
   Vector3d result =
@@ -327,29 +328,24 @@ void Camera::set( const Point3d& iPos,
   mLook = iLook;
   mUp = iUp;
   
-  computeLatAndUp();
+  //on commence par calculer le vecteur lat√©rale parce que le vecteur up
+  //final est d√©pendant du vecteur lat√©ral
+  Vector3d lookVect( getPos(), getLook()  );
+  
+  mLat = lookVect ^ getUp();
+  mLat.normalise();
+  
+  mUp = getLat() ^lookVect;
+  mUp.normalise();
 }
 
 //-----------------------------------------------------------------------------
 void Camera::setLat( const Vector3d& iLat )
 {
-  //TODO: cette fonction n'est pas vraiment testée...
   mLat = iLat;
   mLat.normalise();
   
   mUp = ( mLat ^ Vector3d( getPos(), getLook() ) ).normalise();
-  //on ne doit pas utiliser computeLatAndUp parce que cette
-  //derniere recalcule le vecteur Lat basé sur le Up... étant donné
-  //que c'est le vecteur Lat qu'on désire setter on ne veut pas l'écraser
-  //avec les valeures calculées par computeLatAndUp
-}
-
-//-----------------------------------------------------------------------------
-void Camera::setLook( const Point3d& iLook )
-{
-  mLook = iLook;
-  
-  computeLatAndUp();
 }
 
 //-----------------------------------------------------------------------------
@@ -359,17 +355,81 @@ void Camera::setMode( Mode iMode )
 }
 
 //-----------------------------------------------------------------------------
-void Camera::setPos( const Point3d& iPos )
+void Camera::setOrientation( Orientation iO )
 {
-  mPos = iPos;
-  
-  computeLatAndUp();
+  mOrientation = iO;
+
+  switch( mOrientation )
+  {
+    case XY:
+    case ZY:
+    case XZ:
+      set( Point3d( 0, 0, 10 ),
+           Point3d( 0, 0, 0 ),
+           Vector3d( 0, 1, 0 ) );
+      break;
+    case FREE:
+      set( Point3d( 10, 10, 10 ),
+           Point3d( 0, 0, 0 ),
+           Vector3d( 0, 1, 0 ) );
+      break;
+    default:
+      break;
+  }
+
+  //l'orientation a changé, on s'assure de rafraichier la matrice
+  //de transformation
+  setTransformation( getTransformation() );
+}
+
+//-----------------------------------------------------------------------------
+void Camera::setTransformation( const Matrix4d& iTransfo,
+  bool iApplyOrientation/*=true*/ )
+{
+  if( iApplyOrientation )
+  {
+    switch ( getOrientation() ) 
+    {
+      case Camera::ZY:
+      {
+        Quat4d rot;
+        rot.setRot( PI / 2.0, iTransfo.getBaseY() );
+        mTransformation = iTransfo * rot.getUnitRotationMatrix();
+        mTransformation.setTranslation( iTransfo.getTranslation() );
+      }
+        break;
+      case Camera::XZ:
+      {
+        Quat4d rot;
+        rot.setRot( -PI / 2.0, iTransfo.getBaseX() );
+        mTransformation = iTransfo * rot.getUnitRotationMatrix();
+        mTransformation.setTranslation( iTransfo.getTranslation() );
+      }
+        break;
+      case Camera::XY:
+      case Camera::FREE:
+        mTransformation = iTransfo;
+        break;
+      default:
+        break;
+    }
+  }
+  else
+  {
+    mTransformation = iTransfo;
+  }
 }
 
 //-----------------------------------------------------------------------------
 void Camera::setUp( const Vector3d& iUp )
 {
-  mUp = iUp;
+   mUp = iUp;
+
+  Vector3d currentLookVect( getPos(), getLook()  );
   
-  computeLatAndUp();
+  mLat = currentLookVect ^ getUp();
+  mLat.normalise();
+  
+  Vector3d updatedLookVect = getUp() ^ getLat();
+  mPos = getLook() - ( updatedLookVect.normalise() * currentLookVect.norm() );
 }
