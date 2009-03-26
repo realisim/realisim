@@ -7,6 +7,7 @@
 #ifndef MATRIX_4_H
 #define MATRIX_4_H
 
+#include <cassert>
 #include "Point.h"
 #include "Vect.h"
 #include <vector>
