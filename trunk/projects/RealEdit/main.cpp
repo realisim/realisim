@@ -31,11 +31,12 @@ int main(int argc, char** argv)
 
  	app.setWindowIcon( QIcon( ":/images/RealEdit_icon.png" ) );
 
-	new EditionUi(); 
-    if ( startMainApp() == 0 )
-    {
-        //we are closing!
-    }
+	EditionUi* p = new EditionUi(); 
+  if ( startMainApp() == 0 )
+  {
+      //we are closing!
+      delete p;
+  }
 
     return 0;
 }

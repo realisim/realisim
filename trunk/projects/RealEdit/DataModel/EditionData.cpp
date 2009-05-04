@@ -69,13 +69,11 @@ EditionData::addNode( const std::string iName )
 }
 
 //-----------------------------------------------------------------------------
-void
-EditionData::addPoint( const Point3f& iPoint )
+unsigned int
+EditionData::addPoint( const Point3d& iPoint )
 {
   if ( !mpCurrentModel )
-  {
-    return;
-  }
+    return 0;
   
   RealEditPoint* pPoint = new RealEditPoint( iPoint );
   
@@ -84,8 +82,9 @@ EditionData::addPoint( const Point3f& iPoint )
       std::make_pair<int, RealEditPoint*>( pPoint->getId(), pPoint ) );
   
   assert( result.second );
-  
   mpCurrentModel->addPoint( pPoint );
+  
+  return pPoint->getId();
 }
 
 //-----------------------------------------------------------------------------

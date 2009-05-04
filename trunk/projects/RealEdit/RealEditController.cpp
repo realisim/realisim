@@ -6,48 +6,62 @@
 
 using namespace Realisim;
 using namespace RealEdit;
+using namespace std;
 
 RealEditController::RealEditController(EditionUi& iEditionUi) : 
+  mDisplayData(),
   mEditionUi(iEditionUi),
   mEditionData()
 {
   ObjectNode* pRootNode = mEditionData.getCurrentNode();
-//  pRootNode->rotate( PI/4.0,
-//                    Vector3d( 0.0, 0.0, 1.0 ) );
-  
-  mEditionData.addPoint( Point3f( -2.0, 0.0, 0.0 ) );
-  mEditionData.addPoint( Point3f( 2.0, 0.0, 0.0 ) );
-  mEditionData.addPoint( Point3f( 0.0, 2.0, 0.0 ) );
+  vector<int> idPoints;
+  idPoints.push_back( mEditionData.addPoint( Point3d( -2.0, 0.0, 0.0 ) ) );
+  idPoints.push_back( mEditionData.addPoint( Point3d( 2.0, 0.0, 0.0 ) ) );
+  idPoints.push_back( mEditionData.addPoint( Point3d( 0.0, 2.0, 0.0 ) ) );
+  mEditionData.addPolygon(idPoints);
   
   ObjectNode* pBouetteNode = mEditionData.addNode( "bouette" );
-  pBouetteNode->rotate( 3*PI/4.0,
+  pBouetteNode->rotate( PI/4.0,
                        Vector3d( 1.0, 0.0, 0.0 ) );
-  pBouetteNode->translate( Point3d( 8.0, 0.0, 0.0 ) );
+  pBouetteNode->translate( Point3d( -8.0, 0.0, 0.0 ) );
 //  pBouetteNode->rotate( PI/4.0,
 //                       Vector3d( 0.0, 0.0, 1.0 ) );
   mEditionData.setCurrentNode( pBouetteNode );
-  mEditionData.addPoint( Point3f( -2.0, 0.0, 0.0 ) );
-  mEditionData.addPoint( Point3f( 2.0, 0.0, 0.0 ) );
-  
-  mEditionData.setCurrentNode(pRootNode);
-  mEditionData.addNode( "bouette1" );
-  
+  mEditionData.addPoint( Point3d( -2.0, 0.0, 0.0 ) );
+  mEditionData.addPoint( Point3d( 2.0, 0.0, 0.0 ) );
+    
   ObjectNode* pNode = mEditionData.addNode( "bouette3" );
   pNode->translate( Point3d( -8.0, 0.0, 0.0 ) );
-  pNode->rotate( PI/4.0,
+  pNode->rotate( PI/2.0,
     Vector3d( 0.0, 0.0, 1.0 ),
     Point3d( 0.0, 0.0, 0.0 ) );
-  pNode->rotate( PI/4.0,
-                Vector3d( 0.0, 0.0, 1.0 ),
-                Point3d( 0.0, 0.0, 0.0 ) );
-          
-  
   mEditionData.setCurrentNode( pNode );
-  mEditionData.addPoint( Point3f( -2.0, 0.0, 0.0 ) );
-  mEditionData.addPoint( Point3f( 2.0, 0.0, 0.0 ) );
-  mEditionData.addPoint( Point3f( 0.0, 2.0, 0.0 ) );
+  idPoints.clear();
+  idPoints.push_back(mEditionData.addPoint( Point3d( -2.0, 0.0, 0.0 ) ));
+  idPoints.push_back(mEditionData.addPoint( Point3d( 2.0, 0.0, 0.0 ) ));
+  idPoints.push_back(mEditionData.addPoint( Point3d( 0.0, 2.0, 0.0 ) ));
+  mEditionData.addPolygon(idPoints);
   
-  mEditionData.addNode( "caca" );
+  ObjectNode* pNodeCaca = mEditionData.addNode( "caca" );
+  mEditionData.setCurrentNode(pNodeCaca);
+  pNodeCaca->rotate(PI/4, 
+                    Vector3d( 1.0, 0.0, 1.0 ) );
+  pNodeCaca->translate(Point3d( -8.0, 0.0, 0.0 ));
+  int a,b,c,d;
+  a = mEditionData.addPoint( Point3d( -2.0, -2.0, -2.0 ) );
+  b = mEditionData.addPoint( Point3d( 2.0, -2.0, 0.0 ) );
+  c = mEditionData.addPoint( Point3d( 2.0, 2.0, 0.0 ) );
+  d = mEditionData.addPoint( Point3d( -2.0, 2.0, 0.0 ) );
+  idPoints.clear();
+  idPoints.push_back(a);
+  idPoints.push_back(b);
+  idPoints.push_back(c);
+  mEditionData.addPolygon(idPoints);
+  idPoints.clear();
+  idPoints.push_back(a);
+  idPoints.push_back(c);
+  idPoints.push_back(d);
+  mEditionData.addPolygon(idPoints);
   
   mEditionData.addNode( "caca2" );
   mEditionData.addNode( "caca3" );

@@ -30,17 +30,17 @@ namespace Realisim
   
     // --------------- constructeurs -------------------------------------------
     inline LineSegment();
-    inline LineSegment(const Point3f& point1, const Point3f& point2);
+    inline LineSegment(const Point3d& point1, const Point3d& point2);
     inline LineSegment(const LineSegment &lineSegment);
     
     // --------------- destructeurs --------------------------------------------
     inline ~LineSegment();
 
     // --------------- Fonction Get --------------------------------------------
-    inline const Point3f& getPoint1() const;    
-    inline const Point3f& getPoint2() const;    
+    inline const Point3d& getPoint1() const;    
+    inline const Point3d& getPoint2() const;    
     // --------------- Fonction Set --------------------------------------------
-    inline void setLine(const Point3f& point1, const Point3f& point2);
+    inline void setLine(const Point3d& point1, const Point3d& point2);
     // --------------- Overload: operateurs ------------------------------------
     inline bool operator== (const LineSegment &lineSegment) const;
     inline LineSegment&  operator=  (const LineSegment &lineSegment);
@@ -48,8 +48,8 @@ namespace Realisim
   protected:
   private:
   
-    Point3f point1_;    //! pointeur sur point1 du segemnt
-    Point3f point2_;    //! pointeur sur point2 du segment
+    Point3d point1_;    //! pointeur sur point1 du segemnt
+    Point3d point2_;    //! pointeur sur point2 du segment
   
   };
   
@@ -73,7 +73,7 @@ namespace Realisim
   //!        segment de ligne.
   //!
   //----------------------------------------------------------------------------
-  inline LineSegment::LineSegment(const Point3f& point1, const Point3f& point2)
+  inline LineSegment::LineSegment(const Point3d& point1, const Point3d& point2)
     : point1_(point1), point2_(point2)
   {
   }
@@ -106,7 +106,7 @@ namespace Realisim
   //----------------------------------------------------------------------------
   //! \brief  Retourne le point 1 du segment
   //----------------------------------------------------------------------------
-   inline const Point3f& LineSegment::getPoint1() const
+   inline const Point3d& LineSegment::getPoint1() const
    {
      return point1_;
    }  
@@ -114,7 +114,7 @@ namespace Realisim
   //----------------------------------------------------------------------------
   //! \brief  Retourne le point 2 du segment
   //----------------------------------------------------------------------------
-   inline const Point3f& LineSegment::getPoint2() const
+   inline const Point3d& LineSegment::getPoint2() const
    {
      return point2_;
    }  
@@ -127,7 +127,7 @@ namespace Realisim
   //!        segment de ligne.
   //!
   //----------------------------------------------------------------------------
- inline void LineSegment::setLine(const Point3f& point1, const Point3f& point2)
+ inline void LineSegment::setLine(const Point3d& point1, const Point3d& point2)
   {
     point1_ = point1;
     point2_ = point2;

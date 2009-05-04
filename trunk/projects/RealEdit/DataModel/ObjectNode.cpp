@@ -8,6 +8,7 @@
 
 using namespace RealEdit;
 using namespace Realisim;
+using namespace std;
 //------------------------------------------------------------------------------
 ObjectNode::ObjectNode( const std::string& iName ) : mpModel( new RealEditModel() ),
   mpParentNode( 0 ),
@@ -139,3 +140,25 @@ void ObjectNode::rotate( const double iAngle, const Vector3d& iAxis,
   Point3d translation = rotatePoint(iAngle, getTranslation(), iAxis, iAxisPos);
   translate( translation );
 }
+
+//------------------------------------------------------------------------------
+//   PATH
+//------------------------------------------------------------------------------
+Path::Path(const ObjectNode* ipNode) : mSceneToNode()
+{
+  const ObjectNode* currentNode = ipNode;
+  vector<const ObjectNode*> nodes;
+  nodes.push_back(currentNode);
+  while( currentNode->getParentNode() )
+  {
+    currentNode = currentNode->getParentNode();
+    nodes.push_back(currentNode);
+  }
+  
+  vector<const ObjectNode*>::iterator it = nodes.begin();
+  for(; it != nodes.end(); ++it)
+  {
+    mSceneToNode *= (*it)->getTransformation();
+  }
+}
+

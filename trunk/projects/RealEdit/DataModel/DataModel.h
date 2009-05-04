@@ -35,10 +35,10 @@ private:
 
 //-----------------------------------------------------------------------------
 class RealEdit::RealEditPoint : public RealEdit::DataModelBase,
-                                public Realisim::Point3f
+                                public Realisim::Point3d
 {
 public:  
-  RealEditPoint( const Realisim::Point3f& iPos );
+  RealEditPoint( const Realisim::Point3d& iPos );
   ~RealEditPoint();
     
 private:
@@ -65,13 +65,13 @@ public:
   ~RealEditPolygon();
 
   const std::vector<RealEditPoint*>& getPoints() const;
-  const std::vector<Realisim::Vector3f>& getNormals() const;
+  const std::vector<Realisim::Vector3d>& getNormals() const;
   
   //void calculateNormal();
   
 private:
   std::vector<RealEditPoint*> mPoints;
-  std::vector<Realisim::Vector3f> mNormals;
+  std::vector<Realisim::Vector3d> mNormals;
 };
 
 //-----------------------------------------------------------------------------
@@ -87,6 +87,8 @@ public:
 
   unsigned int getPointCount() const;
   const RealEditPoint* getPoint( int iIndex ) const;
+  unsigned int getPolygonCount() const;
+  const RealEditPolygon* getPolygon( int iIndex ) const;
 
   
 protected:

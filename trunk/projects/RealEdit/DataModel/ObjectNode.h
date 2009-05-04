@@ -12,6 +12,7 @@
 #include <vector>
 
 namespace RealEdit { class ObjectNode; }
+namespace RealEdit { class Path; }
 namespace RealEdit { class RealEditModel; }
 
 
@@ -29,6 +30,7 @@ public:
   const RealEditModel* getModel() const;
   RealEditModel* getModel();
   const std::string& getName() const;
+  const ObjectNode* getParentNode() const {return mpParentNode;}
   const Realisim::Point3d getTranslation() const;
   const Realisim::Matrix4d& getTransformation() const;
   const ObjectNode& operator=( const ObjectNode& iObjectNode ){ assert(0); }
@@ -47,6 +49,16 @@ private:
   Realisim::Matrix4d mTransformation;
   
   std::string mName;
+};
+
+class RealEdit::Path
+{
+public:
+  Path(const ObjectNode* ipNode);
+  const Realisim::Matrix4d& getSceneTransformation() {return mSceneToNode;}
+  
+private:
+  Realisim::Matrix4d mSceneToNode;
 };
 
 #endif  //OBJECTNODE_H

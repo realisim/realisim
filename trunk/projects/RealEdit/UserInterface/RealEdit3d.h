@@ -11,12 +11,16 @@
 #define RealEdit3d_h
 
 #include "Widget3d.h"
+/*
 
+  mDisplayListCube
+*/
 namespace RealEdit 
 {
-  class RealEdit3d;
   class EditionData;
   class ObjectNode;
+  class RealEdit3d;
+  class RealEditModel;
 }
 
 class RealEdit::RealEdit3d : public Realisim::Widget3d
@@ -24,23 +28,19 @@ class RealEdit::RealEdit3d : public Realisim::Widget3d
 public:
   RealEdit3d( QWidget* ipParent, 
               const QGLWidget* iSharedWidget,
+              const DisplayData& iDisplayData,
               const EditionData& iEditionData );
   ~RealEdit3d();
   
   void currentNodeChanged();
   virtual void paintGL();
-  void initDisplayList();
-
-private:
-  void drawCube() const;
+  
+protected:
+  void drawPolygons(const RealEdit::RealEditModel* ipModel) const;
   void drawScene( const RealEdit::ObjectNode* iObjectNode ) const;
 
-  
-  
-  //index de display list
-  static GLuint mCube;
-  
-  //reference sur le EditionData de RealEditController
+private:
+  const DisplayData& mDisplayData;
   const EditionData& mEditionData;
   
 };
