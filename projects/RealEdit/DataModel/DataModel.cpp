@@ -21,16 +21,21 @@ DataModelBase::~DataModelBase()
 {}
 
 //-------------------------Point--------------------------------------------
-RealEditPoint::RealEditPoint(const Point3f& iPos) : 
+RealEditPoint::RealEditPoint(const Point3d& iPos) : 
 DataModelBase(),
-Point3f( iPos )
+Point3d( iPos )
 {
 }
 
 RealEditPoint::~RealEditPoint()
 {}
 
-//--------------------------RealEditPolygon-----------------------------------------
+//--------------------------RealEditPolygon-------------------------------------
+/*
+Les Polygones sont temporairement limité a 3 points parce que la classe 
+mathématique de Polygon est limité a 3 points.... il faudrait arranger
+ca!
+*/
 RealEditPolygon::RealEditPolygon( const std::vector<RealEditPoint*>& iP ) :
 DataModelBase(),
 mPoints(),
@@ -49,6 +54,18 @@ RealEditPolygon::~RealEditPolygon()
 {
 }
 
+const std::vector<RealEditPoint*>&
+RealEditPolygon::getPoints() const
+{
+  return mPoints;
+}
+
+const std::vector<Realisim::Vector3d>&
+RealEditPolygon::getNormals() const
+{
+  return mNormals;
+}
+
 //------------------------RealEditModel--------------------------------------------
 RealEditModel::RealEditModel() : 
 DataModelBase(),
@@ -61,26 +78,44 @@ RealEditModel::~RealEditModel()
 {
 }
 
+//------------------------------------------------------------------------------
 void
 RealEditModel::addPoint( const RealEditPoint* ipPoint )
 {
   mPoints.push_back( ipPoint );
 }
 
+//------------------------------------------------------------------------------
 void
 RealEditModel::addPolygon( const RealEditPolygon* ipPoly )
 {
   mPolygons.push_back( ipPoly );
 }
 
+//------------------------------------------------------------------------------
 unsigned int
 RealEditModel::getPointCount() const
 {
   return mPoints.size();
 }
 
+//------------------------------------------------------------------------------
 const RealEditPoint*
 RealEditModel::getPoint( int iIndex ) const
 {
   return mPoints[iIndex];
+}
+
+//------------------------------------------------------------------------------
+unsigned int
+RealEditModel::getPolygonCount() const
+{
+  return mPolygons.size();
+}
+
+//------------------------------------------------------------------------------
+const RealEditPolygon*
+RealEditModel::getPolygon( int iIndex ) const
+{
+  return mPolygons[iIndex];
 }

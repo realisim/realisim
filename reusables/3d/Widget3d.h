@@ -64,9 +64,6 @@ protected:
   Camera mCam;
   Camera mOldCam; //used to interpolate camera during animation
   Camera mNewCam; //used to interpolate camera during animation
-
-  typedef std::map<int, Primitive3d::Primitive3dBase*> IdToPrimitiveMap;
-  IdToPrimitiveMap mIdToPrimitiveMap;
   
 private:  
   QTime mAnimationTimer;

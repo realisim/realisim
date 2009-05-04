@@ -32,22 +32,22 @@ namespace Realisim
   
     // --------------- constructeurs -------------------------------------------
     inline Polygon();
-    inline Polygon(const Point3f& p1, const Point3f& p2, const Point3f& p3);
+    inline Polygon(const Point3d& p1, const Point3d& p2, const Point3d& p3);
     inline Polygon(const Polygon& polygon);
     
     // --------------- destructeurs --------------------------------------------
     inline ~Polygon();
 
     // --------------- fonction Get --------------------------------------------
-    inline const Point3f& getPoint1() const;
-    inline const Point3f& getPoint2() const;
-    inline const Point3f& getPoint3() const;
+    inline const Point3d& getPoint1() const;
+    inline const Point3d& getPoint2() const;
+    inline const Point3d& getPoint3() const;
 
-    inline const Vector3f& getNormal() const;
+    inline const Vector3d& getNormal() const;
     
     // --------------- fonction Set --------------------------------------------
-    inline void setPolygon(const Point3f& p1, const Point3f& p2, const Point3f& p3);
-    inline void setNormal(const Vector3f& vect);
+    inline void setPolygon(const Point3d& p1, const Point3d& p2, const Point3d& p3);
+    inline void setNormal(const Vector3d& vect);
     
     // --------------- fonction utiles -----------------------------------------
     inline void invertNormal();  //inverse la normale
@@ -61,11 +61,11 @@ namespace Realisim
   private:
   
     //! il est Ègalement constituÈ de 3 points
-    Point3f point1_;
-    Point3f point2_;
-    Point3f point3_;
+    Point3d point1_;
+    Point3d point2_;
+    Point3d point3_;
 
-    Vector3f normal_; //! normal du Polygon
+    Vector3d normal_; //! normal du Polygon
   };
   
   //----------------------------------------------------------------------------
@@ -90,7 +90,7 @@ namespace Realisim
   //! \param listPoint valeur d'initialisation
   //!
   //----------------------------------------------------------------------------
-  inline Polygon::Polygon(const Point3f& p1, const Point3f& p2, const Point3f& p3)
+  inline Polygon::Polygon(const Point3d& p1, const Point3d& p2, const Point3d& p3)
   {
     point1_ = p1;
     point2_ = p2;
@@ -113,31 +113,31 @@ namespace Realisim
   }
 
   //! retourne un Pointeur sur un Point
-  inline const Point3f& Polygon::getPoint1() const
+  inline const Point3d& Polygon::getPoint1() const
   {
     return point1_;
   }
 
   //! retourne un Pointeur sur un Point
-  inline const Point3f& Polygon::getPoint2() const
+  inline const Point3d& Polygon::getPoint2() const
   {
     return point2_;
   }
 
   //! retourne un Pointeur sur un Point
-  inline const Point3f& Polygon::getPoint3() const
+  inline const Point3d& Polygon::getPoint3() const
   {
     return point3_;
   }
 
   //! retourne la normal
-  inline const Vector3f& Polygon::getNormal() const
+  inline const Vector3d& Polygon::getNormal() const
   {
     return normal_;
   }
 
-  //! Set le polygone avec 3 Point3f
-  inline void Polygon::setPolygon(const Point3f& p1, const Point3f& p2, const Point3f& p3)
+  //! Set le polygone avec 3 Point3d
+  inline void Polygon::setPolygon(const Point3d& p1, const Point3d& p2, const Point3d& p3)
   {
     point1_ = p1;
     point2_ = p2;
@@ -147,7 +147,7 @@ namespace Realisim
     calculateNormal();
   }
   
-  inline void Polygon::setNormal(const Vector3f& vect)
+  inline void Polygon::setNormal(const Vector3d& vect)
   {
     normal_ = vect;
   }
@@ -160,7 +160,7 @@ namespace Realisim
     //des points constituants le polygone. Ainsi, la methode qui calcule la
     //normale calculera la nouvelle normale dans un sens oppose a la normale
     //actuelle
-    const Point3f& pointTemp = getPoint1();
+    const Point3d& pointTemp = getPoint1();
     point1_ = getPoint3();
     point3_ = pointTemp;
     
@@ -203,8 +203,8 @@ namespace Realisim
   {
     // on calcule la normale. produit vectoriel entre deux vecteurs (3 points)
     // constituant le polygone.
-    Vector3f tmp1(getPoint1(), getPoint2());
-    Vector3f tmp2(getPoint1(), getPoint3());
+    Vector3d tmp1(getPoint1(), getPoint2());
+    Vector3d tmp2(getPoint1(), getPoint3());
     normal_ = tmp1^tmp2;
     normal_.normalise();
   }

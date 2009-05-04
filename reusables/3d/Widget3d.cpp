@@ -6,9 +6,9 @@
 *
 ******************************************************************************/
 
-#include "Widget3d.h"
 #include "MathUtils.h"
 #include <QMouseEvent>
+#include "Widget3d.h"
 
 using namespace Realisim;
 using namespace std;
@@ -240,4 +240,6 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
 //-----------------------------------------------------------------------------
 void Widget3d::wheelEvent ( QWheelEvent * event )
 {
+  mpInputHandler->wheelEvent(event);
+  updateGL();
 }

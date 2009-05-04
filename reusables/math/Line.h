@@ -30,7 +30,7 @@ namespace Realisim
   
     // --------------- constructeurs -------------------------------------------
     inline Line();
-    inline Line(Point3f &origin, Vect3f &direction);
+    inline Line(Point3d &origin, Vector3d &direction);
     inline Line(const Line &line);
     
     // --------------- destructeurs --------------------------------------------
@@ -43,7 +43,7 @@ namespace Realisim
   protected:
   private:
   
-    Point3f  origin_;    //! origin de la ligne
+    Point3d  origin_;    //! origin de la ligne
     Vect3f direction_;    //! direction de la ligne
   
   }
@@ -62,7 +62,7 @@ namespace Realisim
   //! \param val valeur d'initialisation
   //!
   //----------------------------------------------------------------------------
-  inline Line::Line(Point3f &origin, Vect3f &direction)
+  inline Line::Line(Point3d &origin, Vector3d &direction)
     : origin_(origin), direction_(direction)
   {
   }

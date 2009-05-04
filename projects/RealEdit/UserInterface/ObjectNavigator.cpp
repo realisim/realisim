@@ -28,6 +28,7 @@ mTreeItemToNode()
   
   //create the object tree
   createTree( this, mController.getEditionData().getScene().getObjectNode() );
+  expandAllItems();
   
   connect( this, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*) ),
            this, SLOT(doItemChanged(QTreeWidgetItem*, QTreeWidgetItem*) ) );
@@ -64,6 +65,17 @@ void ObjectNavigator::doItemChanged(QTreeWidgetItem* ipItem,
   if( it != mTreeItemToNode.end() )
   {
     mController.setCurrentNode( it->second );
+  }
+}
+
+//------------------------------------------------------------------------------
+void ObjectNavigator::expandAllItems()
+{
+  TreeItemToNode::const_iterator it = mTreeItemToNode.begin();
+  while(it != mTreeItemToNode.end())
+  {
+    expandItem(it->first);
+    ++it;
   }
 }
 

@@ -8,11 +8,13 @@
  */
 
 #include "Camera.h"
+#include <qgl.h>
 #include "MathUtils.h"
 
-#include <qgl.h>
-
 using namespace Realisim;
+
+static const double kNear = 50.0;
+static const double kFar = 2000.0;
 //-----------------------------------------------------------------------------
 Camera::Camera( Mode iMode /*= PERSPECTIVE*/ ) : 
 mMode( iMode ),
@@ -24,7 +26,8 @@ mLook(),
 mUp(),
 mVisibleGLUnit( 20 ),
 mPixelPerGLUnit( 0.0 ),
-mZoomFactor( 1.0 )
+mZoomFactor( 1.0 ),
+mWindowInfo()
 {
 }
 
@@ -39,7 +42,8 @@ mLook(),
 mUp(),
 mVisibleGLUnit(),
 mPixelPerGLUnit( 0.0 ),
-mZoomFactor()
+mZoomFactor(),
+mWindowInfo()
 {
   operator=( iCam );
 }
@@ -75,19 +79,6 @@ void Camera::move( Vector3d iDelta )
     case ZY:
     case XZ:
     {
-      //On n'utilise pas les m√©thode setPos et setLook ici parce
-      //qu'on ne veut pas recalculer le vecteur lat√©rale et up, car
-      //on sait qu'il sont inchang√©s puisque la pos et le look
-      //se d√©place d'une valeur √©gale.
-      //Si on utilisait les m√©thodes set, les valeurs du vecteur lat√©ral
-      // et up serait modifi√©es ( due aux erreurs d'arrondissement ).
-//      mPos = Point3d( getPos().getX() + iDelta.getX(),
-//                      getPos().getY() + iDelta.getY(), 
-//                      getPos().getZ() + iDelta.getZ() );
-//      
-//      mLook = Point3d( getLook().getX() + iDelta.getX(),
-//                       getLook().getY() + iDelta.getY(), 
-//                       getLook().getZ() + iDelta.getZ() );
       Point3d trans = mTransformation.getTranslation() + iDelta * mTransformation;
       mTransformation.setTranslation(trans);
       
@@ -208,6 +199,7 @@ Camera::operator=( const Camera& iCam )
   mVisibleGLUnit = iCam.getVisibleGLUnit();
   mPixelPerGLUnit = iCam.getPixelPerGLUnit();
   mZoomFactor = iCam.getZoom();
+  mWindowInfo = iCam.getWindowInfo();
   
   return *this;
 }
@@ -247,17 +239,28 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY ) const
 }
 
 //-----------------------------------------------------------------------------
-void Camera::projectionGL( int iWidth, int iHeight ) const
+void Camera::projectionGL( int iWidth, int iHeight )
 {
-  bool horiz = iWidth >= iHeight;
+  if(iWidth >= iHeight)
+    mWindowInfo.mOrientation = WindowInfo::oHorizontal;
+  else
+    mWindowInfo.mOrientation = WindowInfo::oVertical;
   
   //le cot√© le plus long montre la valeur mVisibleGLUnit unit√© GL
-  int windowShortSide = qMin(iWidth, iHeight);
-  int windowLongSide = qMax(iWidth, iHeight);
+  mWindowInfo.mShortSide = qMin(iWidth, iHeight);
+  mWindowInfo.mLongSide = qMax(iWidth, iHeight);
   
+  computeProjection();
+}
+//-----------------------------------------------------------------------------
+void Camera::computeProjection()
+{
+  int windowLongSide = getWindowInfo().mLongSide;
+  int windowShortSide = getWindowInfo().mShortSide;
   float projectionLongSide = getVisibleGLUnit();
   mPixelPerGLUnit = windowLongSide / projectionLongSide;
-  float projectionShortSide = windowShortSide * projectionLongSide / windowLongSide; 
+  float projectionShortSide = windowShortSide * projectionLongSide / 
+    windowLongSide; 
   
   //puisque le viewport est de -projectionLongSide a projectionLongSide et
   //que projectionLongSide represente mVisibleUnitGL, on doit diviser en 2 afin de 
@@ -265,7 +268,7 @@ void Camera::projectionGL( int iWidth, int iHeight ) const
   projectionShortSide /= 2.0;
   projectionLongSide /= 2.0;
   
-  if( horiz )
+  if( getWindowInfo().mOrientation == WindowInfo::oHorizontal )
   {
     glViewport(0, 0, windowLongSide, windowShortSide );
     
@@ -277,19 +280,21 @@ void Camera::projectionGL( int iWidth, int iHeight ) const
       case ORTHOGONAL:
         glOrtho(-projectionLongSide, projectionLongSide,
                 -projectionShortSide, projectionShortSide, 
-                0.0, 100.0);
+                kNear, kFar);
         break;
         
       case PERSPECTIVE:
-        gluPerspective (27.0, (GLfloat) windowLongSide / (GLfloat) windowShortSide, 0.5, 10000.0);
+        //gluPerspective (27.0, (GLfloat) projectionLongSide / (GLfloat) projectionShortSide, 0.5, 10000.0);
+        glFrustum(-projectionLongSide, projectionLongSide,
+                  -projectionShortSide, projectionShortSide, 
+                  kNear, kFar);
         break;
-        
       default:
         break;
     }
     
     glMatrixMode( GL_MODELVIEW );
-
+    
   }
   else //vertical
   {
@@ -303,11 +308,14 @@ void Camera::projectionGL( int iWidth, int iHeight ) const
       case ORTHOGONAL:
         glOrtho(-projectionShortSide, projectionShortSide,
                 -projectionLongSide, projectionLongSide, 
-                0.0, 100.0);
+                kNear, kFar);
         break;
-
+        
       case PERSPECTIVE:
-        gluPerspective (27.0, (GLfloat) windowShortSide / (GLfloat) windowLongSide, 0.5, 10000.0);
+        //gluPerspective (27.0, (GLfloat) projectionShortSide / (GLfloat) projectionLongSide, 0.5, 10000.0);
+        glFrustum(-projectionShortSide, projectionShortSide,
+                -projectionLongSide, projectionLongSide, 
+                kNear, kFar);
         break;
         
       default:
@@ -364,12 +372,12 @@ void Camera::setOrientation( Orientation iO )
     case XY:
     case ZY:
     case XZ:
-      set( Point3d( 0, 0, 10 ),
+      set( Point3d( 0, 0, 100 ),
            Point3d( 0, 0, 0 ),
            Vector3d( 0, 1, 0 ) );
       break;
     case FREE:
-      set( Point3d( 10, 10, 10 ),
+      set( Point3d( 60, 60, 60 ),
            Point3d( 0, 0, 0 ),
            Vector3d( 0, 1, 0 ) );
       break;
@@ -432,4 +440,11 @@ void Camera::setUp( const Vector3d& iUp )
   
   Vector3d updatedLookVect = getUp() ^ getLat();
   mPos = getLook() - ( updatedLookVect.normalise() * currentLookVect.norm() );
+}
+
+//-----------------------------------------------------------------------------
+void Camera::setZoom(double iZoom)
+{
+  mZoomFactor = iZoom;
+  computeProjection();
 }

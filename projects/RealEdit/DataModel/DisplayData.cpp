@@ -1,89 +1,65 @@
 /*
- *  Primitives3d.cpp
+ *  EditionData.cpp
  *  Project
  *
- *  Created by Pierre-Olivier Beaudoin on 22/11/08.
+ *  Created by Pierre-Olivier Beaudoin on 19/11/08.
  *  Copyright 2008 __MyCompanyName__. All rights reserved.
  *
  */
 
-#include "Primitive3d.h"
-
+#include "DisplayData.h"
 #include <qgl.h>
 
-using namespace Realisim;
-using namespace Realisim::Primitive3d;
+using namespace RealEdit;
 
-namespace
-{
-  const int kInvalidDisplayList = -1;
-}
-
-Primitive3dBase::Primitive3dBase()
+DisplayData::DisplayData() : mCube(0)
 {
 }
 
-Primitive3dBase::~Primitive3dBase()
+DisplayData::~DisplayData()
 {
 }
 
-//--------------------------Cube------------------------------------------------
-int Cube::mDisplayList = kInvalidDisplayList;
-
-Cube::Cube() : Primitive3dBase()
+void DisplayData::drawCube() const
 {
+  glPushAttrib(GL_CURRENT_BIT | GL_POLYGON_BIT | GL_ENABLE_BIT);
+  glDisable(GL_LIGHTING);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glColor3d(0, 85/255.0, 176/255.0);
+  glCallList(mCube);
+  glPopAttrib();
 }
 
-Cube::~Cube()
+void DisplayData::initDisplayList()
 {
-}
-
-void
-Cube::draw( bool iPickingDraw /* = false */ ) const
-{
-  initDisplayList();
-  
-  glCallList( mDisplayList );
-}
-
-void
-Cube::initDisplayList() const
-{
-  if( mDisplayList != kInvalidDisplayList )
-  {
-    return;
-  }
-  
+  assert (mCube == 0);
   float hs = 0.5;
-  
-  mDisplayList = glGenLists(1);
-  glNewList(mDisplayList, GL_COMPILE );
-    glBegin(GL_QUADS);
+  mCube = glGenLists(1);
+  glNewList(mCube, GL_COMPILE );
+  glBegin(GL_QUADS);
     glNormal3f( 0.0F, 0.0F, 1.0F);
     glVertex3f( hs, hs, hs); glVertex3f(-hs, hs, hs);
     glVertex3f(-hs,-hs, hs); glVertex3f( hs,-hs, hs);
-    
+
     glNormal3f( 0.0F, 0.0F,-1.0F);
     glVertex3f(-hs,-hs,-hs); glVertex3f(-hs, hs,-hs);
     glVertex3f( hs, hs,-hs); glVertex3f( hs,-hs,-hs);
-    
+
     glNormal3f( 0.0F, 1.0F, 0.0F);
     glVertex3f( hs, hs, hs); glVertex3f( hs, hs,-hs);
     glVertex3f(-hs, hs,-hs); glVertex3f(-hs, hs, hs);
-    
+
     glNormal3f( 0.0F,-1.0F, 0.0F);
     glVertex3f(-hs,-hs,-hs); glVertex3f( hs,-hs,-hs);
     glVertex3f( hs,-hs, hs); glVertex3f(-hs,-hs, hs);
-    
+
     glNormal3f( 1.0F, 0.0F, 0.0F);
     glVertex3f( hs, hs, hs); glVertex3f( hs,-hs, hs);
     glVertex3f( hs,-hs,-hs); glVertex3f( hs, hs,-hs);
-    
+
     glNormal3f(-1.0F, 0.0F, 0.0F);
     glVertex3f(-hs,-hs,-hs); glVertex3f(-hs,-hs, hs);
     glVertex3f(-hs, hs, hs); glVertex3f(-hs, hs,-hs);
-    glEnd();
+  glEnd();
   glEndList();
-  
 }
-

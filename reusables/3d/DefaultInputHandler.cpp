@@ -11,6 +11,8 @@
 
 using namespace Realisim;
 
+static const double kMaxZoom = 1/128.0;
+static const double kMinZoom = 128;
 //-----------------------------------------------------------------------------
 DefaultInputHandler::DefaultInputHandler( Camera& iCam ) :
 mCam( iCam ),
@@ -63,4 +65,12 @@ void DefaultInputHandler::mouseReleaseEvent( QMouseEvent* e )
 }
 
 //-----------------------------------------------------------------------------
-//virtual void wheelEvent ( QWheelEvent * event );
+void DefaultInputHandler::wheelEvent ( QWheelEvent* e )
+{
+  double zoom = 1 / 1.15;
+  if(e->delta() < 0)
+    zoom = 1.15;
+  double finalZoom = mCam.getZoom() * zoom;
+  if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
+    mCam.setZoom(finalZoom);
+}

@@ -33,6 +33,7 @@ private slots:
 private:
   template<class TreeItem>
   void createTree( TreeItem ipItem, ObjectNode* ipNode );
+  void expandAllItems();
   
   RealEditController& mController;
   

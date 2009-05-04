@@ -25,8 +25,7 @@ public:
   virtual void mouseMoveEvent( QMouseEvent* e );
   virtual void mousePressEvent( QMouseEvent* e );
   virtual void mouseReleaseEvent( QMouseEvent* e );
-  
-  //virtual void wheelEvent ( QWheelEvent * event );
+  virtual void wheelEvent ( QWheelEvent * event );
   
 private:
   Camera& mCam;
