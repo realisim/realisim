@@ -76,7 +76,9 @@ RealEditController::~RealEditController()
 void
 RealEditController::newProject()
 {
-	new EditionUi();
+  EditionUi* p = new EditionUi();
+  //pas besoin de deleter la fenetre, Qt le fera lorsque la fenêtre sera fermé
+  p->setAttribute(Qt::WA_DeleteOnClose, true);
 }
 
 //------------------------------------------------------------------------------
