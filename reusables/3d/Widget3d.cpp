@@ -16,6 +16,7 @@ using namespace std;
 namespace
 {
   const int kCameraAnimationTime = 1000; //ms
+  const int kFramesToComputeFps = 10;
 }
 
 //-----------------------------------------------------------------------------
@@ -28,8 +29,12 @@ mOldCam(),
 mNewCam(),
 mAnimationTimer(),
 mAnimationTimerId(),
+mDefaultHandler( mCam ),
+mFps(0.0),
+mFpsFrameCount(0),
+mFpsTimer(),
 mpInputHandler( 0 ),
-mDefaultHandler( mCam )
+mShowFps(true)
 {
   setInputHandler( mDefaultHandler );
 }
@@ -119,7 +124,20 @@ Widget3d::paintGL()
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
   
-  //this should be replaced by a camera
+  //affiche le nombre de frame par seconde
+  if(mShowFps)
+  {
+    if(mFpsFrameCount >= kFramesToComputeFps)
+    {
+      mFps = mFpsFrameCount / (double)mFpsTimer.elapsed() * 1000.0;
+      mFpsTimer = QTime::currentTime();
+      mFpsFrameCount = 0;
+    }
+    renderText(5, 15, QString("fps: ") + QString::number(mFps) );
+    ++mFpsFrameCount;
+  }
+  
+  //On place la caméra en coordonnée absolue.
   Point3d absolutePos = mCam.getPos() * mCam.getTransformation();
   absolutePos += mCam.getTransformation().getTranslation();
   Point3d absoluteLook = mCam.getLook() * mCam.getTransformation();
