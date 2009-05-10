@@ -41,7 +41,7 @@ mLat(),
 mLook(),
 mUp(),
 mVisibleGLUnit(),
-mPixelPerGLUnit( 0.0 ),
+mPixelPerGLUnit(),
 mZoomFactor(),
 mWindowInfo()
 {
@@ -246,7 +246,7 @@ void Camera::projectionGL( int iWidth, int iHeight )
   else
     mWindowInfo.mOrientation = WindowInfo::oVertical;
   
-  //le cot√© le plus long montre la valeur mVisibleGLUnit unit√© GL
+  //le coté le plus long montre la valeur mVisibleGLUnit unité GL
   mWindowInfo.mShortSide = qMin(iWidth, iHeight);
   mWindowInfo.mLongSide = qMax(iWidth, iHeight);
   

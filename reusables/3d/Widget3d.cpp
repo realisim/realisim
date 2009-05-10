@@ -37,6 +37,8 @@ mpInputHandler( 0 ),
 mShowFps(true)
 {
   setInputHandler( mDefaultHandler );
+  //on s'assure que opneGL est initialisé pour ce context
+  glInit();
 }
 
 //-----------------------------------------------------------------------------
@@ -95,25 +97,29 @@ Widget3d::minimumSizeHint() const
 //-----------------------------------------------------------------------------
 void Widget3d::mouseDoubleClickEvent( QMouseEvent* e )
 {
+  makeCurrent();
   mpInputHandler->mouseDoubleClickEvent( e );
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::mouseMoveEvent(QMouseEvent *e)
 {
+  makeCurrent();
   mpInputHandler->mouseMoveEvent( e );
-  updateGL();
+  update();
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::mousePressEvent(QMouseEvent *e)
 {
+  makeCurrent();
   mpInputHandler->mousePressEvent( e );
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::mouseReleaseEvent(QMouseEvent *e)
 {
+  makeCurrent();
   mpInputHandler->mouseReleaseEvent( e );
 }
 
@@ -162,8 +168,7 @@ void
 Widget3d::resizeGL(int iWidth, int iHeight)
 {
   mCam.projectionGL(iWidth, iHeight);
-  
-  updateGL();
+  update();
 }
 
 //-----------------------------------------------------------------------------
@@ -184,7 +189,7 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/ )
   else
   {
     mCam = mNewCam;
-    updateGL();
+    update();
   }
 }
 
@@ -192,14 +197,14 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/ )
 void Widget3d::setCameraMode( Camera::Mode iMode )
 {
   mCam.setMode( iMode );
-  updateGL();
+  update();
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::setCameraOrientation( Camera::Orientation iO )
 {
   mCam.setOrientation( iO );
-  updateGL();
+  update();
 }
 
 //-----------------------------------------------------------------------------
@@ -242,7 +247,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     
     mCam.setTransformation(iterationMatrix,false);
     
-    updateGL();
+    update();
     
     if ( animationTime >= kCameraAnimationTime )
     {
@@ -258,6 +263,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
 //-----------------------------------------------------------------------------
 void Widget3d::wheelEvent ( QWheelEvent * event )
 {
+  makeCurrent();
   mpInputHandler->wheelEvent(event);
-  updateGL();
+  update();
 }
