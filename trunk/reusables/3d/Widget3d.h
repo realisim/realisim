@@ -68,8 +68,12 @@ protected:
 private:  
   QTime mAnimationTimer;
   int mAnimationTimerId;
-  InputHandler* mpInputHandler; //jamais null
   DefaultInputHandler mDefaultHandler;
+  double mFps;
+  int mFpsFrameCount;
+  QTime mFpsTimer;
+  InputHandler* mpInputHandler; //jamais null
+  bool mShowFps;
 };
 
 #endif //Realisim_Widget3d_hh
