@@ -85,6 +85,19 @@ namespace Realisim
   }
   
   //---------------------------------------------------------------------------
+  template<class V>
+  inline Point<V> operator* (const Point<V> &point, const Vect<V> &vect)
+  {
+    Point<V> result;
+    
+    result.setX(point.getX() * vect.getX());
+    result.setY(point.getY() * vect.getY());
+    result.setZ(point.getZ() * vect.getZ());
+    
+    return result;
+  }
+  
+  //---------------------------------------------------------------------------
   //retourne la matrice de rotation correpondant a la rotation de iAngle
   //radian autour de l'axe iAxis
   template<class T>

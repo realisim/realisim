@@ -12,7 +12,7 @@
 #include "Camera.h"
 #include "DefaultInputHandler.h"
 #include "InputHandler.h"
-
+#include "Primitives.h"
 #include <map>
 #include <QTime>
 
@@ -31,8 +31,8 @@ public:
 
   virtual ~Widget3d() = 0;
 
+  void applyDisplayFlag(const Primitives& iP) const;
   const Camera& getCamera() const { return mCam; }
-
   void setCamera( const Camera& iCam, bool iAnimate = true );
   void setCameraMode( Camera::Mode iMode );
   void setCameraOrientation( Camera::Orientation iO );
