@@ -47,20 +47,26 @@ public:
   enum Orientation{ XY, ZY, XZ, FREE };
   struct WindowInfo
   {
+    WindowInfo(){;}
     enum Orientation { oHorizontal, oVertical };
+    int getHeight() const{return mOrientation == oVertical ? mLongSide : mShortSide;}    
+    int getWidth() const{return mOrientation == oHorizontal ? mLongSide : mShortSide;}
+
     Orientation mOrientation;
-    int mShortSide;
     int mLongSide;
+    int mShortSide;
   };
 
   Camera( Mode iMode = PERSPECTIVE );
   Camera( const Camera& iCam );
   virtual ~Camera();
   
+  const Vector3d& getLat() const { return mLat; }
   const Point3d& getLook() const { return mLook; } 
   Mode getMode() const { return mMode; }
   Orientation getOrientation() const { return mOrientation; }
   const Point3d& getPos() const { return mPos; }
+  const double getPixelPerGLUnit() const { return mPixelPerGLUnit; }
   const Matrix4d& getTransformation() const { return mTransformation; }
   const Vector3d& getUp() const { return mUp; }
   const WindowInfo& getWindowInfo() const {return mWindowInfo;}
@@ -81,8 +87,6 @@ public:
 protected:
   void computeLatAndUp();
   void computeProjection();
-  const Vector3d& getLat() const { return mLat; }
-  const double getPixelPerGLUnit() const { return mPixelPerGLUnit; }
   const double getVisibleGLUnit() const { return mVisibleGLUnit * mZoomFactor; }
   void setLat( const Vector3d& iLat );
   void setUp( const Vector3d& iUp );

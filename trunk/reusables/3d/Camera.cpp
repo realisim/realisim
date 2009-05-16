@@ -15,6 +15,7 @@ using namespace Realisim;
 
 static const double kNear = 50.0;
 static const double kFar = 2000.0;
+
 //-----------------------------------------------------------------------------
 Camera::Camera( Mode iMode /*= PERSPECTIVE*/ ) : 
 mMode( iMode ),
@@ -24,7 +25,7 @@ mPos(),
 mLat(),
 mLook(),
 mUp(),
-mVisibleGLUnit( 20 ),
+mVisibleGLUnit( 20.0 ),
 mPixelPerGLUnit( 0.0 ),
 mZoomFactor( 1.0 ),
 mWindowInfo()

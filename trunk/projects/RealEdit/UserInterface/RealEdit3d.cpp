@@ -21,10 +21,9 @@ namespace
   const int kInvalidDisplayList = -1;
 }
 
-
 RealEdit3d::RealEdit3d( QWidget* ipParent, 
                         const QGLWidget* iSharedWidget, 
-                        const DisplayData& iDisplayData,
+                        DisplayData& iDisplayData,
                         const EditionData& iEditionData ) : 
 Widget3d(ipParent, iSharedWidget),
 mDisplayData(iDisplayData),
@@ -43,6 +42,22 @@ void RealEdit3d::currentNodeChanged()
   Path p(mEditionData.getCurrentNode());
   cam.setTransformation(p.getSceneTransformation());
   setCamera( cam );
+}
+
+//------------------------------------------------------------------------------
+void RealEdit3d::drawAxis() const
+{
+  mDisplayData.getAxis().setDisplayFlag(Primitives::pViewport);
+  mDisplayData.getAxis().setDisplayFlag(Primitives::zViewport);
+  //on place la primitive dans le coin inférieur droit
+  Point3d p(getCamera().getWindowInfo().getWidth() - 25,
+    getCamera().getWindowInfo().getHeight() - 25,
+    0);
+  mDisplayData.getAxis().setPosition(p);
+  Widget3d::applyDisplayFlag(mDisplayData.getAxis());
+  //on donne un taille de 20 pixels a la primitives
+  glScaled(20.0, 20.0, 20.0);
+  mDisplayData.drawAxis();
 }
 
 //------------------------------------------------------------------------------
@@ -91,8 +106,13 @@ RealEdit3d::drawScene(const RealEdit::ObjectNode* ipObjectNode) const
     {
       glPushMatrix();
       {
-        const RealEditPoint* pPoint = pModel->getPoint(i);
-        glTranslated( pPoint->getX(), pPoint->getY(), pPoint->getZ() );
+        mDisplayData.getCube().setPosition(*pModel->getPoint(i));        
+        //on désactive le zoom de scene sur la primitives cube
+        mDisplayData.getCube().setDisplayFlag(Primitives::zViewport);
+        Widget3d::applyDisplayFlag(mDisplayData.getCube());
+        //on lui donne un scaling de 10 pour que le cube ait toujours
+        //5 pixels a l'écran.
+        glScaled(5.0, 5.0, 5.0);
         mDisplayData.drawCube();
       }
       glPopMatrix();
@@ -129,6 +149,8 @@ RealEdit3d::paintGL()
 {
   Widget3d::paintGL();
   drawScene( mEditionData.getScene().getObjectNode() );
+  
+  drawAxis();
 }
 
 

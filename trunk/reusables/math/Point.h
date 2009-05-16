@@ -28,7 +28,8 @@ namespace Realisim
     inline Point();
     inline Point(const U &val);
     inline Point(const U &x, const U &y, const U &z);
-    inline Point(const Point &point);
+    template <class T>
+    inline Point(const Point<T> &point);
 
     // --------------- destructeurs --------------------------------------------
     inline ~Point();
@@ -66,6 +67,8 @@ namespace Realisim
     inline Point<U>&     operator+= (const Point &point);
     inline Point<U> operator*  (const U &val) const;
     inline Point<U>& operator*= (const U &val);
+    inline Point<U>  operator/  (const U &val) const;
+    inline Point<U>& operator/= (const U &val);  
   //   inline Point&        operator*= (const Point &point);
   //
   //   inline Point operator* (const Point &point) const;
@@ -115,10 +118,14 @@ namespace Realisim
   {
   }
 
-  //! constructeur copie
+  //! constructeur copie qui permet les conversion implicite légale
+  // int a double par exemple.
   template<class U>
-  inline Point<U>::Point(const Point &point) : x_(point.x_), y_(point.y_),
-    z_(point.z_)
+  template <class T>
+  inline Point<U>::Point(const Point<T> &point) :
+    x_(point.getX()),
+    y_(point.getY()),
+    z_(point.getZ())
   {
   }
 
@@ -437,6 +444,44 @@ namespace Realisim
     x_*=val;
     y_*=val;
     z_*=val;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------------------
+  //! surcharge opÈrateur / avec T
+  template<class U>  
+  inline Point<U> Point<U>::operator/ (const U &val) const
+  {
+    double vTmp;
+    Point<U> p(x_, y_, z_);
+    
+    if(val>SMALL_REAL || val<-SMALL_REAL)
+      vTmp=((double)1.0)/(double)val;
+    else
+      vTmp=(double)0.0;
+    
+    p.x_*=vTmp;
+    p.y_*=vTmp;
+    p.z_*=vTmp;
+    
+    return p;
+  }
+  
+  //! surcharge operateur /= avec T
+  template<class U>
+  inline Point<U>& Point<U>::operator/= (const U &val)
+  {
+    double vTmp;
+    
+    if(val>SMALL_REAL || val<-SMALL_REAL)
+      vTmp=((double)1.0)/(double)val;
+    else
+      vTmp=(double)0.0;
+    
+    x_*=vTmp;
+    y_*=vTmp;
+    z_*=vTmp;
+    
     return *this;
   }
 

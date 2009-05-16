@@ -25,6 +25,8 @@ mController( iC ),
 mTreeItemToNode()
 {
   header()->hide();
+  setAlternatingRowColors(true);
+  setAnimated(true);
   
   //create the object tree
   createTree( this, mController.getEditionData().getScene().getObjectNode() );

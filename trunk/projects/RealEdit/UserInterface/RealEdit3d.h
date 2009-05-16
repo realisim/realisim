@@ -28,19 +28,20 @@ class RealEdit::RealEdit3d : public Realisim::Widget3d
 public:
   RealEdit3d( QWidget* ipParent, 
               const QGLWidget* iSharedWidget,
-              const DisplayData& iDisplayData,
+              DisplayData& iDisplayData,
               const EditionData& iEditionData );
-  ~RealEdit3d();
+  virtual ~RealEdit3d();
   
   void currentNodeChanged();
   virtual void paintGL();
   
 protected:
+  void drawAxis() const;
   void drawPolygons(const RealEdit::RealEditModel* ipModel) const;
   void drawScene( const RealEdit::ObjectNode* iObjectNode ) const;
 
 private:
-  const DisplayData& mDisplayData;
+  DisplayData& mDisplayData;
   const EditionData& mEditionData;
   
 };

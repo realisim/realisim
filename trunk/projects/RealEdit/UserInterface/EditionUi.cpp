@@ -34,9 +34,6 @@ EditionUi::EditionUi()
     mController.getDisplayData(), mController.getEditionData() );
   mpWidget3d_1->setCameraMode( Camera::ORTHOGONAL );
   mpWidget3d_1->setCameraOrientation( Camera::XY );
-  //DisplayData contient les elments d'affichage partagé, il est important
-  //d'initiliser une seule fois apres la creation du widget3D
-  mController.getDisplayData().initDisplayList();
     
   mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1,
     mController.getDisplayData(), mController.getEditionData() );
@@ -51,11 +48,12 @@ EditionUi::EditionUi()
 	mpWidget3d_4 = new RealEdit3d( this, mpWidget3d_1,
     mController.getDisplayData(), mController.getEditionData() );
   mpWidget3d_4->setCameraOrientation( Camera::FREE );
-	
-	pGLyt->addWidget( mpWidget3d_1, 0, 0 );
-	pGLyt->addWidget( mpWidget3d_2, 0, 1 );
-	pGLyt->addWidget( mpWidget3d_3, 1, 0 );
- 	pGLyt->addWidget( mpWidget3d_4, 1, 1 );
+
+  pGLyt->addWidget(mpWidget3d_4, 0, 0, 1, 3);
+  pGLyt->setRowStretch(0, 2);
+  pGLyt->addWidget(mpWidget3d_1, 1, 0 );
+  pGLyt->addWidget(mpWidget3d_2, 1, 1 );
+  pGLyt->addWidget(mpWidget3d_3, 1, 2 ); 
 	
 	//add the Object Navigator
 	addObjectNavigator();

@@ -51,7 +51,7 @@ namespace Realisim
     
     // --------------- fonction utiles -----------------------------------------
     inline T norm() const;
-    inline Vect<T> normalise();
+    inline const Vect<T>& normalise();
     inline T fastNorm() const;
     
     // --------------- Overload: operateurs unitaires --------------------------
@@ -352,7 +352,7 @@ namespace Realisim
   //! \return un vecteur normalisÈ
   //!---------------------------------------------------------------------------
   template<class T>
-  inline Vect<T> Vect<T>::normalise()
+  inline const Vect<T>& Vect<T>::normalise()
   {
     (*this) /= this->norm();
     return (*this);
@@ -576,13 +576,13 @@ namespace Realisim
   template<class T>  
   inline Vect<T> Vect<T>::operator/ (const T &val) const
   {
-    T vTmp;
+    double vTmp;
     Vect<T> vect(x_, y_, z_);
     
     if(val>SMALL_REAL || val<-SMALL_REAL)
-      vTmp=((T)1.0)/val;
+      vTmp=((double)1.0)/(double)val;
     else
-      vTmp=(T)0.0;
+      vTmp=(double)0.0;
       
     vect.x_*=vTmp;
     vect.y_*=vTmp;
@@ -595,12 +595,12 @@ namespace Realisim
   template<class T>
   inline Vect<T>& Vect<T>::operator/= (const T &val)
   {
-    T vTmp;
+    double vTmp;
     
     if(val>SMALL_REAL || val<-SMALL_REAL)
-      vTmp=((T)1.0)/val;
+      vTmp=((double)1.0)/(double)val;
     else
-      vTmp=(T)0.0;
+      vTmp=(double)0.0;
       
     x_*=vTmp;
     y_*=vTmp;
