@@ -59,6 +59,7 @@ EditionData::EditionData() : mScene(),
 //-----------------------------------------------------------------------------
 EditionData::~EditionData()
 {
+  //TODO deleter les maps de points et de polygones!!!
 }
 
 //-----------------------------------------------------------------------------
@@ -88,13 +89,11 @@ EditionData::addPoint( const Point3d& iPoint )
 }
 
 //-----------------------------------------------------------------------------
-void
-EditionData::addPolygon( const std::vector<int>& iPointsId )
+unsigned int
+EditionData::addPolygon( const std::vector<unsigned int>& iPointsId )
 {
   if ( !mpCurrentModel )
-  {
-    return; 
-  }
+    return 0; 
   
   std::vector<RealEditPoint*> points;
   for( unsigned int i = 0; i < iPointsId.size(); ++i )
@@ -111,7 +110,15 @@ EditionData::addPolygon( const std::vector<int>& iPointsId )
   assert( points.size() == iPointsId.size() );
   
   RealEditPolygon* pPoly = new RealEditPolygon( points );
+  
+  std::pair<PolygonMapIt, bool> result =
+  mPolygons.insert(
+    std::make_pair<int, RealEditPolygon*>(pPoly->getId(), pPoly));
+  
+  assert(result.second);
   mpCurrentModel->addPolygon(pPoly);
+  
+  return pPoly->getId();
 }
 
 //-----------------------------------------------------------------------------

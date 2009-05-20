@@ -15,6 +15,7 @@
 
 using namespace Realisim;
 using namespace RealEdit;
+using namespace std;
 
 namespace
 {
@@ -61,18 +62,63 @@ void RealEdit3d::drawAxis() const
 }
 
 //------------------------------------------------------------------------------
+void RealEdit3d::drawNormals(const RealEditModel* ipModel) const
+{
+  for(unsigned int i = 0; i < ipModel->getPolygonCount(); i++)
+  {
+    const RealEditPolygon* pPoly = ipModel->getPolygon(i);
+    
+    glPushMatrix();
+    glTranslated(pPoly->getPoints()[0]->getX(),
+                 pPoly->getPoints()[0]->getY(),
+                 pPoly->getPoints()[0]->getZ());
+    glBegin(GL_LINES);      
+      glVertex3d(0.0, 0.0, 0.0);
+      glVertex3d(pPoly->getNormals()[0].getX(),
+                 pPoly->getNormals()[0].getY(),
+                 pPoly->getNormals()[0].getZ());
+    glEnd();
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslated(pPoly->getPoints()[1]->getX(),
+                 pPoly->getPoints()[1]->getY(),
+                 pPoly->getPoints()[1]->getZ());
+    glBegin(GL_LINES);      
+      glVertex3d(0.0, 0.0, 0.0);
+      glVertex3d(pPoly->getNormals()[1].getX(),
+                 pPoly->getNormals()[1].getY(),
+                 pPoly->getNormals()[1].getZ());
+    glEnd();
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslated(pPoly->getPoints()[2]->getX(),
+                 pPoly->getPoints()[2]->getY(),
+                 pPoly->getPoints()[2]->getZ());
+    glBegin(GL_LINES);      
+      glVertex3d(0.0, 0.0, 0.0);
+      glVertex3d(pPoly->getNormals()[2].getX(),
+                 pPoly->getNormals()[2].getY(),
+                 pPoly->getNormals()[2].getZ());
+    glEnd();
+    glPopMatrix();
+  }
+}
+
+//------------------------------------------------------------------------------
 void RealEdit3d::drawPolygons(const RealEditModel* ipModel) const
 {
-  glBegin(GL_POLYGON);
-  for(unsigned int i = 0; i < ipModel->getPolygonCount(); ++i)
+  for(unsigned int i = 0; i < ipModel->getPolygonCount(); i++)
   {
+    glBegin(GL_POLYGON);
     const RealEditPolygon* pPoly = ipModel->getPolygon(i);
     glNormal3d(pPoly->getNormals()[0].getX(),
                pPoly->getNormals()[0].getY(),
                pPoly->getNormals()[0].getZ());
     glVertex3d(pPoly->getPoints()[0]->getX(),
                pPoly->getPoints()[0]->getY(),
-               pPoly->getPoints()[0]->getZ());
+               pPoly->getPoints()[0]->getZ());    
     glNormal3d(pPoly->getNormals()[1].getX(),
                pPoly->getNormals()[1].getY(),
                pPoly->getNormals()[1].getZ());
@@ -85,8 +131,8 @@ void RealEdit3d::drawPolygons(const RealEditModel* ipModel) const
     glVertex3d(pPoly->getPoints()[2]->getX(),
                pPoly->getPoints()[2]->getY(),
                pPoly->getPoints()[2]->getZ());
+    glEnd();
   }
-  glEnd();
 }
 
 //------------------------------------------------------------------------------
@@ -95,7 +141,6 @@ RealEdit3d::drawScene(const RealEdit::ObjectNode* ipObjectNode) const
 {
   const RealEditModel* pModel = ipObjectNode->getModel();
   
-  glPushAttrib( GL_CURRENT_BIT | GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT );
   glPushMatrix();
   {
     //appliquer la transfo du noeud
@@ -105,7 +150,8 @@ RealEdit3d::drawScene(const RealEdit::ObjectNode* ipObjectNode) const
     for( unsigned int i = 0; i < pModel->getPointCount(); ++i )
     {
       glPushMatrix();
-      {
+      glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_HINT_BIT);
+        enableSmoothLines();
         mDisplayData.getCube().setPosition(*pModel->getPoint(i));        
         //on désactive le zoom de scene sur la primitives cube
         mDisplayData.getCube().setDisplayFlag(Primitives::zViewport);
@@ -114,7 +160,7 @@ RealEdit3d::drawScene(const RealEdit::ObjectNode* ipObjectNode) const
         //5 pixels a l'écran.
         glScaled(5.0, 5.0, 5.0);
         mDisplayData.drawCube();
-      }
+      glPopAttrib();
       glPopMatrix();
     }
     
@@ -126,12 +172,23 @@ RealEdit3d::drawScene(const RealEdit::ObjectNode* ipObjectNode) const
     glPopAttrib();
     
     //dessiner les lignes du polygon
-    glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT);
+    glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
+                 GL_COLOR_BUFFER_BIT | GL_HINT_BIT);
       glDisable(GL_LIGHTING);
+      enableSmoothLines();
       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-      glColor3d( 0.0, 1.0, 0.2);
+      glColor4d( 0.0, 1.0, 0.2, 1.0);
       drawPolygons(pModel);
     glPopAttrib();
+    
+    //dessine les normals du modèle
+//    glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT |
+//                 GL_HINT_BIT);
+//      glDisable(GL_LIGHTING);
+//      glColor4d(1.0, 1.0, 1.0, 1.0);
+//      enableSmoothLines();
+//      drawNormals(pModel);
+//    glPopAttrib();
     
     //dessiner les enfants du noeud
     for( unsigned int i = 0; i < ipObjectNode->getChildCount(); i++ )
@@ -140,7 +197,19 @@ RealEdit3d::drawScene(const RealEdit::ObjectNode* ipObjectNode) const
     }
   }
   glPopMatrix();
-  glPopAttrib();
+}
+
+//------------------------------------------------------------------------------
+//active les etats gl pour l'antialisaing sur les lignes
+//ATTENTION!!! mettre le 
+//pushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_HINT_BIT) avant d'appeler
+//cette fonction
+void RealEdit3d::enableSmoothLines() const
+{
+  glEnable (GL_LINE_SMOOTH);
+  glHint (GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
+  glEnable (GL_BLEND);
+  glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 //------------------------------------------------------------------------------
@@ -149,7 +218,6 @@ RealEdit3d::paintGL()
 {
   Widget3d::paintGL();
   drawScene( mEditionData.getScene().getObjectNode() );
-  
   drawAxis();
 }
 

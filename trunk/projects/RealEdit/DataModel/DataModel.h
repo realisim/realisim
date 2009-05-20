@@ -30,7 +30,6 @@ protected:
 	
 private:
   static unsigned int mIdCounter;
-
 };
 
 //-----------------------------------------------------------------------------
@@ -39,7 +38,7 @@ class RealEdit::RealEditPoint : public RealEdit::DataModelBase,
 {
 public:  
   RealEditPoint( const Realisim::Point3d& iPos );
-  ~RealEditPoint();
+  virtual ~RealEditPoint();
     
 private:
 };
@@ -61,8 +60,8 @@ class RealEdit::RealEditPolygon : public RealEdit::DataModelBase
 public:
   //Le vecteur de point ne doit JAMAIS contenir de pointeur NULL
   RealEditPolygon( const std::vector<RealEditPoint*>& iP );
-  RealEditPolygon( const RealEditPolygon& iP );
-  ~RealEditPolygon();
+  RealEditPolygon( const RealEditPolygon& iP ){assert(0);}
+  virtual ~RealEditPolygon();
 
   const std::vector<RealEditPoint*>& getPoints() const;
   const std::vector<Realisim::Vector3d>& getNormals() const;
@@ -80,17 +79,16 @@ class RealEdit::RealEditModel : public RealEdit::DataModelBase
 public:  
 	RealEditModel();
   RealEditModel( const RealEditModel& iModel ){assert(0);}
-	~RealEditModel();
+	virtual ~RealEditModel();
 	
   void addPoint( const RealEditPoint* ipPoint );
   void addPolygon( const RealEditPolygon* ipPoly );
 
   unsigned int getPointCount() const;
-  const RealEditPoint* getPoint( int iIndex ) const;
+  const RealEditPoint* getPoint(unsigned int iIndex ) const;
   unsigned int getPolygonCount() const;
-  const RealEditPolygon* getPolygon( int iIndex ) const;
+  const RealEditPolygon* getPolygon(unsigned int iIndex ) const;
 
-  
 protected:
 private:
   

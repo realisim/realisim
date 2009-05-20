@@ -41,7 +41,6 @@ public:
   void rotate( const double iAngle, const Realisim::Vector3d& iAxis,
     const Realisim::Point3d& iAxisPos );
   
-  
 private:
   RealEditModel* mpModel;
   ObjectNode* mpParentNode;
