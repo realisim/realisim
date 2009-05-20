@@ -4,6 +4,7 @@
 
 #include "DataModel.h"
 #include "Polygon.h"
+#include <iostream>
 
 using namespace Realisim;
 using namespace RealEdit;
@@ -15,6 +16,7 @@ DataModelBase::DataModelBase() : mId( 0 )
 {
   ++mIdCounter;
   mId = mIdCounter;
+  std::cout<<"id: "<<mId<<std::endl;
 }
 
 DataModelBase::~DataModelBase()
@@ -38,11 +40,9 @@ ca!
 */
 RealEditPolygon::RealEditPolygon( const std::vector<RealEditPoint*>& iP ) :
 DataModelBase(),
-mPoints(),
+mPoints(iP),
 mNormals()
 {
-  mPoints = iP;
-  
   Polygon poly( *mPoints[0], *mPoints[1], *mPoints[2] );
   
   mNormals.push_back( poly.getNormal() );
@@ -89,7 +89,7 @@ RealEditModel::addPoint( const RealEditPoint* ipPoint )
 void
 RealEditModel::addPolygon( const RealEditPolygon* ipPoly )
 {
-  mPolygons.push_back( ipPoly );
+  mPolygons.push_back(ipPoly);
 }
 
 //------------------------------------------------------------------------------
@@ -101,7 +101,7 @@ RealEditModel::getPointCount() const
 
 //------------------------------------------------------------------------------
 const RealEditPoint*
-RealEditModel::getPoint( int iIndex ) const
+RealEditModel::getPoint(unsigned int iIndex) const
 {
   return mPoints[iIndex];
 }
@@ -115,7 +115,7 @@ RealEditModel::getPolygonCount() const
 
 //------------------------------------------------------------------------------
 const RealEditPolygon*
-RealEditModel::getPolygon( int iIndex ) const
+RealEditModel::getPolygon(unsigned int iIndex) const
 {
   return mPolygons[iIndex];
 }

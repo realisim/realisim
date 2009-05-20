@@ -51,7 +51,7 @@ public:
   ~EditionData();
   
   unsigned int addPoint( const Realisim::Point3d& iPoint );
-  void addPolygon( const std::vector<int>& iPoints );
+  unsigned int addPolygon( const std::vector<unsigned int>& iPoints );
   ObjectNode* addNode( const std::string iName );
   const ObjectNode* getCurrentNode() const;
   ObjectNode* getCurrentNode();

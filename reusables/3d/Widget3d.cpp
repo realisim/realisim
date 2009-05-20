@@ -143,7 +143,7 @@ Widget3d::initializeGL()
 {
     //useful for lights 
     GLfloat shininess[] = {80.0};
-    GLfloat position[]  = {0.0, 50.0, 25.0, 0.0};
+    GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
     GLfloat ambiant[]   = {0.2f, 0.2f, 0.2f, 1.0f};
     GLfloat diffuse[]   = {0.5, 0.5, 0.5, 1.0};
     GLfloat specular[]  = {1.0, 1.0, 1.0, 1.0};
@@ -168,14 +168,11 @@ Widget3d::initializeGL()
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambiant);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
     glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
-
-    //Enable de la lumiere
-    glEnable(GL_LIGHT0);
-
-    //Init du ColorMaterial
+    
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);    
 }
 
 //-----------------------------------------------------------------------------
@@ -231,7 +228,7 @@ Widget3d::paintGL()
       mFpsTimer = QTime::currentTime();
       mFpsFrameCount = 0;
     }
-    renderText(5, 15, QString("fps: ") + QString::number(mFps) );
+    renderText(5, 15, QString("fps: ") + QString::number(mFps, 'f', 2) );
     ++mFpsFrameCount;
   }
   
@@ -241,6 +238,7 @@ Widget3d::paintGL()
   Point3d absoluteLook = mCam.getLook() * mCam.getTransformation();
   absoluteLook += mCam.getTransformation().getTranslation();
   Vector3d absoluteUp = mCam.getUp() * mCam.getTransformation();
+  
   gluLookAt( absolutePos.getX(),
              absolutePos.getY(), 
              absolutePos.getZ(),
@@ -250,6 +248,11 @@ Widget3d::paintGL()
              absoluteUp.getX(),
              absoluteUp.getY(),
              absoluteUp.getZ() );
+             
+  //replacer les lumieres
+  GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
+  glLightfv(GL_LIGHT0, GL_POSITION, position);
+             
             
   //Ici on dessine les objets graphiques de la scene privée du widget.
   //drawPrivateScene();

@@ -37,8 +37,10 @@ public:
   
 protected:
   void drawAxis() const;
+  void drawNormals(const RealEdit::RealEditModel* ipModel) const;
   void drawPolygons(const RealEdit::RealEditModel* ipModel) const;
   void drawScene( const RealEdit::ObjectNode* iObjectNode ) const;
+  void enableSmoothLines() const;
 
 private:
   DisplayData& mDisplayData;
