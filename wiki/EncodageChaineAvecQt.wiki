@@ -17,3 +17,6 @@ int main(int argc, char** argv)
 }
 
 }}}
+
+voir:
+http://pepper.troll.no/s60prereleases/doc/qtextcodec.html#codecForName-2
