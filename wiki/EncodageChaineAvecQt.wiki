@@ -1,0 +1,19 @@
+#summary One-sentence summary of this page.
+
+= Encodage des chaînes avec Qt =
+
+Le format interne des QString est UTF-8, donc un support multilingue. Dans le code lorsqu'on fabrique instance une instance de QString ("une instance"), la conversion const char`*` à QString utilise un QTextCodec pour faire l'encodage de cette chaîne. Il est possible de choisir le codec d'endage. Par défaut c'est latin-1.
+
+{{{
+
+int main(int argc, char** argv)
+{
+  QApplication app(argc, argv);
+  QTextCodec::setCodecForCStrings (QTextCodec::codecForName("UTF-8"));
+
+  ...
+
+  return qApp.exec()
+}
+
+}}}
