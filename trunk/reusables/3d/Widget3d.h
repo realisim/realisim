@@ -28,7 +28,6 @@ public:
   Widget3d( QWidget* ipParent = 0,
             const QGLWidget* shareWidget = 0,
             Qt::WindowFlags iFlags = 0 );
-
   virtual ~Widget3d() = 0;
 
   void applyDisplayFlag(const Primitives& iP) const;
@@ -41,24 +40,17 @@ signals:
     void clicked();
 
 protected:
-
   void initializeGL();
   virtual void paintGL();
   void resizeGL(int iWidth, int iHeight);
-
   virtual void mouseDoubleClickEvent( QMouseEvent* e );
   virtual void mouseMoveEvent( QMouseEvent* e );
   virtual void mousePressEvent( QMouseEvent* e );
   virtual void mouseReleaseEvent( QMouseEvent* e );
-  
   void setInputHandler( InputHandler& ipHandler );
-  
   virtual void wheelEvent ( QWheelEvent* e );
-
   QSize minimumSizeHint() const;
   QSize sizeHint() const;
-  
-protected:
   virtual void timerEvent( QTimerEvent* ipE );
 
   Camera mCam;

@@ -172,7 +172,7 @@ Widget3d::initializeGL()
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);    
+    glEnable(GL_LIGHT0);  
 }
 
 //-----------------------------------------------------------------------------

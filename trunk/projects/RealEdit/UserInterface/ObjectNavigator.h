@@ -15,6 +15,7 @@
 
 namespace RealEdit
 {
+  class EditionData;
   class ObjectNavigator;
   class RealEditController;
   class ObjectNode;
@@ -32,12 +33,13 @@ private slots:
   
 private:
   template<class TreeItem>
-  void createTree( TreeItem ipItem, ObjectNode* ipNode );
+  void createTree( TreeItem ipItem, const ObjectNode* ipNode );
   void expandAllItems();
   
   RealEditController& mController;
+  const EditionData& mEditionData;
   
-  typedef std::map<QTreeWidgetItem*, ObjectNode*> TreeItemToNode;
+  typedef std::map<QTreeWidgetItem*, const ObjectNode*> TreeItemToNode;
   TreeItemToNode mTreeItemToNode;
 };
 

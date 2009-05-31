@@ -9,10 +9,26 @@
 
 #include "Matrix4x4.h"
 #include "Point.h"
+#include "Vect.h"
 #include "Quaternion.h"
 
 namespace Realisim
 {
+  //---------------------------------------------------------------------------
+  //convertie un vecteur en point
+  template<class T>
+  inline Point<T> toPoint (const Vect<T>& iV)
+  {
+    return Point<T>(iV.getX(), iV.getY(), iV.getZ());
+  }
+  
+  //---------------------------------------------------------------------------
+  //convertie un point en vecteur
+  template<class T>
+  inline Vect<T> toVector (const Point<T>& iP)
+  {
+    return Vect<T>(iP.getX(), iP.getY(), iP.getZ());
+  }
 
   //---------------------------------------------------------------------------
   template<class V>

@@ -30,23 +30,19 @@ EditionUi::EditionUi()
 	QGridLayout* pGLyt = new QGridLayout( pMainFrame );
   pGLyt->setSpacing( 1 );
 	
-	mpWidget3d_1 = new RealEdit3d( this, mpWidget3d_1,
-    mController.getDisplayData(), mController.getEditionData() );
+	mpWidget3d_1 = new RealEdit3d( this, mpWidget3d_1, mController);
   mpWidget3d_1->setCameraMode( Camera::ORTHOGONAL );
   mpWidget3d_1->setCameraOrientation( Camera::XY );
     
-  mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1,
-    mController.getDisplayData(), mController.getEditionData() );
+  mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController);
   mpWidget3d_2->setCameraMode( Camera::ORTHOGONAL );
   mpWidget3d_2->setCameraOrientation( Camera::ZY );
   
-	mpWidget3d_3 = new RealEdit3d( this, mpWidget3d_1,
-    mController.getDisplayData(), mController.getEditionData() );
+	mpWidget3d_3 = new RealEdit3d (this, mpWidget3d_1, mController);
   mpWidget3d_3->setCameraMode( Camera::ORTHOGONAL );
   mpWidget3d_3->setCameraOrientation( Camera::XZ );
 
-	mpWidget3d_4 = new RealEdit3d( this, mpWidget3d_1,
-    mController.getDisplayData(), mController.getEditionData() );
+	mpWidget3d_4 = new RealEdit3d (this, mpWidget3d_1, mController);
   mpWidget3d_4->setCameraOrientation( Camera::FREE );
 
   pGLyt->addWidget(mpWidget3d_4, 0, 0, 1, 3);

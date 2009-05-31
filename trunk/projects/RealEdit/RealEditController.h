@@ -6,9 +6,9 @@ RealEditController.h
 #ifndef RealEdit_RealEditController_hh
 #define RealEdit_RealEditController_hh
 
+#include "DataModel.h"
 #include "DisplayData.h"
 #include "EditionData.h"
-#include "Vect.h"
 
 /* 
   invariants:
@@ -28,23 +28,23 @@ public:
 	~RealEditController();
 
   void createCube();
-  void createSphere();
-  const DisplayData& getDisplayData() const {return mDisplayData;}
+  void createSphere (unsigned int iLevel = 0);
+  void createTetrahedron();
   DisplayData& getDisplayData() {return mDisplayData;}
-  const EditionData& getEditionData() const{return mEditionData;}
-  EditionData& getEditionData() {return mEditionData;}
+  const EditionData& getEditionData() const;
   void newProject();
-  void setCurrentNode( ObjectNode* ipNode );
+  void setCurrentNode (const ObjectNode* ipNode);
 
 protected:
-  void subdivideIsocahedron(const std::vector<unsigned int>&, long);
+  EditionData& getEditionData();
+  void subdivideIsocahedron(const std::vector<RealEditPoint>&, long);
 private:
   DisplayData mDisplayData;
   EditionUi& mEditionUi;
   EditionData mEditionData;
   
-  typedef std::map<std::pair<unsigned int, unsigned int>, unsigned int> IsocahedronSubdivision;
-  std::map<std::pair<unsigned int, unsigned int>, unsigned int> mIsocahedronSubdivision;
+  typedef std::map<std::pair<unsigned int, unsigned int>, RealEditPoint> IsocahedronSubdivision;
+  std::map<std::pair<unsigned int, unsigned int>, RealEditPoint> mIsocahedronSubdivision;
 };
 
 #endif //RealEdit_RealEditController_hh
