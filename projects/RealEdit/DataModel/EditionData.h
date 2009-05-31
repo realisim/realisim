@@ -47,38 +47,27 @@ private:
 class RealEdit::EditionData
 {
 public:
-  EditionData();
-  ~EditionData();
+  EditionData ();
+  ~EditionData ();
   
-  unsigned int addPoint( const Realisim::Point3d& iPoint );
-  unsigned int addPolygon( const std::vector<unsigned int>& iPoints );
-  ObjectNode* addNode( const std::string iName );
-  const ObjectNode* getCurrentNode() const;
-  ObjectNode* getCurrentNode();
-  const Scene& getScene() const;
-  Scene& getScene();
-  void setCurrentNode( ObjectNode* ipNode );
+  RealEditPoint addPoint ( const Realisim::Point3d& iPoint);
+  RealEditPolygon addPolygon (const std::vector<RealEditPoint>& iPoints);
+  ObjectNode* addNode (const QString iName);
+  void addNode (ObjectNode* ipNode);
+  const ObjectNode* getCurrentNode () const;
+  ObjectNode* getCurrentNode ();
+  const Scene& getScene () const;
+  Scene& getScene ();
+  void setCurrentNode (const ObjectNode* ipNode);
   
 private:
-  Scene mScene;
+  RealEditModel getCurrentModel(){return mCurrentModel;}
 
-  //mpCurrentModel n'est pas accessible a l'extérieur de EditionData
-  //il est seulement utilisé a l'interne
-  RealEditModel* mpCurrentModel; //Ne sera jamais Null
+  RealEditModel mCurrentModel;
   ObjectNode* mpCurrentNode; //Ne sera jamais Null
-
-  std::vector<RealEditPoint*> mSelectedPoints;
-  std::vector<RealEditPolygon*> mSelectedPolygons;
-  
-  //une map de id de point
-  typedef std::map<unsigned int, RealEditPoint*> PointMap;
-  typedef PointMap::iterator PointMapIt;
-  PointMap mPoints; //Propriétaire du pointeur
-  
-  //une map de id de polygon
-  typedef std::map<unsigned int, RealEditPolygon*> PolygonMap;
-  typedef PolygonMap::iterator PolygonMapIt;
-  PolygonMap mPolygons;  //Propriétaire du pointeur
+  Scene mScene;
+  std::vector<RealEditPoint> mSelectedPoints;
+  std::vector<RealEditPolygon> mSelectedPolygons;
 };
 
 #endif

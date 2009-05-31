@@ -1,8 +1,6 @@
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #include "ObjectNode.h"
-
-#include "DataModel.h"
 #include "Matrix4x4.h"
 #include "MathUtils.h"
 
@@ -10,7 +8,7 @@ using namespace RealEdit;
 using namespace Realisim;
 using namespace std;
 //------------------------------------------------------------------------------
-ObjectNode::ObjectNode( const std::string& iName ) : mpModel( new RealEditModel() ),
+ObjectNode::ObjectNode( const QString iName ) : mModel (),
   mpParentNode( 0 ),
   mChilds(),
   mTransformation(),
@@ -19,25 +17,51 @@ ObjectNode::ObjectNode( const std::string& iName ) : mpModel( new RealEditModel(
 }
 
 //------------------------------------------------------------------------------
-ObjectNode::~ObjectNode()
+/*Très important que le parent de la copie du noeud ne soit pas associé parce
+qu'il faut utiliser la méthode addNode(ObjectNode*) afin de conserver la
+hiérarchie de noeud organisée.
+*/
+ObjectNode::ObjectNode (const ObjectNode& iN) : mModel (iN.mModel),
+  mpParentNode (0),
+  mChilds (),
+  mTransformation (iN.mTransformation),
+  mName (iN.mName)
 {
-  //il faut delete toute l'arboresence
-  delete mpModel;
-  for( unsigned int i = 0; i < getChildCount(); ++i )
+  //créer l'arbre d'enfants
+  for (unsigned int i = 0; i < iN.getChildCount(); ++i)
   {
-    delete getChild(i);
+    mChilds.push_back( new ObjectNode (*iN.getChild (i)) );
+    //On parente les enfants correctement afin de conserver la hierarchie.
+    mChilds[i]->setParentNode (this);
   }
 }
 
 //------------------------------------------------------------------------------
-ObjectNode*
-ObjectNode::addNode( const std::string& iName )
+/*Object node est un arbre de pointeur sur d'autres objectNode. Il est donc
+  important que chaque parent détruise ses enfants. Ainsi l'arbre se détruira
+  complètement de façon récursive.
+*/
+ObjectNode::~ObjectNode()
+{
+  for (unsigned int i = 0; i < getChildCount (); ++i)
+    delete getChild (i);
+}
+
+//------------------------------------------------------------------------------
+ObjectNode* ObjectNode::addNode( const QString iName )
 {
   ObjectNode* pNode = new ObjectNode( iName );
   this->mChilds.push_back( pNode );
   pNode->mpParentNode = this;
   
   return pNode;
+}
+
+//------------------------------------------------------------------------------
+void ObjectNode::addNode( ObjectNode* ipNode )
+{
+  this->mChilds.push_back( ipNode );
+  ipNode->mpParentNode = this;
 }
 
 //------------------------------------------------------------------------------
@@ -63,22 +87,15 @@ ObjectNode::getChildCount() const
 }
 
 //------------------------------------------------------------------------------
-const RealEditModel*
-ObjectNode::getModel() const
-{
-  return mpModel;
-}
+const RealEditModel& ObjectNode::getModel() const
+{ return mModel; }
 
 //------------------------------------------------------------------------------
-RealEditModel*
-ObjectNode::getModel()
-{
-  return const_cast<RealEditModel*>( 
-    static_cast<const ObjectNode&>(*this).getModel() );
-}
+RealEditModel& ObjectNode::getModel()
+{ return mModel; }
 
 //------------------------------------------------------------------------------
-const std::string&
+const QString
 ObjectNode::getName() const
 {
   return mName;
@@ -107,17 +124,36 @@ void ObjectNode::setTransformation( const Realisim::Matrix4d& iMat )
 }
 
 //------------------------------------------------------------------------------
-//Translate le noeud a la position spécifiée par iPos
+/*Translate le noeud a la position spécifiée par iPos. Cette translation est
+rigide, elle ne tiendra pas compte de l'orientation actuelle du noeud
+ex: 
+node.rotate (Pi/2, Vector3d (0, 0, 1)); // rotation de 45 deg par rapport a Z
+node.translate (Point3d (3, 0, 0));
+
+  Root---node
+*/
 void ObjectNode::translate( const Realisim::Point3d& iPos )
 {
   mTransformation.setTranslation(iPos);
 }
 
 //------------------------------------------------------------------------------
-//Ajoute iTranslation a la position actuelle du noeud
+/*Ajoute iTranslation a la position actuelle du noeud. Cette translation prend
+en compte l'orientation actuelle du noeud.
+ex: 
+node.rotate (Pi/2, Vector3d (0, 0, 1)); // rotation de 45 deg par rapport a Z
+node.translate (Vector3d (8, 0, 0));
+
+  Root
+      \
+       \
+        \
+         node
+*/
 void ObjectNode::translate( const Realisim::Vector3d& iTranslation )
 {
-  translate( getTranslation() + iTranslation  );
+  Vector3d v = iTranslation * mTransformation;
+  translate( getTranslation() + v  );
 }
 
 //------------------------------------------------------------------------------

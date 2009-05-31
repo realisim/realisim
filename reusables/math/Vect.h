@@ -40,8 +40,6 @@ namespace Realisim
     inline void setXYZ(const T &x, const T &y, const T &z);    
     inline void set(const Point<T> &pt1, const Point<T> &pt2);
     
-    inline Point<T> toPoint() const;
-    
     // --------------- fonction get --------------------------------------------
     inline T getX() const;
     inline T getY() const;
@@ -259,15 +257,6 @@ namespace Realisim
     x_ = (pt2.getX() - pt1.getX());
     y_ = (pt2.getY() - pt1.getY());
     z_ = (pt2.getZ() - pt1.getZ());
-  }
-  
-  //!---------------------------------------------------------------------------
-  //! \brief  Convertit un vecteur en point
-  //!---------------------------------------------------------------------------
-  template<class T>
-  inline Point<T> Vect<T>::toPoint() const
-  {
-    return Point<T>( getX(), getY(), getZ() );
   }
   
   //!---------------------------------------------------------------------------

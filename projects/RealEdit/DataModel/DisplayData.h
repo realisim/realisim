@@ -1,13 +1,4 @@
 /*
- *  EditionData.h
- *  Project
- *
- *  Created by Pierre-Olivier Beaudoin on 19/11/08.
- *  Copyright 2008 __MyCompanyName__. All rights reserved.
- *
- */
-
-/*
  Cette classe sert à regrouper les primitives GL qui sont partagées par les
  différent widget (displayList, Texture et shaders). 
  */

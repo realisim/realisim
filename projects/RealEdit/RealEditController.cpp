@@ -2,7 +2,7 @@
 #include "RealEditController.h"
 #include "DataModel.h"
 #include "EditionUi.h"
-#include "Point.h"
+#include "MathUtils.h"
 
 using namespace Realisim;
 using namespace RealEdit;
@@ -13,29 +13,59 @@ RealEditController::RealEditController(EditionUi& iEditionUi) :
   mEditionUi(iEditionUi),
   mEditionData()
 {
-  ObjectNode* pRootNode = mEditionData.getCurrentNode();
-  for (int i = 0; i < 5; ++i)
-  {
-    ObjectNode* n = mEditionData.addNode(QString::number(i).toStdString());
-    mEditionData.setCurrentNode(n);
-    n->translate(Vector3d(5*i, 0, 0));
-    createSphere();
-    mEditionData.setCurrentNode(pRootNode);
-  }  
+//  ObjectNode* pRootNode = getEditionData().getCurrentNode();
+//  RealEditPoint p1, p2, p3, p4;
+//  vector<RealEditPoint> vFace;
+//  
+//  p1 = mEditionData.addPoint (Point3d (0.0, 0.0, 0.0));
+//  p2 =mEditionData.addPoint (Point3d (2.0, 0.0, 0.0));
+//  p3 = mEditionData.addPoint (Point3d (0.0, 2.0, 2.0));
+//  p4 = mEditionData.addPoint (Point3d (0.0, -2.0, 0.0));
+//  
+//  vFace.push_back(p1);
+//  vFace.push_back(p2);
+//  vFace.push_back(p3);
+//  getEditionData().addPolygon(vFace);
+//  
+//  vFace.clear();
+//  vFace.push_back(p4);
+//  vFace.push_back(p2);
+//  vFace.push_back(p1);
+//  getEditionData().addPolygon(vFace);
+
+
   
-  ObjectNode* pBouetteNode = mEditionData.addNode( "bouette" );
-  pBouetteNode->rotate( PI/4.0,
-    Vector3d( 0.0, 0.0, 1.0 ) );
+//  ObjectNode* pRootNode = getEditionData().getCurrentNode();
+//  ObjectNode* pMasterNode = getEditionData ().addNode ("noeud maître");
+//  getEditionData().setCurrentNode(pMasterNode);
+//  createSphere(0);
+//  ObjectNode* n = new ObjectNode (*pMasterNode);
+//  n->translate(Vector3d (0.0, -5.0, 0.0));
+//  getEditionData ().addNode (n);
+//  for (int i = 1; i < 3; ++i)
+//  {
+//    ObjectNode* n = new ObjectNode (*pMasterNode);
+//    getEditionData ().addNode (n);
+//    n->translate (Vector3d (5*i*i, 0, 0));
+//    getEditionData ().setCurrentNode (pRootNode);
+//  }  
+  
+  
+  createTetrahedron();
+
+  ObjectNode* pBouetteNode = getEditionData().addNode( "étron" );
   pBouetteNode->translate( Point3d( -8.0, 0.0, 0.0 ) );
-  mEditionData.setCurrentNode( pBouetteNode );
+  pBouetteNode->rotate( PI/4.0,
+    Vector3d( 1.0, 0.0, 0.0 ) );
+  getEditionData().setCurrentNode( pBouetteNode );
   createCube();
   
-  ObjectNode* pNode = mEditionData.addNode( "bouette3" );
+  ObjectNode* pNode = getEditionData().addNode( "bâche" );
   pNode->rotate( PI/4.0,
-    Vector3d( 1.0, 0.0, 0.0 ) );
-  pNode->translate( Point3d( -8.0, 0.0, 0.0 ) );
-  mEditionData.setCurrentNode( pNode );  
-  createCube();
+    Vector3d( 0.0, 0.0, 1.0 ) );
+  pNode->translate( Vector3d( -8.0, 0.0, 0.0 ) );
+  getEditionData().setCurrentNode( pNode );
+  createSphere(1);
 }
 
 RealEditController::~RealEditController()
@@ -53,30 +83,30 @@ void RealEditController::createCube()
   GLint tindices[12][3] = { 
     {0,1,5}, {0,5,4}, {1,2,6}, {1,6,5},
     {2,3,7}, {2,7,6}, {3,0,4}, {3,4,7},
-    {0,1,2}, {0,2,3}, {4,5,6}, {4,6,7}};
+    {0,2,1}, {0,3,2}, {4,5,6}, {4,6,7}};
     
-  vector<unsigned int> idCube;
-  vector<unsigned int> idPoints;
+  vector<RealEditPoint> vPoints;
+  vector<RealEditPoint> vFace;
   for (int i = 0; i < 8; ++i) 
   {    
-    idCube.push_back( 
-      mEditionData.addPoint( Point3d( vdata[i][0],
+    vPoints.push_back( 
+      getEditionData().addPoint ( Point3d (vdata[i][0],
         vdata[i][1],
-        vdata[i][2] ) ) );
+        vdata[i][2])));
   }
   
   for (int i = 0; i < 12; ++i)
   {
-    idPoints.clear();
-    idPoints.push_back(idCube[tindices[i][0]]);
-    idPoints.push_back(idCube[tindices[i][1]]);
-    idPoints.push_back(idCube[tindices[i][2]]);
-    mEditionData.addPolygon(idPoints);
+    vFace.clear();
+    vFace.push_back(vPoints[tindices[i][0]]);
+    vFace.push_back(vPoints[tindices[i][1]]);
+    vFace.push_back(vPoints[tindices[i][2]]);
+    getEditionData().addPolygon(vFace);
   }
 }
 
 //------------------------------------------------------------------------------
-void RealEditController::createSphere()
+void RealEditController::createSphere(unsigned int iLevel /*= 0*/)
 {  
   double X = .525731112119133606 ;
   double Z = .850650808352039932;
@@ -93,62 +123,110 @@ void RealEditController::createSphere()
     {7,3,10}, {7,10,6}, {7,6,11}, {11,6,0}, {0,6,1}, 
     {6,10,1}, {9,11,0}, {9,2,11}, {9,5,2}, {7,11,2} };
 
-  vector<unsigned int> idIsocahedron;
-  vector<unsigned int> idPoints;
+  vector<RealEditPoint> vPoints;
+  vector<RealEditPoint> vFace;
   for (int i = 0; i < 12; ++i) 
   {    
-    idIsocahedron.push_back( 
-      mEditionData.addPoint( Point3d( vdata[i][0],
+    vPoints.push_back( 
+      getEditionData().addPoint (Point3d (vdata[i][0],
         vdata[i][1],
-        vdata[i][2] ) ) );
+        vdata[i][2])));
   }
   
   for (int i = 0; i < 20; ++i)
   {
-    idPoints.clear();
-    idPoints.push_back(idIsocahedron[tindices[i][0]]);
-    idPoints.push_back(idIsocahedron[tindices[i][1]]);
-    idPoints.push_back(idIsocahedron[tindices[i][2]]);
-    subdivideIsocahedron(idPoints, 1);
-    //mEditionData.addPolygon(idPoints);
+    vFace.clear();
+    vFace.push_back(vPoints[tindices[i][0]]);
+    vFace.push_back(vPoints[tindices[i][1]]);
+    vFace.push_back(vPoints[tindices[i][2]]);
+    subdivideIsocahedron(vFace, iLevel);
   }
-  
   mIsocahedronSubdivision.clear();
 }
 
-
-void RealEditController::subdivideIsocahedron(const vector<unsigned int>& iFace, long depth)
+//------------------------------------------------------------------------------
+void RealEditController::createTetrahedron()
 {
-  Vector3d v1, v2, v3;
+  GLfloat vdata[4][3] = {    
+    {1, 1, 1}, {-1, -1, 1}, {-1, 1, -1}, {1, -1, -1}};    
+  
+  GLint tindices[4][3] = { 
+    {0,2,1}, {0,1,3}, {1,2,3}, {2,0,3}};
+    
+  vector<RealEditPoint> vPoints;
+  vector<RealEditPoint> vFace;
+  for (int i = 0; i < 4; ++i) 
+  {    
+    vPoints.push_back( 
+      getEditionData().addPoint ( Point3d (vdata[i][0],
+        vdata[i][1],
+        vdata[i][2])));
+  }
+  
+  for (int i = 0; i < 4; ++i)
+  {
+    vFace.clear();
+    vFace.push_back(vPoints[tindices[i][0]]);
+    vFace.push_back(vPoints[tindices[i][1]]);
+    vFace.push_back(vPoints[tindices[i][2]]);
+    getEditionData().addPolygon(vFace);
+  }
+}
+
+//------------------------------------------------------------------------------
+/*Cette méthode est protégé afin d'être utilisée seulement par 
+RealEditController dans le but d'obliger les utilisateurs à passé par 
+RealEditController afin de modifier les données.*/
+EditionData& RealEditController::getEditionData()
+{return mEditionData;}
+
+//------------------------------------------------------------------------------
+/*Cette méthode sert a offrir les données en lecture seulement a quiconque.*/
+const EditionData& RealEditController::getEditionData() const
+{return mEditionData;}
+
+//------------------------------------------------------------------------------
+/*Place le noeud courant et notifie l'interface, qui placera ensuite les caméras
+*/
+void RealEditController::setCurrentNode (const ObjectNode* ipNode)
+{
+  getEditionData().setCurrentNode (ipNode);
+  mEditionUi.currentNodeChanged ();
+}
+
+//------------------------------------------------------------------------------
+void
+RealEditController::newProject()
+{
+  EditionUi* p = new EditionUi();
+  //pas besoin de deleter la fenetre, Qt le fera lorsque la fenêtre sera fermé
+  p->setAttribute(Qt::WA_DeleteOnClose, true);
+}
+
+//------------------------------------------------------------------------------
+void RealEditController::subdivideIsocahedron(const vector<RealEditPoint>& iFace, long depth)
+{
+  Vector3d v1 = toVector (iFace[0].pos ()),
+    v2 = toVector (iFace[1].pos ()),
+    v3 = toVector (iFace[2].pos ());
   Vector3d v12, v23, v31;
     
   if (depth == 0)
   {
-    mEditionData.addPolygon(iFace);
+    getEditionData().addPolygon(iFace);
     return;
   }
-   
-  const RealEditModel* m = mEditionData.getCurrentNode()->getModel();
-  for(unsigned int i = 0; i < m->getPointCount(); ++i)
-  {
-   if (m->getPoint(i)->getId() == iFace[0])
-     v1 = Vector3d(m->getPoint(i)->getX(), m->getPoint(i)->getY(), m->getPoint(i)->getZ());
-   if (m->getPoint(i)->getId() == iFace[1])
-     v2 = Vector3d(m->getPoint(i)->getX(), m->getPoint(i)->getY(), m->getPoint(i)->getZ());
-   if (m->getPoint(i)->getId() == iFace[2])
-     v3 = Vector3d(m->getPoint(i)->getX(), m->getPoint(i)->getY(), m->getPoint(i)->getZ());
-  }
 
-  unsigned int newP1, newP2, newP3; 
+  RealEditPoint newP1, newP2, newP3; 
   IsocahedronSubdivision::const_iterator it = 
-    mIsocahedronSubdivision.find(make_pair(iFace[0], iFace[1]));
+    mIsocahedronSubdivision.find(make_pair(iFace[0].getId(), iFace[1].getId()));
   if(it == mIsocahedronSubdivision.end())
   {
     v12 = v1 + v2;
     v12.normalise();
-    newP1 = mEditionData.addPoint(v12.toPoint());
-    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[0], iFace[1]), newP1));
-    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[1], iFace[0]), newP1));
+    newP1 = getEditionData().addPoint(toPoint (v12));
+    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[0].getId(), iFace[1].getId()), newP1));
+    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[1].getId(), iFace[0].getId()), newP1));
   }
   else
   {
@@ -156,14 +234,14 @@ void RealEditController::subdivideIsocahedron(const vector<unsigned int>& iFace,
   }
   
   it = 
-  mIsocahedronSubdivision.find(make_pair(iFace[1], iFace[2]));
+  mIsocahedronSubdivision.find(make_pair(iFace[1].getId(), iFace[2].getId()));
   if(it == mIsocahedronSubdivision.end())
   {
     v23 = v2 + v3;
     v23.normalise();
-    newP2 = mEditionData.addPoint(v23.toPoint());
-    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[1], iFace[2]), newP2));
-    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[2], iFace[1]), newP2));
+    newP2 = getEditionData().addPoint (toPoint (v23));
+    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[1].getId(), iFace[2].getId()), newP2));
+    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[2].getId(), iFace[1].getId()), newP2));
   }
   else
   {
@@ -171,21 +249,21 @@ void RealEditController::subdivideIsocahedron(const vector<unsigned int>& iFace,
   }
   
   it =
-  mIsocahedronSubdivision.find(make_pair(iFace[2], iFace[0]));
+  mIsocahedronSubdivision.find(make_pair(iFace[2].getId(), iFace[0].getId()));
   if(it == mIsocahedronSubdivision.end())
   {
     v31 = v3 + v1;
     v31.normalise();
-    newP3 = mEditionData.addPoint(v31.toPoint());
-    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[2], iFace[0]), newP3));
-    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[0], iFace[2]), newP3));
+    newP3 = getEditionData().addPoint (toPoint (v31));
+    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[2].getId(), iFace[0].getId()), newP3));
+    mIsocahedronSubdivision.insert (make_pair(make_pair(iFace[0].getId(), iFace[2].getId()), newP3));
   }
   else
   {
     newP3 = it->second;
   }
 
-  vector<unsigned int> v;
+  vector<RealEditPoint> v;
   v.push_back(iFace[0]);
   v.push_back(newP1);
   v.push_back(newP3);
@@ -204,32 +282,5 @@ void RealEditController::subdivideIsocahedron(const vector<unsigned int>& iFace,
   v.push_back(newP1);
   v.push_back(newP2);
   v.push_back(newP3);
-  subdivideIsocahedron(v, depth-1);
-  
-    
-//  subdivide(v1, v12, v31, depth-1);
-//  subdivide(v2, v23, v12, depth-1);
-//  subdivide(v3, v31, v23, depth-1);
-//  subdivide(v12, v23, v31, depth-1);
-  
+  subdivideIsocahedron(v, depth-1);  
 }
-
-
-//------------------------------------------------------------------------------
-void
-RealEditController::newProject()
-{
-  EditionUi* p = new EditionUi();
-  //pas besoin de deleter la fenetre, Qt le fera lorsque la fenêtre sera fermé
-  p->setAttribute(Qt::WA_DeleteOnClose, true);
-}
-
-//------------------------------------------------------------------------------
-void RealEditController::setCurrentNode( ObjectNode* ipNode )
-{
-  mEditionData.setCurrentNode(ipNode);
-  mEditionUi.currentNodeChanged();
-}
-
-
-

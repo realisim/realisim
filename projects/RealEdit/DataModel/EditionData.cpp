@@ -30,15 +30,13 @@ Scene::~Scene()
 }
 
 //-----------------------------------------------------------------------------
-const ObjectNode*
-Scene::getObjectNode() const
+const ObjectNode* Scene::getObjectNode() const
 {
   return &mNodes;
 }
 
 //-----------------------------------------------------------------------------
-ObjectNode*
-Scene::getObjectNode()
+ObjectNode* Scene::getObjectNode()
 {
   return const_cast<ObjectNode*>(
     static_cast<const Scene&> (*this).getObjectNode() );
@@ -47,113 +45,72 @@ Scene::getObjectNode()
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                    EditionData
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-EditionData::EditionData() : mScene(),
-                             mpCurrentModel( 0 ),
-                             mpCurrentNode( 0 ),
-                             mSelectedPoints(),
-                             mSelectedPolygons()
+EditionData::EditionData() : mCurrentModel (),
+  mpCurrentNode (0),
+  mScene (),
+  mSelectedPoints (),
+  mSelectedPolygons ()
 {
-  setCurrentNode( getScene().getObjectNode() );
+  setCurrentNode (getScene (). getObjectNode ());
 }
 
 //-----------------------------------------------------------------------------
 EditionData::~EditionData()
+{}
+
+//-----------------------------------------------------------------------------
+ObjectNode* EditionData::addNode (const QString iName)
+{ return mpCurrentNode->addNode (iName); }
+
+//-----------------------------------------------------------------------------
+void EditionData::addNode (ObjectNode* ipNode)
+{ mpCurrentNode->addNode (ipNode); }
+
+//-----------------------------------------------------------------------------
+RealEditPoint EditionData::addPoint (const Point3d& iPoint)
 {
-  //TODO deleter les maps de points et de polygones!!!
+  RealEditPoint point (iPoint);
+  getCurrentModel().addPoint (point);
+  return point;
 }
 
 //-----------------------------------------------------------------------------
-ObjectNode*
-EditionData::addNode( const std::string iName )
+RealEditPolygon EditionData::addPolygon (const std::vector<RealEditPoint>& iPoints)
 {
-  return mpCurrentNode->addNode( iName );
+  RealEditPolygon poly( iPoints );
+  getCurrentModel().addPolygon(poly);
+  return poly;
 }
 
 //-----------------------------------------------------------------------------
-unsigned int
-EditionData::addPoint( const Point3d& iPoint )
-{
-  if ( !mpCurrentModel )
-    return 0;
-  
-  RealEditPoint* pPoint = new RealEditPoint( iPoint );
-  
-  std::pair<PointMapIt, bool> result =
-    mPoints.insert(
-      std::make_pair<int, RealEditPoint*>( pPoint->getId(), pPoint ) );
-  
-  assert( result.second );
-  mpCurrentModel->addPoint( pPoint );
-  
-  return pPoint->getId();
-}
-
-//-----------------------------------------------------------------------------
-unsigned int
-EditionData::addPolygon( const std::vector<unsigned int>& iPointsId )
-{
-  if ( !mpCurrentModel )
-    return 0; 
-  
-  std::vector<RealEditPoint*> points;
-  for( unsigned int i = 0; i < iPointsId.size(); ++i )
-  {
-    PointMapIt it = mPoints.find( iPointsId[i] );
-    if ( it != mPoints.end() )
-    {
-      points.push_back(it->second);
-    }
-  }
-  
-  //On doit absoluement avoir autant de RealEditPoint que
-  //de pointId
-  assert( points.size() == iPointsId.size() );
-  
-  RealEditPolygon* pPoly = new RealEditPolygon( points );
-  
-  std::pair<PolygonMapIt, bool> result =
-  mPolygons.insert(
-    std::make_pair<int, RealEditPolygon*>(pPoly->getId(), pPoly));
-  
-  assert(result.second);
-  mpCurrentModel->addPolygon(pPoly);
-  
-  return pPoly->getId();
-}
-
-//-----------------------------------------------------------------------------
-const ObjectNode*
-EditionData::getCurrentNode() const
+const ObjectNode* EditionData::getCurrentNode () const
 {
   return mpCurrentNode;
 }
 
 //-----------------------------------------------------------------------------
-ObjectNode* EditionData::getCurrentNode()
+ObjectNode* EditionData::getCurrentNode ()
 {
   return const_cast<ObjectNode*>(
     static_cast<const EditionData&> (*this).getCurrentNode() );
 }
 
 //-----------------------------------------------------------------------------
-const Scene&
-EditionData::getScene() const
+const Scene& EditionData::getScene () const
 { 
   return mScene;
 }
 
 //-----------------------------------------------------------------------------
-Scene&
-EditionData::getScene()
+Scene& EditionData::getScene ()
 {
   return const_cast<Scene&>(
    static_cast<const EditionData&>(*this).getScene() );
 }
 
 //-----------------------------------------------------------------------------
-void
-EditionData::setCurrentNode( ObjectNode* ipNode )
+void EditionData::setCurrentNode (const ObjectNode* ipNode)
 {
-  mpCurrentNode = ipNode;
-  mpCurrentModel = mpCurrentNode->getModel();
+  mpCurrentNode = const_cast<ObjectNode*> (ipNode);
+  mCurrentModel = mpCurrentNode->getModel ();
 }
