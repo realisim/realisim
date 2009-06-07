@@ -16,7 +16,9 @@
 //!-----------------------------------------------------------------------------
 //! \brief Classe gÈrant les fonctionalitÈs associÈes a une matrice 4x4 ou 3x3
 //!-----------------------------------------------------------------------------
-namespace Realisim
+namespace realisim
+{
+namespace math
 {
   template<class T>
   class Matrix4
@@ -326,6 +328,7 @@ namespace Realisim
   typedef Matrix4<float>  Matrix4f;
   typedef Matrix4<double> Matrix4d;
 
+} //math
 } // fin du namespace realisim
 
 #endif // MATRIX_H

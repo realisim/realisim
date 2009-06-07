@@ -1,4 +1,4 @@
-#REALEDIT CMAKELISTS
+#realEdit CMAKELISTS
 
 PROJECT( RealEdit )
 

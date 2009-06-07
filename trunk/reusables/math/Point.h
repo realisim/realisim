@@ -17,7 +17,9 @@
 //! Il s'agit d'une classe point tout ce qu'il a de plus simple. Recherche
 //! d'une certaine efficacitÈ a l'exÈcution.
 //!-----------------------------------------------------------------------------
-namespace Realisim
+namespace realisim
+{
+namespace math
 {
   template<class U>
   class Point
@@ -54,6 +56,8 @@ namespace Realisim
     inline U dist(const Point &point) const;
     inline U distSqr(const Point &point) const;
     inline U fastDist(const Point &point) const;
+    inline void minCoord (const Point<U>& iP);
+    inline void maxCoord (const Point<U>& iP);
     inline void print() const;
 
     // --------------- Overload: operateurs ------------------------------------
@@ -351,6 +355,24 @@ namespace Realisim
     return( max + (11.0/32.0)*med + (1.0/4.0)*min );
   }
   
+  //----------------------------------------------------------------------------
+  template<class U>
+  inline void Point<U>::minCoord (const Point<U>& iP)
+  {
+    setX (std::min (getX (), iP.getX ()));
+    setY (std::min (getY (), iP.getY ()));
+    setZ (std::min (getZ (), iP.getZ ()));
+  }
+  
+  //----------------------------------------------------------------------------
+  template<class U>
+  inline void Point<U>::maxCoord (const Point<U>& iP)
+  {
+    setX (std::max (getX (), iP.getX ()));
+    setY (std::max (getY (), iP.getY ()));
+    setZ (std::max (getZ (), iP.getZ ()));
+  }
+  
   template<class U>
   inline void Point<U>::print() const
   {
@@ -511,6 +533,6 @@ namespace Realisim
   typedef Point<float>        Point3f;
   typedef Point<double>       Point3d;
   typedef Point<int>          Point3i;
-
+} // math
 } // end of namespace realisim
 #endif //POINT_H

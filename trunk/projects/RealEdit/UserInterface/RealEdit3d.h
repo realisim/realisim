@@ -10,22 +10,13 @@
 #ifndef RealEdit3d_h
 #define RealEdit3d_h
 
+namespace realEdit {class RealEditController;}
 #include "Widget3d.h"
-/*
 
-  mDisplayListCube
-*/
-namespace RealEdit 
+namespace realEdit 
 {
-  class DisplayData;
-  class EditionData;
-  class ObjectNode;
-  class RealEdit3d;
-  class RealEditController;
-  class RealEditModel;
-}
 
-class RealEdit::RealEdit3d : public Realisim::Widget3d
+class RealEdit3d : public realisim::treeD::Widget3d
 {
 public:
   RealEdit3d (QWidget* ipParent, 
@@ -37,16 +28,17 @@ public:
   
 protected:
   void drawAxis () const;
-  void drawNormals (const RealEdit::RealEditModel iM) const;
-  void drawPolygons (const RealEdit::RealEditModel iM) const;
-  void drawScene (const RealEdit::ObjectNode* iObjectNode) const;
+  void drawNormals (const RealEditModel iM) const;
+  void drawPolygons (const RealEditModel iM) const;
+  void drawScene (const ObjectNode* iObjectNode) const;
   void enableSmoothLines () const;
 
 private:
   RealEditController& mController;
   DisplayData& mDisplayData;
   const EditionData& mEditionData;
-  
 };
+
+} //realEdit
 
 #endif

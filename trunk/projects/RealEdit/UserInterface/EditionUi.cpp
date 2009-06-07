@@ -9,8 +9,9 @@
 #include <QLayout>
 #include <QListWidget>
 
-using namespace Realisim;
-using namespace RealEdit;
+using namespace realisim;
+using namespace realisim::treeD;
+using namespace realEdit;
 
 EditionUi::EditionUi() 
 : QMainWindow()

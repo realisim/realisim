@@ -14,8 +14,9 @@
 #include "RealEditController.h"
 #include "ObjectNode.h"
 
-using namespace Realisim;
-using namespace RealEdit;
+using namespace realisim;
+using namespace realisim::treeD;
+using namespace realEdit;
 using namespace std;
 
 namespace
@@ -136,7 +137,7 @@ void RealEdit3d::drawPolygons(const RealEditModel iM) const
 
 //------------------------------------------------------------------------------
 void
-RealEdit3d::drawScene(const RealEdit::ObjectNode* ipObjectNode) const
+RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
 {
   const RealEditModel model = ipObjectNode->getModel();
   
@@ -144,6 +145,9 @@ RealEdit3d::drawScene(const RealEdit::ObjectNode* ipObjectNode) const
   {
     //appliquer la transfo du noeud
     glMultMatrixd( ipObjectNode->getTransformation().getPtr() );
+    
+    //dessine le boundingBox
+    model. getBoundingBox (). draw();
     
     //dessiner les polys du modele
     glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT);

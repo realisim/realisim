@@ -9,7 +9,8 @@
 
 #include "DefaultInputHandler.h"
 
-using namespace Realisim;
+using namespace realisim;
+using namespace realisim::treeD;
 
 static const double kMaxZoom = 1/128.0;
 static const double kMinZoom = 128;

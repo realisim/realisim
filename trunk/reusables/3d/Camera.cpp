@@ -11,7 +11,8 @@
 #include <qgl.h>
 #include "MathUtils.h"
 
-using namespace Realisim;
+using namespace realisim;
+using namespace realisim::treeD;
 
 static const double kNear = 50.0;
 static const double kFar = 2000.0;
@@ -105,8 +106,8 @@ void Camera::move( Vector3d iDelta )
       //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
       //est dans le même sens que ce dernier ou non... Si ce n'est pas le
       //cas, on change la direction de l'angle.
-      if( ( projDeltaOnLat + ( getLat() * projDeltaOnLat.norm() ) ) ==
-            Vector3d(0.0, 0.0, 0.0) )
+      if( ( projDeltaOnLat + (getLat() * projDeltaOnLat.norm())) ==
+            Vector3d(0.0) )
       {
         angle1 *= -1;
       }
@@ -164,7 +165,7 @@ void Camera::move( Vector3d iDelta )
       //est dans le même sens que ce dernier ou non... Si ce n'est pas le
       //cas, on change la direction de l'angle.
       if( ( projDeltaOnUp + ( getUp() * projDeltaOnUp.norm() ) ) ==
-         Vector3d(0.0, 0.0, 0.0) )
+         Vector3d(0.0) )
       {
         angle2 *= -1;
       }

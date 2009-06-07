@@ -9,7 +9,8 @@
 
 #include "Primitives.h"
 
-using namespace Realisim;
+using namespace realisim;
+using namespace realisim::treeD;
 
 Primitives::Primitives() :
   mDisplayList(0),
@@ -18,10 +19,6 @@ Primitives::Primitives() :
   mPositionFlag(pScene),
   mZoomFlag(zScene)
 {}
-
-//void Primitives::draw() const
-//{
-//}
 
 //------------------------------------------------------------------------------
 GLuint Primitives::getDisplayList() const
@@ -36,7 +33,7 @@ GLuint Primitives::getDisplayList() const
   return mDisplayList;
 }
 
-//------------------------------------------------------------------------------
+//******************************************************************************
 void Axis::draw() const
 {
   glPushAttrib(GL_CURRENT_BIT | GL_LINE_BIT | GL_ENABLE_BIT);
@@ -56,7 +53,67 @@ void Axis::draw() const
   glPopAttrib();
 }
 
+//******************************************************************************
+BoundingBox::BoundingBox () : Primitives(), mMin (0.0), mMax (0.0)
+{}
+
 //------------------------------------------------------------------------------
+BoundingBox::~BoundingBox ()
+{}
+
+//------------------------------------------------------------------------------
+void BoundingBox::add (const Point3d& iP)
+{
+  mMin.minCoord (iP);
+  mMax.maxCoord (iP);
+}
+
+//------------------------------------------------------------------------------
+void BoundingBox::draw () const
+{
+  glPushAttrib (GL_POLYGON_BIT);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glBegin(GL_QUADS);
+    glNormal3f (0.0F, 0.0F, 1.0F);
+    glVertex3f (mMin. getX (), mMin. getY (), mMax. getZ ());
+    glVertex3f (mMax. getX (), mMin. getY (), mMax. getZ ());
+    glVertex3f (mMax. getX (), mMax. getY (), mMax. getZ ());
+    glVertex3f (mMin. getX (), mMax. getY (), mMax. getZ ());
+
+    glNormal3f( 0.0F, 0.0F,-1.0F);
+    glVertex3f (mMin. getX (), mMin. getY (), mMin. getZ ());
+    glVertex3f (mMax. getX (), mMin. getY (), mMin. getZ ());
+    glVertex3f (mMax. getX (), mMax. getY (), mMin. getZ ());
+    glVertex3f (mMin. getX (), mMax. getY (), mMin. getZ ());
+
+    glNormal3f( 0.0F, 1.0F, 0.0F);
+    glVertex3f (mMin. getX (), mMax. getY (), mMax. getZ ());
+    glVertex3f (mMax. getX (), mMax. getY (), mMax. getZ ());
+    glVertex3f (mMax. getX (), mMax. getY (), mMin. getZ ());
+    glVertex3f (mMin. getX (), mMax. getY (), mMin. getZ ());
+
+    glNormal3f( 0.0F,-1.0F, 0.0F);
+    glVertex3f (mMin. getX (), mMin. getY (), mMax. getZ ());
+    glVertex3f (mMax. getX (), mMin. getY (), mMax. getZ ());
+    glVertex3f (mMax. getX (), mMin. getY (), mMin. getZ ());
+    glVertex3f (mMin. getX (), mMin. getY (), mMin. getZ ());
+
+    glNormal3f( 1.0F, 0.0F, 0.0F);
+    glVertex3f (mMax. getX (), mMin. getY (), mMax. getZ ());
+    glVertex3f (mMax. getX (), mMin. getY (), mMin. getZ ());
+    glVertex3f (mMax. getX (), mMax. getY (), mMin. getZ ());
+    glVertex3f (mMax. getX (), mMax. getY (), mMax. getZ ());
+
+    glNormal3f(-1.0F, 0.0F, 0.0F);
+    glVertex3f (mMin. getX (), mMin. getY (), mMax. getZ ());
+    glVertex3f (mMin. getX (), mMin. getY (), mMin. getZ ());
+    glVertex3f (mMin. getX (), mMax. getY (), mMin. getZ ());
+    glVertex3f (mMin. getX (), mMax. getY (), mMax. getZ ());
+  glEnd();
+  glPopAttrib();
+}
+
+//******************************************************************************
 void Cube::draw() const
 {
   float hs = 0.5;

@@ -14,9 +14,12 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 
-namespace Realisim{ class InputHandler; }
+namespace realisim
+{
+namespace treeD
+{
 
-class Realisim::InputHandler : public QWidget
+class InputHandler : public QWidget
 {
 public:
   InputHandler(){;}
@@ -30,4 +33,6 @@ public:
   virtual void wheelEvent ( QWheelEvent * event ){;}
 };
 
+} //treeD
+} //realisim
 #endif

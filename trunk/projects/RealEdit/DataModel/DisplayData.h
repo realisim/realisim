@@ -7,22 +7,25 @@
 
 #include "Primitives.h"
 
-namespace RealEdit{ class DisplayData; }
-namespace RealEdit{ class axis; }
+namespace realEdit
+{
+using namespace realisim::treeD;
 
-class RealEdit::DisplayData
+class DisplayData
 {
 public:
   DisplayData();
   ~DisplayData();
   
   void drawAxis() const;
-  Realisim::Axis& getAxis() {return mAxis;}
+  Axis& getAxis() {return mAxis;}
   void drawCube() const;
-  Realisim::Cube& getCube() {return mCube;}
+  Cube& getCube() {return mCube;}
 private:
-  Realisim::Axis mAxis;
-  Realisim::Cube mCube;
+  Axis mAxis;
+  Cube mCube;
 };
+
+} //realEdit
 
 #endif

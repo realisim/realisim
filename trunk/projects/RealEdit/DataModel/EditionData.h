@@ -15,19 +15,15 @@
 
 #include <map>
 
-namespace RealEdit
+
+namespace realEdit
 {
-  class EditionData;
-  class ObjectNode;
-  class RealEditPoint;
-  class RealEditPolygon;
-  class Scene;
-}
+using namespace realisim;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                    Scene
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-class RealEdit::Scene
+class Scene
 {
 public:
   Scene();
@@ -44,16 +40,16 @@ private:
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                    EditionData
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-class RealEdit::EditionData
+class EditionData
 {
 public:
   EditionData ();
   ~EditionData ();
   
-  RealEditPoint addPoint ( const Realisim::Point3d& iPoint);
+  RealEditPoint addPoint ( const Point3d& iPoint);
   RealEditPolygon addPolygon (const std::vector<RealEditPoint>& iPoints);
   ObjectNode* addNode (const QString iName);
-  void addNode (ObjectNode* ipNode);
+  //void addNode (ObjectNode* ipNode);
   const ObjectNode* getCurrentNode () const;
   ObjectNode* getCurrentNode ();
   const Scene& getScene () const;
@@ -69,5 +65,7 @@ private:
   std::vector<RealEditPoint> mSelectedPoints;
   std::vector<RealEditPolygon> mSelectedPolygons;
 };
+
+} // realEdit
 
 #endif

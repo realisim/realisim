@@ -1,5 +1,8 @@
 /*-----------------------------------------------------------------------------
 RealEditController.h
+ 
+  invariants:
+  mpEditionUi != 0
 -----------------------------------------------------------------------------*/
 
 
@@ -9,19 +12,12 @@ RealEditController.h
 #include "DataModel.h"
 #include "DisplayData.h"
 #include "EditionData.h"
+namespace realEdit{class EditionUi;}
 
-/* 
-  invariants:
-  mpEditionUi != 0
-*/
-
-namespace RealEdit
+namespace realEdit
 { 
-  class RealEditController;
-	class EditionUi; 
-}
 
-class RealEdit::RealEditController 
+class RealEditController 
 {
 public:
 	RealEditController( EditionUi& ipEditionUi );
@@ -46,5 +42,7 @@ private:
   typedef std::map<std::pair<unsigned int, unsigned int>, RealEditPoint> IsocahedronSubdivision;
   std::map<std::pair<unsigned int, unsigned int>, RealEditPoint> mIsocahedronSubdivision;
 };
+
+} //realEdit
 
 #endif //RealEdit_RealEditController_hh

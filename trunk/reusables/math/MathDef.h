@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 //!
 //! \file
-//! \brief Fichier de définition des types mathématique
+//! \brief Fichier de dÃˆfinition des types mathÃˆmatique
 //!
 //! AUTHOR:  Pierre-Olivier Beaudoin & David Pinson
 //!
@@ -12,7 +12,9 @@
 
 #include <cmath>
 
-namespace Realisim
+namespace realisim
+{
+namespace math
 {
 
   //! constante utile
@@ -28,6 +30,7 @@ namespace Realisim
   static const double UN_SUR_2_PI = 0.5/PI;
   static const double DEUX_PI     = 2.0*PI;
 
-}
+} //math
+} //realisim
 
 #endif //Realisim_Math_Def_h

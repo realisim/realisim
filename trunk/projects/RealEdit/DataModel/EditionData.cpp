@@ -14,8 +14,8 @@
 #include <vector>
 #include <map>
 
-using namespace Realisim;
-using namespace RealEdit;
+using namespace realisim;
+using namespace realEdit;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                    Scene
@@ -63,8 +63,8 @@ ObjectNode* EditionData::addNode (const QString iName)
 { return mpCurrentNode->addNode (iName); }
 
 //-----------------------------------------------------------------------------
-void EditionData::addNode (ObjectNode* ipNode)
-{ mpCurrentNode->addNode (ipNode); }
+//void EditionData::addNode (ObjectNode* ipNode)
+//{ mpCurrentNode->addNode (ipNode); }
 
 //-----------------------------------------------------------------------------
 RealEditPoint EditionData::addPoint (const Point3d& iPoint)
