@@ -13,9 +13,12 @@
 #include "InputHandler.h"
 #include "Camera.h"
 
-namespace Realisim{ class DefaultInputHandler; }
+namespace realisim
+{
+namespace treeD
+{
 
-class Realisim::DefaultInputHandler : public Realisim::InputHandler
+class DefaultInputHandler : public InputHandler
 {
 public:
   DefaultInputHandler( Camera& iCam );
@@ -35,4 +38,6 @@ private:
   int mMousePosY;
 };
 
+} //treeD
+} //realisim
 #endif

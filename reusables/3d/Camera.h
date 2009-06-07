@@ -1,10 +1,5 @@
 /*
  *  Camera.h
- *  Project
- *
- *  Created by Pierre-Olivier Beaudoin on 06/12/08.
- *  Copyright 2008 __MyCompanyName__. All rights reserved.
- *
  */
 
 #ifndef Realisim_E3d_Camera_hh
@@ -13,8 +8,6 @@
 #include "Matrix4x4.h"
 #include "Point.h"
 #include "Vect.h"
-
-namespace Realisim{ class Camera; }
 
 /*
 
@@ -39,7 +32,13 @@ namespace Realisim{ class Camera; }
     -mShortSide: taille en pixel du petit coté
     -mLongSide: taille en pixel du long coté
 */
-class Realisim::Camera
+namespace realisim
+{
+namespace treeD
+{
+using namespace realisim::math;
+
+class Camera
 {
 public:
   
@@ -103,5 +102,8 @@ protected:
   double mZoomFactor;
   WindowInfo mWindowInfo;
 };
+
+} //treeD
+} //realisim
 
 #endif

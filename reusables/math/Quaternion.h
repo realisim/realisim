@@ -19,7 +19,9 @@
 //!
 //! un quaternion est de la forme q = w + xi + yj + zk
 //!-----------------------------------------------------------------------------
-namespace Realisim
+namespace realisim
+{
+namespace math
 {
   template<class T>
   class Quaternion
@@ -390,6 +392,7 @@ namespace Realisim
   typedef Quaternion<double>  Quat4d;
   //NE PAS FAIRE DE QUATERNION DE INT!!
 
+} //math
 } // fin du namespace realisim
 
 #endif // QUARTERNION_H

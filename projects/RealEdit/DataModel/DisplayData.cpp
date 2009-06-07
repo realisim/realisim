@@ -4,8 +4,8 @@
 #include "DisplayData.h"
 #include <qgl.h>
 
-using namespace Realisim;
-using namespace RealEdit;
+using namespace realisim;
+using namespace realEdit;
 
 DisplayData::DisplayData() : mAxis(), mCube()
 {}

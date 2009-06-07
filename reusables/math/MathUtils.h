@@ -12,8 +12,11 @@
 #include "Vect.h"
 #include "Quaternion.h"
 
-namespace Realisim
+namespace realisim
 {
+namespace math
+{
+
   //---------------------------------------------------------------------------
   //convertie un vecteur en point
   template<class T>
@@ -202,6 +205,7 @@ namespace Realisim
     return 1 - result; 
   }
     
+} //math
 } // fin du namespace realisim
 
 #endif // MATH_UTILE_H

@@ -14,7 +14,9 @@
 //!-----------------------------------------------------------------------------
 //! \brief Classe gÈrant les fonctionalitÈs associÈes a un vecteur
 //!-----------------------------------------------------------------------------
-namespace Realisim
+namespace realisim
+{
+namespace math
 {
   template<class T>
   class Vect 
@@ -48,6 +50,8 @@ namespace Realisim
     inline void getXYZ(T &x, T &y, T &z) const;
     
     // --------------- fonction utiles -----------------------------------------
+    inline void minCoord (const Vect<T>& iVect);
+    inline void maxCoord (const Vect<T>& iVect);
     inline T norm() const;
     inline const Vect<T>& normalise();
     inline T fastNorm() const;
@@ -324,6 +328,24 @@ namespace Realisim
     z=z_;
   }
   
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline void Vect<T>::minCoord (const Vect<T>& iVect)
+  {
+    setX (std::min (getX (), iVect.getX ()));
+    setY (std::min (getY (), iVect.getY ()));
+    setZ (std::min (getZ (), iVect.getZ ()));
+  }
+  
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline void Vect<T>::maxCoord (const Vect<T>& iVect)
+  {
+    setX (std::max (getX (), iVect.getX ()));
+    setY (std::max (getY (), iVect.getY ()));
+    setZ (std::max (getZ (), iVect.getZ ()));
+  }
+    
   //!---------------------------------------------------------------------------
   //! \brief  Calcule et retourne la norme du vecteur
   //!
@@ -623,6 +645,7 @@ namespace Realisim
   typedef Vect<double>  Vector3d;
   typedef Vect<int>     Vector3i;
   
+} //math
 } // enf of namespace realisim
 
 #endif //VECT_H

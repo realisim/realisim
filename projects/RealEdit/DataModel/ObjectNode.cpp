@@ -4,8 +4,9 @@
 #include "Matrix4x4.h"
 #include "MathUtils.h"
 
-using namespace RealEdit;
-using namespace Realisim;
+using namespace realEdit;
+using namespace realisim;
+using namespace realisim::math;
 using namespace std;
 //------------------------------------------------------------------------------
 ObjectNode::ObjectNode( const QString iName ) : mModel (),
@@ -58,11 +59,11 @@ ObjectNode* ObjectNode::addNode( const QString iName )
 }
 
 //------------------------------------------------------------------------------
-void ObjectNode::addNode( ObjectNode* ipNode )
-{
-  this->mChilds.push_back( ipNode );
-  ipNode->mpParentNode = this;
-}
+//void ObjectNode::addNode( ObjectNode* ipNode )
+//{
+//  this->mChilds.push_back( ipNode );
+//  ipNode->mpParentNode = this;
+//}
 
 //------------------------------------------------------------------------------
 const ObjectNode*
@@ -102,7 +103,7 @@ ObjectNode::getName() const
 }
 
 //------------------------------------------------------------------------------
-const Realisim::Point3d
+const Point3d
 ObjectNode::getTranslation() const
 {
   return Point3d( mTransformation[3][0], 
@@ -111,14 +112,14 @@ ObjectNode::getTranslation() const
 }
 
 //------------------------------------------------------------------------------
-const Realisim::Matrix4d&
+const Matrix4d&
 ObjectNode::getTransformation() const
 { 
   return mTransformation; 
 }
 
 //------------------------------------------------------------------------------
-void ObjectNode::setTransformation( const Realisim::Matrix4d& iMat )
+void ObjectNode::setTransformation( const Matrix4d& iMat )
 {
   mTransformation = iMat;
 }
@@ -132,7 +133,7 @@ node.translate (Point3d (3, 0, 0));
 
   Root---node
 */
-void ObjectNode::translate( const Realisim::Point3d& iPos )
+void ObjectNode::translate( const Point3d& iPos )
 {
   mTransformation.setTranslation(iPos);
 }
@@ -150,7 +151,7 @@ node.translate (Vector3d (8, 0, 0));
         \
          node
 */
-void ObjectNode::translate( const Realisim::Vector3d& iTranslation )
+void ObjectNode::translate( const Vector3d& iTranslation )
 {
   Vector3d v = iTranslation * mTransformation;
   translate( getTranslation() + v  );

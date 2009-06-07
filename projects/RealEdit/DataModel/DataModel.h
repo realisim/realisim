@@ -6,18 +6,18 @@
 #define RealEdit_DataModel_hh
 
 #include "Point.h"
+#include "Primitives.h"
 #include "Vect.h"
 
 #include <vector>
 #include <cassert>
 
-namespace RealEdit { class DataModelBase; }
-namespace RealEdit { class RealEditPoint; }
-namespace RealEdit { class LineSegment; }
-namespace RealEdit { class RealEditPolygon; }
-namespace RealEdit { class RealEditModel; }
+namespace realEdit
+{
+using namespace realisim::math;
+using namespace realisim::treeD;
 
-class RealEdit::DataModelBase
+class DataModelBase
 {
 public:
 	DataModelBase ();
@@ -36,26 +36,26 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-class RealEdit::RealEditPoint : public RealEdit::DataModelBase
+class RealEditPoint : public DataModelBase
 {
 public:
   RealEditPoint ();
-  RealEditPoint (const Realisim::Point3d& iPos);
+  RealEditPoint (const Point3d& iPos);
   RealEditPoint (const RealEditPoint& iP);
   RealEditPoint& operator= (const RealEditPoint& iP);
   virtual ~RealEditPoint ();
   
-  const Realisim::Point3d& pos () const {return mpGuts->mPoint;}
+  const Point3d& pos () const {return mpGuts->mPoint;}
   double x () const {return mpGuts->mPoint.getX ();}
   double y () const {return mpGuts->mPoint.getY ();}
   double z () const {return mpGuts->mPoint.getZ ();}
 private:
   struct Guts 
   {
-    explicit Guts (const Realisim::Point3d& iP);
+    explicit Guts (const Point3d& iP);
     ~Guts ();
     
-    Realisim::Point3d mPoint;
+    Point3d mPoint;
     unsigned int mRefCount;
   };
   
@@ -63,7 +63,7 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-//class Realisim::DataModel::LineSegment : public Realisim::DataModel::DataModelBase 
+//class LineSegment : public DataModelBase 
 //{
 //public:
 //  LineSegment();
@@ -74,7 +74,7 @@ private:
 //};
 //
 //-----------------------------------------------------------------------------
-class RealEdit::RealEditPolygon : public RealEdit::DataModelBase
+class RealEditPolygon : public DataModelBase
 {
 public:
   RealEditPolygon ();
@@ -84,7 +84,7 @@ public:
   virtual ~RealEditPolygon ();
 
   const std::vector<RealEditPoint>& getPoints() const;
-  const std::vector<Realisim::Vector3d>& getNormals() const;
+  const std::vector<Vector3d>& getNormals() const;
   
   //void calculateNormal();
   
@@ -97,14 +97,14 @@ private:
     
     unsigned int mRefCount;
     std::vector<RealEditPoint> mPoints;
-    std::vector<Realisim::Vector3d> mNormals;
+    std::vector<Vector3d> mNormals;
   };
   
   Guts* mpGuts;
 };
 
 //-----------------------------------------------------------------------------
-class RealEdit::RealEditModel : public RealEdit::DataModelBase
+class RealEditModel : public DataModelBase
 {
 public:  
 	RealEditModel ();
@@ -114,6 +114,7 @@ public:
 	
   void addPoint (RealEditPoint iP);
   void addPolygon (RealEditPolygon ipPoly);
+  const BoundingBox& getBoundingBox () const;
   unsigned int getPointCount () const;
   const RealEditPoint& getPoint (unsigned int iIndex) const;
   unsigned int getPolygonCount () const;
@@ -125,13 +126,16 @@ private:
     Guts();
     ~Guts();
     
-    unsigned int mRefCount;
+    BoundingBox mBoundingBox;
     std::vector<RealEditPoint> mPoints;
-    //std::vector<Realisim::DataModel::LineSegment> mLineSegments;
+    //std::vector<LineSegment> mLineSegments;
     std::vector<RealEditPolygon> mPolygons;
+    unsigned int mRefCount;
   };
   
   Guts* mpGuts;
 };
+
+}//realEdit
 
 #endif

@@ -50,11 +50,15 @@
 
 #include "Point.h"
 #include <qgl.h>
-namespace Realisim { class Axis; }
-namespace Realisim { class Cube; } 
-namespace Realisim { class Primitives; }
+#include "Vect.h"
  
-class Realisim::Primitives
+namespace realisim
+{
+namespace treeD
+{
+using namespace realisim::math;
+
+class Primitives
 {
 public:
   Primitives();
@@ -87,7 +91,7 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-class Realisim::Axis : public Realisim::Primitives
+class Axis : public Primitives
 {
 public:
   Axis() : Primitives(){;}
@@ -96,13 +100,30 @@ public:
 };
 
 //------------------------------------------------------------------------------
-class Realisim::Cube : public Realisim::Primitives
+class BoundingBox : public Primitives
+{
+public:
+  BoundingBox ();
+  virtual ~BoundingBox ();
+  
+  virtual void add (const Point3d& iV);
+  virtual void draw() const;
+protected:
+  Point3d mMin;
+  Point3d mMax;
+};
+
+//------------------------------------------------------------------------------
+class Cube : public Primitives
 {
 public:
   Cube() : Primitives(){;}
   virtual ~Cube(){;}
   virtual void draw() const;
 };
+
+} //namespace treeD
+} //namepsace realisim
 
 #endif
 

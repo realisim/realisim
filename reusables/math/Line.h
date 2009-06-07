@@ -22,8 +22,11 @@
 //! d'une certaine efficacitÈ a l'exÈcution.
 //!
 //------------------------------------------------------------------------------
-namespace Realisim
+namespace realisim
 {
+namespace math
+{
+
   class Line
   {
   public:
@@ -96,5 +99,7 @@ namespace Realisim
     else
       return false;
   }
+  
+} //math
 } // end of namespace realisim
 #endif // LINE_H

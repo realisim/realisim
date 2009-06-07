@@ -2,23 +2,17 @@
 #ifndef RealEdit_EditionUi_hh
 #define RealEdit_EditionUi_hh
 
-
+namespace realEdit{ class ObjectNavigator; }
 #include "RealEditController.h"
-
 #include <QMainWindow.h>
-
 class QMenuBar;
+namespace realEdit{ class RealEdit3d; }
+namespace realEdit{ class RealEditController; }
 
-namespace RealEdit{ class RealEditController; }
-
-namespace RealEdit
+namespace realEdit
 { 
-  class EditionUi; 
-  class RealEdit3d;
-  class ObjectNavigator;
-}
 
-class RealEdit::EditionUi : public QMainWindow
+class EditionUi : public QMainWindow
 {
 	Q_OBJECT
 public:
@@ -50,5 +44,7 @@ private:
 
 	ObjectNavigator* mpObjectNavigator;
 };
+
+} //realEdit
 
 #endif //Realisim_RealEdit_UserInterface_MainWindow_hh

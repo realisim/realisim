@@ -8,7 +8,7 @@
 #include <QIcon>
 
 
-using namespace RealEdit;
+using namespace realEdit;
 
 int startMainApp()
 {
@@ -18,7 +18,7 @@ int startMainApp()
   }
   else
   {
-    printf("ERROR: unable to start RealEdit\n");
+    printf("ERROR: unable to start realEdit\n");
     return 0;
   }
 }

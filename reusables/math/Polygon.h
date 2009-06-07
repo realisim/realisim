@@ -24,7 +24,9 @@
 //!cette classeest utilisÈ avec OpenGL, bien se rapeller qu'OpenGL n'affiche que
 //! des polygones concaves (ou convexes, me souviens plus... TODO vÈrifiÈ ca)
 //!-----------------------------------------------------------------------------
-namespace Realisim
+namespace realisim
+{
+namespace math
 {
   class Polygon
   {
@@ -208,5 +210,6 @@ namespace Realisim
     normal_ = tmp1^tmp2;
     normal_.normalise();
   }
+} //math
 } // end of namespace realisim
 #endif // POLYGON_H

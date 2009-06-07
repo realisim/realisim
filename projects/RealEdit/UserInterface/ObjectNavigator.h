@@ -1,10 +1,5 @@
 /*
  *  ObjectNavigator.h
- *  Project
- *
- *  Created by Pierre-Olivier Beaudoin on 25/11/08.
- *  Copyright 2008 __MyCompanyName__. All rights reserved.
- *
  */
 
 #ifndef RealEdit_ObjectNavigator_hh
@@ -13,7 +8,7 @@
 #include <QTreeWidget>
 #include <map>
 
-namespace RealEdit
+namespace realEdit
 {
   class EditionData;
   class ObjectNavigator;
@@ -21,7 +16,7 @@ namespace RealEdit
   class ObjectNode;
 }
 
-class RealEdit::ObjectNavigator : public QTreeWidget
+class realEdit::ObjectNavigator : public QTreeWidget
 {
   Q_OBJECT
 public:

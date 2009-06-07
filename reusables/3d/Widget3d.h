@@ -15,13 +15,14 @@
 #include "Primitives.h"
 #include <map>
 #include <QTime>
-
-namespace Realisim { class Widget3d; }
-namespace Realisim { namespace Primitive3d { class Primitive3dBase; } }
-
 #include <QGLWidget>
 
-class Realisim::Widget3d : public QGLWidget
+namespace realisim
+{
+namespace treeD
+{
+
+class Widget3d : public QGLWidget
 {
     Q_OBJECT
 public:
@@ -67,5 +68,8 @@ private:
   InputHandler* mpInputHandler; //jamais null
   bool mShowFps;
 };
+
+} //treeD
+} //realisim
 
 #endif //Realisim_Widget3d_hh

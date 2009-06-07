@@ -6,8 +6,10 @@
 #include "Polygon.h"
 #include <iostream>
 
-using namespace Realisim;
-using namespace RealEdit;
+using namespace realisim;
+using namespace realisim::math;
+using namespace realisim::treeD;
+using namespace realEdit;
 
 //initialisation du membre static
 unsigned int DataModelBase::mIdCounter = 0;
@@ -56,7 +58,7 @@ RealEditPoint::RealEditPoint() : DataModelBase(),
   mpGuts (new Guts (Point3d (0.0)))
 {}
 
-RealEditPoint::RealEditPoint (const Realisim::Point3d& iPos) : DataModelBase(),
+RealEditPoint::RealEditPoint (const Point3d& iPos) : DataModelBase(),
   mpGuts (new Guts (iPos))
 { assign(); }
 
@@ -162,14 +164,15 @@ const std::vector<RealEditPoint>& RealEditPolygon::getPoints () const
 { return mpGuts->mPoints; }
 
 //------------------------------------------------------------------------------
-const std::vector<Realisim::Vector3d>& RealEditPolygon::getNormals () const
+const std::vector<Vector3d>& RealEditPolygon::getNormals () const
 { return mpGuts->mNormals;}
 
 //------------------------RealEditModel::Guts-----------------------------------
-RealEditModel::Guts::Guts () : mRefCount(1),
+RealEditModel::Guts::Guts () : mBoundingBox (),
   mPoints (),
   //mLineSegements(),
-  mPolygons ()
+  mPolygons (),
+  mRefCount (1)
 {
   ++newGutsModel;
   std::cout<<"new Guts Model: "<<newGutsModel<<std::endl;
@@ -217,11 +220,18 @@ RealEditModel::~RealEditModel ()
 
 //------------------------------------------------------------------------------
 void RealEditModel::addPoint (const RealEditPoint iP)
-{ mpGuts->mPoints. push_back (iP); }
+{
+  mpGuts->mPoints. push_back (iP);
+  mpGuts->mBoundingBox. add (iP.pos ());
+}
 
 //------------------------------------------------------------------------------
 void RealEditModel::addPolygon (const RealEditPolygon iP)
 { mpGuts->mPolygons. push_back (iP); }
+
+//------------------------------------------------------------------------------
+const BoundingBox& RealEditModel::getBoundingBox () const
+{ return mpGuts->mBoundingBox; }
 
 //------------------------------------------------------------------------------
 unsigned int RealEditModel::getPointCount () const

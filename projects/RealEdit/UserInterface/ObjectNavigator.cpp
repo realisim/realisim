@@ -16,7 +16,7 @@
 #include <QHeaderView>
 #include <QTreeWidgetItem>
 
-using namespace RealEdit;
+using namespace realEdit;
 using namespace std;
 
 ObjectNavigator::ObjectNavigator( QWidget* ipParent, RealEditController& iC ) :

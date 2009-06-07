@@ -4,8 +4,8 @@
 #include "EditionUi.h"
 #include "MathUtils.h"
 
-using namespace Realisim;
-using namespace RealEdit;
+using namespace realisim;
+using namespace realEdit;
 using namespace std;
 
 RealEditController::RealEditController(EditionUi& iEditionUi) : 
@@ -50,7 +50,7 @@ RealEditController::RealEditController(EditionUi& iEditionUi) :
 //    getEditionData ().setCurrentNode (pRootNode);
 //  }  
   
-  
+  ObjectNode* pRootNode = getEditionData().getCurrentNode();
   createTetrahedron();
 
   ObjectNode* pBouetteNode = getEditionData().addNode( "étron" );

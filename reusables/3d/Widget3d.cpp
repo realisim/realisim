@@ -10,7 +10,8 @@
 #include <QMouseEvent>
 #include "Widget3d.h"
 
-using namespace Realisim;
+using namespace realisim;
+using namespace realisim::treeD;
 using namespace std;
 
 namespace
