@@ -1,0 +1,4 @@
+
+= Affichage des QString dans le debugger de Xcode =
+
+http://lists.trolltech.com/qt-interest/2005-07/thread00765-0.html
