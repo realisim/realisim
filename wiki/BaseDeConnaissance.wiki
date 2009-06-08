@@ -1,3 +1,4 @@
 = Base de connaissance =
 
+  * [http://code.google.com/p/realisim/wiki/AffichageQStringXcode Affichage des QString dans le debugger de Xcode]
   * [http://code.google.com/p/realisim/wiki/EncodageChaineAvecQt Encodage des chaînes avec Qt]
