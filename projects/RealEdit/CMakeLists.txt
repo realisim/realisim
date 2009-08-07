@@ -12,6 +12,7 @@ ADD_COMPONENT( "DataModel" "Data Model")
 
 ADD_COMPONENT( "images" )
 ADD_COMPONENT( "../../reusables/3d" )
+ADD_COMPONENT( "../../reusables/command" )
 ADD_COMPONENT( "../../reusables/math" )
 
 

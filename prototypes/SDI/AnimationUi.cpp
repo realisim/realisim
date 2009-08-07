@@ -8,7 +8,8 @@
 #include <QLayout>
 #include <QListWidget>
 
-using namespace Realisim;
+using namespace realisim;
+using namespace treeD;
 using namespace RealEdit;
 
 AnimationUi::AnimationUi( UiController& iUiController)

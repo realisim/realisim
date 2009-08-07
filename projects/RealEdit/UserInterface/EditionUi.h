@@ -29,8 +29,8 @@ private slots:
 	
 private:
 	void addMenuBar();
-	void addObjectNavigator();
-	
+	void addToolPanel();
+  	
 	void createFileMenu( QMenuBar* ipMenuBar );
 	void createEditMenu( QMenuBar* ipMenuBar );
 	void createToolMenu( QMenuBar* ipMenuBar );

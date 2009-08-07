@@ -4,7 +4,6 @@
 #include <iostream>
 #include <QApplication>
 #include <QTextCodec>
-#include <QMainWindow>
 #include <QIcon>
 
 

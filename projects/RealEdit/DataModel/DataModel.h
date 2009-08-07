@@ -5,6 +5,7 @@
 #ifndef RealEdit_DataModel_hh
 #define RealEdit_DataModel_hh
 
+#include "BoundingBox.h"
 #include "Point.h"
 #include "Primitives.h"
 #include "Vect.h"
@@ -114,7 +115,7 @@ public:
 	
   void addPoint (RealEditPoint iP);
   void addPolygon (RealEditPolygon ipPoly);
-  const BoundingBox& getBoundingBox () const;
+  const BB3d& getBoundingBox () const;
   unsigned int getPointCount () const;
   const RealEditPoint& getPoint (unsigned int iIndex) const;
   unsigned int getPolygonCount () const;
@@ -126,7 +127,7 @@ private:
     Guts();
     ~Guts();
     
-    BoundingBox mBoundingBox;
+    BB3d mBoundingBox;
     std::vector<RealEditPoint> mPoints;
     //std::vector<LineSegment> mLineSegments;
     std::vector<RealEditPolygon> mPolygons;

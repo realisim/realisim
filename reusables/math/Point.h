@@ -5,8 +5,8 @@
 //! AUTHOR:  Pierre-Olivier Beaudoin
 //!          David Pinson
 //!-----------------------------------------------------------------------------
-#ifndef POINT_H
-#define POINT_H
+#ifndef realisim_math_POINT_H
+#define realisim_math_POINT_H
 
 #include "MathDef.h"
 #include <iostream>
@@ -535,4 +535,4 @@ namespace math
   typedef Point<int>          Point3i;
 } // math
 } // end of namespace realisim
-#endif //POINT_H
+#endif //realisim_math_POINT_H

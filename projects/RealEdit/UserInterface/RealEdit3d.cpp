@@ -147,7 +147,9 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
     glMultMatrixd( ipObjectNode->getTransformation().getPtr() );
     
     //dessine le boundingBox
-    model. getBoundingBox (). draw();
+    treeD::BoundingBox bb(model.getBoundingBox().getMin(), 
+    model.getBoundingBox().getMax() );
+    bb.draw();
     
     //dessiner les polys du modele
     glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT);
