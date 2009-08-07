@@ -54,19 +54,15 @@ void Axis::draw() const
 }
 
 //******************************************************************************
-BoundingBox::BoundingBox () : Primitives(), mMin (0.0), mMax (0.0)
+BoundingBox::BoundingBox (const Point3d& iMin, const Point3d& iMax) : 
+  Primitives(),
+  mMin (iMin),
+  mMax (iMax)
 {}
 
 //------------------------------------------------------------------------------
 BoundingBox::~BoundingBox ()
 {}
-
-//------------------------------------------------------------------------------
-void BoundingBox::add (const Point3d& iP)
-{
-  mMin.minCoord (iP);
-  mMax.maxCoord (iP);
-}
 
 //------------------------------------------------------------------------------
 void BoundingBox::draw () const

@@ -230,7 +230,7 @@ void RealEditModel::addPolygon (const RealEditPolygon iP)
 { mpGuts->mPolygons. push_back (iP); }
 
 //------------------------------------------------------------------------------
-const BoundingBox& RealEditModel::getBoundingBox () const
+const BB3d& RealEditModel::getBoundingBox () const
 { return mpGuts->mBoundingBox; }
 
 //------------------------------------------------------------------------------

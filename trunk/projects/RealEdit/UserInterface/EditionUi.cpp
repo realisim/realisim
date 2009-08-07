@@ -29,6 +29,7 @@ EditionUi::EditionUi()
 	addMenuBar();
 	
 	QGridLayout* pGLyt = new QGridLayout( pMainFrame );
+  pGLyt->setContentsMargins(1, 1, 1, 1);
   pGLyt->setSpacing( 1 );
 	
 	mpWidget3d_1 = new RealEdit3d( this, mpWidget3d_1, mController);
@@ -53,40 +54,12 @@ EditionUi::EditionUi()
   pGLyt->addWidget(mpWidget3d_3, 1, 2 ); 
 	
 	//add the Object Navigator
-	addObjectNavigator();
-	
+	addToolPanel();
 	show();
-	
 }
 
 EditionUi::~EditionUi()
 {
-}
-
-//------------------------------------------------------------------------------
-void
-EditionUi::addObjectNavigator()
-{
-	//add the dock widget via the controller, because the 
-	//controller manage the show/hide of the dock widget
-	//when a different workspace is shown by the central tab widget
-	QDockWidget* pDockWidget = new QDockWidget( "Object Navigation", this );
-	addDockWidget( Qt::LeftDockWidgetArea, pDockWidget );
-	pDockWidget->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
-	
-	//add the QlistWidget
-	QFrame* pFrame = new QFrame( pDockWidget );
-	pDockWidget->setWidget( pFrame );
-	QVBoxLayout* vLyt = new QVBoxLayout( pFrame );
-	{
-		mpObjectNavigator = new ObjectNavigator( pFrame, mController );
-		
-		QFontMetrics dockWidgetFontMetric( pDockWidget->font() );
-		int a = dockWidgetFontMetric.width( pDockWidget->windowTitle() );
-		
-		mpObjectNavigator->setMinimumWidth( a );
-	}
-	vLyt->addWidget( mpObjectNavigator );
 }
 
 //------------------------------------------------------------------------------
@@ -102,6 +75,25 @@ EditionUi::addMenuBar()
 	createEditMenu( pMenuBar );
 	createToolMenu( pMenuBar );
 	
+}
+
+//------------------------------------------------------------------------------
+void
+EditionUi::addToolPanel()
+{
+	QDockWidget* pDockWidget = new QDockWidget( "Tools", this );
+	addDockWidget( Qt::LeftDockWidgetArea, pDockWidget );
+	pDockWidget->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
+	
+	//add the QlistWidget
+	QFrame* pFrame = new QFrame( pDockWidget );
+	pDockWidget->setWidget( pFrame );
+	QVBoxLayout* vLyt = new QVBoxLayout( pFrame );
+	{
+		mpObjectNavigator = new ObjectNavigator( pFrame, mController );
+    //ObjectNavigator* b = new ObjectNavigator( pFrame, mController );
+	}
+  vLyt->addWidget( mpObjectNavigator );
 }
 
 //------------------------------------------------------------------------------

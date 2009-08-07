@@ -10,7 +10,6 @@
 #include "Vect.h"
 
 /*
-
   --members
   mMode: mode de projection, Orthogonal ou Perspective
   mOrientation: Orientation de la camera

@@ -103,10 +103,9 @@ public:
 class BoundingBox : public Primitives
 {
 public:
-  BoundingBox ();
+  explicit BoundingBox (const Point3d&, const Point3d&);
   virtual ~BoundingBox ();
   
-  virtual void add (const Point3d& iV);
   virtual void draw() const;
 protected:
   Point3d mMin;
