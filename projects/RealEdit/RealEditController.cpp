@@ -1,4 +1,6 @@
 
+#include "commands, translate.h"
+#include "assembly, rotate.h"
 #include "RealEditController.h"
 #include "DataModel.h"
 #include "EditionUi.h"
@@ -8,10 +10,12 @@ using namespace realisim;
 using namespace realEdit;
 using namespace std;
 
-RealEditController::RealEditController(EditionUi& iEditionUi) : 
+RealEditController::RealEditController(EditionUi& iEditionUi) :
+  mCommandStack(), 
   mDisplayData(),
   mEditionUi(iEditionUi),
-  mEditionData()
+  mEditionData(),
+  mMode(mAssembly)
 {
 //  ObjectNode* pRootNode = getEditionData().getCurrentNode();
 //  RealEditPoint p1, p2, p3, p4;
@@ -50,13 +54,15 @@ RealEditController::RealEditController(EditionUi& iEditionUi) :
 //    getEditionData ().setCurrentNode (pRootNode);
 //  }  
   
+  
+  
   ObjectNode* pRootNode = getEditionData().getCurrentNode();
   createTetrahedron();
 
   ObjectNode* pBouetteNode = getEditionData().addNode( "étron" );
   pBouetteNode->translate( Point3d( -8.0, 0.0, 0.0 ) );
-  pBouetteNode->rotate( PI/4.0,
-    Vector3d( 1.0, 0.0, 0.0 ) );
+  pBouetteNode->rotate( PI/2.0,
+    Vector3d( 0.0, 0.0, 1.0 ) );
   getEditionData().setCurrentNode( pBouetteNode );
   createCube();
   
@@ -70,6 +76,18 @@ RealEditController::RealEditController(EditionUi& iEditionUi) :
 
 RealEditController::~RealEditController()
 {
+}
+
+void RealEditController::translate()
+{
+  commands::Translate* c = new commands::Translate(getEditionData());
+  mCommandStack.add(c);
+}
+
+void RealEditController::rotate()
+{
+  commands::assembly::Rotate* c = new commands::assembly::Rotate(getEditionData());
+  mCommandStack.add(c);
 }
 
 //------------------------------------------------------------------------------
@@ -88,11 +106,12 @@ void RealEditController::createCube()
   vector<RealEditPoint> vPoints;
   vector<RealEditPoint> vFace;
   for (int i = 0; i < 8; ++i) 
-  {    
-    vPoints.push_back( 
+  {   
+    RealEditPoint p =
       getEditionData().addPoint ( Point3d (vdata[i][0],
-        vdata[i][1],
-        vdata[i][2])));
+          vdata[i][1],
+          vdata[i][2])); 
+    vPoints.push_back(p);
   }
   
   for (int i = 0; i < 12; ++i)
@@ -127,10 +146,11 @@ void RealEditController::createSphere(unsigned int iLevel /*= 0*/)
   vector<RealEditPoint> vFace;
   for (int i = 0; i < 12; ++i) 
   {    
-    vPoints.push_back( 
+    RealEditPoint p =
       getEditionData().addPoint (Point3d (vdata[i][0],
         vdata[i][1],
-        vdata[i][2])));
+        vdata[i][2]));
+    vPoints.push_back(p);
   }
   
   for (int i = 0; i < 20; ++i)
@@ -157,10 +177,11 @@ void RealEditController::createTetrahedron()
   vector<RealEditPoint> vFace;
   for (int i = 0; i < 4; ++i) 
   {    
-    vPoints.push_back( 
+    RealEditPoint p = 
       getEditionData().addPoint ( Point3d (vdata[i][0],
         vdata[i][1],
-        vdata[i][2])));
+        vdata[i][2]));
+    vPoints.push_back(p);
   }
   
   for (int i = 0; i < 4; ++i)

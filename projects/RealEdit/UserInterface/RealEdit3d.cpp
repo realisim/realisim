@@ -30,18 +30,28 @@ RealEdit3d::RealEdit3d (QWidget* ipParent,
 Widget3d(ipParent, iSharedWidget),
 mController (iC),
 mDisplayData (iC.getDisplayData ()),
-mEditionData (const_cast<const RealEditController&> (iC).getEditionData ())
-{}
+mEditionData (const_cast<const RealEditController&>(iC).getEditionData ())
+{
+  setFocusPolicy(Qt::StrongFocus);
+}
 
 RealEdit3d::~RealEdit3d()
 {}
 
 //------------------------------------------------------------------------------
+/*Donner la transformation du noeud courant à la caméra. Quand on est en mode
+assemblage, la caméra prend seulement la translation de la transformation du 
+noeud courant. Quand on est en mode edition, la caméra prend la transformation
+complète du noeud courant.*/
 void RealEdit3d::currentNodeChanged()
 {
   Camera cam = getCamera();
   Path p(mEditionData.getCurrentNode());
-  cam.setTransformation(p.getSceneTransformation());
+  Matrix4d transfo;
+  transfo.setTranslation(p.getNodeToScene().getTranslation());
+  if(mController.getMode() == RealEditController::mEdition)
+    transfo = p.getNodeToScene();
+  cam.setTransformation(transfo);
   setCamera( cam );
 }
 
@@ -62,7 +72,23 @@ void RealEdit3d::drawAxis() const
 }
 
 //------------------------------------------------------------------------------
-void RealEdit3d::drawNormals(const RealEditModel iM) const
+void RealEdit3d::drawBoundingBox(const RealEditModel& iM) const
+{
+  if (mController.getMode() == RealEditController::mAssembly)
+  {
+    glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
+                   GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
+      glDisable(GL_LIGHTING);
+      enableSmoothLines();
+      treeD::BoundingBox bb(iM.getBoundingBox().getMin(), 
+        iM.getBoundingBox().getMax() );
+      bb.draw();
+    glPopAttrib();
+  }
+}
+
+//------------------------------------------------------------------------------
+void RealEdit3d::drawNormals(const RealEditModel& iM) const
 {
   for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
   {
@@ -107,7 +133,7 @@ void RealEdit3d::drawNormals(const RealEditModel iM) const
 }
 
 //------------------------------------------------------------------------------
-void RealEdit3d::drawPolygons(const RealEditModel iM) const
+void RealEdit3d::drawPolygons(const RealEditModel& iM) const
 {
   for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
   {
@@ -147,9 +173,7 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
     glMultMatrixd( ipObjectNode->getTransformation().getPtr() );
     
     //dessine le boundingBox
-    treeD::BoundingBox bb(model.getBoundingBox().getMin(), 
-    model.getBoundingBox().getMax() );
-    bb.draw();
+    drawBoundingBox(model);
     
     //dessiner les polys du modele
     glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT);
@@ -183,7 +207,6 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
       glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
                    GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_LIGHTING);
-        glDepthMask(0);
         enableSmoothLines();
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glColor4d( 0.0, 1.0, 0.2, 1.0);
@@ -220,6 +243,20 @@ void RealEdit3d::enableSmoothLines() const
   glHint (GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
   glEnable (GL_BLEND);
   glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+//------------------------------------------------------------------------------
+void RealEdit3d::keyPressEvent ( QKeyEvent* ipE)
+{
+
+//COCHONERIE A ENLEVER
+if (ipE->key() == Qt::Key_T)
+  mController.translate();
+else if (ipE->key() == Qt::Key_R)
+  mController.rotate();
+  
+Widget3d::keyPressEvent(ipE);
+update();
 }
 
 //------------------------------------------------------------------------------

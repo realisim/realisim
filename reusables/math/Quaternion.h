@@ -43,6 +43,7 @@ namespace math
     inline void setY(const T &y);
     inline void setZ(const T &z);
     inline void setQuat(const T &w, const T &x, const T &y, const T &z);
+    inline void setRot(const T &angle, const Vect<T>& iAxis);
 
     // --------------- fonction get --------------------------------------------
     inline T getW() const;
@@ -55,10 +56,10 @@ namespace math
     inline Matrix4<T> getUnitRotationMatrix() const;
 
     // --------------- fonction utiles -----------------------------------------
-    inline void print() const;
-    inline void conjugate();
-    inline void setRot(const T &angle, const Vect<T>& iAxis);
+    inline Quaternion<T>& inverse();        
     inline Point<T> multRotation( const Quaternion<T> &quat ) const;
+    inline Quaternion<T>& normalize();
+    inline void print() const;
 
     // --------------- Overload: operateurs unitaires --------------------------
     inline Quaternion<T>& operator=  (const Quaternion<T> &quat);
@@ -108,10 +109,40 @@ namespace math
   template<class T>
   inline Quaternion<T>::Quaternion(const Matrix4<T>& iMat)
   {
-    w_ = 0.5 * ( sqrt( iMat[0][0] + iMat[1][1] + iMat[2][2] + iMat[3][3] ) );
-    x_ = ( iMat[1][2] - iMat[2][1] ) / ( 4 * w_ );
-    y_ = ( iMat[2][0] - iMat[0][2] ) / ( 4 * w_ );
-    z_ = ( iMat[0][1] - iMat[1][0]) / ( 4 * w_ );
+    T trace = iMat(0, 0) + iMat(1, 1) + iMat(2, 2);
+    if( trace > 0 ) 
+    {
+      T s = sqrt(trace+1.0) * 2;
+      w_ = 0.25 * s;
+      x_ = ( iMat(1, 2) - iMat(2, 1) ) / s;
+      y_ = ( iMat(2, 0) - iMat(0, 2) ) / s;
+      z_ = ( iMat(0, 1) - iMat(1, 0) ) / s;
+    } 
+    else if ( iMat(0, 0) > iMat(1, 1) && iMat(0, 0) > iMat(2, 2) ) 
+    {
+      T s = sqrt(1.0 + iMat(0, 0) - iMat(1, 1) - iMat(2, 2)) * 2;
+      w_ = (iMat(1, 2) - iMat(2, 1) ) / s;
+      x_ = 0.25 * s;
+      y_ = (iMat(0, 1) + iMat(1, 0) ) / s;
+      z_ = (iMat(2, 0) + iMat(0, 2) ) / s;
+    } 
+    else if (iMat(1, 1) > iMat(2, 2)) 
+    {
+      T s = sqrt(1.0 + iMat(1, 1) - iMat(0, 0) - iMat(2, 2)) * 2;
+      w_ = (iMat(2, 0) - iMat(0, 2) ) / s;
+      x_ = (iMat(0, 1) + iMat(1, 0) ) / s;
+      y_ = 0.25 * s;
+      z_ = (iMat(1, 2) + iMat(2, 1) ) / s;
+    } 
+    else 
+    {
+      T s = sqrt(1.0 + iMat(2, 2) - iMat(0 ,0 ) - iMat(1, 1)) * 2;
+      w_ = (iMat(0, 1) - iMat(1, 0) ) / s;
+      x_ = (iMat(2, 0) + iMat(0, 2) ) / s;
+      y_ = (iMat(1, 2) + iMat(2, 1) ) / s;
+      z_ = 0.25 * s;
+    }
+  normalize();
   }
   
   //! destructeur
@@ -214,6 +245,22 @@ namespace math
 
     return result;
   }
+  
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline Quaternion<T>& Quaternion<T>::normalize()
+  {
+    double magnitude = getLength();
+    //si length est 0, on ne fait pas la division!
+    if (-SMALL_REAL < magnitude && magnitude > SMALL_REAL)
+    {
+      w_ = w_ / magnitude;
+      x_ = x_ / magnitude;
+      y_ = y_ / magnitude;
+      z_ = z_ / magnitude;
+    }
+    return *this;
+  }
 
   //----------------------------------------------------------------------------
   //addition de quaternion
@@ -314,19 +361,12 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class T>
-  inline Quaternion<T> Quaternion<T>::getConjugate() const
-  {
-    return Quaternion<T>(w_, -x_, -y_, -z_);
-  }
-  
-  //----------------------------------------------------------------------------
-  template<class T>
   inline double Quaternion<T>::getLength() const
   {
     return (double)sqrt(w_*w_ + x_*x_ + y_*y_ + z_*z_);
   }
 
-
+  //----------------------------------------------------------------------------
   //Cette fonction remplie la matrice unitRotationMatrix avec la matrice de
   //rotation correspondant au quaternion.
   template<class T>
@@ -357,13 +397,19 @@ namespace math
     return mat;
   }
 
-  //Cette fonction est a utiliser seulement si le quaternion est unitaire
+  //----------------------------------------------------------------------------
   template<class T>
-  inline void Quaternion<T>::conjugate()
+  inline Quaternion<T> Quaternion<T>::getConjugate() const
   {
-    x_ = -x_;
-    y_ = -y_;
-    z_ = -z_;
+    return Quaternion<T>(w_, -x_, -y_, -z_);
+  }
+  
+  template<class T>
+  inline Quaternion<T>& Quaternion<T>::inverse()
+  {
+    double squareNorm = 1.0 / (x_ * x_ + y_ * y_ + z_* z_ + w_ * w_);
+    *this = (*this).getConjugate() * squareNorm;
+    return *this;
   }
 
   //!---------------------------------------------------------------------------

@@ -89,6 +89,10 @@ RealEditPoint::~RealEditPoint ()
     delete mpGuts;
 }
 
+void RealEditPoint::set(const Point3d& iP)
+{
+  mpGuts->mPoint.set(iP);
+}
 //--------------------------RealEditPolygon::Guts-------------------------------
 RealEditPolygon::Guts::Guts() : mRefCount (1),
   mPoints (),

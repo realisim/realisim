@@ -52,6 +52,8 @@ public:
   //void addNode (ObjectNode* ipNode);
   const ObjectNode* getCurrentNode () const;
   ObjectNode* getCurrentNode ();
+const std::vector<RealEditPoint>& getSelectedPoints() const {return mSelectedPoints;}
+std::vector<RealEditPoint>& getSelectedPoints() {return mSelectedPoints;}
   const Scene& getScene () const;
   Scene& getScene ();
   void setCurrentNode (const ObjectNode* ipNode);

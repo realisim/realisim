@@ -15,7 +15,7 @@
 #include <QDialog>
 class QLineEdit;
 
-class CommandAdd : public realisim::command::Command
+class CommandAdd : public realisim::utils::Command
 {
   public:
     CommandAdd(double iO, QLineEdit* ipLe) : mOperand(iO), mpLe(ipLe){;}
@@ -27,7 +27,7 @@ class CommandAdd : public realisim::command::Command
     QLineEdit* mpLe;
 };
 
-class CommandSubstract : public realisim::command::Command
+class CommandSubstract : public realisim::utils::Command
 {
   public:
     CommandSubstract(double iO, QLineEdit* ipLe) : mOperand(iO), mpLe(ipLe){;}
@@ -38,7 +38,7 @@ class CommandSubstract : public realisim::command::Command
     QLineEdit* mpLe;
 };
 
-class CommandMultiply : public realisim::command::Command
+class CommandMultiply : public realisim::utils::Command
 {
   public:
     CommandMultiply(double iO, QLineEdit* ipLe) : mOperand(iO), mpLe(ipLe){;}
@@ -49,7 +49,7 @@ class CommandMultiply : public realisim::command::Command
     QLineEdit* mpLe;
 };
 
-class CommandDivide : public realisim::command::Command
+class CommandDivide : public realisim::utils::Command
 {
   public:
     CommandDivide(double iO, QLineEdit* ipLe) : mOperand(iO), mpLe(ipLe){;}
@@ -76,7 +76,7 @@ public slots:
   void onRedo();
                 
 protected:
-  realisim::command::CommandStack mCommandStack;
+  realisim::utils::CommandStack mCommandStack;
   QLineEdit* mpResult;
 };
 

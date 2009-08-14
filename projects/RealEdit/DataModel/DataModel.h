@@ -47,6 +47,7 @@ public:
   virtual ~RealEditPoint ();
   
   const Point3d& pos () const {return mpGuts->mPoint;}
+  void set(const Point3d&);
   double x () const {return mpGuts->mPoint.getX ();}
   double y () const {return mpGuts->mPoint.getY ();}
   double z () const {return mpGuts->mPoint.getZ ();}

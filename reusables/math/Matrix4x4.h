@@ -4,6 +4,17 @@
 //!
 //! AUTHOR:  Pierre-Olivier Beaudoin & David Pinson
 //!-----------------------------------------------------------------------------
+/*Classe qui représente un matrice 4x4 de la forme
+
+   m = a00 a01 a02 a03    m = r r r s  -> r: rotation
+       a10 a11 a12 a13        r r r s     s: scale
+       a20 a21 a22 a23        r r r s     t: translation
+       a30 a31 a32 a33        t t t 1
+       
+  Par défaut la matrice est initialisée comme une matrice identité.
+  il est possible d'obtenir la valeur i, j de la matrice par l'opérateur ().
+*/
+
 #ifndef MATRIX_4_H
 #define MATRIX_4_H
 
@@ -51,12 +62,14 @@ namespace math
     inline Point<T> getTranslation() const;
 
     // --------------- fonction utiles -----------------------------------------
-    inline void multEquMat3(const Matrix4 &matrix);
-    inline void loadIdentity();
-    inline void print() const;
     inline const T* getPtr() const;
+    inline Matrix4<T>& inverse();
+    inline void loadIdentity();
+    inline void multEquMat3(const Matrix4 &matrix);
+    inline void print() const;
 
     // --------------- Overload: operateurs unitaires --------------------------
+    inline T operator()(unsigned int i, unsigned int j) const;
     inline Matrix4<T>& operator=  (const Matrix4 &matrix);
 
     inline Matrix4<T>  operator+  (const Matrix4 &matrix) const;
@@ -67,8 +80,6 @@ namespace math
 
     inline Matrix4<T>  operator*  (const Matrix4 &matrix) const;
     inline void operator*= (const Matrix4 &matrix);
-    
-    inline const std::vector<T> operator[] ( unsigned int iIndex ) const;
 
   protected:
   private:
@@ -175,6 +186,167 @@ namespace math
   inline Point<T> Matrix4<T>::getTranslation() const
   {
     return Point<T>( mat_[12], mat_[13], mat_[14]);
+  }
+
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline Matrix4<T>& Matrix4<T>::inverse()
+  {
+    /*trouver le determinant de la matrice, s'il est different de 0, on peut
+    inverser la matrice, sinon on ne peut pas*/
+    double determinant =
+      (*this)(0, 0) * (*this)(1, 1) * (*this)(2, 2) * (*this)(3, 3) +
+      (*this)(0, 0) * (*this)(1, 2) * (*this)(2, 3) * (*this)(3, 1) +
+      (*this)(0, 0) * (*this)(1, 3) * (*this)(2, 1) * (*this)(3, 2) +
+      
+      (*this)(0, 1) * (*this)(1, 0) * (*this)(2, 3) * (*this)(3, 2) +
+      (*this)(0, 1) * (*this)(1, 2) * (*this)(2, 0) * (*this)(3, 3) +
+      (*this)(0, 1) * (*this)(1, 3) * (*this)(2, 2) * (*this)(3, 0) +
+      
+      (*this)(0, 2) * (*this)(1, 0) * (*this)(2, 1) * (*this)(3, 3) +
+      (*this)(0, 2) * (*this)(1, 1) * (*this)(2, 3) * (*this)(3, 0) +
+      (*this)(0, 2) * (*this)(1, 3) * (*this)(2, 0) * (*this)(3, 1) +
+      
+      (*this)(0, 3) * (*this)(1, 0) * (*this)(2, 2) * (*this)(3, 1) +
+      (*this)(0, 3) * (*this)(1, 1) * (*this)(2, 0) * (*this)(3, 2) +
+      (*this)(0, 3) * (*this)(1, 2) * (*this)(2, 1) * (*this)(3, 0) -
+      
+      (*this)(0, 0) * (*this)(1, 1) * (*this)(2, 3) * (*this)(3, 2) -
+      (*this)(0, 0) * (*this)(1, 2) * (*this)(2, 1) * (*this)(3, 3) -
+      (*this)(0, 0) * (*this)(1, 3) * (*this)(2, 2) * (*this)(3, 1) -
+      
+      (*this)(0, 1) * (*this)(1, 0) * (*this)(2, 2) * (*this)(3, 3) -
+      (*this)(0, 1) * (*this)(1, 2) * (*this)(2, 3) * (*this)(3, 0) -
+      (*this)(0, 1) * (*this)(1, 3) * (*this)(2, 0) * (*this)(3, 2) -
+      
+      (*this)(0, 2) * (*this)(1, 0) * (*this)(2, 3) * (*this)(3, 1) -
+      (*this)(0, 2) * (*this)(1, 1) * (*this)(2, 0) * (*this)(3, 3) -
+      (*this)(0, 2) * (*this)(1, 3) * (*this)(2, 1) * (*this)(3, 0) -
+      
+      (*this)(0, 3) * (*this)(1, 0) * (*this)(2, 1) * (*this)(3, 2) -
+      (*this)(0, 3) * (*this)(1, 1) * (*this)(2, 2) * (*this)(3, 0) -
+      (*this)(0, 3) * (*this)(1, 2) * (*this)(2, 0) * (*this)(3, 1);
+    
+    //si le determinant est plus grand que 0, on peut inverser la matrice
+    if (-SMALL_REAL < determinant &&
+      determinant > SMALL_REAL)
+    {
+      double invDet = 1.0 / determinant;
+      Matrix4<T> tmp(*this);
+      mat_[0] = (tmp(1, 1) * tmp(2, 2) * tmp(3, 3) +
+                tmp(1, 2) * tmp(2, 3) * tmp(3, 1) +
+                tmp(1, 3) * tmp(2, 1) * tmp(3, 2) -
+                tmp(1, 1) * tmp(2, 3) * tmp(3, 2) -
+                tmp(1, 2) * tmp(2, 1) * tmp(3, 3) -
+                tmp(1, 3) * tmp(2, 2) * tmp(3, 1)) * invDet;
+      
+      mat_[1] = (tmp(0, 1) * tmp(2, 3) * tmp(3, 2) +
+                tmp(0, 2) * tmp(2, 1) * tmp(3, 3) +
+                tmp(0, 3) * tmp(2, 2) * tmp(3, 1) -
+                tmp(0, 1) * tmp(2, 2) * tmp(3, 3) -
+                tmp(0, 2) * tmp(2, 3) * tmp(3, 1) -
+                tmp(0, 3) * tmp(2, 1) * tmp(3, 2)) * invDet;
+        
+      mat_[2] = (tmp(0, 1) * tmp(1, 2) * tmp(3, 3) +
+                tmp(0, 2) * tmp(1, 3) * tmp(3, 1) +
+                tmp(0, 3) * tmp(1, 1) * tmp(3, 2) -
+                tmp(0, 1) * tmp(1, 3) * tmp(3, 2) -
+                tmp(0, 2) * tmp(1, 1) * tmp(3, 3) -
+                tmp(0, 3) * tmp(1, 2) * tmp(3, 1)) * invDet;
+                
+      mat_[3] = (tmp(0, 1) * tmp(1, 3) * tmp(2, 2) +
+                tmp(0, 2) * tmp(1, 1) * tmp(2, 3) +
+                tmp(0, 3) * tmp(1, 2) * tmp(2, 1) -
+                tmp(0, 1) * tmp(1, 2) * tmp(2, 3) -
+                tmp(0, 2) * tmp(1, 3) * tmp(2, 1) -
+                tmp(0, 3) * tmp(1, 1) * tmp(2, 2)) * invDet;
+                
+      mat_[4] = (tmp(1, 0) * tmp(2, 3) * tmp(3, 2) +
+                tmp(1, 2) * tmp(2, 0) * tmp(3, 3) +
+                tmp(1, 3) * tmp(2, 2) * tmp(3, 0) -
+                tmp(1, 0) * tmp(2, 2) * tmp(3, 3) -
+                tmp(1, 2) * tmp(2, 3) * tmp(3, 0) -
+                tmp(1, 3) * tmp(2, 0) * tmp(3, 2)) * invDet;
+                
+      mat_[5] = (tmp(0, 0) * tmp(2, 2) * tmp(3, 3) +
+                tmp(0, 2) * tmp(2, 3) * tmp(3, 0) +
+                tmp(0, 3) * tmp(2, 0) * tmp(3, 2) -
+                tmp(0, 0) * tmp(2, 3) * tmp(3, 2) -
+                tmp(0, 2) * tmp(2, 0) * tmp(3, 3) -
+                tmp(0, 3) * tmp(2, 2) * tmp(3, 0)) * invDet;
+                
+      mat_[6] = (tmp(0, 0) * tmp(1, 3) * tmp(3, 2) +
+                tmp(0, 2) * tmp(1, 0) * tmp(3, 3) +
+                tmp(0, 3) * tmp(1, 2) * tmp(3, 0) -
+                tmp(0, 0) * tmp(1, 2) * tmp(3, 3) -
+                tmp(0, 2) * tmp(1, 3) * tmp(3, 0) -
+                tmp(0, 3) * tmp(1, 0) * tmp(3, 2)) * invDet;
+                
+      mat_[7] = (tmp(0, 0) * tmp(1, 2) * tmp(2, 3) +
+                tmp(0, 2) * tmp(1, 3) * tmp(2, 0) +
+                tmp(0, 3) * tmp(1, 0) * tmp(2, 2) -
+                tmp(0, 0) * tmp(1, 3) * tmp(2, 2) -
+                tmp(0, 2) * tmp(1, 0) * tmp(2, 3) -
+                tmp(0, 3) * tmp(1, 2) * tmp(2, 0)) * invDet;
+                
+      mat_[8] = (tmp(1, 0) * tmp(2, 1) * tmp(3, 3) +
+                tmp(1, 1) * tmp(2, 3) * tmp(3, 1) +
+                tmp(1, 3) * tmp(2, 0) * tmp(3, 1) -
+                tmp(1, 0) * tmp(2, 3) * tmp(3, 1) -
+                tmp(1, 1) * tmp(2, 0) * tmp(3, 3) -
+                tmp(1, 3) * tmp(2, 1) * tmp(3, 0)) * invDet;
+                
+      mat_[9] = (tmp(0, 0) * tmp(2, 3) * tmp(3, 1) +
+                tmp(0, 1) * tmp(2, 0) * tmp(3, 3) +
+                tmp(0, 3) * tmp(2, 1) * tmp(3, 0) -
+                tmp(0, 0) * tmp(2, 1) * tmp(3, 3) -
+                tmp(0, 1) * tmp(2, 3) * tmp(3, 0) -
+                tmp(0, 3) * tmp(2, 0) * tmp(3, 1)) * invDet;
+                
+      mat_[10] = (tmp(0, 0) * tmp(1, 1) * tmp(3, 3) +
+                 tmp(0, 1) * tmp(1, 3) * tmp(3, 0) +
+                 tmp(0, 3) * tmp(1, 0) * tmp(3, 1) -
+                 tmp(0, 0) * tmp(1, 3) * tmp(3, 1) -
+                 tmp(0, 1) * tmp(1, 0) * tmp(3, 3) -
+                 tmp(0, 3) * tmp(1, 1) * tmp(3, 0)) * invDet;
+                 
+      mat_[11] = (tmp(0, 0) * tmp(1, 3) * tmp(2, 1) +
+                 tmp(0, 1) * tmp(1, 0) * tmp(2, 3) +
+                 tmp(0, 3) * tmp(1, 1) * tmp(2, 0) -
+                 tmp(0, 0) * tmp(1, 1) * tmp(2, 3) -
+                 tmp(0, 1) * tmp(1, 3) * tmp(2, 0) -
+                 tmp(0, 3) * tmp(1, 0) * tmp(2, 1)) * invDet;
+                 
+      mat_[12] = (tmp(1, 0) * tmp(2, 2) * tmp(3, 1) +
+                 tmp(1, 1) * tmp(2, 0) * tmp(3, 2) +
+                 tmp(1, 2) * tmp(2, 1) * tmp(3, 0) -
+                 tmp(1, 0) * tmp(2, 1) * tmp(3, 2) -
+                 tmp(1, 1) * tmp(2, 2) * tmp(3, 0) -
+                 tmp(1, 2) * tmp(2, 0) * tmp(3, 1)) * invDet;
+                 
+      mat_[13] = (tmp(0, 0) * tmp(2, 1) * tmp(3, 2) +
+                 tmp(0, 1) * tmp(2, 2) * tmp(3, 0) +
+                 tmp(0, 2) * tmp(2, 0) * tmp(3, 1) -
+                 tmp(0, 0) * tmp(2, 2) * tmp(3, 1) -
+                 tmp(0, 1) * tmp(2, 0) * tmp(3, 2) -
+                 tmp(0, 2) * tmp(2, 1) * tmp(3, 0)) * invDet;
+                 
+      mat_[14] = (tmp(0, 0) * tmp(1, 2) * tmp(3, 1) +
+                 tmp(0, 1) * tmp(1, 0) * tmp(3, 2) +
+                 tmp(0, 2) * tmp(1, 1) * tmp(3, 0) -
+                 tmp(0, 0) * tmp(1, 1) * tmp(3, 2) -
+                 tmp(0, 1) * tmp(1, 2) * tmp(3, 0) -
+                 tmp(0, 2) * tmp(1, 0) * tmp(3, 1)) * invDet;
+                 
+      mat_[15] = (tmp(0, 0) * tmp(1, 1) * tmp(2, 2) +
+                 tmp(0, 1) * tmp(1, 2) * tmp(2, 0) +
+                 tmp(0, 2) * tmp(1, 0) * tmp(2, 1) -
+                 tmp(0, 0) * tmp(1, 2) * tmp(2, 1) -
+                 tmp(0, 1) * tmp(1, 0) * tmp(2, 2) -
+                 tmp(0, 2) * tmp(1, 1) * tmp(2, 0)) * invDet;
+    }
+    
+    return *this;
   }
 
   template<class T>
@@ -306,22 +478,20 @@ namespace math
   }
   
   //----------------------------------------------------------------------------
-  //Retourne une rangé de la matrice. EX:
-  // matrice[2] => retourne la rangée 3 de la matrice.
-  // matrice[2][2] => retourne l'item 3,3 de la matrice ( ou mat_[10] ).
+  /*Retourne l'élément i, j de la matrice.
+      i: rangé
+      j: colonne
+      m = a00 a01 a02 a03
+          a10 a11 a12 a13
+          a20 a21 a22 a23
+          a30 a31 a32 a33*/
   template<class T>
-  inline const std::vector<T>
-  Matrix4<T>::operator[] ( unsigned int iIndex ) const
+  inline T Matrix4<T>::operator()(unsigned int i, unsigned int j) const
   {
-    assert( iIndex < 4 );
-    std::vector<T> subVector;
-    
-    for( unsigned int i = 0; i < 4; ++i )
-    {
-      subVector.push_back( mat_[ iIndex*4 + i ] );
-    }
-    
-    return subVector;
+    assert(i < 4 && j< 4);
+    if(i < 4 && j< 4)
+      return mat_[i * 4 + j];
+    return T(0);
   }
 
   typedef Matrix4<int>    Matrix4i;

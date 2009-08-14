@@ -3,11 +3,13 @@
 #include "ObjectNode.h"
 #include "Matrix4x4.h"
 #include "MathUtils.h"
+#include "Quaternion.h"
 
 using namespace realEdit;
 using namespace realisim;
 using namespace realisim::math;
 using namespace std;
+
 //------------------------------------------------------------------------------
 ObjectNode::ObjectNode( const QString iName ) : mModel (),
   mpParentNode( 0 ),
@@ -106,9 +108,9 @@ ObjectNode::getName() const
 const Point3d
 ObjectNode::getTranslation() const
 {
-  return Point3d( mTransformation[3][0], 
-    mTransformation[3][1],
-    mTransformation[3][2] );
+  return Point3d( mTransformation(3, 0), 
+    mTransformation(3, 1),
+    mTransformation(3, 2) );
 }
 
 //------------------------------------------------------------------------------
@@ -181,7 +183,7 @@ void ObjectNode::rotate( const double iAngle, const Vector3d& iAxis,
 //------------------------------------------------------------------------------
 //   PATH
 //------------------------------------------------------------------------------
-Path::Path(const ObjectNode* ipNode) : mSceneToNode()
+Path::Path(const ObjectNode* ipNode) : mNodeToScene(), mSceneToNode()
 {
   const ObjectNode* currentNode = ipNode;
   vector<const ObjectNode*> nodes;
@@ -195,7 +197,10 @@ Path::Path(const ObjectNode* ipNode) : mSceneToNode()
   vector<const ObjectNode*>::iterator it = nodes.begin();
   for(; it != nodes.end(); ++it)
   {
-    mSceneToNode *= (*it)->getTransformation();
+    mNodeToScene *= (*it)->getTransformation();
   }
+  
+  mSceneToNode = mNodeToScene;
+  mSceneToNode.inverse();
 }
 
