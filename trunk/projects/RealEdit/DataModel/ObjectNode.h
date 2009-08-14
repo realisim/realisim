@@ -49,13 +49,16 @@ private:
   QString mName;
 };
 
+/**/
 class Path
 {
 public:
   Path(const ObjectNode* ipNode);
-  const Matrix4d& getSceneTransformation() {return mSceneToNode;}
+  const Matrix4d& getNodeToScene() {return mNodeToScene;}
+  const Matrix4d& getSceneToNode() {return mSceneToNode;}
   
 private:
+  Matrix4d mNodeToScene;
   Matrix4d mSceneToNode;
 };
 

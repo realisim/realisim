@@ -60,9 +60,9 @@ namespace math
   inline Vect<T> operator* ( const Vect<T>& iVect, const Matrix4<T>& iMat)
   {
     Vect<T> vect;
-    vect.setX( iVect.getX() * iMat[0][0] + iVect.getY() * iMat[1][0] + iVect.getZ() * iMat[2][0] );
-    vect.setY( iVect.getX() * iMat[0][1] + iVect.getY() * iMat[1][1] + iVect.getZ() * iMat[2][1] );
-    vect.setZ( iVect.getX() * iMat[0][2] + iVect.getY() * iMat[1][2] + iVect.getZ() * iMat[2][2] );
+    vect.setX( iVect.getX() * iMat(0, 0) + iVect.getY() * iMat(1, 0) + iVect.getZ() * iMat(2, 0) );
+    vect.setY( iVect.getX() * iMat(0, 1) + iVect.getY() * iMat(1, 1) + iVect.getZ() * iMat(2, 1) );
+    vect.setZ( iVect.getX() * iMat(0, 2) + iVect.getY() * iMat(1, 2) + iVect.getZ() * iMat(2, 2) );
     return vect;
   }
   
@@ -71,9 +71,9 @@ namespace math
   inline Point<T> operator* ( const Point<T>& iPoint, const Matrix4<T>& iMat)
   {
     Point<T> result;
-    result.setX( iPoint.getX() * iMat[0][0] + iPoint.getY() * iMat[1][0] + iPoint.getZ() * iMat[2][0] );
-    result.setY( iPoint.getX() * iMat[0][1] + iPoint.getY() * iMat[1][1] + iPoint.getZ() * iMat[2][1] );
-    result.setZ( iPoint.getX() * iMat[0][2] + iPoint.getY() * iMat[1][2] + iPoint.getZ() * iMat[2][2] );
+    result.setX( iPoint.getX() * iMat(0, 0) + iPoint.getY() * iMat(1, 0) + iPoint.getZ() * iMat(2, 0) );
+    result.setY( iPoint.getX() * iMat(0, 1) + iPoint.getY() * iMat(1, 1) + iPoint.getZ() * iMat(2, 1) );
+    result.setZ( iPoint.getX() * iMat(0, 2) + iPoint.getY() * iMat(1, 2) + iPoint.getZ() * iMat(2, 2) );
     return result;
   }
   

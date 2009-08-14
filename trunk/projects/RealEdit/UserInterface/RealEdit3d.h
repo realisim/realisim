@@ -13,6 +13,8 @@
 namespace realEdit {class RealEditController;}
 #include "Widget3d.h"
 
+class QKeyEvent;
+
 namespace realEdit 
 {
 
@@ -28,10 +30,12 @@ public:
   
 protected:
   void drawAxis () const;
-  void drawNormals (const RealEditModel iM) const;
-  void drawPolygons (const RealEditModel iM) const;
+  void drawBoundingBox(const RealEditModel& iM) const;
+  void drawNormals (const RealEditModel& iM) const;
+  void drawPolygons (const RealEditModel& iM) const;
   void drawScene (const ObjectNode* iObjectNode) const;
   void enableSmoothLines () const;
+virtual void keyPressEvent ( QKeyEvent*);
 
 private:
   RealEditController& mController;

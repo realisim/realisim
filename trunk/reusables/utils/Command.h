@@ -3,14 +3,14 @@
  *  Created by Pierre-Olivier Beaudoin on 09-08-05.
  */
 
-#ifndef realisim_command_command_hh
-#define realisim_command_command_hh
+#ifndef realisim_utils_command_hh
+#define realisim_utils_command_hh
 
 /*Classe de base pour les commandes du système de undo/redo.*/
 
 namespace realisim 
 {
-namespace command 
+namespace utils 
 {
   class Command
   {
@@ -23,5 +23,4 @@ namespace command
   };
 }
 }
-
 #endif

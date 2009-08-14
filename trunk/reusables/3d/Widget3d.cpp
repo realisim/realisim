@@ -328,7 +328,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     
     Quat4d q1( mOldCam.getTransformation() );
     Quat4d q2( mNewCam.getTransformation() );
-    //on compare avec le conjugate pour prendre le plus petit angle
+    //on compare avec les longueurs pour prendre le plus petit angle
     if( (-q2-q1).getLength() < (q2-q1).getLength() )
     {
       q2 = -q2;

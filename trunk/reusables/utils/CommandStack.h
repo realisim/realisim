@@ -3,11 +3,11 @@
  *  Created by Pierre-Olivier Beaudoin on 09-08-05.
  */
  
- #ifndef realisim_command_commandManager_hh
- #define realisim_command_commandManager_hh
+ #ifndef realisim_utils_commandManager_hh
+ #define realisim_utils_commandManager_hh
  
 /*Cette classe gère les besoins de undo/redo. Il suffit de sous classer 
-realisim::command::Command afin de pouvoir ajouter les commandes et le 
+realisim::utils::Command afin de pouvoir ajouter les commandes et le 
 CommandManager gère la file de commandes.
 
 Chaque nouvelle commande ajoutée est placée a la fin de la file. Lorsque l'index
@@ -19,12 +19,12 @@ mCommands: la liste des commandes
 mIndex: identifie l'emplacement actuel dans la pile de commandes.
 */
 
-namespace realisim {namespace command {class Command;}} 
+namespace realisim {namespace utils {class Command;}} 
  #include <vector>
  
  namespace realisim
  {
- namespace command 
+ namespace utils 
  {
    class CommandStack
    {

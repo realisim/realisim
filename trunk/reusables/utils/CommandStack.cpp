@@ -8,7 +8,7 @@
 
 using namespace std;
 using namespace realisim;
-  using namespace command;
+  using namespace utils;
   
 CommandStack::CommandStack() :
   mCommands(),
