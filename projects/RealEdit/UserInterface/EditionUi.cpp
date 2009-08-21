@@ -3,24 +3,25 @@
 #include "RealEdit3d.h"
 #include "ObjectNavigator.h"
 
-#include <QMenuBar>
+#include <QButtonGroup>
 #include <QDockWidget>
 #include <QFrame>
 #include <QLayout>
 #include <QListWidget>
+#include <QMenuBar>
+#include <QPushButton>
 
 using namespace realisim;
 using namespace realisim::treeD;
 using namespace realEdit;
 
 EditionUi::EditionUi() 
-: QMainWindow()
-, mController( *this )
-, mpWidget3d_1( 0 )
-, mpWidget3d_2( 0 )
-, mpWidget3d_3( 0 )
-, mpWidget3d_4( 0 )
-, mpObjectNavigator( 0 )
+  : QMainWindow(),
+  mController( *this ),
+  mpObjectNavigator( 0 ),
+  mViewers(),
+  mpAssembly(0),
+  mpEdition(0)
 {	
 	resize(800, 600);
 	QFrame* pMainFrame = new QFrame( this );
@@ -32,29 +33,39 @@ EditionUi::EditionUi()
   pGLyt->setContentsMargins(1, 1, 1, 1);
   pGLyt->setSpacing( 1 );
 	
-	mpWidget3d_1 = new RealEdit3d( this, mpWidget3d_1, mController);
-  mpWidget3d_1->setCameraMode( Camera::ORTHOGONAL );
-  mpWidget3d_1->setCameraOrientation( Camera::XY );
+	RealEdit3d* pV1 = new RealEdit3d( this, 0, mController);
+  pV1->setCameraMode( Camera::ORTHOGONAL );
+  pV1->setCameraOrientation( Camera::XY );
     
-  mpWidget3d_2 = new RealEdit3d( this, mpWidget3d_1, mController);
-  mpWidget3d_2->setCameraMode( Camera::ORTHOGONAL );
-  mpWidget3d_2->setCameraOrientation( Camera::ZY );
+  RealEdit3d* pV2 = new RealEdit3d( this, pV1, mController);
+  pV2->setCameraMode( Camera::ORTHOGONAL );
+  pV2->setCameraOrientation( Camera::ZY );
   
-	mpWidget3d_3 = new RealEdit3d (this, mpWidget3d_1, mController);
-  mpWidget3d_3->setCameraMode( Camera::ORTHOGONAL );
-  mpWidget3d_3->setCameraOrientation( Camera::XZ );
+	RealEdit3d* pV3 = new RealEdit3d (this, pV1, mController);
+  pV3->setCameraMode( Camera::ORTHOGONAL );
+  pV3->setCameraOrientation( Camera::XZ );
 
-	mpWidget3d_4 = new RealEdit3d (this, mpWidget3d_1, mController);
-  mpWidget3d_4->setCameraOrientation( Camera::FREE );
+	RealEdit3d* pV4 = new RealEdit3d (this, pV1, mController);
+  pV4->setCameraOrientation( Camera::FREE );
 
-  pGLyt->addWidget(mpWidget3d_4, 0, 0, 1, 3);
+  mViewers.push_back(pV4);
+  mViewers.push_back(pV1);
+  mViewers.push_back(pV2);
+  mViewers.push_back(pV3);
+  
+  pGLyt->addWidget(pV4, 0, 0, 1, 3);
   pGLyt->setRowStretch(0, 2);
-  pGLyt->addWidget(mpWidget3d_1, 1, 0 );
-  pGLyt->addWidget(mpWidget3d_2, 1, 1 );
-  pGLyt->addWidget(mpWidget3d_3, 1, 2 ); 
+  pGLyt->addWidget(pV1, 1, 0 );
+  pGLyt->addWidget(pV2, 1, 1 );
+  pGLyt->addWidget(pV3, 1, 2 ); 
 	
 	//add the Object Navigator
 	addToolPanel();
+
+  //--- initialisation du UI a partir de mEditionData
+  modeChanged();
+  currentNodeChanged();
+  
 	show();
 }
 
@@ -85,15 +96,37 @@ EditionUi::addToolPanel()
 	addDockWidget( Qt::LeftDockWidgetArea, pDockWidget );
 	pDockWidget->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
 	
-	//add the QlistWidget
 	QFrame* pFrame = new QFrame( pDockWidget );
 	pDockWidget->setWidget( pFrame );
 	QVBoxLayout* vLyt = new QVBoxLayout( pFrame );
 	{
+    //--- Bouton de modes
+    QHBoxLayout* pModeLyt = new QHBoxLayout(pFrame);
+    {
+      mpAssembly = new QPushButton("Assembly", pFrame);
+      mpAssembly->setCheckable(true);
+      mpEdition = new QPushButton("Edition", pFrame);
+      mpEdition->setCheckable(true);
+
+      QButtonGroup* pButtonGroup = new QButtonGroup(pFrame);
+      pButtonGroup->setExclusive(true);
+      pButtonGroup->addButton(mpAssembly, 0);
+      pButtonGroup->addButton(mpEdition, 1);
+      
+      connect(pButtonGroup, SIGNAL(buttonClicked(int)), 
+        this, SLOT(doModeChange(int)));
+
+      pModeLyt->addWidget(mpAssembly);
+      pModeLyt->addWidget(mpEdition);
+      pModeLyt->addStretch(1);
+    }    
+    
 		mpObjectNavigator = new ObjectNavigator( pFrame, mController );
-    //ObjectNavigator* b = new ObjectNavigator( pFrame, mController );
+    
+    vLyt->addLayout(pModeLyt);
+    vLyt->addWidget( mpObjectNavigator );
+    vLyt->addStretch(1);
 	}
-  vLyt->addWidget( mpObjectNavigator );
 }
 
 //------------------------------------------------------------------------------
@@ -131,17 +164,38 @@ EditionUi::createToolMenu( QMenuBar* ipMenuBar )
 }
 
 //------------------------------------------------------------------------------
-void EditionUi::currentNodeChanged()
+void EditionUi::doModeChange(int iButtonId)
 {
-  mpWidget3d_1->currentNodeChanged();
-  mpWidget3d_2->currentNodeChanged();
-  mpWidget3d_3->currentNodeChanged();
-  mpWidget3d_4->currentNodeChanged();
+  if(iButtonId == 0)
+    mController.setMode(RealEditController::mAssembly);
+  else
+    mController.setMode(RealEditController::mEdition);
 }
 
 //------------------------------------------------------------------------------
-void
-EditionUi::newProject()
+void EditionUi::currentNodeChanged()
+{
+  mpObjectNavigator->currentNodeChanged();
+  for(unsigned int i = 0; i < mViewers.size(); ++i)
+    mViewers[i]->currentNodeChanged();
+}
+
+//------------------------------------------------------------------------------
+void EditionUi::modeChanged()
+{
+  /*On s'assure que les boutons de mode sont synchronisé avec le mode courant
+  et on rafraichît les viewers*/
+  if(mController.getMode() == RealEditController::mAssembly)
+    mpAssembly->setChecked(true);
+  else
+    mpEdition->setChecked(true);
+  
+  for(unsigned int i = 0; i < mViewers.size(); ++i)
+    mViewers[i]->update();
+}
+
+//------------------------------------------------------------------------------
+void EditionUi::newProject()
 {
 	mController.newProject();
 }

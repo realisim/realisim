@@ -6,6 +6,7 @@ namespace realEdit{ class ObjectNavigator; }
 #include "RealEditController.h"
 #include <QMainWindow.h>
 class QMenuBar;
+class QPushButton;
 namespace realEdit{ class RealEdit3d; }
 namespace realEdit{ class RealEditController; }
 
@@ -20,10 +21,12 @@ public:
 	~EditionUi();
   
   void currentNodeChanged();
-
+  void modeChanged();
+  
 protected:
 	
 private slots:
+  void doModeChange(int);
 	void newProject();
 	//void openProject();
 	
@@ -36,13 +39,10 @@ private:
 	void createToolMenu( QMenuBar* ipMenuBar );
 	
 	RealEditController mController; //created and deleted within the class
-	
-  RealEdit3d* mpWidget3d_1;
-  RealEdit3d* mpWidget3d_2;
-  RealEdit3d* mpWidget3d_3;
-  RealEdit3d* mpWidget3d_4;
-
 	ObjectNavigator* mpObjectNavigator;
+  std::vector<RealEdit3d*> mViewers;
+  QPushButton* mpAssembly;
+  QPushButton* mpEdition;
 };
 
 } //realEdit

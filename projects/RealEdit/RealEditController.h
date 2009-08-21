@@ -34,7 +34,7 @@ public:
   MODE getMode() const {return mMode;}
   void newProject();
   void setCurrentNode (const ObjectNode* ipNode);
-  void setMode(MODE iM) {mMode = iM;}
+  void setMode(MODE iM);
   
 void translate();
 void rotate();
