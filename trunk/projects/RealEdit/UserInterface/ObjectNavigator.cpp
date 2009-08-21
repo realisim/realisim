@@ -20,10 +20,11 @@ using namespace realEdit;
 using namespace std;
 
 ObjectNavigator::ObjectNavigator( QWidget* ipParent, RealEditController& iC ) :
-QTreeWidget( ipParent ),
-mController( iC ),
-mEditionData (const_cast<const RealEditController&> (iC).getEditionData ()),
-mTreeItemToNode()
+  QTreeWidget( ipParent ),
+  mController( iC ),
+  mEditionData (const_cast<const RealEditController&> (iC).getEditionData ()),
+  mTreeItemToNode(),
+  mNodeToTreeItem()
 {
   header()->hide();
   setAlternatingRowColors(true);
@@ -53,10 +54,22 @@ ObjectNavigator::createTree (TreeItem ipItem,
     make_pair<QTreeWidgetItem*, const ObjectNode*>(pItem, ipNode) );
   pItem->setText( 0, ipNode->getName() );
   
+  mNodeToTreeItem.insert(
+    make_pair<const ObjectNode*, QTreeWidgetItem*>(ipNode, pItem) );
+  
   for( unsigned int i = 0; i < ipNode->getChildCount(); ++i )
   {
     createTree( pItem, ipNode->getChild( i ) );
   }
+}
+
+//------------------------------------------------------------------------------
+void ObjectNavigator::currentNodeChanged()
+{
+  NodeToTreeItem::iterator it = 
+    mNodeToTreeItem.find(mEditionData.getCurrentNode());
+  if(it != mNodeToTreeItem.end())
+    setCurrentItem(it->second);
 }
 
 //------------------------------------------------------------------------------

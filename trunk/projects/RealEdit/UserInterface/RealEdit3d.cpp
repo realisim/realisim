@@ -39,19 +39,12 @@ RealEdit3d::~RealEdit3d()
 {}
 
 //------------------------------------------------------------------------------
-/*Donner la transformation du noeud courant à la caméra. Quand on est en mode
-assemblage, la caméra prend seulement la translation de la transformation du 
-noeud courant. Quand on est en mode edition, la caméra prend la transformation
-complète du noeud courant.*/
+/*Donner la transformation du noeud courant à la caméra.*/
 void RealEdit3d::currentNodeChanged()
 {
   Camera cam = getCamera();
   Path p(mEditionData.getCurrentNode());
-  Matrix4d transfo;
-  transfo.setTranslation(p.getNodeToScene().getTranslation());
-  if(mController.getMode() == RealEditController::mEdition)
-    transfo = p.getNodeToScene();
-  cam.setTransformation(transfo);
+  cam.setTransformation(p.getNodeToScene());
   setCamera( cam );
 }
 

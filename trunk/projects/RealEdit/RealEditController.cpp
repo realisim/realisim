@@ -15,47 +15,8 @@ RealEditController::RealEditController(EditionUi& iEditionUi) :
   mDisplayData(),
   mEditionUi(iEditionUi),
   mEditionData(),
-  mMode(mAssembly)
+  mMode(mEdition)
 {
-//  ObjectNode* pRootNode = getEditionData().getCurrentNode();
-//  RealEditPoint p1, p2, p3, p4;
-//  vector<RealEditPoint> vFace;
-//  
-//  p1 = mEditionData.addPoint (Point3d (0.0, 0.0, 0.0));
-//  p2 =mEditionData.addPoint (Point3d (2.0, 0.0, 0.0));
-//  p3 = mEditionData.addPoint (Point3d (0.0, 2.0, 2.0));
-//  p4 = mEditionData.addPoint (Point3d (0.0, -2.0, 0.0));
-//  
-//  vFace.push_back(p1);
-//  vFace.push_back(p2);
-//  vFace.push_back(p3);
-//  getEditionData().addPolygon(vFace);
-//  
-//  vFace.clear();
-//  vFace.push_back(p4);
-//  vFace.push_back(p2);
-//  vFace.push_back(p1);
-//  getEditionData().addPolygon(vFace);
-
-
-  
-//  ObjectNode* pRootNode = getEditionData().getCurrentNode();
-//  ObjectNode* pMasterNode = getEditionData ().addNode ("noeud maître");
-//  getEditionData().setCurrentNode(pMasterNode);
-//  createSphere(0);
-//  ObjectNode* n = new ObjectNode (*pMasterNode);
-//  n->translate(Vector3d (0.0, -5.0, 0.0));
-//  getEditionData ().addNode (n);
-//  for (int i = 1; i < 3; ++i)
-//  {
-//    ObjectNode* n = new ObjectNode (*pMasterNode);
-//    getEditionData ().addNode (n);
-//    n->translate (Vector3d (5*i*i, 0, 0));
-//    getEditionData ().setCurrentNode (pRootNode);
-//  }  
-  
-  
-  
   ObjectNode* pRootNode = getEditionData().getCurrentNode();
   createTetrahedron();
 
@@ -211,8 +172,21 @@ const EditionData& RealEditController::getEditionData() const
 */
 void RealEditController::setCurrentNode (const ObjectNode* ipNode)
 {
-  getEditionData().setCurrentNode (ipNode);
-  mEditionUi.currentNodeChanged ();
+  if(getEditionData().getCurrentNode() != ipNode)
+  {
+    getEditionData().setCurrentNode (ipNode);
+    mEditionUi.currentNodeChanged ();
+  }
+}
+
+//------------------------------------------------------------------------------
+void RealEditController::setMode(MODE iMode)
+{
+  if(mMode != iMode)
+  {
+    mMode = iMode;
+    mEditionUi.modeChanged();
+  }
 }
 
 //------------------------------------------------------------------------------
