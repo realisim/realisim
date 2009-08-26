@@ -14,6 +14,7 @@ RealEditController.h
 #include "DisplayData.h"
 #include "EditionData.h"
 namespace realEdit{class EditionUi;}
+#include "PlatonicSolid.h"
 
 namespace realEdit
 { 
@@ -21,37 +22,31 @@ namespace realEdit
 class RealEditController 
 {
 public:
-  enum MODE{mAssembly, mEdition};
+  enum mode{mAssembly, mEdition};
   
 	RealEditController( EditionUi& ipEditionUi );
 	~RealEditController();
 
-  void createCube();
-  void createSphere (unsigned int iLevel = 0);
-  void createTetrahedron();
   DisplayData& getDisplayData() {return mDisplayData;}
   const EditionData& getEditionData() const;
-  MODE getMode() const {return mMode;}
+  mode getMode() const {return mMode;}
   void newProject();
   void setCurrentNode (const ObjectNode* ipNode);
-  void setMode(MODE iM);
+  void setMode(mode iM);
   
 void translate();
 void rotate();
 
 protected:
+  void createPlatonicSolid(PlatonicSolid::type, int = 0);
   EditionData& getEditionData();
-  void subdivideIsocahedron(const std::vector<RealEditPoint>&, long);
   
 private:
   realisim::utils::CommandStack mCommandStack;
   DisplayData mDisplayData;
   EditionUi& mEditionUi;
   EditionData mEditionData;
-  MODE mMode;
-  
-  typedef std::map<std::pair<unsigned int, unsigned int>, RealEditPoint> IsocahedronSubdivision;
-  std::map<std::pair<unsigned int, unsigned int>, RealEditPoint> mIsocahedronSubdivision;
+  mode mMode;
 };
 
 } //realEdit
