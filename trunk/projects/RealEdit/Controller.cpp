@@ -6,13 +6,13 @@
 #include "EditionUi.h"
 #include "MathUtils.h"
 #include "PlatonicSolid.h"
-#include "RealEditController.h"
+#include "Controller.h"
 
 using namespace realisim;
 using namespace realEdit;
 using namespace std;
 
-RealEditController::RealEditController(EditionUi& iEditionUi) :
+Controller::Controller(EditionUi& iEditionUi) :
   mCommandStack(), 
   mDisplayData(),
   mEditionUi(iEditionUi),
@@ -51,12 +51,12 @@ RealEditController::RealEditController(EditionUi& iEditionUi) :
   createPlatonicSolid(PlatonicSolid::tIsocahedron, 1);
 }
 
-RealEditController::~RealEditController()
+Controller::~Controller()
 {
 }
 
 //------------------------------------------------------------------------------
-void RealEditController::createPlatonicSolid(PlatonicSolid::type iType, 
+void Controller::createPlatonicSolid(PlatonicSolid::type iType, 
   int iLevel /*= 0*/)
 {
   PlatonicSolid ps(iType, iLevel);
@@ -82,19 +82,19 @@ void RealEditController::createPlatonicSolid(PlatonicSolid::type iType,
 
 //------------------------------------------------------------------------------
 /*Cette méthode est protégé afin d'être utilisée seulement par 
-RealEditController dans le but d'obliger les utilisateurs à passé par 
-RealEditController afin de modifier les données.*/
-EditionData& RealEditController::getEditionData()
+Controller dans le but d'obliger les utilisateurs à passé par 
+Controller afin de modifier les données.*/
+EditionData& Controller::getEditionData()
 {return mEditionData;}
 
 //------------------------------------------------------------------------------
 /*Cette méthode sert a offrir les données en lecture seulement a quiconque.*/
-const EditionData& RealEditController::getEditionData() const
+const EditionData& Controller::getEditionData() const
 {return mEditionData;}
 
 //------------------------------------------------------------------------------
 void
-RealEditController::newProject()
+Controller::newProject()
 {
   EditionUi* p = new EditionUi();
   //pas besoin de deleter la fenetre, Qt le fera lorsque la fenêtre sera fermé
@@ -102,12 +102,12 @@ RealEditController::newProject()
 }
 
 //------------------------------------------------------------------------------
-void RealEditController::redo()
+void Controller::redo()
 { getCommandStack().redo(); getUi().update(); }
 
 //------------------------------------------------------------------------------
 //select all ids from the vector.
-void RealEditController::select(vector<uint> iS)
+void Controller::select(vector<uint> iS)
 {
   commands::Selection* c = new commands::Selection(getEditionData(), iS);
   getCommandStack().add(c);
@@ -117,7 +117,7 @@ void RealEditController::select(vector<uint> iS)
 //------------------------------------------------------------------------------
 /*Place le noeud courant et notifie l'interface, qui placera ensuite les caméras
 */
-void RealEditController::setCurrentNode (const ObjectNode* ipNode)
+void Controller::setCurrentNode (const ObjectNode* ipNode)
 {
   if(getEditionData().getCurrentNode() != ipNode)
   {
@@ -128,7 +128,7 @@ void RealEditController::setCurrentNode (const ObjectNode* ipNode)
 }
 
 //------------------------------------------------------------------------------
-void RealEditController::setMode(mode iMode)
+void Controller::setMode(mode iMode)
 {
   if(mMode != iMode)
   {
@@ -138,5 +138,5 @@ void RealEditController::setMode(mode iMode)
 }
 
 //------------------------------------------------------------------------------
-void RealEditController::undo()
+void Controller::undo()
 { getCommandStack().undo(); getUi().update(); }

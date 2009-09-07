@@ -12,7 +12,7 @@
 #include <QCursor>
 #include <QMouseEvent>
 #include "RealEdit3d.h"
-#include "RealEditController.h"
+#include "Controller.h"
 
 using namespace realisim;
 using namespace realisim::treeD;
@@ -26,11 +26,11 @@ namespace
 
 RealEdit3d::RealEdit3d (QWidget* ipParent, 
                         const QGLWidget* ipSharedWidget, 
-                        RealEditController& iC) : 
+                        Controller& iC) : 
 Widget3d(ipParent, ipSharedWidget),
 mController (iC),
 mDisplayData (iC.getDisplayData ()),
-mEditionData (const_cast<const RealEditController&>(iC).getEditionData ()),
+mEditionData (const_cast<const Controller&>(iC).getEditionData ()),
 mMouseInfo(),
 mMouseState(msIdle),
 mTool(tSelection),
@@ -292,7 +292,7 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
     //appliquer la transfo du noeud
     glMultMatrixd( ipObjectNode->getTransformation().getPtr() );
     
-    if(mController.getMode() == RealEditController::mAssembly)
+    if(mController.getMode() == Controller::mAssembly)
     {
       //dessine le boundingBox
       drawBoundingBox(model);
@@ -371,7 +371,7 @@ RealEdit3d::drawSceneForPicking(const realEdit::ObjectNode* ipObjectNode) const
     //appliquer la transfo du noeud
     glMultMatrixd( ipObjectNode->getTransformation().getPtr() );
     
-    if(mController.getMode() == RealEditController::mAssembly)
+    if(mController.getMode() == Controller::mAssembly)
       drawBoundingBox(model, true);
     else  //Edition Mode
     {

@@ -9,7 +9,7 @@
 
 #include "ObjectNavigator.h"
 
-#include "RealEditController.h"
+#include "Controller.h"
 #include "ObjectNode.h"
 #include "DataModel.h"
 
@@ -19,10 +19,10 @@
 using namespace realEdit;
 using namespace std;
 
-ObjectNavigator::ObjectNavigator( QWidget* ipParent, RealEditController& iC ) :
+ObjectNavigator::ObjectNavigator( QWidget* ipParent, Controller& iC ) :
   QTreeWidget( ipParent ),
   mController( iC ),
-  mEditionData (const_cast<const RealEditController&> (iC).getEditionData ()),
+  mEditionData (const_cast<const Controller&> (iC).getEditionData ()),
   mTreeItemToNode(),
   mNodeToTreeItem()
 {

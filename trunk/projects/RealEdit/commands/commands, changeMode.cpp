@@ -15,8 +15,8 @@ using namespace realisim;
 using namespace realEdit;
   using namespace commands;
   
-ChangeMode::ChangeMode(RealEditController& iC, EditionUi& iUi,
-  RealEditController::mode iMode) :
+ChangeMode::ChangeMode(Controller& iC, EditionUi& iUi,
+  Controller::mode iMode) :
   mController(iC),
   mUi(iUi),
   mPreviousMode(iC.getMode()),

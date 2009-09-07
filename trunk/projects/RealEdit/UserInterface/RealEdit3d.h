@@ -10,7 +10,7 @@
 #ifndef RealEdit3d_h
 #define RealEdit3d_h
 
-namespace realEdit {class RealEditController;}
+namespace realEdit {class Controller;}
 #include <Point.h>
 class QKeyEvent;
 class QMouseEvent;
@@ -31,7 +31,7 @@ public:
 
   RealEdit3d (QWidget* ipParent, 
               const QGLWidget* iSharedWidget,
-              RealEditController& iC);
+              Controller& iC);
 //RealEdit3d(const RealEdit3d&);
   virtual ~RealEdit3d ();
   virtual void currentNodeChanged ();
@@ -90,7 +90,7 @@ protected:
   virtual void wheelEvent(QWheelEvent* e);
 
 private:
-  RealEditController& mController;
+  Controller& mController;
   DisplayData& mDisplayData;
   const EditionData& mEditionData;
   MouseInfo mMouseInfo;
