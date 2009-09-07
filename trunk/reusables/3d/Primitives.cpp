@@ -68,6 +68,7 @@ BoundingBox::~BoundingBox ()
 void BoundingBox::draw () const
 {
   glPushAttrib (GL_POLYGON_BIT);
+  glDisable(GL_CULL_FACE);
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   glBegin(GL_QUADS);
     glNormal3f (0.0F, 0.0F, 1.0F);
@@ -106,6 +107,7 @@ void BoundingBox::draw () const
     glVertex3f (mMin. getX (), mMax. getY (), mMin. getZ ());
     glVertex3f (mMin. getX (), mMax. getY (), mMax. getZ ());
   glEnd();
+  glEnable(GL_CULL_FACE);
   glPopAttrib();
 }
 

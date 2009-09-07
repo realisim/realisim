@@ -58,8 +58,8 @@ Camera::~Camera()
 //-----------------------------------------------------------------------------
 //void Camera::computeLatAndUp()
 //{
-//  //on commence par calculer le vecteur lat√©rale parce que le vecteur up
-//  //final est d√©pendant du vecteur lat√©ral
+//  //on commence par calculer le vecteur latérale parce que le vecteur up
+//  //final est dependant du vecteur lateral
 //  
 //  Vector3d lookVect( getPos(), getLook()  );
 //  
@@ -274,9 +274,6 @@ void Camera::computeProjection()
   {
     glViewport(0, 0, windowLongSide, windowShortSide );
     
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-    
     switch ( getMode() ) 
     {
       case ORTHOGONAL:
@@ -294,16 +291,10 @@ void Camera::computeProjection()
       default:
         break;
     }
-    
-    glMatrixMode( GL_MODELVIEW );
-    
   }
   else //vertical
   {
     glViewport(0, 0, windowShortSide, windowLongSide );
-    
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
     
     switch ( getMode() ) 
     {
@@ -323,10 +314,7 @@ void Camera::computeProjection()
       default:
         break;
     }   
-    
-    glMatrixMode( GL_MODELVIEW );
   }
-  
 }
 
 //-----------------------------------------------------------------------------
@@ -338,8 +326,8 @@ void Camera::set( const Point3d& iPos,
   mLook = iLook;
   mUp = iUp;
   
-  //on commence par calculer le vecteur lat√©rale parce que le vecteur up
-  //final est d√©pendant du vecteur lat√©ral
+  //on commence par calculer le vecteur laterale parce que le vecteur up
+  //final est dependant du vecteur lateral
   Vector3d lookVect( getPos(), getLook()  );
   
   mLat = lookVect ^ getUp();
@@ -448,5 +436,8 @@ void Camera::setUp( const Vector3d& iUp )
 void Camera::setZoom(double iZoom)
 {
   mZoomFactor = iZoom;
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
   computeProjection();
+  glMatrixMode(GL_MODELVIEW);
 }

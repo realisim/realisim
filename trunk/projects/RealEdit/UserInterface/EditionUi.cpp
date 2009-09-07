@@ -95,18 +95,21 @@ EditionUi::addToolPanel()
 	QDockWidget* pDockWidget = new QDockWidget( "Tools", this );
 	addDockWidget( Qt::LeftDockWidgetArea, pDockWidget );
 	pDockWidget->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
+  pDockWidget->setFixedWidth(200);
 	
 	QFrame* pFrame = new QFrame( pDockWidget );
 	pDockWidget->setWidget( pFrame );
 	QVBoxLayout* vLyt = new QVBoxLayout( pFrame );
 	{
     //--- Bouton de modes
-    QHBoxLayout* pModeLyt = new QHBoxLayout(pFrame);
+    QHBoxLayout* pModeLyt = new QHBoxLayout();
     {
       mpAssembly = new QPushButton("Assembly", pFrame);
       mpAssembly->setCheckable(true);
+      mpAssembly->setFixedHeight(25);
       mpEdition = new QPushButton("Edition", pFrame);
       mpEdition->setCheckable(true);
+      mpEdition->setFixedHeight(25);
 
       QButtonGroup* pButtonGroup = new QButtonGroup(pFrame);
       pButtonGroup->setExclusive(true);
@@ -123,8 +126,27 @@ EditionUi::addToolPanel()
     
 		mpObjectNavigator = new ObjectNavigator( pFrame, mController );
     
+    //--- Bouton des outils
+    QHBoxLayout* pToolLyt = new QHBoxLayout();
+    {
+      QPushButton* pSelection = new QPushButton("s", pFrame);
+      pSelection->setCheckable(true);
+      pSelection->setFixedHeight(25);
+
+      QButtonGroup* pButtonGroup = new QButtonGroup(pFrame);
+      pButtonGroup->setExclusive(true);
+      pButtonGroup->addButton(pSelection, 0);
+      
+      connect(pButtonGroup, SIGNAL(buttonClicked(int)), 
+        this, SLOT(doChangeTool(int)));
+
+      pToolLyt->addWidget(pSelection);
+      pToolLyt->addStretch(1);
+    }
+    
     vLyt->addLayout(pModeLyt);
     vLyt->addWidget( mpObjectNavigator );
+    vLyt->addLayout( pToolLyt );
     vLyt->addStretch(1);
 	}
 }
@@ -150,6 +172,13 @@ void
 EditionUi::createEditMenu( QMenuBar* ipMenuBar )
 {
 	QMenu* pEditMenu = ipMenuBar->addMenu( QObject::tr( "&Edit" ) );
+  QAction* pUndo = pEditMenu->addAction("&Undo");
+  pUndo->setShortcut(Qt::CTRL + Qt::Key_Z);
+  QAction* pRedo = pEditMenu->addAction("&Redo");
+  pRedo->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_Z);
+  
+  connect(pUndo, SIGNAL(triggered()), this, SLOT(doUndo()));
+  connect(pRedo, SIGNAL(triggered()), this, SLOT(doRedo()));
 }
 
 //------------------------------------------------------------------------------
@@ -164,6 +193,22 @@ EditionUi::createToolMenu( QMenuBar* ipMenuBar )
 }
 
 //------------------------------------------------------------------------------
+void EditionUi::currentNodeChanged()
+{
+  mpObjectNavigator->currentNodeChanged();
+  for(unsigned int i = 0; i < mViewers.size(); ++i)
+    mViewers[i]->currentNodeChanged();
+}
+
+//------------------------------------------------------------------------------
+void EditionUi::doChangeTool(int iButtonId)
+{
+  if(iButtonId == 0)
+    for(unsigned int i = 0; i < mViewers.size(); ++i)
+      mViewers[i]->setTool(RealEdit3d::tSelection);
+}
+
+//------------------------------------------------------------------------------
 void EditionUi::doModeChange(int iButtonId)
 {
   if(iButtonId == 0)
@@ -173,12 +218,12 @@ void EditionUi::doModeChange(int iButtonId)
 }
 
 //------------------------------------------------------------------------------
-void EditionUi::currentNodeChanged()
-{
-  mpObjectNavigator->currentNodeChanged();
-  for(unsigned int i = 0; i < mViewers.size(); ++i)
-    mViewers[i]->currentNodeChanged();
-}
+void EditionUi::doUndo()
+{mController.undo();}
+
+//------------------------------------------------------------------------------
+void EditionUi::doRedo()
+{mController.redo();}
 
 //------------------------------------------------------------------------------
 void EditionUi::modeChanged()
@@ -196,6 +241,12 @@ void EditionUi::modeChanged()
 
 //------------------------------------------------------------------------------
 void EditionUi::newProject()
+{mController.newProject();}
+
+//------------------------------------------------------------------------------
+void EditionUi::update()
 {
-	mController.newProject();
+  for(unsigned int i = 0; i < mViewers.size(); ++i)
+    mViewers[i]->update();
 }
+

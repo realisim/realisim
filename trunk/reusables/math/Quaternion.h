@@ -1,6 +1,6 @@
 //!-----------------------------------------------------------------------------
 //! \file
-//! \brief Classe \c Quaternion permet de reprÈsenter un quaternion
+//! \brief Classe \c Quaternion permet de representer un quaternion
 //!
 //! AUTHOR:  Pierre-Olivier Beaudoin & David Pinson
 //!-----------------------------------------------------------------------------
@@ -15,7 +15,7 @@
 #include "Vect.h"
 
 //!-----------------------------------------------------------------------------
-//! \brief Classe gÈrant les fonctionalitÈs associÈes a un quaternion
+//! \brief Classe gerant les fonctionalites associees a un quaternion
 //!
 //! un quaternion est de la forme q = w + xi + yj + zk
 //!-----------------------------------------------------------------------------
@@ -252,7 +252,7 @@ namespace math
   {
     double magnitude = getLength();
     //si length est 0, on ne fait pas la division!
-    if (-SMALL_REAL < magnitude && magnitude > SMALL_REAL)
+    if (-EPSILON < magnitude && magnitude > EPSILON)
     {
       w_ = w_ / magnitude;
       x_ = x_ / magnitude;

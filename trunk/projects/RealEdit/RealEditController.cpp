@@ -1,6 +1,7 @@
 
-#include "assembly, rotate.h"
-#include "commands, translate.h"
+#include "commands, changeMode.h"
+#include "commands, changeNode.h"
+#include "commands, selection.h"
 #include "DataModel.h"
 #include "EditionUi.h"
 #include "MathUtils.h"
@@ -18,6 +19,20 @@ RealEditController::RealEditController(EditionUi& iEditionUi) :
   mEditionData(),
   mMode(mEdition)
 {
+//  ObjectNode* pRootNode = getEditionData().getCurrentNode();
+//  vector<RealEditPoint> vPoints;
+//  RealEditPoint p = 
+//      getEditionData().addPoint (Point3d(-1.0, 0.0, 0.0));
+//    vPoints.push_back(p);
+//  RealEditPoint p1 = 
+//      getEditionData().addPoint (Point3d(1.0, 0.0, 0.0));
+//    vPoints.push_back(p1);
+//  RealEditPoint p2 = 
+//      getEditionData().addPoint (Point3d(0.0, 1.0, 0.0));
+//    vPoints.push_back(p2);
+//  
+//  getEditionData().addPolygon(vPoints);
+
   ObjectNode* pRootNode = getEditionData().getCurrentNode();
   createPlatonicSolid(PlatonicSolid::tTetrahedron);
 
@@ -38,18 +53,6 @@ RealEditController::RealEditController(EditionUi& iEditionUi) :
 
 RealEditController::~RealEditController()
 {
-}
-
-void RealEditController::translate()
-{
-  commands::Translate* c = new commands::Translate(getEditionData());
-  mCommandStack.add(c);
-}
-
-void RealEditController::rotate()
-{
-  commands::assembly::Rotate* c = new commands::assembly::Rotate(getEditionData());
-  mCommandStack.add(c);
 }
 
 //------------------------------------------------------------------------------
@@ -90,14 +93,37 @@ const EditionData& RealEditController::getEditionData() const
 {return mEditionData;}
 
 //------------------------------------------------------------------------------
+void
+RealEditController::newProject()
+{
+  EditionUi* p = new EditionUi();
+  //pas besoin de deleter la fenetre, Qt le fera lorsque la fenêtre sera fermé
+  p->setAttribute(Qt::WA_DeleteOnClose, true);
+}
+
+//------------------------------------------------------------------------------
+void RealEditController::redo()
+{ getCommandStack().redo(); getUi().update(); }
+
+//------------------------------------------------------------------------------
+//select all ids from the vector.
+void RealEditController::select(vector<uint> iS)
+{
+  commands::Selection* c = new commands::Selection(getEditionData(), iS);
+  getCommandStack().add(c);
+  getUi().update();
+}
+
+//------------------------------------------------------------------------------
 /*Place le noeud courant et notifie l'interface, qui placera ensuite les caméras
 */
 void RealEditController::setCurrentNode (const ObjectNode* ipNode)
 {
   if(getEditionData().getCurrentNode() != ipNode)
   {
-    getEditionData().setCurrentNode (ipNode);
-    mEditionUi.currentNodeChanged ();
+    commands::ChangeNode* c = new commands::ChangeNode(getEditionData(),
+      getUi(), ipNode);
+    getCommandStack().add(c);
   }
 }
 
@@ -106,16 +132,11 @@ void RealEditController::setMode(mode iMode)
 {
   if(mMode != iMode)
   {
-    mMode = iMode;
-    mEditionUi.modeChanged();
+    commands::ChangeMode* c = new commands::ChangeMode(*this, getUi(), iMode);
+    getCommandStack().add(c);
   }
 }
 
 //------------------------------------------------------------------------------
-void
-RealEditController::newProject()
-{
-  EditionUi* p = new EditionUi();
-  //pas besoin de deleter la fenetre, Qt le fera lorsque la fenêtre sera fermé
-  p->setAttribute(Qt::WA_DeleteOnClose, true);
-}
+void RealEditController::undo()
+{ getCommandStack().undo(); getUi().update(); }

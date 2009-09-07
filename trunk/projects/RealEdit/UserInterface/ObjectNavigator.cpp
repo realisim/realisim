@@ -32,7 +32,7 @@ ObjectNavigator::ObjectNavigator( QWidget* ipParent, RealEditController& iC ) :
   
   //create the object tree
   createTree( this, mEditionData.getScene().getObjectNode() );
-  expandAllItems();
+  //expandAllItems();
   
   connect( this, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*) ),
            this, SLOT(doItemChanged(QTreeWidgetItem*, QTreeWidgetItem*) ) );

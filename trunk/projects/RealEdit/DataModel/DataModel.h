@@ -116,11 +116,15 @@ public:
 	
   void addPoint (RealEditPoint iP);
   void addPolygon (RealEditPolygon ipPoly);
+//bool hasPoint(unsigned int) const;
+//bool hasPolygon(unsigned int) const;
   const BB3d& getBoundingBox () const;
   unsigned int getPointCount () const;
   const RealEditPoint& getPoint (unsigned int iIndex) const;
+//const RealEditPoint& getPointFromId(unsigned int) const;
   unsigned int getPolygonCount () const;
   const RealEditPolygon& getPolygon (unsigned int iIndex) const;
+//const RealEditPolygon& getPolygonFromId(unsigned int) const
 
 private:
   struct Guts

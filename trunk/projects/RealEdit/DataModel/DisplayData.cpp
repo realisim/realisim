@@ -20,10 +20,10 @@ void DisplayData::drawAxis() const
 
 void DisplayData::drawCube() const
 {
-  glPushAttrib(GL_CURRENT_BIT | GL_POLYGON_BIT | GL_ENABLE_BIT);
+  glPushAttrib(GL_POLYGON_BIT | GL_ENABLE_BIT);
   glDisable(GL_LIGHTING);
+  glDisable(GL_CULL_FACE);
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  glColor3d(0, 85/255.0, 176/255.0);
   glCallList(mCube.getDisplayList());
   glPopAttrib();
 }

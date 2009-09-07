@@ -19,6 +19,7 @@
 namespace realEdit
 {
 using namespace realisim;
+using namespace std;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                    Scene
@@ -49,13 +50,17 @@ public:
   RealEditPoint addPoint ( const Point3d& iPoint);
   RealEditPolygon addPolygon (const std::vector<RealEditPoint>& iPoints);
   ObjectNode* addNode (const QString iName);
-  //void addNode (ObjectNode* ipNode);
+//void addNode (ObjectNode* ipNode);
+  bool hasSelection() const {return mSelection.size() > 0;}
+  bool isSelected(uint) const;
   const ObjectNode* getCurrentNode () const;
   ObjectNode* getCurrentNode ();
-const std::vector<RealEditPoint>& getSelectedPoints() const {return mSelectedPoints;}
-std::vector<RealEditPoint>& getSelectedPoints() {return mSelectedPoints;}
+//const vector<RealEditPoint>& getSelectedPoints() const {return mSelectedPoints;}
+//vector<RealEditPoint>& getSelectedPoints() {return mSelectedPoints;}
+  const vector<uint>& getSelection() const {return mSelection;}
   const Scene& getScene () const;
   Scene& getScene ();
+  void select(vector<uint>);
   void setCurrentNode (const ObjectNode* ipNode);
   
 private:
@@ -64,8 +69,9 @@ private:
   RealEditModel mCurrentModel;
   ObjectNode* mpCurrentNode; //Ne sera jamais Null
   Scene mScene;
-  std::vector<RealEditPoint> mSelectedPoints;
-  std::vector<RealEditPolygon> mSelectedPolygons;
+  vector<uint> mSelection;
+  vector<RealEditPoint> mSelectedPoints;
+  vector<RealEditPolygon> mSelectedPolygons;
 };
 
 } // realEdit
