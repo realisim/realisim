@@ -1,6 +1,6 @@
 //!-----------------------------------------------------------------------------
 //! \file
-//! \brief Classe \c Vect permet de reprÈsenter un vecteur a trois dimensions
+//! \brief Classe \c Vect permet de representer un vecteur a trois dimensions
 //!
 //! AUTHOR:  Pierre-Olivier Beaudoin & David Pinson
 //!-----------------------------------------------------------------------------
@@ -12,7 +12,7 @@
 #include "MathDef.h"
 
 //!-----------------------------------------------------------------------------
-//! \brief Classe gÈrant les fonctionalitÈs associÈes a un vecteur
+//! \brief Classe gerant les fonctionalites associees a un vecteur
 //!-----------------------------------------------------------------------------
 namespace realisim
 {
@@ -92,7 +92,7 @@ namespace math
     T z_;
   };
   
-  //! constructeur par dÈfaut.
+  //! constructeur par defaut.
   template<class T>
   inline Vect<T>::Vect()
   {
@@ -104,7 +104,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametre.
   //!
-  //! Construit un objet de type \c Vect ou chacune des valeurs cartÈsiennes 
+  //! Construit un objet de type \c Vect ou chacune des valeurs cartesiennes 
   //! vaut la meme valeur.
   //! 
   //! \param val valeur d'initialisation
@@ -120,8 +120,8 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametres.
   //!
-  //! Construit un objet de type \c Vect avec chacune des valeurs cartÈsiennes 
-  //! passÈes en parametre.
+  //! Construit un objet de type \c Vect avec chacune des valeurs cartesiennes 
+  //! passees en parametre.
   //! 
   //! \param x valeur d'initialisation pour x_
   //! \param y valeur d'initialisation pour y_
@@ -169,7 +169,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du vecteur.
   //!
-  //! …gale le vecteur a celui passÈ en parametre.
+  //! egale le vecteur a celui passe en parametre.
   //! 
   //! \param &vect
   //!---------------------------------------------------------------------------
@@ -184,7 +184,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du vecteur.
   //!
-  //! …gale le vecteur a la valeur passÈe en parametre.
+  //! egale le vecteur a la valeur passee en parametre.
   //! 
   //! \param &val
   //!---------------------------------------------------------------------------
@@ -232,7 +232,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du vecteur.
   //!
-  //! …gale le vecteur a chacune des valeurs passÈees en parametre.
+  //! egale le vecteur a chacune des valeurs passeees en parametre.
   //! 
   //! \param &x
   //! \param &y
@@ -417,7 +417,7 @@ namespace math
     if(dz<(T)0.0)
       dz = -dz;
   
-    if (dx<SMALL_REAL && dy<SMALL_REAL && dz<SMALL_REAL)
+    if (dx<EPSILON && dy<EPSILON && dz<EPSILON)
       return true;
     else
       return false;
@@ -590,7 +590,7 @@ namespace math
     double vTmp;
     Vect<T> vect(x_, y_, z_);
     
-    if(val>SMALL_REAL || val<-SMALL_REAL)
+    if(val>EPSILON || val<-EPSILON)
       vTmp=((double)1.0)/(double)val;
     else
       vTmp=(double)0.0;
@@ -608,7 +608,7 @@ namespace math
   {
     double vTmp;
     
-    if(val>SMALL_REAL || val<-SMALL_REAL)
+    if(val>EPSILON || val<-EPSILON)
       vTmp=((double)1.0)/(double)val;
     else
       vTmp=(double)0.0;

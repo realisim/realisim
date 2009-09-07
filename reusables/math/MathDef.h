@@ -11,6 +11,7 @@
 #define Realisim_Math_Def_h
 
 #include <cmath>
+#include <limits>
 
 namespace realisim
 {
@@ -18,9 +19,7 @@ namespace math
 {
 
   //! constante utile
-  static const double SMALL_REAL          = 1.0e-4;
-  static const double HUGE_REAL           = 1.0e6;
-  static const unsigned int HUGE_INT = 0xffffffff;
+  static const double EPSILON          = 1.0e-4;
 
   static const double PI = 3.141592654;
 

@@ -23,10 +23,14 @@ public:
   void currentNodeChanged();
   void modeChanged();
   
-protected:
+public slots:
+  virtual void update();
 	
 private slots:
+  void doChangeTool(int);
   void doModeChange(int);
+  void doUndo();
+  void doRedo();
 	void newProject();
 	//void openProject();
 	

@@ -48,6 +48,7 @@ ObjectNode* Scene::getObjectNode()
 EditionData::EditionData() : mCurrentModel (),
   mpCurrentNode (0),
   mScene (),
+  mSelection(),
   mSelectedPoints (),
   mSelectedPolygons ()
 {
@@ -106,6 +107,17 @@ Scene& EditionData::getScene ()
 {
   return const_cast<Scene&>(
    static_cast<const EditionData&>(*this).getScene() );
+}
+
+//-----------------------------------------------------------------------------
+bool EditionData::isSelected(uint iId) const
+{return find(mSelection.begin(), mSelection.end(), iId) != mSelection.end();}
+
+//-----------------------------------------------------------------------------
+void EditionData::select(vector<uint> iS)
+{
+  mSelection.clear();
+  mSelection = iS;
 }
 
 //-----------------------------------------------------------------------------

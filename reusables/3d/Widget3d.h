@@ -1,8 +1,7 @@
 /******************************************************************************
 * Author: Pierre-Olivier Beaudoin                                                                    
 * File name: Widget3d
-* Description: Opengl Widget  to display 3d
-*
+* Description: Opengl Widget to display 3d
 *
 ******************************************************************************/
 
@@ -10,8 +9,6 @@
 #define Realisim_Widget3d_hh
 
 #include "Camera.h"
-#include "DefaultInputHandler.h"
-#include "InputHandler.h"
 #include "Primitives.h"
 #include <map>
 #include <QTime>
@@ -48,7 +45,6 @@ protected:
   virtual void mouseMoveEvent( QMouseEvent* e );
   virtual void mousePressEvent( QMouseEvent* e );
   virtual void mouseReleaseEvent( QMouseEvent* e );
-  void setInputHandler( InputHandler& ipHandler );
   virtual void wheelEvent ( QWheelEvent* e );
   QSize minimumSizeHint() const;
   QSize sizeHint() const;
@@ -61,12 +57,14 @@ protected:
 private:  
   QTime mAnimationTimer;
   int mAnimationTimerId;
-  DefaultInputHandler mDefaultHandler;
   double mFps;
   int mFpsFrameCount;
   QTime mFpsTimer;
-  InputHandler* mpInputHandler; //jamais null
   bool mShowFps;
+  
+  bool mMousePressed;
+  int mMousePosX;
+  int mMousePosY;
 };
 
 } //treeD

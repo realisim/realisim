@@ -1,6 +1,6 @@
 //!-----------------------------------------------------------------------------
 //! \file
-//! \brief Classe \c Point permet de reprÈsenter un point dans l'espace 3D.
+//! \brief Classe \c Point permet de representer un point dans l'espace 3D.
 //!
 //! AUTHOR:  Pierre-Olivier Beaudoin
 //!          David Pinson
@@ -12,10 +12,10 @@
 #include <iostream>
 
 //!-----------------------------------------------------------------------------
-//! \brief Classe gÈrant les fonctionalitÈs associÈes a un point
+//! \brief Classe gerant les fonctionalites associees a un point
 //!
 //! Il s'agit d'une classe point tout ce qu'il a de plus simple. Recherche
-//! d'une certaine efficacitÈ a l'exÈcution.
+//! d'une certaine efficacite a l'execution.
 //!-----------------------------------------------------------------------------
 namespace realisim
 {
@@ -87,7 +87,7 @@ namespace math
     U z_;
   };
 
-  //! constructeur par dÈfaut.
+  //! constructeur par defaut.
   template<class U>
   inline Point<U>::Point(): x_((U)0.0), y_((U)0.0), z_((U)0.0)
   {
@@ -96,7 +96,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametre.
   //!
-  //! Construit un objet de type \c Point ou chacune des valeurs cartÈsiennes
+  //! Construit un objet de type \c Point ou chacune des valeurs cartesiennes
   //! vaut la meme valeur.
   //!
   //! \param val valeur d'initialisation
@@ -109,8 +109,8 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametres.
   //!
-  //! Construit un objet de type \c Point avec chacune des valeurs cartÈsiennes
-  //! passÈes en parametre.
+  //! Construit un objet de type \c Point avec chacune des valeurs cartesiennes
+  //! passees en parametre.
   //!
   //! \param x valeur d'initialisation pour x_
   //! \param y valeur d'initialisation pour y_
@@ -143,7 +143,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du point.
   //!
-  //! …gale le point a celui passÈ en parametre.
+  //! égale le point a celui passe en parametre.
   //!
   //! \param &point
   //!---------------------------------------------------------------------------
@@ -158,7 +158,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du point.
   //!
-  //! …gale le point a la valeur passÈe en parametre.
+  //! egale le point a la valeur passee en parametre.
   //!
   //! \param &val
   //!---------------------------------------------------------------------------
@@ -206,7 +206,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du point.
   //!
-  //! …gale le point a chacune des valeurs passÈees en parametre.
+  //! egale le point a chacune des valeurs passeees en parametre.
   //!
   //! \param &x
   //! \param &y
@@ -223,7 +223,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir le point.
   //!
-  //! Permet d'obtenir la valeur du point dans celui passÈ en parametre.
+  //! Permet d'obtenir la valeur du point dans celui passe en parametre.
   //!
   //! \param &point Le point qui va etre comme le point que l'on veut
   //!---------------------------------------------------------------------------
@@ -271,7 +271,7 @@ namespace math
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir le point.
   //!
-  //! Le point est transfÈrÈ dans les variables passÈes en parametres
+  //! Le point est transfere dans les variables passees en parametres
   //!
   //! \param &x
   //! \param &y
@@ -303,11 +303,11 @@ namespace math
   }
 
   //!---------------------------------------------------------------------------
-  //! \brief  Calcule et retourne la distance au carrÈ entre deux points.
+  //! \brief  Calcule et retourne la distance au carre entre deux points.
   //!
-  //! \param &point le point avec qui calculer la distance au carrÈ
+  //! \param &point le point avec qui calculer la distance au carre
   //!
-  //! \return la distance au carrÈ entre les deux points.
+  //! \return la distance au carre entre les deux points.
   //!---------------------------------------------------------------------------
   template<class U>
   inline U Point<U>::distSqr(const Point &point) const
@@ -324,7 +324,7 @@ namespace math
   //!         points.
   //!
   //! Calcule une estimation de la distance entre deux points, mais plus
-  //! rapidement que la mÈthode classique (qui demande une racine carrÈ).
+  //! rapidement que la methode classique (qui demande une racine carre).
   //!
   //! \param &point le point avec qui calculer la distance
   //!
@@ -380,7 +380,7 @@ namespace math
   }
   
 
-  //! surcharge opÈrateur = Point
+  //! surcharge operateur = Point
   template<class U>
   inline Point<U>& Point<U>::operator= (const Point &point)
   {
@@ -390,7 +390,7 @@ namespace math
     return *this;
   }
 
-  //! surcharge opÈrateur ==
+  //! surcharge operateur ==
   template<class U>
   inline bool Point<U>::operator== (const Point &point) const
   {
@@ -405,7 +405,7 @@ namespace math
     if(dz<(U)0.0)
       dz = -dz;
 
-    if (dx<SMALL_REAL && dy<SMALL_REAL && dz<SMALL_REAL)
+    if (dx<EPSILON && dy<EPSILON && dz<EPSILON)
       return 1;
     else
       return 0;
@@ -446,7 +446,7 @@ namespace math
   }
   
   //----------------------------------------------------------------------------
-  //! surcharge opÈrateur * avec T
+  //! surcharge operateur * avec T
   template<class U>
   inline Point<U> Point<U>::operator* (const U &val) const
   {
@@ -470,14 +470,14 @@ namespace math
   }
   
   //----------------------------------------------------------------------------
-  //! surcharge opÈrateur / avec T
+  //! surcharge operateur / avec T
   template<class U>  
   inline Point<U> Point<U>::operator/ (const U &val) const
   {
     double vTmp;
     Point<U> p(x_, y_, z_);
     
-    if(val>SMALL_REAL || val<-SMALL_REAL)
+    if(val>EPSILON || val<-EPSILON)
       vTmp=((double)1.0)/(double)val;
     else
       vTmp=(double)0.0;
@@ -495,7 +495,7 @@ namespace math
   {
     double vTmp;
     
-    if(val>SMALL_REAL || val<-SMALL_REAL)
+    if(val>EPSILON || val<-EPSILON)
       vTmp=((double)1.0)/(double)val;
     else
       vTmp=(double)0.0;

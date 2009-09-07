@@ -25,7 +25,7 @@
 #include <iostream>
 
 //!-----------------------------------------------------------------------------
-//! \brief Classe gÈrant les fonctionalitÈs associÈes a une matrice 4x4 ou 3x3
+//! \brief Classe gÈrant les fonctionalités associées a une matrice 4x4 ou 3x3
 //!-----------------------------------------------------------------------------
 namespace realisim
 {
@@ -87,7 +87,7 @@ namespace math
     T mat_[16];
   };
 
-  //! constructeur par dÈfaut.
+  //! constructeur par défaut.
   template<class T>
   inline Matrix4<T>::Matrix4()
   {
@@ -228,8 +228,8 @@ namespace math
       (*this)(0, 3) * (*this)(1, 2) * (*this)(2, 0) * (*this)(3, 1);
     
     //si le determinant est plus grand que 0, on peut inverser la matrice
-    if (-SMALL_REAL < determinant &&
-      determinant > SMALL_REAL)
+    if (-EPSILON < determinant &&
+      determinant > EPSILON)
     {
       double invDet = 1.0 / determinant;
       Matrix4<T> tmp(*this);
@@ -383,7 +383,7 @@ namespace math
     mat_[12] = (T)0; mat_[13] = (T)0; mat_[14] = (T)0; mat_[15] = (T)1;
   }
 
-  //! fonction qui affiche le contenu de la matrice utile pour le dÈbugage
+  //! fonction qui affiche le contenu de la matrice utile pour le débugage
   template<class T>
   inline void Matrix4<T>::print() const
   {
@@ -470,7 +470,7 @@ namespace math
     return tmp;
   }
 
-  //! TODO surchage operateur *=
+  //----------------------------------------------------------------------------
   template<class T>
   inline void Matrix4<T>::operator*= (const Matrix4 &matrix)
   {

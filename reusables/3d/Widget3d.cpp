@@ -1,6 +1,6 @@
 /******************************************************************************
 * Author: Pierre-Olivier Beaudoin                                                                    
-* File name: RePluginMgr
+* File name: Widget3d
 * Description: Basic QT OpenGL canvas
 *
 *
@@ -18,6 +18,9 @@ namespace
 {
   const int kCameraAnimationTime = 1000; //ms
   const int kFramesToComputeFps = 10;
+  
+  const double kMaxZoom = 1/128.0;
+  const double kMinZoom = 128;
 }
 
 //-----------------------------------------------------------------------------
@@ -30,15 +33,15 @@ mOldCam(),
 mNewCam(),
 mAnimationTimer(),
 mAnimationTimerId(),
-mDefaultHandler( mCam ),
 mFps(0.0),
 mFpsFrameCount(0),
 mFpsTimer(),
-mpInputHandler( 0 ),
-mShowFps(true)
+mShowFps(true),
+mMousePressed( false ),
+mMousePosX( 0 ),
+mMousePosY( 0 )
 {
-  setInputHandler( mDefaultHandler );
-  //on s'assure que opneGL est initialisé pour ce context
+  //on s'assure que opneGL est initialise pour ce context
   glInit();
 }
 
@@ -154,7 +157,8 @@ Widget3d::initializeGL()
     GLfloat mat_specular[]  = {0.5f, 0.5f, 0.5f, 1.0f};
 
     // Let OpenGL clear background to Grey
-    glClearColor(125/255.0f, 125/255.0f, 125/255.0f, 0.0);
+    //glClearColor(125/255.0f, 125/255.0f, 125/255.0f, 0.0);
+    glClearColor(0.3, 0.3, 0.3, 0.0);
 
     glShadeModel(GL_SMOOTH);
 
@@ -173,7 +177,9 @@ Widget3d::initializeGL()
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);  
+    glEnable(GL_LIGHT0);
+    glEnable(GL_CULL_FACE);  //on ne dessine pas les back-facing polygons
+    glCullFace(GL_BACK);
 }
 
 //-----------------------------------------------------------------------------
@@ -187,14 +193,34 @@ Widget3d::minimumSizeHint() const
 void Widget3d::mouseDoubleClickEvent( QMouseEvent* e )
 {
   makeCurrent();
-  mpInputHandler->mouseDoubleClickEvent( e );
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::mouseMoveEvent(QMouseEvent *e)
 {
   makeCurrent();
-  mpInputHandler->mouseMoveEvent( e );
+
+  if( mMousePressed )
+  {
+    int deltaX = e->x() - mMousePosX;
+    int deltaY = e->y() - mMousePosY;
+    
+    //on met un - devant le deltaY parce que le systeme de fenetrage QT
+    //a laxe Y vers le bas et notre systeme de fenetrage GL a l'axe y vers le
+    //haut.
+    Vector3d delta = mCam.pixelDeltaToGLDelta( deltaX, -deltaY );
+    
+    //On met un - devant le delta pour donner l'impression qu'on ne 
+    //déplace pas la camera, mais le model. Si on ne mettait pas de -,
+    //la caméra se déplacerait en suivant la souris et ce qu'on voit a l'écran
+    //s'en irait dans le sens contraire de la souris. En mettant le - on
+    //donne l'impression de déplacer le contenu de l'écran.
+    mCam.move( -delta );
+  }
+  
+  mMousePosX = e->x();
+  mMousePosY = e->y();
+
   update();
 }
 
@@ -202,14 +228,18 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
 void Widget3d::mousePressEvent(QMouseEvent *e)
 {
   makeCurrent();
-  mpInputHandler->mousePressEvent( e );
+
+  mMousePressed = true;
+  mMousePosX = e->x();
+  mMousePosY = e->y();
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::mouseReleaseEvent(QMouseEvent *e)
 {
   makeCurrent();
-  mpInputHandler->mouseReleaseEvent( e );
+
+  mMousePressed = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -263,7 +293,10 @@ Widget3d::paintGL()
 void
 Widget3d::resizeGL(int iWidth, int iHeight)
 {
+  glMatrixMode( GL_PROJECTION );
+  glLoadIdentity();
   mCam.projectionGL(iWidth, iHeight);
+  glMatrixMode( GL_MODELVIEW );
   update();
 }
 
@@ -301,12 +334,6 @@ void Widget3d::setCameraOrientation( Camera::Orientation iO )
 {
   mCam.setOrientation( iO );
   update();
-}
-
-//-----------------------------------------------------------------------------
-void Widget3d::setInputHandler( InputHandler& iHandler )
-{
-  mpInputHandler = &iHandler;
 }
 
 //-----------------------------------------------------------------------------
@@ -357,9 +384,16 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
 }
 
 //-----------------------------------------------------------------------------
-void Widget3d::wheelEvent ( QWheelEvent * event )
+void Widget3d::wheelEvent(QWheelEvent* ipE)
 {
   makeCurrent();
-  mpInputHandler->wheelEvent(event);
+
+  double zoom = 1 / 1.15;
+  if(ipE->delta() < 0)
+    zoom = 1.15;
+  double finalZoom = mCam.getZoom() * zoom;
+  if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
+    mCam.setZoom(finalZoom);
+
   update();
 }
