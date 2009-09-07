@@ -1,13 +1,13 @@
 /*-----------------------------------------------------------------------------
-RealEditController.h
+Controller.h
 
   Les commandes (commands, ...) sont une extension du controller et facilite
   grandement les undos/redos. Elles reçoivents généralement en paramêtres soit
   les données d'édition, soit le Ui (pour des fin des rafrîchissement) soit 
-  RealEditController lui même. Les commandes reçoivent RealEditController dans
-  le cas où l'action à accomplir se fait sur les membre de RealEditController 
+  Controller lui même. Les commandes reçoivent Controller dans
+  le cas où l'action à accomplir se fait sur les membre de Controller 
   (la méthode setMode() par exemple). Dans ces cas, les commandes impliquées 
-  doivent être friend avec RealEditController afin de leur permettre de modifier
+  doivent être friend avec Controller afin de leur permettre de modifier
   les membres de ce dernier.
 
   invariants:
@@ -15,8 +15,8 @@ RealEditController.h
 -----------------------------------------------------------------------------*/
 
 
-#ifndef RealEdit_RealEditController_hh
-#define RealEdit_RealEditController_hh
+#ifndef RealEdit_controller_hh
+#define RealEdit_controller_hh
 
 #include "CommandStack.h"
 #include "DataModel.h"
@@ -29,15 +29,16 @@ namespace realEdit{namespace commands{class ChangeMode;}}
 namespace realEdit
 { 
 
-class RealEditController 
+class Controller 
 {
 public:
   friend class commands::ChangeMode;
 
   enum mode{mAssembly, mEdition};
+  enum tool{tCamera, tSelection};
   
-	RealEditController( EditionUi& ipEditionUi );
-	~RealEditController();
+	Controller( EditionUi& ipEditionUi );
+	~Controller();
   DisplayData& getDisplayData() {return mDisplayData;}
   const EditionData& getEditionData() const;
   mode getMode() const {return mMode;}
@@ -64,4 +65,4 @@ private:
 
 } //realEdit
 
-#endif //RealEdit_RealEditController_hh
+#endif //RealEdit_Controller_hh

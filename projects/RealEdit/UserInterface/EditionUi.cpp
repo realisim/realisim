@@ -212,9 +212,9 @@ void EditionUi::doChangeTool(int iButtonId)
 void EditionUi::doModeChange(int iButtonId)
 {
   if(iButtonId == 0)
-    mController.setMode(RealEditController::mAssembly);
+    mController.setMode(Controller::mAssembly);
   else
-    mController.setMode(RealEditController::mEdition);
+    mController.setMode(Controller::mEdition);
 }
 
 //------------------------------------------------------------------------------
@@ -230,7 +230,7 @@ void EditionUi::modeChanged()
 {
   /*On s'assure que les boutons de mode sont synchronisé avec le mode courant
   et on rafraichît les viewers*/
-  if(mController.getMode() == RealEditController::mAssembly)
+  if(mController.getMode() == Controller::mAssembly)
     mpAssembly->setChecked(true);
   else
     mpEdition->setChecked(true);

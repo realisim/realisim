@@ -12,7 +12,7 @@ namespace realEdit
 {
   class EditionData;
   class ObjectNavigator;
-  class RealEditController;
+  class Controller;
   class ObjectNode;
 }
 
@@ -20,7 +20,7 @@ class realEdit::ObjectNavigator : public QTreeWidget
 {
   Q_OBJECT
 public:
-  ObjectNavigator( QWidget* ipParent, RealEditController& iC );
+  ObjectNavigator( QWidget* ipParent, Controller& iC );
   ~ObjectNavigator();
   
   void currentNodeChanged();
@@ -33,7 +33,7 @@ private:
   void createTree( TreeItem ipItem, const ObjectNode* ipNode );
   void expandAllItems();
   
-  RealEditController& mController;
+  Controller& mController;
   const EditionData& mEditionData;
   
   typedef std::map<QTreeWidgetItem*, const ObjectNode*> TreeItemToNode;
