@@ -53,9 +53,9 @@ namespace math
     inline void getXYZ(U &x, U &y, U &z) const;
 
     // --------------- fonction utiles -----------------------------------------
-    inline U dist(const Point &point) const;
+    inline double dist(const Point &point) const;
     inline U distSqr(const Point &point) const;
-    inline U fastDist(const Point &point) const;
+    inline double fastDist(const Point &point) const;
     inline void minCoord (const Point<U>& iP);
     inline void maxCoord (const Point<U>& iP);
     inline void print() const;
@@ -293,13 +293,13 @@ namespace math
   //! \return la distance entre les deux points.
   //!---------------------------------------------------------------------------
   template<class U>
-  inline U Point<U>::dist(const Point &point) const
+  inline double Point<U>::dist(const Point &point) const
   {
-    U x = point.x_-x_;
-    U y = point.y_-y_;
-    U z = point.z_-z_;
+    double x = point.x_-x_;
+    double y = point.y_-y_;
+    double z = point.z_-z_;
 
-    return (std::sqrt(x*x + y*y + z*z));
+    return (sqrt(x*x + y*y + z*z));
   }
 
   //!---------------------------------------------------------------------------
@@ -331,9 +331,9 @@ namespace math
   //! \return une estimation de la distance entre les deux points.
   //!---------------------------------------------------------------------------
   template<class U>
-  inline U Point<U>::fastDist(const Point &point) const
+  inline double Point<U>::fastDist(const Point &point) const
   {
-    U max, med, min, mom;
+    double max, med, min, mom;
 
     max = x_-point.x_;
     med = y_-point.y_;

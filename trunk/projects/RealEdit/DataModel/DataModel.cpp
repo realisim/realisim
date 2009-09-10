@@ -108,7 +108,7 @@ RealEditPolygon::Guts::Guts (const std::vector<RealEditPoint>& iP) :
   mNormals ()
 {
   assert (iP. size () == 3);
-  Polygon poly (mPoints[0].pos(), mPoints[1].pos(), mPoints[2].pos());
+  math::Polygon poly (mPoints[0].pos(), mPoints[1].pos(), mPoints[2].pos());
   
   mNormals. push_back (poly.getNormal ());
   mNormals. push_back (poly.getNormal ());

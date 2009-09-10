@@ -12,7 +12,7 @@ using namespace realisim;
   
 CommandStack::CommandStack() :
   mCommands(),
-  mIndex(0)
+  mIndex(-1)
 {}
 
 CommandStack::~CommandStack()
@@ -35,8 +35,10 @@ void CommandStack::add(Command* ipC)
     //ont détruit toutes le commandes qui suivent l'index
     for(int i = mIndex + 1; i < (int)mCommands.size(); ++i)
       delete mCommands[i];
-      
-    mCommands.erase(mCommands.begin() + mIndex + 1, mCommands.end());
+    
+      //les parentheses sur mIndex + 1 sont importants sous windows... sans elles,
+      //ca plante!
+      mCommands.erase(mCommands.begin() + (mIndex + 1), mCommands.end());
   }
   
   //on ajoute et execute la commande insérée
