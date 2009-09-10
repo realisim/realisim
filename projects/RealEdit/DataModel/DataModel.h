@@ -23,7 +23,7 @@ class DataModelBase
 public:
 	DataModelBase ();
   DataModelBase (const DataModelBase& iD);
-  virtual DataModelBase& operator= (const DataModelBase& iD){assert(0);}
+  //virtual DataModelBase& operator= (const DataModelBase& iD){assert(0);}
 	virtual ~DataModelBase() = 0;
   
   void assign();

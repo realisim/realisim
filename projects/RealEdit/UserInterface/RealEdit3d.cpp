@@ -4,6 +4,7 @@
  *  Created by Pierre-Olivier Beaudoin on 17/11/08.
  */
 
+#include <algorithm>
 #include "DataModel.h"
 #include "DisplayData.h"
 #include "EditionData.h"
@@ -435,7 +436,7 @@ void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* e)
 void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
 {
   makeCurrent();
-  mMouseInfo.delta = Point3d(e->x(), e->y(), 0) - mMouseInfo.end;
+  mMouseInfo.delta = Point3i(e->x(), e->y(), 0) - mMouseInfo.end;
   mMouseInfo.end.setXYZ(e->x(), e->y(), 0);
   
   switch (getMouseState()) 
@@ -550,9 +551,9 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
   pour plus d'info*/
 vector<RealEdit3d::Hits> RealEdit3d::pick(int x, int y)
 {
-  int BUFSIZE = 1024;
+  const int BUFSIZE = 1024;
   unsigned int selectBuf[BUFSIZE];
-  int hits;
+  int hits = 0;
   int viewport[4];
 
   glGetIntegerv(GL_VIEWPORT, viewport);
@@ -582,8 +583,7 @@ vector<RealEdit3d::Hits> RealEdit3d::pick(int x, int y)
   glFlush();
   glPopAttrib();
 
-  if(hits != 0)
-    hits = glRenderMode(GL_RENDER);
+  hits = glRenderMode(GL_RENDER);
 
   return processHits(hits, selectBuf);
 }
