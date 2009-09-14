@@ -42,6 +42,15 @@ ObjectNavigator::~ObjectNavigator()
 {}
 
 //------------------------------------------------------------------------------
+void ObjectNavigator::changeCurrentNode()
+{
+  NodeToTreeItem::iterator it = 
+    mNodeToTreeItem.find(mEditionData.getCurrentNode());
+  if(it != mNodeToTreeItem.end())
+    setCurrentItem(it->second);
+}
+
+//------------------------------------------------------------------------------
 template<class TreeItem>
 void
 ObjectNavigator::createTree (TreeItem ipItem,
@@ -61,15 +70,6 @@ ObjectNavigator::createTree (TreeItem ipItem,
   {
     createTree( pItem, ipNode->getChild( i ) );
   }
-}
-
-//------------------------------------------------------------------------------
-void ObjectNavigator::currentNodeChanged()
-{
-  NodeToTreeItem::iterator it = 
-    mNodeToTreeItem.find(mEditionData.getCurrentNode());
-  if(it != mNodeToTreeItem.end())
-    setCurrentItem(it->second);
 }
 
 //------------------------------------------------------------------------------

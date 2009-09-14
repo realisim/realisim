@@ -24,6 +24,7 @@ Controller.h
 #include "EditionData.h"
 namespace realEdit{class EditionUi;}
 namespace realEdit{namespace commands{class ChangeMode;}}
+namespace realEdit{namespace commands{class ChangeTool;}}
 #include "PlatonicSolid.h"
 
 namespace realEdit
@@ -33,21 +34,25 @@ class Controller
 {
 public:
   friend class commands::ChangeMode;
+  friend class commands::ChangeTool;
 
   enum mode{mAssembly, mEdition};
-  enum tool{tCamera, tSelection};
+  enum tool{tSelection, tTranslation};
   
 	Controller( EditionUi& ipEditionUi );
 	~Controller();
   DisplayData& getDisplayData() {return mDisplayData;}
   const EditionData& getEditionData() const;
   mode getMode() const {return mMode;}
+  tool getTool() const {return mTool;}
   void newProject();
   void redo();
   void undo();
-  void select(vector<uint>);
+  void select(const vector<uint>&);
   void setCurrentNode (const ObjectNode* ipNode);
   void setMode(mode iM);
+  void setTool(tool);
+  void translate(const Vector3d&);
 
 protected:
   void createPlatonicSolid(PlatonicSolid::type, int = 0);
@@ -61,6 +66,7 @@ private:
   EditionUi& mEditionUi;
   EditionData mEditionData;
   mode mMode;
+  tool mTool;
 };
 
 } //realEdit

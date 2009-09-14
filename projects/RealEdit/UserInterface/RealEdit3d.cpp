@@ -13,10 +13,11 @@
 #include <QCursor>
 #include <QMouseEvent>
 #include "RealEdit3d.h"
-#include "Controller.h"
+#include "Vect.h"
 
 using namespace realisim;
-using namespace realisim::treeD;
+  using namespace math;
+  using namespace treeD;
 using namespace realEdit;
 using namespace std;
 
@@ -34,8 +35,7 @@ mDisplayData (iC.getDisplayData ()),
 mEditionData (const_cast<const Controller&>(iC).getEditionData ()),
 mMouseInfo(),
 mMouseState(msIdle),
-mTool(tSelection),
-mPreviousTool(tSelection)
+mPreviousTool(mController.getTool())
 {
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
@@ -45,50 +45,45 @@ RealEdit3d::~RealEdit3d()
 {}
 
 //------------------------------------------------------------------------------
+/*Donner la transformation du noeud courant à la caméra.*/
+void RealEdit3d::changeCurrentNode()
+{
+  Camera cam = getCamera();
+  Path p(mEditionData.getCurrentNode());
+  cam.setTransformation(p.getNodeToScene());
+  setCamera( cam );
+}
+
+//------------------------------------------------------------------------------
 void RealEdit3d::changeCursor()
 {
   switch (getMouseState()) 
   {
+    case msCamera:
+      setCursor(Qt::OpenHandCursor);
+      break;
+    case msCameraDrag:
+      setCursor(Qt::ClosedHandCursor);
+      break;
     case msIdle:
-      switch (getTool()) 
+      switch (mController.getTool()) 
       {
-        case tCamera:
-          setCursor(Qt::OpenHandCursor);
-          break;
-        case tSelection:
+        case Controller::tSelection:
           setCursor(Qt::ArrowCursor);
           break;
         default:
-          assert(0);
+          setCursor(Qt::ArrowCursor);
           break;
       } 
       break;
     case msDown:
       break;
     case msDrag:
-      switch (getTool()) 
-      {
-        case tCamera:
-          setCursor(Qt::ClosedHandCursor);
-          break;
-        default:
-          break;
-      }
       break;
     default:
       setCursor(Qt::ArrowCursor);
       break;
   }
-}
-
-//------------------------------------------------------------------------------
-/*Donner la transformation du noeud courant à la caméra.*/
-void RealEdit3d::currentNodeChanged()
-{
-  Camera cam = getCamera();
-  Path p(mEditionData.getCurrentNode());
-  cam.setTransformation(p.getNodeToScene());
-  setCamera( cam );
 }
 
 //------------------------------------------------------------------------------
@@ -112,7 +107,10 @@ void RealEdit3d::drawBoundingBox(const RealEditModel& iM,
   bool iPicking /*= false*/) const
 {
   if(iPicking)
-      glPushName(iM.getId());
+  {
+    glPushName(iM.getId());
+    glPushName(Hits::tModel);
+  }
 
   glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
                  GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
@@ -124,7 +122,10 @@ void RealEdit3d::drawBoundingBox(const RealEditModel& iM,
   glPopAttrib();
   
   if(iPicking)
-      glPopName();
+  {
+    glPopName();
+    glPopName();
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -219,7 +220,10 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
       glColor3d(0, 85/255.0, 176/255.0);
     
     if(iPicking)
+    {
       glPushName(p.getId());
+      glPushName(Hits::tPoint);
+    }
     
     glPushMatrix();
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_HINT_BIT);
@@ -236,7 +240,10 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
     glPopMatrix();
     
     if(iPicking)
+    {
       glPopName();
+      glPopName();
+    }
   }
 }
 
@@ -254,7 +261,10 @@ void RealEdit3d::drawPolygons(const RealEditModel& iM,
       glColor3f(0.85, 0.85, 0.85);
     
     if(iPicking)
+    {
       glPushName(poly.getId());
+      glPushName(Hits::tPolygon);
+    }
     
     glBegin(GL_POLYGON);
     glNormal3d(poly.getNormals()[0].getX(),
@@ -278,7 +288,10 @@ void RealEdit3d::drawPolygons(const RealEditModel& iM,
     glEnd();
     
     if(iPicking)
-      glPopName();      
+    {
+      glPopName();
+      glPopName();
+    }  
   }
 }
 
@@ -343,14 +356,14 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
           drawLines(model);
         glPopAttrib();
       
-  //      //dessine les normals du modèle
-  //      glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT |
-  //                   GL_HINT_BIT);
-  //        glDisable(GL_LIGHTING);
-  //        glColor4d(1.0, 1.0, 1.0, 1.0);
-  //        enableSmoothLines();
-  //        drawNormals(model);
-  //      glPopAttrib();
+        //dessine les normals du modèle
+        glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT |
+                     GL_HINT_BIT);
+          glDisable(GL_LIGHTING);
+          glColor4d(1.0, 1.0, 1.0, 1.0);
+          enableSmoothLines();
+          drawNormals(model);
+        glPopAttrib();
       }
     }
     
@@ -439,8 +452,24 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
   mMouseInfo.delta = Point3i(e->x(), e->y(), 0) - mMouseInfo.end;
   mMouseInfo.end.setXYZ(e->x(), e->y(), 0);
   
+  //On calcul le delta (pixel) de la souris en deltaGL.
+  //on prend -Y pcq l'axe pixel est inversé de l'axe GL
+  Vector3d deltaGL =
+    getCamera().pixelDeltaToGLDelta(mMouseInfo.delta.getX(),
+      -mMouseInfo.delta.getY());
+  
   switch (getMouseState()) 
   {
+    case msCamera:
+      if( mMouseInfo.end.dist(mMouseInfo.origin) >= kDragTreshold )
+        setMouseState(msCameraDrag);
+      break;
+    case msCameraDrag:
+    {
+      getCamera().move(-deltaGL);
+      update();
+    }
+      break;
     case msIdle:
       break;
     case msDown:
@@ -448,7 +477,15 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
         setMouseState(msDrag);
       break;
     case msDrag:
-      Widget3d::mouseMoveEvent(e);
+      switch (mController.getTool())
+      {
+        case Controller::tTranslation:
+          mController.translate(deltaGL);
+          break;
+        default:
+          break;
+      }
+      break;
     default:
       break;
   }
@@ -469,24 +506,13 @@ void RealEdit3d::mousePressEvent(QMouseEvent* e)
       setMouseState(msDown);
       
       /*Le bouton droit de la souris est réservé pour la caméra. Quand la souris
-       est idle et que le bouton droit est pressé, l'outil caméra s'active. 
-       Lorsque le bouton est relaché, l'outils précedent revient.*/
+       est idle et que le bouton droit est pressé, l'état caméra s'active. 
+       Lorsque le bouton est relaché, on revient a l'état msIdle de l'outil 
+       courant.*/
       if(e->button() == Qt::RightButton)
-        {mPreviousTool = getTool(); setTool(tCamera);}
-      
-      switch (getTool()) 
-      {
-        case tCamera:
-          Widget3d::mousePressEvent(e);
-          break;
-        case tSelection:        
-          break;
-        default:
-          break;
-      }    
+          setMouseState(msCamera);
       break;
   default:
-    assert(0);
     break;
   }
   
@@ -499,25 +525,23 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
   makeCurrent();
   switch (getMouseState()) 
   {
+    case msCamera:
+    case msCameraDrag:
+      setMouseState(msIdle);
+      break;
     case msIdle:
       break;
     case msDown:
       setMouseState(msIdle);
-      switch (getTool()) 
+      switch (mController.getTool()) 
       {
-        case tCamera:
-          Widget3d::mouseReleaseEvent(e);
-          setTool(mPreviousTool);
-          break;
-        case tSelection:
+        case Controller::tSelection:
         {
-          vector<Hits> hitId2 = pick(e->x(), e->y());
-            
-          vector<uint> hitId;
-          for(uint i = 0; i < hitId2.size(); ++i)
-            hitId.push_back(hitId2[i].getName());
-            
-          mController.select(hitId);
+          vector<uint> selectedIds;
+          vector<Hits> hits = pick(e->x(), e->y());
+          for(uint i = 0; i < hits.size(); ++i)
+            selectedIds.push_back(hits[i].getId());
+          mController.select(selectedIds);
         }
           break;
         default:
@@ -526,13 +550,9 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
       break;
     case msDrag:
       setMouseState(msIdle);
-      switch (getTool()) 
+      switch (mController.getTool()) 
       {
-        case tCamera:
-          Widget3d::mouseReleaseEvent(e);
-          setTool(mPreviousTool);
-          break;
-        case tSelection:
+        case Controller::tSelection:
           break;
         default:
           break;
@@ -595,7 +615,7 @@ vector<RealEdit3d::Hits> RealEdit3d::processHits(int iHits,
   unsigned int iBuffer[])
 {
   int i;
-  unsigned int j, names, *ptr;
+  unsigned int names, *ptr;
   double maxDepth, minDepth;
   vector<Hits> result;
 
@@ -609,12 +629,19 @@ vector<RealEdit3d::Hits> RealEdit3d::processHits(int iHits,
     maxDepth = (double) *ptr/0x7fffffff;
     ptr++;
     
-    assert(names <= 1 && "Le systeme de Hits ne supporte pas les noms"
-      "multiples... Il suffit de changer Hits::mName pour un vector<uint>.");
-    for (j = 0; j < names; j++)
-    {	/*  for each name */
-      result.push_back(Hits(minDepth, maxDepth, *ptr));
+    assert(names <= 2 && "Au maximum 2 noms. Le Id de l'object et son type");
+//    for (uint j = 0; j < names; j++)
+//    {	/*  for each name */
+//      ptr++;
+//    }
+
+    if(names == 2)
+    {
+      uint id = *ptr;
       ptr++;
+      Hits::type t = (Hits::type)*ptr;
+      ptr++;
+      result.push_back(Hits(minDepth, maxDepth, id, t));
     }
   }
   
@@ -622,7 +649,8 @@ vector<RealEdit3d::Hits> RealEdit3d::processHits(int iHits,
   cout<<"Number of hits: "<<result.size()<<endl;
   for(uint i = 0; i < result.size(); ++i)
   {
-    cout<<"\t name:"<<result[i].getName()<<
+    cout<<"\t name:"<<result[i].getId()<<
+      "\t type: "<<result[i].getType()<<
       "\t min depth: "<<result[i].getMinDepth()<<
       "\t max depth:"<<result[i].getMaxDepth()<<endl;
   }

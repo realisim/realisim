@@ -20,8 +20,9 @@ public:
 	EditionUi();
 	~EditionUi();
   
-  void currentNodeChanged();
-  void modeChanged();
+void changeCurrentNode();
+void changeMode();
+void changeTool();
   
 public slots:
   virtual void update();
@@ -45,8 +46,13 @@ private:
 	Controller mController; //created and deleted within the class
 	ObjectNavigator* mpObjectNavigator;
   std::vector<RealEdit3d*> mViewers;
+  //mode
   QPushButton* mpAssembly;
   QPushButton* mpEdition;
+  //tools
+  QPushButton* mpSelection;
+  QPushButton* mpTranslation;
+  
 };
 
 } //realEdit

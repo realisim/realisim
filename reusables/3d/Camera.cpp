@@ -83,7 +83,6 @@ void Camera::move( Vector3d iDelta )
     {
       Point3d trans = mTransformation.getTranslation() + iDelta * mTransformation;
       mTransformation.setTranslation(trans);
-      
     }
     break;
       
@@ -360,11 +359,19 @@ void Camera::setOrientation( Orientation iO )
   switch( mOrientation )
   {
     case XY:
-    case ZY:
-    case XZ:
       set( Point3d( 0, 0, 100 ),
            Point3d( 0, 0, 0 ),
            Vector3d( 0, 1, 0 ) );
+      break;
+    case ZY:
+      set( Point3d( 100, 0, 0 ),
+           Point3d( 0, 0, 0 ),
+           Vector3d( 0, 1, 0 ) );
+      break;
+    case XZ:
+      set( Point3d( 0, 100, 0 ),
+           Point3d( 0, 0, 0 ),
+           Vector3d( 0, 0, -1 ) );
       break;
     case FREE:
       set( Point3d( 60, 60, 60 ),
@@ -381,42 +388,8 @@ void Camera::setOrientation( Orientation iO )
 }
 
 //-----------------------------------------------------------------------------
-void Camera::setTransformation( const Matrix4d& iTransfo,
-  bool iApplyOrientation/*=true*/ )
-{
-  if( iApplyOrientation )
-  {
-    switch ( getOrientation() ) 
-    {
-      case Camera::ZY:
-      {
-        Quat4d rot;
-        rot.setRot( PI / 2.0, iTransfo.getBaseY() );
-        mTransformation = iTransfo * rot.getUnitRotationMatrix();
-        mTransformation.setTranslation( iTransfo.getTranslation() );
-      }
-        break;
-      case Camera::XZ:
-      {
-        Quat4d rot;
-        rot.setRot( -PI / 2.0, iTransfo.getBaseX() );
-        mTransformation = iTransfo * rot.getUnitRotationMatrix();
-        mTransformation.setTranslation( iTransfo.getTranslation() );
-      }
-        break;
-      case Camera::XY:
-      case Camera::FREE:
-        mTransformation = iTransfo;
-        break;
-      default:
-        break;
-    }
-  }
-  else
-  {
-    mTransformation = iTransfo;
-  }
-}
+void Camera::setTransformation(const Matrix4d& iTransfo)
+{ mTransformation = iTransfo; }
 
 //-----------------------------------------------------------------------------
 void Camera::setUp( const Vector3d& iUp )

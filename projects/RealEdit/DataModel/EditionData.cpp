@@ -8,12 +8,11 @@
  */
 
 #include <algorithm>
-#include "EditionData.h"
-
 #include "DataModel.h"
-
+#include "EditionData.h"
 #include <vector>
-#include <map>
+#include <set>
+
 
 using namespace realisim;
 using namespace realEdit;
@@ -50,8 +49,8 @@ EditionData::EditionData() : mCurrentModel (),
   mpCurrentNode (0),
   mScene (),
   mSelection(),
-  mSelectedPoints (),
-  mSelectedPolygons ()
+  mSelectedPoints(),
+  mSelectedPolygons()
 {
   setCurrentNode (getScene (). getObjectNode ());
 }
@@ -112,13 +111,43 @@ Scene& EditionData::getScene ()
 
 //-----------------------------------------------------------------------------
 bool EditionData::isSelected(uint iId) const
-{return find(mSelection.begin(), mSelection.end(), iId) != mSelection.end();}
+{
+  return find(mSelection.begin(), mSelection.end(), iId) != mSelection.end();  
+}
 
 //-----------------------------------------------------------------------------
-void EditionData::select(vector<uint> iS)
+void EditionData::select(const vector<uint>& iS)
 {
+  mSelectedPoints.clear();
+  mSelectedPolygons.clear();
   mSelection.clear();
   mSelection = iS;
+  
+  /*a partir de la selection, on crée la liste de tous les points (unique)
+  selectionnés. Les commandes (translate, rotate, scale etc...) s'effectueront
+  sur ces points.*/
+  
+  set<unsigned int> uniquePointIds;
+  for(unsigned int i = 0; i < mSelection.size(); ++i)
+  {
+    if(getCurrentModel().hasPoint(mSelection[i]))
+      uniquePointIds.insert(mSelection[i]);
+    else if(getCurrentModel().hasPolygon(mSelection[i]))
+    {
+      const RealEditPolygon& p =
+        getCurrentModel().getPolygonFromId(mSelection[i]);
+      mSelectedPolygons.push_back(p);
+      for(unsigned int j = 0; j < p.getPointCount(); ++j )
+        uniquePointIds.insert(p.getPoint(j).getId());
+    }
+  }
+  
+  set<unsigned int>::const_iterator it = uniquePointIds.begin();
+  for(it; it != uniquePointIds.end(); ++it)
+  {
+    mSelectedPoints.push_back(
+      getCurrentModel().getPointFromId(*it));
+  }
 }
 
 //-----------------------------------------------------------------------------

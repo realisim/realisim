@@ -21,7 +21,9 @@ EditionUi::EditionUi()
   mpObjectNavigator( 0 ),
   mViewers(),
   mpAssembly(0),
-  mpEdition(0)
+  mpEdition(0),
+  mpSelection(0),
+  mpTranslation(0)
 {	
 	resize(800, 600);
 	QFrame* pMainFrame = new QFrame( this );
@@ -63,8 +65,9 @@ EditionUi::EditionUi()
 	addToolPanel();
 
   //--- initialisation du UI a partir de mEditionData
-  modeChanged();
-  currentNodeChanged();
+  changeCurrentNode();
+  changeMode();
+  changeTool();
   
 	show();
 }
@@ -129,18 +132,25 @@ EditionUi::addToolPanel()
     //--- Bouton des outils
     QHBoxLayout* pToolLyt = new QHBoxLayout();
     {
-      QPushButton* pSelection = new QPushButton("s", pFrame);
-      pSelection->setCheckable(true);
-      pSelection->setFixedHeight(25);
+      //--- selection
+      mpSelection = new QPushButton("s", pFrame);
+      mpSelection->setCheckable(true);
+      mpSelection->setFixedHeight(25);
+      //--- translation
+      mpTranslation = new QPushButton("t", pFrame);
+      mpTranslation->setCheckable(true);
+      mpTranslation->setFixedHeight(25);
 
       QButtonGroup* pButtonGroup = new QButtonGroup(pFrame);
       pButtonGroup->setExclusive(true);
-      pButtonGroup->addButton(pSelection, 0);
+      pButtonGroup->addButton(mpSelection, 0);
+      pButtonGroup->addButton(mpTranslation, 1);
       
       connect(pButtonGroup, SIGNAL(buttonClicked(int)), 
         this, SLOT(doChangeTool(int)));
 
-      pToolLyt->addWidget(pSelection);
+      pToolLyt->addWidget(mpSelection);
+      pToolLyt->addWidget(mpTranslation);
       pToolLyt->addStretch(1);
     }
     
@@ -149,6 +159,46 @@ EditionUi::addToolPanel()
     vLyt->addLayout( pToolLyt );
     vLyt->addStretch(1);
 	}
+}
+
+//------------------------------------------------------------------------------
+void EditionUi::changeCurrentNode()
+{
+  mpObjectNavigator->changeCurrentNode();
+  for(unsigned int i = 0; i < mViewers.size(); ++i)
+    mViewers[i]->changeCurrentNode();
+}
+
+//------------------------------------------------------------------------------
+void EditionUi::changeMode()
+{
+  /*On s'assure que les boutons de mode sont synchronisé avec le mode courant
+  et on rafraichît les viewers*/
+  if(mController.getMode() == Controller::mAssembly)
+    mpAssembly->setChecked(true);
+  else
+    mpEdition->setChecked(true);
+  
+  for(unsigned int i = 0; i < mViewers.size(); ++i)
+    mViewers[i]->update();
+}
+
+//------------------------------------------------------------------------------
+void EditionUi::changeTool()
+{
+  switch (mController.getTool()) 
+  {
+    case Controller::tSelection :
+      if(!mpSelection->isDown())
+        mpSelection->toggle();
+      break;
+    case Controller::tTranslation :
+      if(!mpTranslation->isDown())
+        mpTranslation->toggle();
+      break;
+    default:
+      break;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -193,19 +243,18 @@ EditionUi::createToolMenu( QMenuBar* ipMenuBar )
 }
 
 //------------------------------------------------------------------------------
-void EditionUi::currentNodeChanged()
-{
-  mpObjectNavigator->currentNodeChanged();
-  for(unsigned int i = 0; i < mViewers.size(); ++i)
-    mViewers[i]->currentNodeChanged();
-}
-
-//------------------------------------------------------------------------------
 void EditionUi::doChangeTool(int iButtonId)
 {
-  if(iButtonId == 0)
-    for(unsigned int i = 0; i < mViewers.size(); ++i)
-      mViewers[i]->setTool(RealEdit3d::tSelection);
+  switch (iButtonId) {
+    case 0:
+      mController.setTool(Controller::tSelection);
+      break;
+    case 1:
+      mController.setTool(Controller::tTranslation);
+      break;
+    default:
+      break;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -224,20 +273,6 @@ void EditionUi::doUndo()
 //------------------------------------------------------------------------------
 void EditionUi::doRedo()
 {mController.redo();}
-
-//------------------------------------------------------------------------------
-void EditionUi::modeChanged()
-{
-  /*On s'assure que les boutons de mode sont synchronisé avec le mode courant
-  et on rafraichît les viewers*/
-  if(mController.getMode() == Controller::mAssembly)
-    mpAssembly->setChecked(true);
-  else
-    mpEdition->setChecked(true);
-  
-  for(unsigned int i = 0; i < mViewers.size(); ++i)
-    mViewers[i]->update();
-}
 
 //------------------------------------------------------------------------------
 void EditionUi::newProject()

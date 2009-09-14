@@ -79,7 +79,7 @@ public:
             const Vector3d& iUp );
   void setMode( Mode iMode );
   void setOrientation( Orientation iO );
-  void setTransformation( const Matrix4d&, bool = true );
+  void setTransformation(const Matrix4d&);
   void setZoom(double iZoom);
   
 protected:

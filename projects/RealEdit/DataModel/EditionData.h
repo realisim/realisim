@@ -13,9 +13,6 @@
 #include "ObjectNode.h"
 #include "Point.h"
 
-#include <map>
-
-
 namespace realEdit
 {
 using namespace realisim;
@@ -53,19 +50,18 @@ public:
 //void addNode (ObjectNode* ipNode);
   bool hasSelection() const {return mSelection.size() > 0;}
   bool isSelected(uint) const;
+  RealEditModel getCurrentModel(){return mCurrentModel;}
   const ObjectNode* getCurrentNode () const;
   ObjectNode* getCurrentNode ();
-//const vector<RealEditPoint>& getSelectedPoints() const {return mSelectedPoints;}
-//vector<RealEditPoint>& getSelectedPoints() {return mSelectedPoints;}
+  vector<RealEditPoint>& getSelectedPoints() {return mSelectedPoints;}
+  vector<RealEditPolygon>& getSelectedPolygons() {return mSelectedPolygons;}
   const vector<uint>& getSelection() const {return mSelection;}
   const Scene& getScene () const;
   Scene& getScene ();
-  void select(vector<uint>);
+  void select(const vector<uint>&);
   void setCurrentNode (const ObjectNode* ipNode);
   
 private:
-  RealEditModel getCurrentModel(){return mCurrentModel;}
-
   RealEditModel mCurrentModel;
   ObjectNode* mpCurrentNode; //Ne sera jamais Null
   Scene mScene;
