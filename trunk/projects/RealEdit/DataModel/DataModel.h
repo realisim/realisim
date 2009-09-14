@@ -46,11 +46,11 @@ public:
   RealEditPoint& operator= (const RealEditPoint& iP);
   virtual ~RealEditPoint ();
   
-  const Point3d& pos () const {return mpGuts->mPoint;}
-  void set(const Point3d&);
-  double x () const {return mpGuts->mPoint.getX ();}
-  double y () const {return mpGuts->mPoint.getY ();}
-  double z () const {return mpGuts->mPoint.getZ ();}
+  virtual const Point3d& pos () const {return mpGuts->mPoint;}
+  virtual void set(const Point3d&);
+  virtual double x () const {return mpGuts->mPoint.getX ();}
+  virtual double y () const {return mpGuts->mPoint.getY ();}
+  virtual double z () const {return mpGuts->mPoint.getZ ();}
 private:
   struct Guts 
   {
@@ -85,10 +85,11 @@ public:
   RealEditPolygon& operator= (const RealEditPolygon& iP);
   virtual ~RealEditPolygon ();
 
-  const std::vector<RealEditPoint>& getPoints() const;
-  const std::vector<Vector3d>& getNormals() const;
-  
-  //void calculateNormal();
+  virtual const RealEditPoint& getPoint(unsigned int iIndex) const;
+  virtual const std::vector<RealEditPoint>& getPoints() const;
+  virtual unsigned int getPointCount() const;
+  virtual const std::vector<Vector3d>& getNormals() const;
+  virtual void computeNormals();
   
 private:
   struct Guts
@@ -96,6 +97,8 @@ private:
     Guts();
     Guts (const std::vector<RealEditPoint>& iP);
     ~Guts();
+    
+    void computeNormals();
     
     unsigned int mRefCount;
     std::vector<RealEditPoint> mPoints;
@@ -114,17 +117,27 @@ public:
   RealEditModel& operator= (const RealEditModel& iM);
 	virtual ~RealEditModel ();
 	
-  void addPoint (RealEditPoint iP);
-  void addPolygon (RealEditPolygon ipPoly);
-//bool hasPoint(unsigned int) const;
-//bool hasPolygon(unsigned int) const;
-  const BB3d& getBoundingBox () const;
-  unsigned int getPointCount () const;
-  const RealEditPoint& getPoint (unsigned int iIndex) const;
-//const RealEditPoint& getPointFromId(unsigned int) const;
-  unsigned int getPolygonCount () const;
-  const RealEditPolygon& getPolygon (unsigned int iIndex) const;
-//const RealEditPolygon& getPolygonFromId(unsigned int) const
+  virtual void addPoint (RealEditPoint iP);
+  virtual void addPolygon (RealEditPolygon ipPoly);
+  virtual const BB3d& getBoundingBox () const;
+  virtual unsigned int getPointCount () const;
+/*c'est méthode const sont dangereuses parce quelle retourne une reference
+sur un object qui est partagé implicitement. Donc si l'utilisateur fait une
+copie et modifie la copie, il modifiera aussi l'object référencé qui se
+veut const!!!*/
+virtual const RealEditPoint& getPoint (unsigned int iIndex) const;
+virtual const RealEditPoint& getPointFromId(unsigned int) const;
+  virtual unsigned int getPolygonCount () const;
+/*c'est méthode const sont dangereuses parce quelle retourne une reference
+sur un object qui est partagé implicitement. Donc si l'utilisateur fait une
+copie et modifie la copie, il modifiera aussi l'object référencé qui se
+veut const!!!*/  
+virtual const RealEditPolygon& getPolygon (unsigned int iIndex) const;
+virtual const RealEditPolygon& getPolygonFromId(unsigned int) const;
+  virtual bool hasPoint(unsigned int) const;
+  virtual bool hasPolygon(unsigned int) const;
+  virtual void updateBoundingBox();
+  virtual void updateNormals();
 
 private:
   struct Guts

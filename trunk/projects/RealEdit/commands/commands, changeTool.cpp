@@ -1,13 +1,13 @@
 /*
- *  commands, changeMode.cpp
+ *  changeTool.cpp
  *  Project
  *
- *  Created by Pierre-Olivier Beaudoin on 09-09-06.
+ *  Created by Pierre-Olivier Beaudoin on 09-09-07.
  *  Copyright 2009 __MyCompanyName__. All rights reserved.
  *
  */
 
-#include "commands, changeMode.h"
+#include "commands, changeTool.h"
 #include "EditionData.h"
 #include "EditionUi.h"
 
@@ -15,27 +15,28 @@ using namespace realisim;
 using namespace realEdit;
   using namespace commands;
   
-ChangeMode::ChangeMode(Controller& iC, EditionUi& iUi,
-  Controller::mode iMode) :
+ChangeTool::ChangeTool(Controller& iC, EditionUi& iUi,
+  Controller::tool iTool) :
   mController(iC),
   mUi(iUi),
-  mPreviousMode(iC.getMode()),
-  mMode(iMode)
+  mPreviousTool(iC.getTool()),
+  mTool(iTool)
 {}
 
-ChangeMode::~ChangeMode()
+ChangeTool::~ChangeTool()
 {}
 
 //------------------------------------------------------------------------------
-void ChangeMode::execute()
+void ChangeTool::execute()
 {
-  mController.mMode = mMode;
-  mUi.changeMode();
+  mController.mTool = mTool;
+  mUi.changeTool();
 }
 
 //------------------------------------------------------------------------------
-void ChangeMode::undo()
+void ChangeTool::undo()
 {
-  mController.mMode = mPreviousMode;
-  mUi.changeMode();
+  mController.mTool = mPreviousTool;
+  mUi.changeTool();
 }
+

@@ -208,14 +208,14 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
     //on met un - devant le deltaY parce que le systeme de fenetrage QT
     //a laxe Y vers le bas et notre systeme de fenetrage GL a l'axe y vers le
     //haut.
-    Vector3d delta = mCam.pixelDeltaToGLDelta( deltaX, -deltaY );
+    Vector3d delta = getCamera().pixelDeltaToGLDelta( deltaX, -deltaY );
     
     //On met un - devant le delta pour donner l'impression qu'on ne 
     //déplace pas la camera, mais le model. Si on ne mettait pas de -,
     //la caméra se déplacerait en suivant la souris et ce qu'on voit a l'écran
     //s'en irait dans le sens contraire de la souris. En mettant le - on
     //donne l'impression de déplacer le contenu de l'écran.
-    mCam.move( -delta );
+    getCamera().move( -delta );
   }
   
   mMousePosX = e->x();
@@ -264,11 +264,11 @@ Widget3d::paintGL()
   }
   
   //On place la caméra en coordonnée absolue.
-  Point3d absolutePos = mCam.getPos() * mCam.getTransformation();
-  absolutePos += mCam.getTransformation().getTranslation();
-  Point3d absoluteLook = mCam.getLook() * mCam.getTransformation();
-  absoluteLook += mCam.getTransformation().getTranslation();
-  Vector3d absoluteUp = mCam.getUp() * mCam.getTransformation();
+  Point3d absolutePos = getCamera().getPos() * getCamera().getTransformation();
+  absolutePos += getCamera().getTransformation().getTranslation();
+  Point3d absoluteLook = getCamera().getLook() * getCamera().getTransformation();
+  absoluteLook += getCamera().getTransformation().getTranslation();
+  Vector3d absoluteUp = getCamera().getUp() * getCamera().getTransformation();
   
   gluLookAt( absolutePos.getX(),
              absolutePos.getY(), 
@@ -295,7 +295,7 @@ Widget3d::resizeGL(int iWidth, int iHeight)
 {
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
-  mCam.projectionGL(iWidth, iHeight);
+  getCamera().projectionGL(iWidth, iHeight);
   glMatrixMode( GL_MODELVIEW );
   update();
 }
@@ -325,14 +325,14 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/ )
 //-----------------------------------------------------------------------------
 void Widget3d::setCameraMode( Camera::Mode iMode )
 {
-  mCam.setMode( iMode );
+  getCamera().setMode( iMode );
   update();
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::setCameraOrientation( Camera::Orientation iO )
 {
-  mCam.setOrientation( iO );
+  getCamera().setOrientation( iO );
   update();
 }
 
@@ -368,7 +368,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     iterationMatrix.setTranslation( mOldCam.getTransformation().getTranslation()*( 1 - t ) + 
       mNewCam.getTransformation().getTranslation()*( t ) );
     
-    mCam.setTransformation(iterationMatrix,false);
+    getCamera().setTransformation(iterationMatrix);
     
     update();
     
@@ -391,9 +391,9 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
   double zoom = 1 / 1.15;
   if(ipE->delta() < 0)
     zoom = 1.15;
-  double finalZoom = mCam.getZoom() * zoom;
+  double finalZoom = getCamera().getZoom() * zoom;
   if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
-    mCam.setZoom(finalZoom);
+    getCamera().setZoom(finalZoom);
 
   update();
 }

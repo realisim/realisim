@@ -23,7 +23,7 @@ public:
   ObjectNavigator( QWidget* ipParent, Controller& iC );
   ~ObjectNavigator();
   
-  void currentNodeChanged();
+  void changeCurrentNode();
   
 private slots:
   void doItemChanged(QTreeWidgetItem* ipItem, QTreeWidgetItem* ipPreviousItem);

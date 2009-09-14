@@ -1,6 +1,7 @@
 
 #include "commands, changeMode.h"
 #include "commands, changeNode.h"
+#include "commands, changeTool.h"
 #include "commands, selection.h"
 #include "DataModel.h"
 #include "EditionUi.h"
@@ -17,7 +18,8 @@ Controller::Controller(EditionUi& iEditionUi) :
   mDisplayData(),
   mEditionUi(iEditionUi),
   mEditionData(),
-  mMode(mEdition)
+  mMode(mEdition),
+  mTool(tSelection)
 {
 //  ObjectNode* pRootNode = getEditionData().getCurrentNode();
 //  vector<RealEditPoint> vPoints;
@@ -107,7 +109,7 @@ void Controller::redo()
 
 //------------------------------------------------------------------------------
 //select all ids from the vector.
-void Controller::select(vector<uint> iS)
+void Controller::select(const vector<uint>& iS)
 {
   commands::Selection* c = new commands::Selection(getEditionData(), iS);
   getCommandStack().add(c);
@@ -134,6 +136,38 @@ void Controller::setMode(mode iMode)
   {
     commands::ChangeMode* c = new commands::ChangeMode(*this, getUi(), iMode);
     getCommandStack().add(c);
+  }
+}
+
+//------------------------------------------------------------------------------
+void Controller::setTool(tool iTool)
+{
+  if(mTool != iTool)
+  {
+    commands::ChangeTool* c = new commands::ChangeTool(*this, getUi(), iTool);
+    getCommandStack().add(c);
+  }
+}
+
+//------------------------------------------------------------------------------
+void Controller::translate(const Vector3d& iDelta)
+{
+  if(getEditionData().hasSelection())
+  {
+    for(uint i = 0; i < getEditionData().getSelectedPoints().size(); ++i)
+    {
+      RealEditPoint p = getEditionData().getSelectedPoints()[i];
+      p.set(p.pos() + iDelta);      
+    }
+    
+//    for(uint i = 0; i < getEditionData().getSelectedPolygons().size(); ++i)
+//    {
+//      RealEditPolygon p = getEditionData().getSelectedPolygons()[i];
+//      p.updateNormals();      
+//    }
+    getEditionData().getCurrentModel().updateNormals();
+    getEditionData().getCurrentModel().updateBoundingBox();
+      getUi().update();
   }
 }
 

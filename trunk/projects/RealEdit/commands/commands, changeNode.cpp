@@ -26,13 +26,13 @@ ChangeNode::~ChangeNode()
 void ChangeNode::execute()
 {
   mEditionData.setCurrentNode(mpNode);
-  mUi.currentNodeChanged();
+  mUi.changeCurrentNode();
 }
 
 //------------------------------------------------------------------------------
 void ChangeNode::undo()
 {
   mEditionData.setCurrentNode(mpPreviousNode);
-  mUi.currentNodeChanged();
+  mUi.changeCurrentNode();
 }
 

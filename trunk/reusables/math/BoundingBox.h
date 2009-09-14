@@ -22,6 +22,7 @@ class BoundingBox
     virtual ~BoundingBox();
   
   virtual void add (const Point<T>& iV);
+  virtual void clear();
   const Point<T>& getMin() const {return mMin;}
   const Point<T>& getMax() const {return mMax;}
 protected:
@@ -45,6 +46,14 @@ void BoundingBox<T>::add (const Point<T>& iP)
 {
   mMin.minCoord (iP);
   mMax.maxCoord (iP);
+}
+
+//------------------------------------------------------------------------------
+template<class T>
+void BoundingBox<T>::clear()
+{
+  mMin.set((T)0.0);
+  mMax.set((T)0.0);
 }
 
 typedef BoundingBox<double> BB3d;

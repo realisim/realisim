@@ -38,6 +38,7 @@ signals:
     void clicked();
 
 protected:
+  Camera& getCamera() {return mCam;}
   void initializeGL();
   virtual void paintGL();
   void resizeGL(int iWidth, int iHeight);

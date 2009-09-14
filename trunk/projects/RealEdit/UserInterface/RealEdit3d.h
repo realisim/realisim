@@ -10,7 +10,7 @@
 #ifndef RealEdit3d_h
 #define RealEdit3d_h
 
-namespace realEdit {class Controller;}
+#include "Controller.h"
 #include <Point.h>
 class QKeyEvent;
 class QMouseEvent;
@@ -26,20 +26,16 @@ using namespace math;
 class RealEdit3d : public realisim::treeD::Widget3d
 {
 public:
-  enum tool{tCamera, tSelection};
-
-
   RealEdit3d (QWidget* ipParent, 
               const QGLWidget* iSharedWidget,
               Controller& iC);
 //RealEdit3d(const RealEdit3d&);
   virtual ~RealEdit3d ();
-  virtual void currentNodeChanged ();
+  virtual void changeCurrentNode();
   virtual void paintGL ();
-  virtual void setTool(tool t) {mTool = t;}
   
 protected:
-  enum mouseState{msDown, msDrag, msIdle};
+  enum mouseState{msCamera, msCameraDrag, msDown, msDrag, msIdle};
   
   struct MouseInfo 
   {
@@ -50,21 +46,25 @@ protected:
   class Hits
   {
     public:
-      Hits() : mMinDepth(0), mMaxDepth(0), mName(0) {;}
-      Hits(double a, double b, uint c) : mMinDepth(b), mMaxDepth(a), mName(c) {;}
+      enum type{tModel, tPoint, tPolygon, tUnknown};
+      Hits() : mMinDepth(0), mMaxDepth(0), mId(0), mType(tUnknown) {;}
+      Hits(double a, double b, uint c, type t) :
+        mMinDepth(b), mMaxDepth(a), mId(c), mType(t) {;}
       Hits(const Hits& h) : mMinDepth(h.getMinDepth()),
-         mMaxDepth(h.getMaxDepth()), mName(h.getName()) {;}
+         mMaxDepth(h.getMaxDepth()), mId(h.getId()), mType(h.getType()) {;}
       ~Hits() {;}
       
       double getMaxDepth() const {return mMaxDepth;}
       double getMinDepth() const {return mMinDepth;}
-      uint getName() const {return mName;}
+      uint getId() const {return mId;}
+      type getType() const {return mType;}
       bool operator< (const Hits& h) const {return getMinDepth() < h.getMinDepth();}
       
     private:
       double mMinDepth;
       double mMaxDepth;
-      uint mName;
+      uint mId;
+      type mType;
   };
 
   virtual void changeCursor();
@@ -78,7 +78,6 @@ protected:
   virtual void drawSceneForPicking(const ObjectNode* iObjectNode) const;
   virtual void enableSmoothLines() const;
   virtual mouseState getMouseState() const {return mMouseState;}
-  virtual tool getTool() const {return mTool;}
   virtual void keyPressEvent(QKeyEvent*);
   virtual void mouseDoubleClickEvent(QMouseEvent* e);
   virtual void mouseMoveEvent(QMouseEvent* e);
@@ -95,8 +94,7 @@ private:
   const EditionData& mEditionData;
   MouseInfo mMouseInfo;
   mouseState mMouseState;
-  tool mTool;
-  tool mPreviousTool;
+  Controller::tool mPreviousTool;
 };
 
 } //realEdit
