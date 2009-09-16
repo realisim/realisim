@@ -61,6 +61,7 @@ namespace RealTraycer
     private DataReader _dataReader;
     private TGA _image;
     private string _inputFile = string.Empty;
+    private Dictionary<Triangle, List<Triangle>> _frontFaceTriangle = new Dictionary<Triangle, List<Triangle>>();
 
     public RealTracer(string inputFile)
     {
@@ -82,12 +83,18 @@ namespace RealTraycer
 
     private void CalculateFormFactor()
     {
+      List<Triangle> trglLst;
+
       for(int i = 0; i < Data.Instance.Triangles.Count; i++)
       {
+        trglLst = new List<Triangle>();
+        _frontFaceTriangle.Add(Data.Instance.Triangles[i], trglLst);
+
         for(int j = i; j < Data.Instance.Triangles.Count; j++)
         {
-          if (Data.Instance.Triangles[i].IsFrontFacing(Data.Instance.Triangles[j]))
-          {
+          if(Data.Instance.Triangles[i].IsFrontFacing(Data.Instance.Triangles[j]))
+          {            
+            trglLst.Add(Data.Instance.Triangles[j]);
           }
         }
       }
