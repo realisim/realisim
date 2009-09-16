@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealTraycer", "RealTraycer\RealTraycer.csproj", "{86935802-2718-46A6-90D9-DE643000978B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Realisim.Core", "Math\Realisim.Core.csproj", "{BD731063-6204-4047-83C0-487C1C75823A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tracer", "Tracer\Tracer.csproj", "{D8A82907-6A48-4D10-9052-3C7F087CDB6E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{86935802-2718-46A6-90D9-DE643000978B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86935802-2718-46A6-90D9-DE643000978B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86935802-2718-46A6-90D9-DE643000978B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86935802-2718-46A6-90D9-DE643000978B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD731063-6204-4047-83C0-487C1C75823A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD731063-6204-4047-83C0-487C1C75823A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD731063-6204-4047-83C0-487C1C75823A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD731063-6204-4047-83C0-487C1C75823A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8A82907-6A48-4D10-9052-3C7F087CDB6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8A82907-6A48-4D10-9052-3C7F087CDB6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8A82907-6A48-4D10-9052-3C7F087CDB6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8A82907-6A48-4D10-9052-3C7F087CDB6E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
