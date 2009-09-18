@@ -52,6 +52,8 @@ namespace RealTraycer
     private Vector _polyNormal;
     private Point _polyCenter;
 
+    private List<Triangle> _frontFacingTriangle = new List<Triangle>();
+
     public Point PtA
     {
       get { return _a; }
@@ -71,6 +73,11 @@ namespace RealTraycer
     public Point PolygonCenter
     {
       get { return _polyCenter; }
+    }
+
+    public List<Triangle> FrontFacingTriangle
+    {
+      get { return _frontFacingTriangle; }
     }
 
     public Triangle(Point a, Point b, Point c)
@@ -139,11 +146,12 @@ namespace RealTraycer
       vecProj.Normalise();
 
       vecProj.AddVector(_polyNormal);
+      vecProj.Normalise();
 
       if(vecProj.Norm >= -Definition.EPSILON && vecProj.Norm <= Definition.EPSILON)
-        return true;
-      else
         return false;
+      else
+        return true;
     }
 
   }
