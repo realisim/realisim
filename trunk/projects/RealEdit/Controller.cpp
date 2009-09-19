@@ -154,20 +154,28 @@ void Controller::translate(const Vector3d& iDelta)
 {
   if(getEditionData().hasSelection())
   {
-    for(uint i = 0; i < getEditionData().getSelectedPoints().size(); ++i)
+    if(getMode() == mEdition)
     {
-      RealEditPoint p = getEditionData().getSelectedPoints()[i];
-      p.set(p.pos() + iDelta);      
+      for(uint i = 0; i < getEditionData().getSelectedPoints().size(); ++i)
+      {
+        RealEditPoint p = getEditionData().getSelectedPoints()[i];
+        p.set(p.pos() + iDelta);      
+      }
+      
+  //    for(uint i = 0; i < getEditionData().getSelectedPolygons().size(); ++i)
+  //    {
+  //      RealEditPolygon p = getEditionData().getSelectedPolygons()[i];
+  //      p.updateNormals();      
+  //    }
+      getEditionData().getCurrentModel().updateNormals();
+      getEditionData().getCurrentModel().updateBoundingBox();
+    }
+    else
+    {
+      getEditionData().getCurrentNode()->translate(iDelta);
     }
     
-//    for(uint i = 0; i < getEditionData().getSelectedPolygons().size(); ++i)
-//    {
-//      RealEditPolygon p = getEditionData().getSelectedPolygons()[i];
-//      p.updateNormals();      
-//    }
-    getEditionData().getCurrentModel().updateNormals();
-    getEditionData().getCurrentModel().updateBoundingBox();
-      getUi().update();
+    getUi().update();
   }
 }
 

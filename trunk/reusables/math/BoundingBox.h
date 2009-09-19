@@ -6,6 +6,7 @@
 #define realisim_math_BoundingBox_hh
 
 #include <cassert>
+#include <limits>
 #include "Point.h"
 
 namespace realisim
@@ -32,8 +33,8 @@ protected:
 
 template<class T>
 BoundingBox<T>::BoundingBox() :
-  mMin((T)0),
-  mMax((T)0)
+  mMin(std::numeric_limits<T>::max()),
+  mMax(-std::numeric_limits<T>::max())
 {}
 
 template<class T>
@@ -52,8 +53,8 @@ void BoundingBox<T>::add (const Point<T>& iP)
 template<class T>
 void BoundingBox<T>::clear()
 {
-  mMin.set((T)0.0);
-  mMax.set((T)0.0);
+  mMin.set(std::numeric_limits<T>::max());
+  mMax.set(-std::numeric_limits<T>::max());
 }
 
 typedef BoundingBox<double> BB3d;
