@@ -284,9 +284,8 @@ Widget3d::paintGL()
   GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
   glLightfv(GL_LIGHT0, GL_POSITION, position);
              
-            
   //Ici on dessine les objets graphiques de la scene privée du widget.
-  //drawPrivateScene();
+  //drawPrimitives();
 }
 
 //-----------------------------------------------------------------------------

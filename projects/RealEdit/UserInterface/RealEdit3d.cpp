@@ -12,6 +12,7 @@
 #include "ObjectNode.h"
 #include <QCursor>
 #include <QMouseEvent>
+#include <QRect>
 #include "RealEdit3d.h"
 #include "Vect.h"
 
@@ -23,7 +24,26 @@ using namespace std;
 
 namespace
 {
+  struct Color
+  {
+    Color() : r(255), g(255), b(255), a(255) {;}
+    Color(GLubyte iR, GLubyte iG, GLubyte iB, GLubyte iA) : 
+      r(iR), g(iG), b(iB), a(iA) {;}
+    GLubyte r; GLubyte g; GLubyte b; GLubyte a;
+  };
+  
+  void color(const Color& iC) {glColor4ub(iC.r, iC.g, iC.b,iC.a);}
+
   const int kDragTreshold = 3; //3 pixels to go into drag mode
+  const Color kcLine(0, 255, 51, 255);
+  const Color kcModel();
+  const Color kcNormal(255, 255, 255, 255);
+  const Color kcPoint(0, 85, 176, 255);
+  const Color kcPolygon(217, 217, 217, 255);
+  const Color kcSelectedModel();
+  const Color kcSelectedPoint(255, 0, 0, 255);
+  const Color kcSelectedPolygon(255, 0, 0, 255);
+  const Color kcSelectionBox(255, 255, 255, 255);
 }
 
 RealEdit3d::RealEdit3d (QWidget* ipParent, 
@@ -35,7 +55,8 @@ mDisplayData (iC.getDisplayData ()),
 mEditionData (const_cast<const Controller&>(iC).getEditionData ()),
 mMouseInfo(),
 mMouseState(msIdle),
-mPreviousTool(mController.getTool())
+mPreviousTool(mController.getTool()),
+mShowSelectionBox(false)
 {
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
@@ -89,6 +110,7 @@ void RealEdit3d::changeCursor()
 //------------------------------------------------------------------------------
 void RealEdit3d::drawAxis() const
 {
+  glPushMatrix();
   mDisplayData.getAxis().setDisplayFlag(Primitives::pViewport);
   mDisplayData.getAxis().setDisplayFlag(Primitives::zViewport);
   //on place la primitive dans le coin inférieur droit
@@ -100,6 +122,7 @@ void RealEdit3d::drawAxis() const
   //on donne un taille de 20 pixels a la primitives
   glScaled(20.0, 20.0, 20.0);
   mDisplayData.drawAxis();
+  glPopMatrix();
 }
 
 //------------------------------------------------------------------------------
@@ -135,7 +158,7 @@ void RealEdit3d::drawLines(const RealEditModel& iM) const
   {
     const RealEditPolygon& poly = iM.getPolygon(i);
     
-    glColor4d( 0.0, 1.0, 0.2, 1.0);
+    color(kcLine);
     
     glBegin(GL_POLYGON);
     glNormal3d(poly.getNormals()[0].getX(),
@@ -215,9 +238,9 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
     const RealEditPoint& p = iM.getPoint (i);
     
     if(mEditionData.isSelected(p.getId()))
-      glColor3f(1.0, 0.0, 0.0);
+      color(kcSelectedPoint);
     else
-      glColor3d(0, 85/255.0, 176/255.0);
+      color(kcPoint);
     
     if(iPicking)
     {
@@ -256,9 +279,9 @@ void RealEdit3d::drawPolygons(const RealEditModel& iM,
     const RealEditPolygon& poly = iM.getPolygon(i);
     
     if(mEditionData.isSelected(poly.getId()))
-      glColor3f(1.0, 0.0, 0.0);
+      color(kcSelectedPolygon);
     else
-      glColor3f(0.85, 0.85, 0.85);
+      color(kcPolygon);
     
     if(iPicking)
     {
@@ -360,7 +383,7 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
         glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT |
                      GL_HINT_BIT);
           glDisable(GL_LIGHTING);
-          glColor4d(1.0, 1.0, 1.0, 1.0);
+          color(kcNormal);
           enableSmoothLines();
           drawNormals(model);
         glPopAttrib();
@@ -412,6 +435,50 @@ RealEdit3d::drawSceneForPicking(const realEdit::ObjectNode* ipObjectNode) const
 }
 
 //------------------------------------------------------------------------------
+void RealEdit3d::drawSelectionBox() const
+{
+  int windowWidth = getCamera().getWindowInfo().getWidth();
+  int windowHeight = getCamera().getWindowInfo().getHeight();
+  
+  glPushMatrix();
+  gluLookAt(0, 0, 5,
+    0, 0, 0,
+    0, 1, 0);
+  
+  //on fait un projection 2d de la taille du widget pour pouvoir positionner
+  //en coordonné pixel.
+  glMatrixMode (GL_PROJECTION);
+  glPushMatrix();
+  glLoadIdentity ();
+  gluOrtho2D (0, windowWidth, 0, windowHeight);
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+  
+  color(kcSelectionBox);
+  glPushAttrib(GL_ENABLE_BIT);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_LIGHTING);//
+  glEnable(GL_LINE_STIPPLE);
+  glLineStipple(1, 0x0F0F);
+  glBegin(GL_LINE_LOOP);
+  
+  glVertex2i(mMouseInfo.origin.x(), windowHeight - mMouseInfo.origin.y());
+  glVertex2i(mMouseInfo.end.x(), windowHeight - mMouseInfo.origin.y());
+  glVertex2i(mMouseInfo.end.x(), windowHeight - mMouseInfo.end.y());
+  glVertex2i(mMouseInfo.origin.x(), windowHeight - mMouseInfo.end.y());
+  glEnd();
+  glPopAttrib();
+  
+  glMatrixMode( GL_PROJECTION );
+  glPopMatrix();
+  glMatrixMode( GL_MODELVIEW );
+  glPopMatrix();
+
+  glPopMatrix();
+}
+
+//------------------------------------------------------------------------------
 //active les etats gl pour l'antialisaing sur les lignes
 //ATTENTION!!! mettre le 
 //pushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_HINT_BIT) avant d'appeler
@@ -433,6 +500,8 @@ void RealEdit3d::keyPressEvent(QKeyEvent* e)
   {
     case Qt::Key_Escape:
         setMouseState(msIdle);
+        showSelectionBox(false);
+        update();
       break;
     default:
       break;
@@ -449,20 +518,23 @@ void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* e)
 void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
 {
   makeCurrent();
-  mMouseInfo.delta = Point3i(e->x(), e->y(), 0) - mMouseInfo.end;
-  mMouseInfo.end.setXYZ(e->x(), e->y(), 0);
+  mMouseInfo.delta = QPoint(e->x(), e->y()) - mMouseInfo.end;
+  mMouseInfo.end = QPoint(e->x(), e->y());
   
   //On calcul le delta (pixel) de la souris en deltaGL.
   //on prend -Y pcq l'axe pixel est inversé de l'axe GL
   Vector3d deltaGL =
-    getCamera().pixelDeltaToGLDelta(mMouseInfo.delta.getX(),
-      -mMouseInfo.delta.getY());
+    getCamera().pixelDeltaToGLDelta(mMouseInfo.delta.x(),
+      -mMouseInfo.delta.y());
   
   switch (getMouseState()) 
   {
     case msCamera:
-      if( mMouseInfo.end.dist(mMouseInfo.origin) >= kDragTreshold )
-        setMouseState(msCameraDrag);
+      {
+        QPoint p = mMouseInfo.end - mMouseInfo.origin;
+        if( p.manhattanLength() >= kDragTreshold )
+          setMouseState(msCameraDrag);
+      }
       break;
     case msCameraDrag:
     {
@@ -473,12 +545,19 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
     case msIdle:
       break;
     case msDown:
-      if( mMouseInfo.end.dist(mMouseInfo.origin) >= kDragTreshold )
-        setMouseState(msDrag);
+      {
+        QPoint p = mMouseInfo.end - mMouseInfo.origin;
+        if( p.manhattanLength() >= kDragTreshold )
+          setMouseState(msDrag);
+      }
       break;
     case msDrag:
       switch (mController.getTool())
       {
+        case Controller::tSelection:
+          showSelectionBox(true);
+          update();
+          break;
         case Controller::tTranslation:
           mController.translate(deltaGL);
           break;
@@ -497,8 +576,8 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
 void RealEdit3d::mousePressEvent(QMouseEvent* e)
 {
   makeCurrent();
-  mMouseInfo.origin.setXYZ(e->x(), e->y(), 0);
-  mMouseInfo.end.setXYZ(e->x(), e->y(), 0);
+  mMouseInfo.origin = QPoint(e->x(), e->y());
+  mMouseInfo.end = QPoint(e->x(), e->y());
   
   switch (getMouseState()) 
   {
@@ -539,8 +618,10 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
         {
           vector<uint> selectedIds;
           vector<Hits> hits = pick(e->x(), e->y());
-          for(uint i = 0; i < hits.size(); ++i)
-            selectedIds.push_back(hits[i].getId());
+          //puisque les Hits sont tries en Z, on prend le premier de la liste
+          //en sachant que c'est le plus proche de la camera.
+          if(!hits.empty())
+            selectedIds.push_back(hits.front().getId());
           mController.select(selectedIds);
         }
           break;
@@ -553,6 +634,20 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
       switch (mController.getTool()) 
       {
         case Controller::tSelection:
+        {
+          showSelectionBox(false);
+          //on trouve la taille du rectangle de selection ainsi que le point
+          //milieu de ce rectangle.
+          QRect selectionRect(mMouseInfo.origin, mMouseInfo.end);
+          QPoint center = selectionRect.center();
+          
+          vector<uint> selectedIds;
+          vector<Hits> hits = pick(center.x(), center.y(),
+            abs(selectionRect.width()), abs(selectionRect.height()));
+          for(uint i = 0; i < hits.size(); i++)
+            selectedIds.push_back(hits[i].getId());
+          mController.select(selectedIds);
+        }
           break;
         default:
           break;
@@ -569,7 +664,8 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
 //------------------------------------------------------------------------------
 /*voir http://www.lighthouse3d.com/opengl/picking/index.php?openglway2 
   pour plus d'info*/
-vector<RealEdit3d::Hits> RealEdit3d::pick(int x, int y)
+vector<RealEdit3d::Hits> RealEdit3d::pick(int iX, int iY, int iWidth /*= 1*/,
+  int iHeight /*= 1*/ )
 {
   const int BUFSIZE = 1024;
   unsigned int selectBuf[BUFSIZE];
@@ -585,12 +681,12 @@ vector<RealEdit3d::Hits> RealEdit3d::pick(int x, int y)
   glPushMatrix();
   glLoadIdentity();
   //Creat a 1 x 1 pixel picking region near the cursor
-  gluPickMatrix( (GLdouble) x, (GLdouble) (viewport[3] - y),
-                1, 1, viewport );
+  gluPickMatrix( (GLdouble) iX, (GLdouble) (viewport[3] - iY),
+                iWidth, iHeight, viewport );
 
   //viewport[2]: width 
   //viewport[3]: height
-  mCam.projectionGL(viewport[2], viewport[3]);
+  getCamera().projectionGL(viewport[2], viewport[3]);
   glMatrixMode(GL_MODELVIEW);
   glInitNames();
   
@@ -663,6 +759,10 @@ void RealEdit3d::paintGL()
   Widget3d::paintGL();
   drawScene( mEditionData.getScene().getObjectNode() );
   drawAxis();
+  
+  //Draw 2d selection box on top of the other
+  if(isSelectionBoxShown())
+    drawSelectionBox();
 }
 
 //------------------------------------------------------------------------------
