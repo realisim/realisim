@@ -163,10 +163,10 @@ Widget3d::initializeGL()
     glShadeModel(GL_SMOOTH);
 
     //define material props
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_ambiant);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_diffuse);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_specular);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shininess);
+    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambiant);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
 
     //init lights
     glLightfv(GL_LIGHT0, GL_POSITION, position);
@@ -178,8 +178,6 @@ Widget3d::initializeGL()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
-    glEnable(GL_CULL_FACE);  //on ne dessine pas les back-facing polygons
-    glCullFace(GL_BACK);
 }
 
 //-----------------------------------------------------------------------------

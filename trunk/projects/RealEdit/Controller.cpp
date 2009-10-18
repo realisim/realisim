@@ -2,7 +2,6 @@
 #include "commands, changeMode.h"
 #include "commands, changeNode.h"
 #include "commands, changeTool.h"
-#include "commands, selection.h"
 #include "DataModel.h"
 #include "EditionUi.h"
 #include "MathUtils.h"
@@ -19,7 +18,8 @@ Controller::Controller(EditionUi& iEditionUi) :
   mEditionUi(iEditionUi),
   mEditionData(),
   mMode(mEdition),
-  mTool(tSelection)
+  mTool(tSelection),
+  mpSelectionCommand(0)
 {
 //  ObjectNode* pRootNode = getEditionData().getCurrentNode();
 //  vector<RealEditPoint> vPoints;
@@ -50,11 +50,15 @@ Controller::Controller(EditionUi& iEditionUi) :
     Vector3d( 0.0, 0.0, 1.0 ) );
   pNode->translate( Vector3d( -8.0, 0.0, 0.0 ) );
   getEditionData().setCurrentNode( pNode );
-  createPlatonicSolid(PlatonicSolid::tIsocahedron, 1);
+  createPlatonicSolid(PlatonicSolid::tIsocahedron, 3);
 }
 
 Controller::~Controller()
 {
+  //s'il y a des commandes qui n'ont pas été assigné au commandStack, il faut
+  //les deleter manuellement
+  if(mpSelectionCommand)
+    {delete mpSelectionCommand; mpSelectionCommand = 0;}
 }
 
 //------------------------------------------------------------------------------
@@ -109,11 +113,23 @@ void Controller::redo()
 
 //------------------------------------------------------------------------------
 //select all ids from the vector.
-void Controller::select(const vector<uint>& iS)
+void Controller::select(const uint iS, commands::Selection::mode iMode)
 {
-  commands::Selection* c = new commands::Selection(getEditionData(), iS);
-  getCommandStack().add(c);
+  if(mpSelectionCommand == 0)
+    mpSelectionCommand = new commands::Selection(getEditionData(), iS, iMode);
+  else
+    mpSelectionCommand->update(iS, iMode);
+    
+  mpSelectionCommand->execute();
   getUi().update();
+}
+
+//------------------------------------------------------------------------------
+void Controller::selectEnd()
+{
+  if(mpSelectionCommand)
+    mCommandStack.add(mpSelectionCommand);
+  mpSelectionCommand = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -125,6 +141,7 @@ void Controller::setCurrentNode (const ObjectNode* ipNode)
   {
     commands::ChangeNode* c = new commands::ChangeNode(getEditionData(),
       getUi(), ipNode);
+    c->execute();
     getCommandStack().add(c);
   }
 }
@@ -135,6 +152,7 @@ void Controller::setMode(mode iMode)
   if(mMode != iMode)
   {
     commands::ChangeMode* c = new commands::ChangeMode(*this, getUi(), iMode);
+    c->execute();
     getCommandStack().add(c);
   }
 }
@@ -145,6 +163,7 @@ void Controller::setTool(tool iTool)
   if(mTool != iTool)
   {
     commands::ChangeTool* c = new commands::ChangeTool(*this, getUi(), iTool);
+    c->execute();
     getCommandStack().add(c);
   }
 }
@@ -161,12 +180,7 @@ void Controller::translate(const Vector3d& iDelta)
         RealEditPoint p = getEditionData().getSelectedPoints()[i];
         p.set(p.pos() + iDelta);      
       }
-      
-  //    for(uint i = 0; i < getEditionData().getSelectedPolygons().size(); ++i)
-  //    {
-  //      RealEditPolygon p = getEditionData().getSelectedPolygons()[i];
-  //      p.updateNormals();      
-  //    }
+
       getEditionData().getCurrentModel().updateNormals();
       getEditionData().getCurrentModel().updateBoundingBox();
     }
