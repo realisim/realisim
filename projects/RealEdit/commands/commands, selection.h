@@ -8,6 +8,7 @@
 
 namespace realEdit{class EditionData;}
 #include "Command.h"
+#include <set>
 #include <vector>
 
 namespace realEdit
@@ -18,16 +19,19 @@ namespace commands
   class Selection : public realisim::utils::Command
   {
    public:
-     explicit Selection(EditionData&, const vector<unsigned int>&);
+     enum mode{mAdditive, mNormal, mSubtractive};
+     
+     explicit Selection(EditionData&, const unsigned int, mode);
      virtual ~Selection();
      
      virtual void execute();
      virtual void undo();
+     virtual void update(const unsigned int, mode);
      
-  private:    
+  protected:
     realEdit::EditionData& mEditionData;
-    vector<unsigned int> mPreviousSelection;
-    vector<unsigned int> mSelection;
+    set<unsigned int> mPreviousSelection;
+    vector<pair<unsigned int, mode> > mSelection;
   };
 }
 }

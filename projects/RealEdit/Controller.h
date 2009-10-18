@@ -19,16 +19,19 @@ Controller.h
 #define RealEdit_controller_hh
 
 #include "CommandStack.h"
+#include "commands, selection.h"
 #include "DataModel.h"
 #include "DisplayData.h"
 #include "EditionData.h"
 namespace realEdit{class EditionUi;}
 namespace realEdit{namespace commands{class ChangeMode;}}
 namespace realEdit{namespace commands{class ChangeTool;}}
+namespace realEdit{namespace commands{class Selection;}}
 #include "PlatonicSolid.h"
 
 namespace realEdit
 { 
+  using namespace commands;
 
 class Controller 
 {
@@ -48,7 +51,9 @@ public:
   void newProject();
   void redo();
   void undo();
-  void select(const vector<uint>&);
+  
+  void select(const uint, Selection::mode);
+  void selectEnd();
   void setCurrentNode (const ObjectNode* ipNode);
   void setMode(mode iM);
   void setTool(tool);
@@ -67,6 +72,9 @@ private:
   EditionData mEditionData;
   mode mMode;
   tool mTool;
+  
+  //--- Commands
+  commands::Selection* mpSelectionCommand;
 };
 
 } //realEdit

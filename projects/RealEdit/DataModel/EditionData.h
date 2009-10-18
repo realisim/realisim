@@ -12,6 +12,7 @@
 
 #include "ObjectNode.h"
 #include "Point.h"
+#include <set>
 
 namespace realEdit
 {
@@ -55,17 +56,17 @@ public:
   ObjectNode* getCurrentNode ();
   vector<RealEditPoint>& getSelectedPoints() {return mSelectedPoints;}
   vector<RealEditPolygon>& getSelectedPolygons() {return mSelectedPolygons;}
-  const vector<uint>& getSelection() const {return mSelection;}
+  const set<uint>& getSelection() const {return mSelection;}
+  set<uint>& getSelection() {return mSelection;}
   const Scene& getScene () const;
   Scene& getScene ();
-  void select(const vector<uint>&);
   void setCurrentNode (const ObjectNode* ipNode);
   
 private:
   RealEditModel mCurrentModel;
   ObjectNode* mpCurrentNode; //Ne sera jamais Null
   Scene mScene;
-  vector<uint> mSelection;
+  set<uint> mSelection;
   vector<RealEditPoint> mSelectedPoints;
   vector<RealEditPolygon> mSelectedPolygons;
 };

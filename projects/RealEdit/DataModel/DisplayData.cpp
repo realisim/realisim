@@ -22,7 +22,6 @@ void DisplayData::drawCube() const
 {
   glPushAttrib(GL_POLYGON_BIT | GL_ENABLE_BIT);
   glDisable(GL_LIGHTING);
-  glDisable(GL_CULL_FACE);
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   glCallList(mCube.getDisplayList());
   glPopAttrib();

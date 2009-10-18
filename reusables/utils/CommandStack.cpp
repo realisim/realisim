@@ -43,7 +43,6 @@ void CommandStack::add(Command* ipC)
   
   //on ajoute et execute la commande insérée
   mCommands.push_back(ipC);
-  ipC->execute();
   mIndex = mCommands.size() - 1;
 }
 

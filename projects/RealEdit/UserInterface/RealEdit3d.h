@@ -111,6 +111,7 @@ private:
   mouseState mMouseState;
   Controller::tool mPreviousTool;
   bool mShowSelectionBox;
+  unsigned int mHoverId;
 };
 
 } //realEdit
