@@ -2,6 +2,7 @@
 #include "commands, changeMode.h"
 #include "commands, changeNode.h"
 #include "commands, changeTool.h"
+#include "commands, translate.h"
 #include "DataModel.h"
 #include "EditionUi.h"
 #include "MathUtils.h"
@@ -19,7 +20,8 @@ Controller::Controller(EditionUi& iEditionUi) :
   mEditionData(),
   mMode(mEdition),
   mTool(tSelection),
-  mpSelectionCommand(0)
+  mpSelection(0),
+  mpTranslate(0)
 {
 //  ObjectNode* pRootNode = getEditionData().getCurrentNode();
 //  vector<RealEditPoint> vPoints;
@@ -57,8 +59,11 @@ Controller::~Controller()
 {
   //s'il y a des commandes qui n'ont pas été assigné au commandStack, il faut
   //les deleter manuellement
-  if(mpSelectionCommand)
-    {delete mpSelectionCommand; mpSelectionCommand = 0;}
+  if(mpSelection)
+    {delete mpSelection; mpSelection = 0;}
+  if(mpTranslate)
+    {delete mpTranslate; mpTranslate = 0;}
+
 }
 
 //------------------------------------------------------------------------------
@@ -115,21 +120,21 @@ void Controller::redo()
 //select all ids from the vector.
 void Controller::select(const uint iS, commands::Selection::mode iMode)
 {
-  if(mpSelectionCommand == 0)
-    mpSelectionCommand = new commands::Selection(getEditionData(), iS, iMode);
+  if(mpSelection == 0)
+    mpSelection = new commands::Selection(getEditionData(), iS, iMode);
   else
-    mpSelectionCommand->update(iS, iMode);
+    mpSelection->update(iS, iMode);
     
-  mpSelectionCommand->execute();
+  mpSelection->execute();
   getUi().update();
 }
 
 //------------------------------------------------------------------------------
 void Controller::selectEnd()
 {
-  if(mpSelectionCommand)
-    mCommandStack.add(mpSelectionCommand);
-  mpSelectionCommand = 0;
+  if(mpSelection)
+    mCommandStack.add(mpSelection);
+  mpSelection = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -171,27 +176,23 @@ void Controller::setTool(tool iTool)
 //------------------------------------------------------------------------------
 void Controller::translate(const Vector3d& iDelta)
 {
-  if(getEditionData().hasSelection())
-  {
-    if(getMode() == mEdition)
-    {
-      for(uint i = 0; i < getEditionData().getSelectedPoints().size(); ++i)
-      {
-        RealEditPoint p = getEditionData().getSelectedPoints()[i];
-        p.set(p.pos() + iDelta);      
-      }
-
-      getEditionData().getCurrentModel().updateNormals();
-      getEditionData().getCurrentModel().updateBoundingBox();
-    }
-    else
-    {
-      getEditionData().getCurrentNode()->translate(iDelta);
-    }
+  if(mpTranslate == 0)
+    mpTranslate = new commands::Translate(getEditionData(), iDelta, getMode());
+  else
+    mpTranslate->update(iDelta);
     
-    getUi().update();
-  }
+  mpTranslate->execute();
+  getUi().update();
 }
+
+//------------------------------------------------------------------------------
+void Controller::translateEnd()
+{
+  if(mpTranslate)
+    getCommandStack().add(mpTranslate);
+  mpTranslate = 0;
+}
+
 
 //------------------------------------------------------------------------------
 void Controller::undo()

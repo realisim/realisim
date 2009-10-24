@@ -11,6 +11,7 @@ using namespace realEdit;
 using namespace std;
   
 Selection::Selection(EditionData& iEd, const unsigned int iS, mode iMode) :
+  Command(),
   mEditionData(iEd),
   mPreviousSelection(mEditionData.getSelection()),
   mSelection()
@@ -25,11 +26,6 @@ Selection::~Selection()
 void Selection::execute()
 {
   set<uint>& selection = mEditionData.getSelection();
-  vector<RealEditPoint>& points = mEditionData.getSelectedPoints();
-  vector<RealEditPolygon>& polygons = mEditionData.getSelectedPolygons();
-  
-  points.clear();
-  polygons.clear();
   
   vector<pair<unsigned int, mode> >::const_iterator it = mSelection.begin();
   for(; it != mSelection.end(); ++it)
@@ -47,38 +43,14 @@ void Selection::execute()
       if(itToRemove != selection.end())
         selection.erase(itToRemove);
     }
-  }  
-  
-  {
-    /*a partir de la selection, on crée la liste de tous les points (unique)
-    selectionnés. Les commandes (translate, rotate, scale etc...) s'effectueront
-    sur ces points.*/
-    set<unsigned int> uniquePointIds;
-    set<unsigned int>::const_iterator it = selection.begin();
-    for(; it != selection.end(); ++it)
-    {
-      if(mEditionData.getCurrentModel().hasPoint(*it))
-        uniquePointIds.insert(*it);
-      else if(mEditionData.getCurrentModel().hasPolygon(*it))
-      {
-        const RealEditPolygon& p =
-          mEditionData.getCurrentModel().getPolygonFromId(*it);
-        polygons.push_back(p);
-        for(unsigned int j = 0; j < p.getPointCount(); ++j )
-          uniquePointIds.insert(p.getPoint(j).getId());
-      }
-    }
-    
-    it = uniquePointIds.begin();
-    for(; it != uniquePointIds.end(); ++it)
-      points.push_back(
-        mEditionData.getCurrentModel().getPointFromId(*it));
   }
+  
+  mEditionData.select(selection);
 }
 
 //------------------------------------------------------------------------------
 void Selection::undo()
-{mEditionData.getSelection() = mPreviousSelection;}
+{mEditionData.select(mPreviousSelection);}
 
 //------------------------------------------------------------------------------
 void Selection::update(const unsigned int iS, mode iMode)

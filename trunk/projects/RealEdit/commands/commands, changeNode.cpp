@@ -13,6 +13,7 @@ using namespace realEdit;
   using namespace commands;
   
 ChangeNode::ChangeNode(EditionData& iEd, EditionUi& iUi, const ObjectNode* ipNode) :
+  Command(),
   mEditionData(iEd),
   mUi(iUi),
   mpPreviousNode(mEditionData.getCurrentNode()),

@@ -120,3 +120,35 @@ void EditionData::setCurrentNode (const ObjectNode* ipNode)
   mpCurrentNode = const_cast<ObjectNode*> (ipNode);
   mCurrentModel = mpCurrentNode->getModel ();
 }
+
+//-----------------------------------------------------------------------------
+void EditionData::select(const set<uint>& iS)
+{
+  mSelection = iS;
+  mSelectedPoints.clear();
+  mSelectedPolygons.clear();
+  
+  /*a partir de la selection, on crée la liste de tous les points (unique)
+  selectionnés. Les commandes (translate, rotate, scale etc...) s'effectueront
+  sur ces points.*/
+  set<unsigned int> uniquePointIds;
+  set<unsigned int>::const_iterator it = iS.begin();
+  for(; it != iS.end(); ++it)
+  {
+    if(getCurrentModel().hasPoint(*it))
+      uniquePointIds.insert(*it);
+    else if(getCurrentModel().hasPolygon(*it))
+    {
+      const RealEditPolygon& p =
+        getCurrentModel().getPolygon(*it);
+      mSelectedPolygons.push_back(p);
+      for(unsigned int j = 0; j < p.getPointCount(); ++j )
+        uniquePointIds.insert(p.getPoint(j).getId());
+    }
+  }
+  
+  it = uniquePointIds.begin();
+  for(; it != uniquePointIds.end(); ++it)
+    mSelectedPoints.push_back(
+      getCurrentModel().getPoint(*it));
+}
