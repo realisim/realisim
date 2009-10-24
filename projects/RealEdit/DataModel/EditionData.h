@@ -60,6 +60,7 @@ public:
   set<uint>& getSelection() {return mSelection;}
   const Scene& getScene () const;
   Scene& getScene ();
+  void select(const set<uint>& iS);
   void setCurrentNode (const ObjectNode* ipNode);
   
 private:

@@ -17,6 +17,7 @@ using namespace realEdit;
   
 ChangeTool::ChangeTool(Controller& iC, EditionUi& iUi,
   Controller::tool iTool) :
+  Command(),
   mController(iC),
   mUi(iUi),
   mPreviousTool(iC.getTool()),

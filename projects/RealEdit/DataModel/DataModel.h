@@ -10,8 +10,9 @@
 #include "Primitives.h"
 #include "Vect.h"
 
-#include <vector>
 #include <cassert>
+#include <vector>
+#include <map>
 
 namespace realEdit
 {
@@ -65,14 +66,28 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-//class LineSegment : public DataModelBase 
+//class RealEditEdge : public DataModelBase 
 //{
 //public:
-//  LineSegment();
-//  ~LineSegment();
+//  RealEditEdge();
+//  RealEditEdge(const RealEditEdge&);
+//  RealEditEdge& operator=(const RealEditEdge&);
+//  virtual ~RealEditEdge();
 //
-//  virtual void draw() const;
 //private:
+//	struct Guts
+//  {
+//    Guts();
+//    Guts(RealEditPoint, RealEditPoint);
+//    ~Guts();
+//    
+//    unsigned int mRefCount;
+//    RealEditPoint mPoint1;
+//    RealEditPoint mPoint2;
+//  };
+//  
+//  Guts* mpGuts;
+//
 //};
 //
 //-----------------------------------------------------------------------------
@@ -85,11 +100,11 @@ public:
   RealEditPolygon& operator= (const RealEditPolygon& iP);
   virtual ~RealEditPolygon ();
 
+  virtual void computeNormals();
   virtual const RealEditPoint& getPoint(unsigned int iIndex) const;
   virtual const std::vector<RealEditPoint>& getPoints() const;
   virtual unsigned int getPointCount() const;
   virtual const std::vector<Vector3d>& getNormals() const;
-  virtual void computeNormals();
   
 private:
   struct Guts
@@ -125,15 +140,15 @@ public:
 sur un object qui est partagé implicitement. Donc si l'utilisateur fait une
 copie et modifie la copie, il modifiera aussi l'object référencé qui se
 veut const!!!*/
-virtual const RealEditPoint& getPoint (unsigned int iIndex) const;
-virtual const RealEditPoint& getPointFromId(unsigned int) const;
+virtual const RealEditPoint& getPoint(unsigned int) const;
+virtual const std::map<unsigned int, RealEditPoint>& getPoints() const;
   virtual unsigned int getPolygonCount () const;
 /*c'est méthode const sont dangereuses parce quelle retourne une reference
 sur un object qui est partagé implicitement. Donc si l'utilisateur fait une
 copie et modifie la copie, il modifiera aussi l'object référencé qui se
 veut const!!!*/  
-virtual const RealEditPolygon& getPolygon (unsigned int iIndex) const;
-virtual const RealEditPolygon& getPolygonFromId(unsigned int) const;
+virtual const RealEditPolygon& getPolygon(unsigned int) const;
+virtual const std::map<unsigned int, RealEditPolygon>& getPolygons() const;
   virtual bool hasPoint(unsigned int) const;
   virtual bool hasPolygon(unsigned int) const;
   virtual void updateBoundingBox();
@@ -146,9 +161,9 @@ private:
     ~Guts();
     
     BB3d mBoundingBox;
-    std::vector<RealEditPoint> mPoints;
+    std::map<unsigned int, RealEditPoint> mPoints;
     //std::vector<LineSegment> mLineSegments;
-    std::vector<RealEditPolygon> mPolygons;
+    std::map<unsigned int, RealEditPolygon> mPolygons;
     unsigned int mRefCount;
   };
   

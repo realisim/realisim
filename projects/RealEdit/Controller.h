@@ -9,6 +9,12 @@ Controller.h
   (la méthode setMode() par exemple). Dans ces cas, les commandes impliquées 
   doivent être friend avec Controller afin de leur permettre de modifier
   les membres de ce dernier.
+  De plus, certaines commandes comme selection ou translate ont des états
+  intermédiaires. i.e: Lors du drag de la souris, on execute la commande mais on
+  ne veut pas stocker le résultat dans le CommandStack parce qu'on ne veut pas
+  que ça fasse partie du undo/redo. Dans ce cas, le Controller possède un
+  pointeur sur la commande et gère manuellement le moment ou celle-ci est 
+  ajouté au CommandStack.
 
   invariants:
   mpEditionUi != 0
@@ -26,7 +32,7 @@ Controller.h
 namespace realEdit{class EditionUi;}
 namespace realEdit{namespace commands{class ChangeMode;}}
 namespace realEdit{namespace commands{class ChangeTool;}}
-namespace realEdit{namespace commands{class Selection;}}
+namespace realEdit{namespace commands{class Translate;}}
 #include "PlatonicSolid.h"
 
 namespace realEdit
@@ -58,6 +64,7 @@ public:
   void setMode(mode iM);
   void setTool(tool);
   void translate(const Vector3d&);
+  void translateEnd();
 
 protected:
   void createPlatonicSolid(PlatonicSolid::type, int = 0);
@@ -74,7 +81,8 @@ private:
   tool mTool;
   
   //--- Commands
-  commands::Selection* mpSelectionCommand;
+  commands::Selection* mpSelection;
+  commands::Translate* mpTranslate;
 };
 
 } //realEdit

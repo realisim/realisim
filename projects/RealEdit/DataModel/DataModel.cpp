@@ -6,9 +6,10 @@
 #include "Polygon.h"
 #include <iostream>
 
+using namespace std;
 using namespace realisim;
-using namespace realisim::math;
-using namespace realisim::treeD;
+	using namespace realisim::math;
+	using namespace realisim::treeD;
 using namespace realEdit;
 
 //initialisation du membre static de DataModelBase
@@ -252,13 +253,13 @@ RealEditModel::~RealEditModel ()
 //------------------------------------------------------------------------------
 void RealEditModel::addPoint (const RealEditPoint iP)
 {
-  mpGuts->mPoints. push_back (iP);
-  mpGuts->mBoundingBox. add (iP.pos ());
+  mpGuts->mPoints.insert(make_pair(iP.getId(), iP));
+  mpGuts->mBoundingBox.add(iP.pos());
 }
 
 //------------------------------------------------------------------------------
 void RealEditModel::addPolygon (const RealEditPolygon iP)
-{ mpGuts->mPolygons. push_back (iP); }
+{ mpGuts->mPolygons.insert(make_pair(iP.getId(), iP)); }
 
 //------------------------------------------------------------------------------
 const BB3d& RealEditModel::getBoundingBox () const
@@ -269,51 +270,51 @@ unsigned int RealEditModel::getPointCount () const
 { return mpGuts->mPoints.size(); }
 
 //------------------------------------------------------------------------------
-const RealEditPoint& RealEditModel::getPoint (unsigned int iIndex) const
-{ return mpGuts->mPoints[iIndex]; }
-
-//------------------------------------------------------------------------------
-const RealEditPoint& RealEditModel::getPointFromId (unsigned int iId) const
+const RealEditPoint& RealEditModel::getPoint(unsigned int iId) const
 {
-  unsigned int i;
-  for(i = 0; i < mpGuts->mPoints.size(); ++i)
-    if(mpGuts->mPoints[i].getId() == iId)
-      return mpGuts->mPoints[i];
+  map<unsigned int, RealEditPoint>::iterator it = mpGuts->mPoints.find(iId);
+  if(it != mpGuts->mPoints.end())
+    return it->second;
   return mDummyPoint;
 }
+
+//------------------------------------------------------------------------------
+const map<unsigned int, RealEditPoint>& RealEditModel::getPoints () const
+{ return mpGuts->mPoints; }
 
 //------------------------------------------------------------------------------
 unsigned int RealEditModel::getPolygonCount () const
 { return mpGuts->mPolygons.size(); }
 
 //------------------------------------------------------------------------------
-const RealEditPolygon& RealEditModel::getPolygon (unsigned int iIndex) const
-{ return mpGuts->mPolygons[iIndex]; }
-
-//------------------------------------------------------------------------------
-const RealEditPolygon& RealEditModel::getPolygonFromId (unsigned int iId) const
+const RealEditPolygon& RealEditModel::getPolygon(unsigned int iId) const
 {
-  unsigned int i;
-  for(i = 0; i < mpGuts->mPolygons.size(); ++i)
-    if(mpGuts->mPolygons[i].getId() == iId)
-      return mpGuts->mPolygons[i];
+  map<unsigned int, RealEditPolygon>::iterator it = mpGuts->mPolygons.find(iId);
+  if(it != mpGuts->mPolygons.end())
+    return it->second;
   return mDummyPolygon;
 }
 
 //------------------------------------------------------------------------------
+const map<unsigned int, RealEditPolygon>& RealEditModel::getPolygons() const
+{ return mpGuts->mPolygons; }
+
+//------------------------------------------------------------------------------
 bool RealEditModel::hasPoint (unsigned int iId) const
 {
-  for(unsigned int i = 0; i < mpGuts->mPoints.size(); ++i)
-    if(mpGuts->mPoints[i].getId() == iId)
-      return true;
+  map<unsigned int, RealEditPoint>::const_iterator it;
+  it = mpGuts->mPoints.find(iId);
+  if(it != mpGuts->mPoints.end())
+    return true;
   return false;
 }
 
 //------------------------------------------------------------------------------
 bool RealEditModel::hasPolygon (unsigned int iId) const
 {
-  for(unsigned int i = 0; i < mpGuts->mPolygons.size(); ++i)
-    if(mpGuts->mPolygons[i].getId() == iId)
+  map<unsigned int, RealEditPolygon>::const_iterator it;
+  it = mpGuts->mPolygons.find(iId);
+  if(it != mpGuts->mPolygons.end())
       return true;
   return false;
 }
@@ -322,13 +323,23 @@ bool RealEditModel::hasPolygon (unsigned int iId) const
 void RealEditModel::updateBoundingBox()
 {
   mpGuts->mBoundingBox.clear();
-  for(unsigned int i = 0; i < getPointCount(); ++i)
-    mpGuts->mBoundingBox.add(getPoint(i).pos());
+  
+  map<unsigned int, RealEditPoint>::const_iterator it = mpGuts->mPoints.begin();
+  while(it != mpGuts->mPoints.end())
+  {
+    mpGuts->mBoundingBox.add(it->second.pos());
+    ++it;
+  }
 }
 
 //------------------------------------------------------------------------------
 void RealEditModel::updateNormals()
 {
-  for(unsigned int i = 0; i < getPolygonCount(); ++i)
-    mpGuts->mPolygons[i].computeNormals();
+  map<unsigned int, RealEditPolygon>::iterator it;
+  it = mpGuts->mPolygons.begin();
+  while(it != mpGuts->mPolygons.end())
+  {
+    it->second.computeNormals();
+    ++it;
+  }
 }

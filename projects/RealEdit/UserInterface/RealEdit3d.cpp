@@ -148,9 +148,14 @@ void RealEdit3d::drawBoundingBox(const RealEditModel& iM,
 //------------------------------------------------------------------------------
 void RealEdit3d::drawLines(const RealEditModel& iM) const
 {
-  for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
+  map<unsigned int, RealEditPolygon>::const_iterator it =
+    iM.getPolygons().begin();
+  while(it != iM.getPolygons().end())
   {
-    const RealEditPolygon& poly = iM.getPolygon(i);
+    const RealEditPolygon& poly = it->second;
+//  for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
+//  {
+//    const RealEditPolygon& poly = iM.getPolygon(i);
     
     color(kcLine);
     
@@ -174,15 +179,22 @@ void RealEdit3d::drawLines(const RealEditModel& iM) const
                poly.getPoints()[2].y (),
                poly.getPoints()[2].z ());
     glEnd();
+    
+    ++it;
   }
 }
 
 //------------------------------------------------------------------------------
 void RealEdit3d::drawNormals(const RealEditModel& iM) const
 {
-  for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
+  map<unsigned int, RealEditPolygon>::const_iterator it =
+    iM.getPolygons().begin();
+  while(it != iM.getPolygons().end())
   {
-    const RealEditPolygon& poly = iM.getPolygon(i);
+    const RealEditPolygon& poly = it->second;
+//  for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
+//  {
+//    const RealEditPolygon& poly = iM.getPolygon(i);
     
     glPushMatrix();
     glTranslated(poly.getPoints()[0].x(),
@@ -219,6 +231,8 @@ void RealEdit3d::drawNormals(const RealEditModel& iM) const
                  poly.getNormals()[2].getZ());
     glEnd();
     glPopMatrix();
+    
+    ++it;
   }
 }
 
@@ -227,9 +241,14 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
   bool iPicking /*= false*/) const
 {
   //dessiner les points du modele
-  for (unsigned int i = 0; i < iM.getPointCount(); ++i)
+  map<unsigned int, RealEditPoint>::const_iterator it =
+    iM.getPoints().begin();
+  while(it != iM.getPoints().end())
   {
-    const RealEditPoint& p = iM.getPoint (i);
+    const RealEditPoint& p = it->second;
+//  for (unsigned int i = 0; i < iM.getPointCount(); ++i)
+//  {
+//    const RealEditPoint& p = iM.getPoint (i);
     
     if(mEditionData.isSelected(p.getId()))
       color(kcSelectedPoint);
@@ -252,6 +271,8 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
       mDisplayData.drawCube();
     glPopAttrib();
     glPopMatrix();
+    
+    ++it;
   }
 }
 
@@ -259,9 +280,14 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
 void RealEdit3d::drawPolygons(const RealEditModel& iM,
   bool iPicking /*= false*/) const
 {
-  for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
+  map<unsigned int, RealEditPolygon>::const_iterator it =
+    iM.getPolygons().begin();
+  while(it != iM.getPolygons().end())
   {
-    const RealEditPolygon& poly = iM.getPolygon(i);
+    const RealEditPolygon& poly = it->second;
+//  for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
+//  {
+//    const RealEditPolygon& poly = iM.getPolygon(i);
     
     if(mEditionData.isSelected(poly.getId()))
       color(kcSelectedPolygon);
@@ -293,7 +319,8 @@ void RealEdit3d::drawPolygons(const RealEditModel& iM,
                poly.getPoints()[2].y (),
                poly.getPoints()[2].z ());
     glEnd();
-    
+   
+    ++it; 
   }
 }
 
@@ -348,7 +375,7 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
         glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
                      GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
           //dessine les points du model
-//          drawPoints(model);
+          //drawPoints(model);
          
           glDisable(GL_LIGHTING);
           enableSmoothLines();
@@ -392,7 +419,7 @@ RealEdit3d::drawSceneForPicking(const realEdit::ObjectNode* ipObjectNode) const
       bool isCurrentNode = ipObjectNode == mEditionData.getCurrentNode();
       //dessiner les points et poly du modele
       glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT);
-        drawPoints(model, isCurrentNode);
+        //drawPoints(model, isCurrentNode);
         drawPolygons(model, isCurrentNode);
       glPopAttrib();
     }
@@ -647,6 +674,7 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
       switch (mController.getTool()) 
       {
         case Controller::tSelection: mController.selectEnd(); break;
+        case Controller::tTranslation: mController.translateEnd(); break;
         default: break;
       }
       break;

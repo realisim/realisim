@@ -17,6 +17,7 @@ using namespace realEdit;
   
 ChangeMode::ChangeMode(Controller& iC, EditionUi& iUi,
   Controller::mode iMode) :
+  Command(),
   mController(iC),
   mUi(iUi),
   mPreviousMode(iC.getMode()),
