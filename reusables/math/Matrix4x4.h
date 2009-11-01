@@ -60,6 +60,7 @@ namespace math
     inline Vect<T> getBaseY() const;
     inline Vect<T> getBaseZ() const;
     inline Point<T> getTranslation() const;
+    inline Matrix4<T> getRotation() const;
 
     // --------------- fonction utiles -----------------------------------------
     inline const T* getPtr() const;
@@ -181,13 +182,24 @@ namespace math
    return Vect<T>( mat_[8], mat_[9], mat_[10]);
   }
   
-  //! permet d'obtenir la 3e ligne de la sous matrice 3x3 ("coin" sup gauche)
+  //! permet d'obtenir la translation
   template<class T>
   inline Point<T> Matrix4<T>::getTranslation() const
   {
     return Point<T>( mat_[12], mat_[13], mat_[14]);
   }
-
+  
+  //----------------------------------------------------------------------------
+  //! permet d'obtenir la rotation sans la translation
+  template<class T>
+  inline Matrix4<T> Matrix4<T>::getRotation() const
+  {
+    return Matrix4<T>(mat_[0], mat_[1], mat_[2], 0,
+    									mat_[4], mat_[5], mat_[6], 0,
+                      mat_[8], mat_[9], mat_[10], 0,
+                      0, 0, 0, 1);
+  }
+  
   //----------------------------------------------------------------------------
   template<class T>
   inline Matrix4<T>& Matrix4<T>::inverse()

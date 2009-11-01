@@ -7,7 +7,6 @@
 
 #include "BoundingBox.h"
 #include "Point.h"
-#include "Primitives.h"
 #include "Vect.h"
 
 #include <cassert>
@@ -17,7 +16,6 @@
 namespace realEdit
 {
 using namespace realisim::math;
-using namespace realisim::treeD;
 
 class DataModelBase
 {

@@ -9,6 +9,7 @@
 #include "DisplayData.h"
 #include "EditionData.h"
 #include "MathDef.h"
+#include "MathUtils.h"
 #include "ObjectNode.h"
 #include <QCursor>
 #include <QMouseEvent>
@@ -34,6 +35,26 @@ namespace
   };
   
   void color(const Color& iC) {glColor4ub(iC.r, iC.g, iC.b,iC.a);}
+  
+  //encode the id into color for color picking
+  void idToColor(unsigned int iId)
+  {
+    int r,g,b,a;
+    r = g = b = a = 0;
+    int remaining = iId / 255;
+    a = iId % 255;
+    b = remaining % 255;
+    remaining /= 255;
+    g = remaining % 255;
+    remaining /= 255;
+    r = remaining % 255;
+    
+    glColor4ub(r, g, b, a);
+  }
+  
+  //de-encode color to id.
+  int colorToId(const Color& iC)
+  { return iC.a + iC.b *255 + iC.g * 255*255 + iC.r *255*255*255; }
 
   const int kDragTreshold = 3; //3 pixels to go into drag mode
   const Color kcHover(255, 0, 255, 255);
@@ -112,20 +133,43 @@ void RealEdit3d::changeCursor()
 
 //------------------------------------------------------------------------------
 void RealEdit3d::drawAxis() const
-{
+{  
+  glMatrixMode(GL_PROJECTION);
   glPushMatrix();
-  mDisplayData.getAxis().setDisplayFlag(Primitives::pViewport);
-  mDisplayData.getAxis().setDisplayFlag(Primitives::zViewport);
-  //on place la primitive dans le coin inférieur droit
-  Point3d p(getCamera().getWindowInfo().getWidth() - 25,
-    getCamera().getWindowInfo().getHeight() - 25,
-    0);
-  mDisplayData.getAxis().setPosition(p);
-  Widget3d::applyDisplayFlag(mDisplayData.getAxis());
-  //on donne un taille de 20 pixels a la primitives
-  glScaled(20.0, 20.0, 20.0);
-  mDisplayData.drawAxis();
+  glLoadIdentity();
+  glOrtho(0, getCamera().getWindowInfo().getWidth(),
+    0, getCamera().getWindowInfo().getHeight(),
+    -1, 1000);
+
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+
+    GLdouble modelView[16];
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+    
+    GLdouble projection[16];
+    glGetDoublev(GL_PROJECTION_MATRIX, projection);
+    
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    
+    // get 3D coordinates based on window coordinates
+    double x,y,z;
+    gluUnProject(getCamera().getWindowInfo().getWidth() - 25,
+      25,
+      0.01,
+      modelView, projection, viewport,
+      &x, &y, &z);
+    glTranslated(x, y, z);
+
+    glScaled(20.0, 20.0, 20.0);
+    mDisplayData.drawAxis();
+  
   glPopMatrix();
+  glMatrixMode(GL_PROJECTION);
+  glPopMatrix();
+  glMatrixMode(GL_MODELVIEW);
+  
 }
 
 //------------------------------------------------------------------------------
@@ -139,24 +183,21 @@ void RealEdit3d::drawBoundingBox(const RealEditModel& iM,
                  GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
     glDisable(GL_LIGHTING);
     enableSmoothLines();
-    treeD::BoundingBox bb(iM.getBoundingBox().getMin(), 
-      iM.getBoundingBox().getMax() );
-    bb.draw();
+    mDisplayData.drawBoundingBox(iM.getBoundingBox().getMin(), 
+      iM.getBoundingBox().getMax());
   glPopAttrib();
 }
 
 //------------------------------------------------------------------------------
-void RealEdit3d::drawLines(const RealEditModel& iM) const
+void RealEdit3d::drawEdges(const RealEditModel& iM) const
 {
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  
   map<unsigned int, RealEditPolygon>::const_iterator it =
     iM.getPolygons().begin();
   while(it != iM.getPolygons().end())
   {
-    const RealEditPolygon& poly = it->second;
-//  for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
-//  {
-//    const RealEditPolygon& poly = iM.getPolygon(i);
-    
+    const RealEditPolygon& poly = it->second;    
     color(kcLine);
     
     glBegin(GL_POLYGON);
@@ -192,9 +233,6 @@ void RealEdit3d::drawNormals(const RealEditModel& iM) const
   while(it != iM.getPolygons().end())
   {
     const RealEditPolygon& poly = it->second;
-//  for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
-//  {
-//    const RealEditPolygon& poly = iM.getPolygon(i);
     
     glPushMatrix();
     glTranslated(poly.getPoints()[0].x(),
@@ -243,51 +281,45 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
   //dessiner les points du modele
   map<unsigned int, RealEditPoint>::const_iterator it =
     iM.getPoints().begin();
+    
+  glPushAttrib(GL_POINT_BIT | GL_ENABLE_BIT);
+  glDisable(GL_LIGHTING);
+  glPointSize(6);
+
+  glBegin(GL_POINTS);
   while(it != iM.getPoints().end())
   {
     const RealEditPoint& p = it->second;
-//  for (unsigned int i = 0; i < iM.getPointCount(); ++i)
-//  {
-//    const RealEditPoint& p = iM.getPoint (i);
     
     if(mEditionData.isSelected(p.getId()))
       color(kcSelectedPoint);
+    else if(p.getId() == mHoverId)
+      color(kcHover);
     else
       color(kcPoint);
     
     if(iPicking)
-      glLoadName(p.getId());
+      idToColor(p.getId());
     
-    glPushMatrix();
-    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_HINT_BIT);
-      enableSmoothLines();
-      mDisplayData.getCube().setPosition (p.pos());        
-      //on désactive le zoom de scene sur la primitives cube
-      mDisplayData.getCube().setDisplayFlag(Primitives::zViewport);
-      Widget3d::applyDisplayFlag(mDisplayData.getCube());
-      //on lui donne un scaling de 10 pour que le cube ait toujours
-      //5 pixels a l'écran.
-      glScaled(5.0, 5.0, 5.0);
-      mDisplayData.drawCube();
-    glPopAttrib();
-    glPopMatrix();
-    
+    glVertex3d(p.pos().getX(), p.pos().getY(), p.pos().getZ());
+
     ++it;
   }
+  glEnd();
+  glPopAttrib();
 }
 
 //------------------------------------------------------------------------------
 void RealEdit3d::drawPolygons(const RealEditModel& iM,
   bool iPicking /*= false*/) const
 {
+  glEnable(GL_POLYGON_OFFSET_FILL);
+  glPolygonOffset(1.0, 2.0);
   map<unsigned int, RealEditPolygon>::const_iterator it =
     iM.getPolygons().begin();
   while(it != iM.getPolygons().end())
   {
     const RealEditPolygon& poly = it->second;
-//  for(unsigned int i = 0; i < iM.getPolygonCount(); i++)
-//  {
-//    const RealEditPolygon& poly = iM.getPolygon(i);
     
     if(mEditionData.isSelected(poly.getId()))
       color(kcSelectedPolygon);
@@ -297,7 +329,7 @@ void RealEdit3d::drawPolygons(const RealEditModel& iM,
       color(kcPolygon);
     
     if(iPicking)
-      glLoadName(poly.getId());
+      idToColor(poly.getId());
     
     glBegin(GL_POLYGON);
     glNormal3d(poly.getNormals()[0].getX(),
@@ -342,8 +374,6 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
       
       //dessiner les polys du modele
       glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT);
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(1.0, 3.0);
         drawPolygons(model);
       glPopAttrib();
       
@@ -354,8 +384,7 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
                      GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
           glDisable(GL_LIGHTING);
           enableSmoothLines();
-          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-          drawLines(model);
+          drawEdges(model);
         glPopAttrib();
       }
     }
@@ -363,8 +392,6 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
     {
       //dessiner les polys du modele
       glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT);
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(1.0, 3.0);
         drawPolygons(model);
       glPopAttrib();
       
@@ -375,12 +402,11 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
         glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
                      GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
           //dessine les points du model
-          //drawPoints(model);
+          drawPoints(model);
          
           glDisable(GL_LIGHTING);
           enableSmoothLines();
-          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-          drawLines(model);
+          drawEdges(model);
         glPopAttrib();
       
         //dessine les normals du modèle
@@ -419,7 +445,7 @@ RealEdit3d::drawSceneForPicking(const realEdit::ObjectNode* ipObjectNode) const
       bool isCurrentNode = ipObjectNode == mEditionData.getCurrentNode();
       //dessiner les points et poly du modele
       glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT);
-        //drawPoints(model, isCurrentNode);
+        drawPoints(model, isCurrentNode);
         drawPolygons(model, isCurrentNode);
       glPopAttrib();
     }
@@ -551,9 +577,9 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
       {
         case Controller::tSelection:
         {
-          vector<Hits> hits = pick(e->x(), e->y());
+          vector<unsigned int> hits = pick(e->x(), e->y());
           if(!hits.empty())
-          { mHoverId = hits.front().getId(); }
+          { mHoverId = hits.front(); }
           else
             mHoverId = 0;
           update();
@@ -583,11 +609,11 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
           if(e->modifiers() == Qt::ControlModifier)
             sMode = Selection::mSubtractive;
           
-          vector<Hits> hits = pick(e->x(), e->y());
+          vector<unsigned int> hits = pick(e->x(), e->y());
           //puisque les Hits sont tries en Z, on prend le premier de la liste
           //en sachant que c'est le plus proche de la camera.
           if(!hits.empty())
-            mController.select(hits.front().getId(), sMode);
+            mController.select(hits.front(), sMode);
           update();
         }
         break;
@@ -633,11 +659,11 @@ void RealEdit3d::mousePressEvent(QMouseEvent* e)
           else if(e->modifiers() == Qt::ControlModifier)
             sMode = Selection::mSubtractive;
            
-          vector<Hits> hits = pick(e->x(), e->y());
+          vector<unsigned int> hits = pick(e->x(), e->y());
           //puisque les Hits sont tries en Z, on prend le premier de la liste
           //en sachant que c'est le plus proche de la camera.
           if(!hits.empty())
-            mController.select(hits.front().getId(), sMode);
+            mController.select(hits.front(), sMode);
           else
             mController.select(0, sMode);
         }
@@ -685,101 +711,35 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
 }
 
 //------------------------------------------------------------------------------
-/*voir http://www.lighthouse3d.com/opengl/picking/index.php?openglway2 
+/*voir http://www.lighthouse3d.com/opengl/picking/index.php?color1
   pour plus d'info*/
-vector<RealEdit3d::Hits> RealEdit3d::pick(int iX, int iY, int iWidth /*= 1*/,
+vector<unsigned int> RealEdit3d::pick(int iX, int iY, int iWidth /*= 1*/,
   int iHeight /*= 1*/ )
 {
-  const int BUFSIZE = 1024;
-  unsigned int selectBuf[BUFSIZE];
-  int hits = 0;
-  int viewport[4];
+  vector<unsigned int> hits;
+	GLint viewport[4];
+	GLubyte pixel[4];
 
-  glGetIntegerv(GL_VIEWPORT, viewport);
-  glSelectBuffer(BUFSIZE, selectBuf);
-  (void) glRenderMode(GL_SELECT);
+	glGetIntegerv(GL_VIEWPORT,viewport);
 
-  glPushAttrib(GL_TRANSFORM_BIT);
-  glMatrixMode(GL_PROJECTION);
-  glPushMatrix();
-  glLoadIdentity();
-  //Creat a 1 x 1 pixel picking region near the cursor
-  gluPickMatrix( (GLdouble) iX, (GLdouble) (viewport[3] - iY),
-                iWidth, iHeight, viewport );
-
-  //viewport[2]: width 
-  //viewport[3]: height
-  getCamera().projectionGL(viewport[2], viewport[3]);
-  glMatrixMode(GL_MODELVIEW);
-  glInitNames();
-  //on ajoute un nom pour initialiser la liste et pouvoir utiliser glLoadName()
-  glPushName(0);
-  
+  glPushAttrib(GL_ENABLE_BIT);
+  glDisable(GL_DITHER);
+  glDisable(GL_LIGHTING);
+  glDisable(GL_COLOR_MATERIAL);
   //draw the scene in picking mode...
   Widget3d::paintGL();
   drawSceneForPicking(mEditionData.getScene().getObjectNode());
   
-  glMatrixMode(GL_PROJECTION);
-  glPopMatrix();
-  glFlush();
+	glReadPixels(iX, viewport[3]- iY, 1, 1,
+		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixel);
+  
+  hits.push_back(colorToId(Color(pixel[0],pixel[1],pixel[2],pixel[3])));
   glPopAttrib();
 
-  hits = glRenderMode(GL_RENDER);
-
-  return processHits(hits, selectBuf);
-}
-
-//------------------------------------------------------------------------------
-/*voir http://www.lighthouse3d.com/opengl/picking/index.php?openglway3 
-  pour plus d'info*/
-vector<RealEdit3d::Hits> RealEdit3d::processHits(int iHits,
-  unsigned int iBuffer[])
-{
-  int i;
-  unsigned int names, *ptr;
-  double maxDepth, minDepth;
-  vector<Hits> result;
-
-  ptr = (uint*) iBuffer;
-  for (i = 0; i < iHits; i++)
-  {	/*  for each hit  */
-    names = *ptr;
-    ptr++;
-    minDepth = (double) *ptr/0x7fffffff;
-    ptr++;
-    maxDepth = (double) *ptr/0x7fffffff;
-    ptr++;
-    
-    assert(names <= 1 && "Au maximum 2 noms. Le Id de l'object et son type");
-//    for (uint j = 0; j < names; j++)
-//    {	/*  for each name */
-//      ptr++;
-//    }
-
-    if(names == 1)
-    {
-      uint id = *ptr;
-      //ptr++;
-      //Hits::type t = (Hits::type)*ptr;
-      Hits::type t;
-      ptr++;
-      result.push_back(Hits(minDepth, maxDepth, id, t));
-    }
-  }
+	printf("%d %d %d %d\n",pixel[0],pixel[1],pixel[2],pixel[3]);
+  printf ("\n");
   
-  //on enleve le premier element du vector parce que c'est le 0 qu'on a inséré
-  result.erase(result.begin());
-  sort(result.begin(), result.end());
-  cout<<"Number of hits: "<<result.size()<<endl;
-  for(uint i = 0; i < result.size(); ++i)
-  {
-    cout<<"\t name:"<<result[i].getId()<<
-      "\t type: "<<result[i].getType()<<
-      "\t min depth: "<<result[i].getMinDepth()<<
-      "\t max depth:"<<result[i].getMaxDepth()<<endl;
-  }
-  
-  return result;
+  return hits;
 }
 
 //------------------------------------------------------------------------------
