@@ -9,7 +9,6 @@
 using namespace std;
 using namespace realisim;
 	using namespace realisim::math;
-	using namespace realisim::treeD;
 using namespace realEdit;
 
 //initialisation du membre static de DataModelBase

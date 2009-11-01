@@ -50,98 +50,6 @@ Widget3d::~Widget3d()
 {}
 
 //-----------------------------------------------------------------------------
-/* Voir Primitives.h pour la signification des flags
-*/
-void Widget3d::applyDisplayFlag(const Primitives& iP) const
-{
-  switch (iP.getPositionFlag()) 
-  {
-    case Primitives::pViewport:
-    {
-      GLdouble modelView[16];
-      glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
-      
-      GLdouble projection[16];
-      glGetDoublev(GL_PROJECTION_MATRIX, projection);
-      
-      GLint viewport[4];
-      glGetIntegerv(GL_VIEWPORT, viewport);
-      
-      // get 3D coordinates based on window coordinates
-      double x,y,z;
-      gluUnProject(iP.getPosition().getX(),
-        getCamera().getWindowInfo().getHeight() - iP.getPosition().getY(),
-        0.01,
-        modelView, projection, viewport,
-        &x, &y, &z);
-    
-      glTranslated(x, y, z);
-    }
-      break;
-    case Primitives::pScene:
-    {
-      glTranslated(iP.getPosition().getX(),
-        iP.getPosition().getY(),
-        iP.getPosition().getZ());
-    }
-    default:
-      break;
-  }
-  
-  switch (iP.getZoomFlag()) 
-  {
-    case Primitives::zViewport:
-      {
-        double perspectiveCompensation = 1.0;
-        
-//!!!Ca ne fonctionne pas et c'est peut etre pas utile        
-//        if (getCamera().getMode() == Camera::PERSPECTIVE)
-//        {
-//          double winX, winY, winZ;
-//          double winX2, winY2, winZ2;
-//          GLdouble modelView[16];
-//          glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
-//          
-//          GLdouble projection[16];
-//          glGetDoublev(GL_PROJECTION_MATRIX, projection);
-//          
-//          GLint viewport[4];
-//          glGetIntegerv(GL_VIEWPORT, viewport);
-//          
-//          gluProject(iP.getPosition().getX(),
-//                     iP.getPosition().getY(),
-//                     iP.getPosition().getZ(),
-//                     modelView,
-//                     projection,
-//                     viewport,
-//                     &winX, &winY, &winZ);
-//          
-//          Vector3d v(Point3d(0.0), iP.getPosition());
-//          v += getCamera().getLat();
-//          gluProject(v.getX(),
-//                     v.getY(),
-//                     v.getZ(),
-//                     modelView,
-//                     projection,
-//                     viewport,
-//                     &winX2, &winY2, &winZ2);
-//          
-//          Vector3d v2(winX2 - winX, winY2 - winY, winZ2 - winZ);
-//          perspectiveCompensation =  getCamera().getPixelPerGLUnit() / v2.norm();
-//          cout<<"persp comp: "<<perspectiveCompensation<<endl;
-//        }        
-        
-        double z = 1 / getCamera().getPixelPerGLUnit() * perspectiveCompensation;
-        glScaled(z, z, z);
-      }
-      break;
-    case Primitives::zScene:
-    default:
-      break;
-  }
-}
-
-//-----------------------------------------------------------------------------
 void
 Widget3d::initializeGL()
 {
@@ -341,7 +249,10 @@ Widget3d::sizeHint() const
 }
 
 //-----------------------------------------------------------------------------
-//Animate the camera in the timer event function
+/*Animate the camera in the timer event function
+  Note: La transformation de la camera est le seul parametre a etre animee. 
+  Changer la position (ou le vecteur lateral ou up) ne fera rien lors de 
+  l'animation.*/
 void Widget3d::timerEvent( QTimerEvent* ipE )
 {
   if ( ipE->timerId() == mAnimationTimerId )
@@ -385,12 +296,25 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
 {
   makeCurrent();
 
-  double zoom = 1 / 1.15;
-  if(ipE->delta() < 0)
-    zoom = 1.15;
-  double finalZoom = getCamera().getZoom() * zoom;
-  if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
-    getCamera().setZoom(finalZoom);
+  if(getCamera().getMode() == Camera::ORTHOGONAL)
+  {
+    double zoom = 1 / 1.15;
+    if(ipE->delta() < 0)
+      zoom = 1.15;
+    double finalZoom = getCamera().getZoom() * zoom;
+    if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
+      getCamera().setZoom(finalZoom);
+  }
+  else
+  {
+    int wheelDir = ipE->delta() > 0 ? 1.0 : -1.0;
+    Vector3d lookDirection(getCamera().getPos(), getCamera().getLook());
+    Point3d p = getCamera().getPos() + lookDirection * 0.2 * wheelDir;
+    Camera c = getCamera();
+    c.setPos(p);
+    setCamera(c, false);
+  }
+
 
   update();
 }

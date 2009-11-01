@@ -9,7 +9,6 @@
 #define Realisim_Widget3d_hh
 
 #include "Camera.h"
-#include "Primitives.h"
 #include <map>
 #include <QTime>
 #include <QGLWidget>
@@ -28,7 +27,6 @@ public:
             Qt::WindowFlags iFlags = 0 );
   virtual ~Widget3d() = 0;
 
-  void applyDisplayFlag(const Primitives& iP) const;
   const Camera& getCamera() const { return mCam; }
   void setCamera( const Camera& iCam, bool iAnimate = true );
   void setCameraMode( Camera::Mode iMode );

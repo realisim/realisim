@@ -5,11 +5,12 @@
 #ifndef RealEdit_DisplayData_hh
 #define RealEdit_DisplayData_hh
 
-#include "Primitives.h"
+#include <qgl.h>
+#include "Point.h"
 
 namespace realEdit
 {
-using namespace realisim::treeD;
+using namespace realisim::math;
 
 class DisplayData
 {
@@ -18,12 +19,11 @@ public:
   ~DisplayData();
   
   void drawAxis() const;
-  Axis& getAxis() {return mAxis;}
+  void drawBoundingBox(const Point3d& iMin, const Point3d& iMax) const;
   void drawCube() const;
-  Cube& getCube() {return mCube;}
 private:
-  Axis mAxis;
-  Cube mCube;
+  mutable GLuint mAxisDisplayList;
+  mutable GLuint mCubeDisplayList;
 };
 
 } //realEdit

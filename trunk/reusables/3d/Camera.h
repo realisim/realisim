@@ -78,6 +78,7 @@ public:
             const Point3d& iLook,
             const Vector3d& iUp );
   void setMode( Mode iMode );
+  void setPos(const Point3d&);
   void setOrientation( Orientation iO );
   void setTransformation(const Matrix4d&);
   void setZoom(double iZoom);

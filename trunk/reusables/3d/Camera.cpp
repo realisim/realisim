@@ -282,10 +282,7 @@ void Camera::computeProjection()
         break;
         
       case PERSPECTIVE:
-        //gluPerspective (27.0, (GLfloat) projectionLongSide / (GLfloat) projectionShortSide, 0.5, 10000.0);
-        glFrustum(-projectionLongSide, projectionLongSide,
-                  -projectionShortSide, projectionShortSide, 
-                  kNear, kFar);
+        gluPerspective (27.0, (GLfloat) projectionLongSide / (GLfloat) projectionShortSide, 0.5, 10000.0);
         break;
       default:
         break;
@@ -304,10 +301,7 @@ void Camera::computeProjection()
         break;
         
       case PERSPECTIVE:
-        //gluPerspective (27.0, (GLfloat) projectionShortSide / (GLfloat) projectionLongSide, 0.5, 10000.0);
-        glFrustum(-projectionShortSide, projectionShortSide,
-                -projectionLongSide, projectionLongSide, 
-                kNear, kFar);
+        gluPerspective (27.0, (GLfloat) projectionShortSide / (GLfloat) projectionLongSide, 0.5, 10000.0);
         break;
         
       default:
@@ -347,9 +341,11 @@ void Camera::setLat( const Vector3d& iLat )
 
 //-----------------------------------------------------------------------------
 void Camera::setMode( Mode iMode )
-{
-  mMode = iMode;
-}
+{ mMode = iMode; }
+
+//-----------------------------------------------------------------------------
+void Camera::setPos( const Point3d& iPos)
+{ set(iPos, getLook(), getUp()); }
 
 //-----------------------------------------------------------------------------
 void Camera::setOrientation( Orientation iO )
