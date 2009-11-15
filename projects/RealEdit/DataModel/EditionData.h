@@ -51,6 +51,7 @@ public:
 //void addNode (ObjectNode* ipNode);
   bool hasSelection() const {return mSelection.size() > 0;}
   bool isSelected(uint) const;
+  const RealEditModel getCurrentModel() const {return mCurrentModel;}
   RealEditModel getCurrentModel(){return mCurrentModel;}
   const ObjectNode* getCurrentNode () const;
   ObjectNode* getCurrentNode ();

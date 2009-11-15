@@ -14,6 +14,9 @@
   mMode: mode de projection, Orthogonal ou Perspective
   mOrientation: Orientation de la camera
   mTransformation: transformation appliqué au systeme d'axe de la caméra.
+    cette transformation est: syteme local à system global. Le Widget 3d
+    utilisera cette transformation pour transformer la position de la caméra
+    en position global (de scene).
   mPos: position de la caméra..
   mLat: vecteur latéral normalisé
   mLook:  point visé.
@@ -69,19 +72,17 @@ public:
   const Vector3d& getUp() const { return mUp; }
   const WindowInfo& getWindowInfo() const {return mWindowInfo;}
   const double getZoom() const { return mZoomFactor; }
-  void move( Vector3d iDelta );
-  Camera& operator=( const Camera& iCam );
-  Point3d pixelToGL( int iX, int iY ) const;
-  Vector3d pixelDeltaToGLDelta( int iDeltaX, int iDeltaY ) const;
-  void projectionGL( int iWidth, int iHeight );
-  void set( const Point3d& iPos,
-            const Point3d& iLook,
-            const Vector3d& iUp );
-  void setMode( Mode iMode );
+  void move( const Vector3d& );
+  Camera& operator=( const Camera& );
+  Point3d pixelToGL( int, int ) const;
+  Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
+  void projectionGL( int, int );
+  void set( const Point3d&, const Point3d&, const Vector3d& );
+  void setMode( Mode );
   void setPos(const Point3d&);
-  void setOrientation( Orientation iO );
+  void setOrientation( Orientation );
   void setTransformation(const Matrix4d&);
-  void setZoom(double iZoom);
+  void setZoom(double);
   
 protected:
   void computeLatAndUp();

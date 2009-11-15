@@ -19,15 +19,18 @@ namespace math
 {
 
   //! constante utile
-  static const double EPSILON          = 1.0e-4;
+  static const double EPSILON          = std::numeric_limits<double>::epsilon();
 
   static const double PI = 3.141592654;
 
-  static const double PI_SUR_180  = PI/180.0;
-  static const double PI_SUR_360  = PI/360.0;
+  static const double kDegreeToRadian  = PI/180.0;
+  static const double kRadianToDegree = 1.0 / kDegreeToRadian;
   static const double UN_SUR_PI   = 1.0/PI;
   static const double UN_SUR_2_PI = 0.5/PI;
   static const double DEUX_PI     = 2.0*PI;
+  
+  static const double MAX_DOUBLE = std::numeric_limits<double>::max();
+  static const double MIN_DOUBLE = std::numeric_limits<double>::min();
 
 } //math
 } //realisim

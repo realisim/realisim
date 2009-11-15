@@ -28,7 +28,7 @@ namespace math
 
     // --------------- constructeurs -------------------------------------------
     inline Point();
-    inline Point(const U &val);
+    inline explicit Point(const U &val);
     inline Point(const U &x, const U &y, const U &z);
     template <class T>
     inline Point(const Point<T> &point);
@@ -78,6 +78,10 @@ namespace math
   //   inline Point operator* (const Point &point) const;
   //   inline Point operator+ (const Point &point) const;
     inline Point<U> operator- (const U &val) const;
+    inline bool operator< (const Point<U>&) const;
+    inline bool operator<= (const Point<U>&) const;
+    inline bool operator> (const Point<U>&) const;
+    inline bool operator>= (const Point<U>&) const;
 
   protected:
   private:
@@ -422,6 +426,43 @@ namespace math
 
     return result;
   }
+  
+  //----------------------------------------------------------------------------
+  template<class U>
+  inline bool Point<U>::operator< (const Point<U>& iP) const
+  {
+    return getX() < iP.getX() && 
+      getY() < iP.getY() &&
+      getZ() < iP.getZ();
+  }
+
+  //----------------------------------------------------------------------------
+  template<class U>
+  inline bool Point<U>::operator<= (const Point<U>& iP) const
+  {
+    return getX() <= iP.getX() && 
+      getY() <= iP.getY() &&
+      getZ() <= iP.getZ();
+  }
+
+  //----------------------------------------------------------------------------
+  template<class U>
+  inline bool Point<U>::operator> (const Point<U>& iP) const
+  {
+    return getX() > iP.getX() && 
+      getY() > iP.getY() &&
+      getZ() > iP.getZ();
+  }
+  
+  //----------------------------------------------------------------------------
+  template<class U>
+  inline bool Point<U>::operator>= (const Point<U>& iP) const
+  {
+    return getX() >= iP.getX() && 
+      getY() >= iP.getY() &&
+      getZ() >= iP.getZ();
+  }
+
 
   template<class U>
   inline Point<U> Point<U>::operator+  (const Point &point) const

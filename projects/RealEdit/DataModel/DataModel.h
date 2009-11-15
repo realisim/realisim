@@ -133,6 +133,7 @@ public:
   virtual void addPoint (RealEditPoint iP);
   virtual void addPolygon (RealEditPolygon ipPoly);
   virtual const BB3d& getBoundingBox () const;
+  virtual const Point3d& getCentroid() const;
   virtual unsigned int getPointCount () const;
 /*c'est méthode const sont dangereuses parce quelle retourne une reference
 sur un object qui est partagé implicitement. Donc si l'utilisateur fait une
@@ -163,6 +164,7 @@ private:
     //std::vector<LineSegment> mLineSegments;
     std::map<unsigned int, RealEditPolygon> mPolygons;
     unsigned int mRefCount;
+    mutable Point3d mCentroid;
   };
   
   Guts* mpGuts;

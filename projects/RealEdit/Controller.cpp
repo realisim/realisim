@@ -50,7 +50,7 @@ Controller::Controller(EditionUi& iEditionUi) :
   ObjectNode* pNode = getEditionData().addNode( "bâche" );
   pNode->rotate( PI/4.0,
     Vector3d( 0.0, 0.0, 1.0 ) );
-  pNode->translate( Vector3d( -8.0, 0.0, 0.0 ) );
+  pNode->translate( Vector3d( -800.0, 0.0, 0.0 ) );
   getEditionData().setCurrentNode( pNode );
   createPlatonicSolid(PlatonicSolid::tIsocahedron, 3);
 }
