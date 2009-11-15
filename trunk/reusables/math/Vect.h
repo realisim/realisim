@@ -25,7 +25,7 @@ namespace math
   
     // --------------- constructeurs -------------------------------------------
     inline Vect();
-    inline Vect(const T &val);
+    inline explicit Vect(const T &val);
     inline Vect(const T &x, const T &y, const T &z);
     inline Vect(const Vect<T> &vect);    
     inline Vect(const Point<T> &pt1, const Point<T> &pt2);

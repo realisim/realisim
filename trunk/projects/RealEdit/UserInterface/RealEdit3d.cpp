@@ -195,7 +195,7 @@ void RealEdit3d::drawEdges(const RealEditModel& iM) const
   
   map<unsigned int, RealEditPolygon>::const_iterator it =
     iM.getPolygons().begin();
-  while(it != iM.getPolygons().end())
+  for(; it != iM.getPolygons().end(); ++it)
   {
     const RealEditPolygon& poly = it->second;    
     color(kcLine);
@@ -220,8 +220,6 @@ void RealEdit3d::drawEdges(const RealEditModel& iM) const
                poly.getPoints()[2].y (),
                poly.getPoints()[2].z ());
     glEnd();
-    
-    ++it;
   }
 }
 
@@ -230,7 +228,7 @@ void RealEdit3d::drawNormals(const RealEditModel& iM) const
 {
   map<unsigned int, RealEditPolygon>::const_iterator it =
     iM.getPolygons().begin();
-  while(it != iM.getPolygons().end())
+  for(; it != iM.getPolygons().end(); ++it)
   {
     const RealEditPolygon& poly = it->second;
     
@@ -269,8 +267,6 @@ void RealEdit3d::drawNormals(const RealEditModel& iM) const
                  poly.getNormals()[2].getZ());
     glEnd();
     glPopMatrix();
-    
-    ++it;
   }
 }
 
@@ -287,7 +283,7 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
   glPointSize(6);
 
   glBegin(GL_POINTS);
-  while(it != iM.getPoints().end())
+  for(; it != iM.getPoints().end(); ++it)
   {
     const RealEditPoint& p = it->second;
     
@@ -302,8 +298,6 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
       idToColor(p.getId());
     
     glVertex3d(p.pos().getX(), p.pos().getY(), p.pos().getZ());
-
-    ++it;
   }
   glEnd();
   glPopAttrib();
@@ -317,7 +311,8 @@ void RealEdit3d::drawPolygons(const RealEditModel& iM,
   glPolygonOffset(1.0, 2.0);
   map<unsigned int, RealEditPolygon>::const_iterator it =
     iM.getPolygons().begin();
-  while(it != iM.getPolygons().end())
+    
+  for(; it != iM.getPolygons().end(); ++it)
   {
     const RealEditPolygon& poly = it->second;
     
@@ -351,8 +346,6 @@ void RealEdit3d::drawPolygons(const RealEditModel& iM,
                poly.getPoints()[2].y (),
                poly.getPoints()[2].z ());
     glEnd();
-   
-    ++it; 
   }
 }
 
@@ -548,12 +541,6 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
     mMouseInfo.delta = mMouseInfo.end - mMouseInfo.origin;
   mMouseInfo.end = QPoint(e->x(), e->y());
   
-  //On calcul le delta (pixel) de la souris en deltaGL.
-  //on prend -Y pcq l'axe pixel est inversé de l'axe GL
-  Vector3d deltaGL =
-    getCamera().pixelDeltaToGLDelta(mMouseInfo.delta.x(),
-      -mMouseInfo.delta.y());
-  
   switch (getMouseState()) 
   {
     case msCamera:
@@ -568,6 +555,10 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
     break;
     case msCameraDrag:
     {
+      //On calcul le delta (pixel) de la souris en deltaGL.
+      //on prend -Y pcq l'axe pixel est inversé de l'axe GL
+      Vector3d deltaGL = getCamera().pixelDeltaToGLDelta(mMouseInfo.delta.x(),
+        -mMouseInfo.delta.y());
       getCamera().move(-deltaGL);
       update();
     }
@@ -618,7 +609,15 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
         }
         break;
         case Controller::tTranslation:
+        {
+          //On calcul le delta (pixel) de la souris en deltaGL.
+          //on prend -Y pcq l'axe pixel est inversé de l'axe GL
+          Point3d c = mEditionData.getCurrentModel().getCentroid();
+          Vector3d deltaGL =
+            getCamera().pixelDeltaToGLDelta(mMouseInfo.delta.x(),
+              -mMouseInfo.delta.y(), c);
           mController.translate(deltaGL);
+        }
           break;
         default: break;
       }
@@ -736,8 +735,13 @@ vector<unsigned int> RealEdit3d::pick(int iX, int iY, int iWidth /*= 1*/,
   hits.push_back(colorToId(Color(pixel[0],pixel[1],pixel[2],pixel[3])));
   glPopAttrib();
 
-	printf("%d %d %d %d\n",pixel[0],pixel[1],pixel[2],pixel[3]);
-  printf ("\n");
+	printf("Color: %d %d %d %d\n",pixel[0],pixel[1],pixel[2],pixel[3]);
+  
+//  float z = 0.0;
+//  glReadPixels(iX, viewport[3]- iY, 1, 1,
+//		 GL_DEPTH_COMPONENT, GL_FLOAT, &z );
+//  printf("depth: %f\n",z);
+  
   
   return hits;
 }

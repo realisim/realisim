@@ -86,6 +86,8 @@ Widget3d::initializeGL()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_TEXTURE_3D);
 }
 
 //-----------------------------------------------------------------------------
@@ -171,9 +173,7 @@ Widget3d::paintGL()
   
   //On place la caméra en coordonnée absolue.
   Point3d absolutePos = getCamera().getPos() * getCamera().getTransformation();
-  absolutePos += getCamera().getTransformation().getTranslation();
   Point3d absoluteLook = getCamera().getLook() * getCamera().getTransformation();
-  absoluteLook += getCamera().getTransformation().getTranslation();
   Vector3d absoluteUp = getCamera().getUp() * getCamera().getTransformation();
   
   gluLookAt( absolutePos.getX(),

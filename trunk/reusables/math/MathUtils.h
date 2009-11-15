@@ -56,6 +56,8 @@ namespace math
   }
   
   //---------------------------------------------------------------------------
+  /*Le vecteur multiplié par la matrice ne fait que modifié sont orientation,
+    on n'ajoute pas la translation.*/
   template<class T>
   inline Vect<T> operator* ( const Vect<T>& iVect, const Matrix4<T>& iMat)
   {
@@ -67,6 +69,8 @@ namespace math
   }
   
   //---------------------------------------------------------------------------
+  /*On multiplie le point par la partie de rotation et on ajoute la translation
+    au point.*/
   template<class T>
   inline Point<T> operator* ( const Point<T>& iPoint, const Matrix4<T>& iMat)
   {
@@ -74,6 +78,8 @@ namespace math
     result.setX( iPoint.getX() * iMat(0, 0) + iPoint.getY() * iMat(1, 0) + iPoint.getZ() * iMat(2, 0) );
     result.setY( iPoint.getX() * iMat(0, 1) + iPoint.getY() * iMat(1, 1) + iPoint.getZ() * iMat(2, 1) );
     result.setZ( iPoint.getX() * iMat(0, 2) + iPoint.getY() * iMat(1, 2) + iPoint.getZ() * iMat(2, 2) );
+    //on ajoute la translation au point
+    result += Point<T>(iMat(3, 0), iMat(3, 1), iMat(3, 2));
     return result;
   }
   

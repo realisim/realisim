@@ -8,6 +8,7 @@
  */
 
 #include "Camera.h"
+#include <iostream>
 #include <qgl.h>
 #include "MathUtils.h"
 
@@ -71,9 +72,11 @@ Camera::~Camera()
 //}
 
 //-----------------------------------------------------------------------------
-//déplace la caméra
-//le delta est en coord GL
-void Camera::move( Vector3d iDelta )
+/*déplace la caméra. La caméra se déplace en coordonné GLOBALE, on doit donc
+  multiplié le delta (qui est en coordonné locale de caméra et qui provient 
+  dénéralement de la méthode pixelToGLDelta) par la matrice de transformation.
+//le delta est en coord GL*/
+void Camera::move( const Vector3d& iDelta )
 {
   switch ( getOrientation() ) 
   {
@@ -81,7 +84,8 @@ void Camera::move( Vector3d iDelta )
     case ZY:
     case XZ:
     {
-      Point3d trans = mTransformation.getTranslation() + iDelta * mTransformation;
+      Point3d trans = mTransformation.getTranslation() + 
+        iDelta * getTransformation();
       mTransformation.setTranslation(trans);
     }
     break;
@@ -210,31 +214,99 @@ Camera::operator=( const Camera& iCam )
 //Les paramètres sont en pixels
 Point3d Camera::pixelToGL( int iX, int iY ) const
 {
-  int* viewport = new int[4];
-  glGetIntegerv( GL_VIEWPORT, viewport );
+  assert(0);
+  return(Point3d());
+  //la fonction était incorrecte et n'est pas en utilisation pour l'instant...
+  //il faudrait aussi prendre la transformation en compte.
   
-  int width = viewport[2];
-  int heigth = viewport[3];
-  
-  Point3d result = getPos() - ( getLat() * (width/2.0) / mPixelPerGLUnit ) + 
-    ( getUp() * (heigth/2.0) / mPixelPerGLUnit ) +
-    getLat() * iX / mPixelPerGLUnit +
-    getUp() * iY / mPixelPerGLUnit;
-  
-//  std::cout<<"x: "<<iX<<" y: "<<iY<<std::endl;
-//  result.print();
-  
-  return result;
+//  int width = getWindowInfo().getWidth();
+//  int heigth = getWindowInfo().getHeight();
+//  
+//  Point3d result = getPos() - ( getLat() * (width/2.0) / mPixelPerGLUnit ) + 
+//    ( getUp() * (heigth/2.0) / mPixelPerGLUnit ) +
+//    getLat() * iX / mPixelPerGLUnit +
+//    getUp() * iY / mPixelPerGLUnit;
+//    
+//  /*TODO: Pour la camera perspective, voire la méthode pixelDeltaToGLDelta et
+//    s'en inspirer pour faire celle-ci*/
+//  
+//  return result;
 }
 
 //-----------------------------------------------------------------------------
-//Convertie une delta en pixel d'écran en delta GL
-//Les paramètres sont en pixels
-Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY ) const
+/*Convertie une delta en pixel d'écran en delta GL
+  Les paramètres sont en pixels. Le Point3d répresente un point sur le
+  plan de travail qui est perdiculaire a la caméra. On a besoin de ce point
+  afin de déterminer, dans la vue de perspective, la profodeur à laquelle on
+  veut le deltaGL.
+  NOTE: le Point3d doit être en coordonnée locale et non globale.*/
+Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
+	const Point3d& iPoint /*= Point3d(MAX_DOUBLE)*/ ) const
 {
-  Vector3d result =
-    getLat() * iDeltaX / mPixelPerGLUnit +
-    getUp() * iDeltaY / mPixelPerGLUnit;
+  Vector3d result(0.0);
+  if(getMode() == ORTHOGONAL ||
+     (iPoint == Point3d(MAX_DOUBLE)))
+  {
+    result = getLat() * iDeltaX / mPixelPerGLUnit +
+      getUp() * iDeltaY / mPixelPerGLUnit;
+  }
+  else //PERSPECTIVE
+  {
+    double modelView[16];
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+    double projection[16];
+    glGetDoublev(GL_PROJECTION_MATRIX, projection);
+    int viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+
+    double winx, winy, winz, p0x, p0y, p0z, p1x, p1y, p1z;
+    
+    /*on transforme le point en coordonné global afin de faire les calculs de
+      projection*/
+    Point3d p = iPoint * getTransformation();
+
+    /*A partir du Point3d qui represente le point sur le plan de travail
+      perpendiculaire a la camera, on le projete a l'écran. Ce qui nous
+      intéresse c'est la coordonnée en z normalisé qui nous donne la profondeur
+      de ce point3d dans le zBuffer qui sera utilisé pour trouver le deltaGL*/
+    gluProject(p.getX(), p.getY(), p.getZ(),
+      modelView, projection, viewport,
+      &winx, &winy, &winz);
+      
+    /*On projete le point d'écran 0.0, 0.0, winz qui nous donnera un point (p0)
+      qui correspond au point d'écran (0.0, 0.0) a la profondeur du plan de
+      travail*/
+    gluUnProject(0.0, 0.0, winz,
+      modelView, projection, viewport,
+      &p0x, &p0y, &p0z);
+      
+    /*On projete le point d'écran iDeltax, iDeltaY, winz qui nous donnera un
+      point (p1) qui correspond au point d'écran (iDeltaX, iDeltaY) a la
+      profondeur du plan de travail. Ainsi, avec ces deux points 3d qui
+      représente le delta pixel en coordonnée GL a la profondeur du plan de
+      travail*/
+    gluUnProject(iDeltaX, iDeltaY, winz,
+      modelView, projection, viewport,
+      &p1x, &p1y, &p1z);
+    
+    /*on met les points dans le systeme de coordonné local. La transformation
+      de la camera est du systeme local vers le system global. On a donc besoin
+      de la transformation inverse pour mettre les points globaux dans le 
+      systeme local.*/
+    Matrix4d sceneToLocal = getTransformation();
+    sceneToLocal.inverse();
+    Vector3d p0 = Vector3d(p0x, p0y, p0z) * sceneToLocal;
+    Vector3d p1 = Vector3d(p1x, p1y, p1z) * sceneToLocal;
+    Vector3d glDelta = p1 - p0;
+    
+    //projection de glDelta sur lateral
+    Vector3d projGlDeltaOnLat = getLat() * ( getLat() & glDelta );
+    //projection de glDelta sur up
+    Vector3d projGlDeltaOnUp = getUp() * ( getUp() & glDelta );
+    result = getLat() * iDeltaX/(abs(iDeltaX)) * projGlDeltaOnLat.fastNorm() + 
+      getUp() * iDeltaY/(abs(iDeltaY)) * projGlDeltaOnUp.fastNorm();
+  }
+
   
   return result;
 }
@@ -282,7 +354,10 @@ void Camera::computeProjection()
         break;
         
       case PERSPECTIVE:
-        gluPerspective (27.0, (GLfloat) projectionLongSide / (GLfloat) projectionShortSide, 0.5, 10000.0);
+        gluPerspective (27.0,
+          (GLfloat) projectionLongSide / (GLfloat) projectionShortSide,
+          0.5,
+          1000.0);
         break;
       default:
         break;
@@ -301,7 +376,10 @@ void Camera::computeProjection()
         break;
         
       case PERSPECTIVE:
-        gluPerspective (27.0, (GLfloat) projectionShortSide / (GLfloat) projectionLongSide, 0.5, 10000.0);
+        gluPerspective (27.0,
+          (GLfloat) projectionShortSide / (GLfloat) projectionLongSide,
+          0.5,
+          1000.0);
         break;
         
       default:

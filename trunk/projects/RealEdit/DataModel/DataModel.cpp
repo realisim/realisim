@@ -18,12 +18,14 @@ unsigned int DataModelBase::mIdCounter = 0;
 static RealEditPoint mDummyPoint = RealEditPoint();
 static RealEditPolygon mDummyPolygon = RealEditPolygon();
   
+#ifndef NDEBUG
 static int newGuts = 0;
 static int deleteGuts = 0;
 static int newGutsPoly = 0;
 static int deleteGutsPoly = 0;
 static int newGutsModel = 0;
 static int deleteGutsModel = 0;
+#endif
 
 //-------------------------DataModelBase--------------------------------------------
 DataModelBase::DataModelBase() : mId( 0 )
@@ -39,21 +41,28 @@ void DataModelBase::assign()
 {
   ++mIdCounter;
   mId = mIdCounter;
-  std::cout<<"id: "<<mId<<std::endl;
+  
+#ifndef NDEBUG
+std::cout<<"id: "<<mId<<std::endl;
+#endif
 }
 
 //-------------------------RealEditPoint::Guts----------------------------------
 RealEditPoint::Guts::Guts (const Point3d& iP) : mPoint (iP),
   mRefCount (1)
 {
+#ifndef NDEBUG
   ++newGuts;
   std::cout<<"new Guts Point: "<<newGuts<<std::endl;
+#endif
 }
 
 RealEditPoint::Guts::~Guts ()
 {
+#ifndef NDEBUG
   ++deleteGuts;
   std::cout<<"delete Guts Point: "<<deleteGuts<<std::endl;
+#endif
 }
 
 //-------------------------RealEditPoint----------------------------------------
@@ -102,8 +111,10 @@ RealEditPolygon::Guts::Guts() : mRefCount (1),
   mPoints (),
   mNormals ()
 {
+#ifndef NDEBUG
   ++newGutsPoly;
   std::cout<<"new Guts Poly: "<<newGutsPoly<<std::endl;
+#endif
 }
 
 RealEditPolygon::Guts::Guts (const std::vector<RealEditPoint>& iP) :
@@ -112,14 +123,19 @@ RealEditPolygon::Guts::Guts (const std::vector<RealEditPoint>& iP) :
   mNormals ()
 {
   computeNormals();
+  
+#ifndef NDEBUG
   ++newGutsPoly;
   std::cout<<"new Guts Poly: "<<newGutsPoly<<std::endl;
+#endif
 }
 
 RealEditPolygon::Guts::~Guts()
 {
+#ifndef NDEBUG
   ++deleteGutsPoly;
   std::cout<<"delete Guts Poly: "<<deleteGutsPoly<<std::endl;
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -203,16 +219,21 @@ RealEditModel::Guts::Guts () : mBoundingBox (),
   mPoints (),
   //mLineSegements(),
   mPolygons (),
-  mRefCount (1)
+  mRefCount (1),
+  mCentroid(0.0)
 {
+#ifndef NDEBUG
   ++newGutsModel;
   std::cout<<"new Guts Model: "<<newGutsModel<<std::endl;
+#endif
 }
 
 RealEditModel::Guts::~Guts ()
 {
+#ifndef NDEBUG
   ++deleteGutsModel;
   std::cout<<"delete Guts Model: "<<deleteGutsModel<<std::endl;
+#endif
 }
 
 //------------------------RealEditModel-----------------------------------------
@@ -263,6 +284,16 @@ void RealEditModel::addPolygon (const RealEditPolygon iP)
 //------------------------------------------------------------------------------
 const BB3d& RealEditModel::getBoundingBox () const
 { return mpGuts->mBoundingBox; }
+
+const Point3d& RealEditModel::getCentroid () const
+{
+  map<unsigned int, RealEditPoint>::const_iterator it = getPoints().begin();
+  for(; it != getPoints().end(); ++it)
+    mpGuts->mCentroid += it->second.pos();
+  mpGuts->mCentroid /= getPointCount();
+  
+  return mpGuts->mCentroid;
+}
 
 //------------------------------------------------------------------------------
 unsigned int RealEditModel::getPointCount () const
