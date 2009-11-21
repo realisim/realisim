@@ -4,7 +4,9 @@
 #define Pong_GameWindow_hh
 
 #include <chipmunk.h>
+#include <map>
 namespace Pong{class Ball;}
+namespace Pong{class Net;}
 namespace Pong{class Player;}
 class QCheckBox;
 class QCloseEvent;
@@ -29,14 +31,14 @@ public:
   ~Options() {;}
   Options(const Options&);
   
-  int getNumberOfPlayers() const {return mNumberOfPlayers;}
+  unsigned int getNumberOfPlayers() const {return mNumberOfPlayers;}
   bool isFullScreen() const {return mIsFullScreen;}
   const Options& operator=(const Options&);
   void setFullScreen(bool i){mIsFullScreen = i;}
   void setNumberOfPlayers(int i) {mNumberOfPlayers = i;}
 private:
   bool mIsFullScreen;
-  int mNumberOfPlayers;
+  unsigned int mNumberOfPlayers;
 };
 
 //--- OptionsDialog-------------------------------------------------------------
@@ -67,37 +69,61 @@ public:
   virtual ~Board() {;}
   
   virtual void draw() const;
-  const Matrix4d& getPlayer1Transformation() const {return mPlayer1Transformation;}
-  const Matrix4d& getPlayer2Transformation() const {return mPlayer2Transformation;}
-  const QSizeF& getSize() const {return mSize;}
-
+  virtual const Matrix4d& getPlayerTransformation(int i) const {return mPlayerTransformations[i];}
+  virtual const Matrix4d& getNetTransformation(int i) const {return mNetTransformations[i];}
+  virtual unsigned int getMaxNumberOfPlayers() const {return 2;}
+  virtual const QSizeF& getSize() const {return mSize;}
+  
 protected:
   QSizeF mSize;
-  Matrix4d mPlayer1Transformation;
-  Matrix4d mPlayer2Transformation;
+  vector<Matrix4d> mPlayerTransformations;
+  vector<Matrix4d> mNetTransformations;
 };
 
 //--- physics -----------------------------------------------------------------
+class GameWindow;
 class Physics
 {
 public:
-  explicit Physics(const Board&, vector<Ball*>&, vector<Player*>&);
+  explicit Physics(GameWindow*, const Board&, vector<Ball*>&,
+    vector<Net*>&, vector<Player*>&);
   virtual ~Physics();
   
-  void updatePhysics();
   void drawCollisions();
+  void markPlayerForRemoval(int iId) {mPlayersToRemove.push_back(iId);}
+  void movePlayer(int, int, int);
+  void resetBalls();
+  void updatePhysics();
   
 protected:
-  static void drawCollisionsFunc(void *ptr, void *data);
+  enum CollisionType {ctBall, ctBoard, ctPlayer, ctNet};
   
+  void removeMarkedPlayers();
+  void removeShapes(cpBody*);
+  void removeStaticShapes(cpBody*);
+  static int ballToNetCollisionFunc(cpShape*, cpShape*, cpContact*, int, cpFloat,
+    void*);
+  static int defaultCollisionFunc(cpShape*, cpShape*, cpContact*, int, cpFloat,
+    void*);
+  static void drawCollisionsFunc(void*, void*);
+  
+  static GameWindow* mpGameWindow; //not owned
+      
   cpSpace* mpSpace;
   cpBody* mpBoard;
+  
   vector<cpBody*> mPlayers;
   vector<cpBody*> mPlayerHolders;
+  vector<cpJoint*> mJoints;
   vector<cpBody*> mBalls;
+  static vector<cpBody*> mNets;
+  vector<cpShape*> mShapes;
   
-  vector<Ball*>& mDataBalls;
-  vector<Player*>& mDataPlayers;
+  vector<Ball*>& mDataBalls; //not owned
+  vector<Net*>& mDataNets; //not owned
+  vector<Player*>& mDataPlayers; //not owned
+  
+  vector<int> mPlayersToRemove;
 };
 
 //--- GameWindow----------------------------------------------------------------
@@ -109,6 +135,7 @@ public:
 	virtual ~GameWindow();
   
   void addPlayer(Player*);
+  virtual void score(int);
   virtual void showOptions() const;
   
 protected slots:
@@ -119,7 +146,9 @@ protected:
   
   virtual void drawBalls() const;
   virtual void drawGameBoard() const;
+  virtual void drawNets() const;
   virtual void drawPlayers() const;
+  virtual void eliminatePlayer(int iId);
   const GameState getState() const {return mState;}
   virtual void keyPressEvent(QKeyEvent*);
   virtual void mouseDoubleClickEvent(QMouseEvent*) {;}
@@ -129,6 +158,7 @@ protected:
   //virtual void wheelEvent(QWheelEvent*) {;}
   virtual void paintGL();
   virtual void pauseGame();
+//virtual void removePlayer(Player*);
   virtual void resumeGame();
   virtual void startGame();
   virtual void setState(GameState gs) {mState = gs;}
@@ -143,8 +173,10 @@ protected:
   GameState mState;
   int mGameTimerId;
   vector<Player*> mPlayers;
+  vector<Player*> mEliminatedPlayers;
   Player* mpLocalPlayer;
   Board* mpBoard;
+  vector<Net*> mNets;
   QPoint mMousePosition;
   vector<Ball*> mBalls;
   Physics* mpPhysics;

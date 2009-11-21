@@ -22,7 +22,8 @@ static const double kFar = 2000.0;
 Camera::Camera( Mode iMode /*= PERSPECTIVE*/ ) : 
 mMode( iMode ),
 mOrientation( FREE ),
-mTransformation(),
+mToLocal(),
+mToGlobal(),
 mPos(),
 mLat(),
 mLook(),
@@ -38,7 +39,8 @@ mWindowInfo()
 Camera::Camera( const Camera& iCam ) : 
 mMode(),
 mOrientation(),
-mTransformation(),
+mToLocal(),
+mToGlobal(),
 mPos(),
 mLat(),
 mLook(),
@@ -72,10 +74,7 @@ Camera::~Camera()
 //}
 
 //-----------------------------------------------------------------------------
-/*déplace la caméra. La caméra se déplace en coordonné GLOBALE, on doit donc
-  multiplié le delta (qui est en coordonné locale de caméra et qui provient 
-  dénéralement de la méthode pixelToGLDelta) par la matrice de transformation.
-//le delta est en coord GL*/
+/*déplace la caméra. Le delta est en coordonnée GL et locale à la caméra.*/
 void Camera::move( const Vector3d& iDelta )
 {
   switch ( getOrientation() ) 
@@ -84,9 +83,12 @@ void Camera::move( const Vector3d& iDelta )
     case ZY:
     case XZ:
     {
-      Point3d trans = mTransformation.getTranslation() + 
-        iDelta * getTransformation();
-      mTransformation.setTranslation(trans);
+      Point3d trans = mToLocal.getTranslation() -
+        iDelta;
+      mToLocal.setTranslation(trans);
+      //important de seter la matrice local parce que ca rafraichit aussi
+      //la matrice globale.
+      setTransformationToLocal(mToLocal);
     }
     break;
       
@@ -196,7 +198,8 @@ Camera::operator=( const Camera& iCam )
 {
   mMode = iCam.getMode();
   mOrientation = iCam.getOrientation();
-  mTransformation = iCam.getTransformation();
+  mToLocal = iCam.getTransformationToLocal();
+  mToGlobal = iCam.getTransformationToGlobal();
   mPos = iCam.getPos();
   mLat = iCam.getLat();
   mLook = iCam.getLook();
@@ -234,7 +237,8 @@ Point3d Camera::pixelToGL( int iX, int iY ) const
 }
 
 //-----------------------------------------------------------------------------
-/*Convertie une delta en pixel d'écran en delta GL
+/*Convertie une delta en pixel d'écran en delta GL. Le deltaGL sera en
+  coordonnée locale.
   Les paramètres sont en pixels. Le Point3d répresente un point sur le
   plan de travail qui est perdiculaire a la caméra. On a besoin de ce point
   afin de déterminer, dans la vue de perspective, la profodeur à laquelle on
@@ -263,7 +267,7 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
     
     /*on transforme le point en coordonné global afin de faire les calculs de
       projection*/
-    Point3d p = iPoint * getTransformation();
+    Point3d p = iPoint * getTransformationToGlobal();
 
     /*A partir du Point3d qui represente le point sur le plan de travail
       perpendiculaire a la camera, on le projete a l'écran. Ce qui nous
@@ -293,8 +297,7 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
       de la camera est du systeme local vers le system global. On a donc besoin
       de la transformation inverse pour mettre les points globaux dans le 
       systeme local.*/
-    Matrix4d sceneToLocal = getTransformation();
-    sceneToLocal.inverse();
+    Matrix4d sceneToLocal = getTransformationToLocal();
     Vector3d p0 = Vector3d(p0x, p0y, p0z) * sceneToLocal;
     Vector3d p1 = Vector3d(p1x, p1y, p1z) * sceneToLocal;
     Vector3d glDelta = p1 - p0;
@@ -389,6 +392,9 @@ void Camera::computeProjection()
 }
 
 //-----------------------------------------------------------------------------
+/*Définie la position de la caméra, le point visé et le vecteur up. Le 
+  vecteur Latéral sera calculé à partir du vecteur up et ensuite le up
+  sera recalculé afin d'assurer une base normale.*/
 void Camera::set( const Point3d& iPos,
          const Point3d& iLook,
          const Vector3d& iUp )
@@ -455,15 +461,23 @@ void Camera::setOrientation( Orientation iO )
     default:
       break;
   }
-
-  //l'orientation a changé, on s'assure de rafraichier la matrice
-  //de transformation
-  setTransformation( getTransformation() );
 }
 
 //-----------------------------------------------------------------------------
-void Camera::setTransformation(const Matrix4d& iTransfo)
-{ mTransformation = iTransfo; }
+void Camera::setTransformationToLocal(const Matrix4d& iTransfo)
+{
+  mToLocal = iTransfo;
+  mToGlobal = mToLocal;
+  mToGlobal.inverse();
+}
+
+//-----------------------------------------------------------------------------
+void Camera::setTransformationToGlobal(const Matrix4d& iTransfo)
+{
+  mToGlobal = iTransfo;
+  mToLocal = mToGlobal;
+  mToLocal.inverse();
+}
 
 //-----------------------------------------------------------------------------
 void Camera::setUp( const Vector3d& iUp )

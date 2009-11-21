@@ -95,7 +95,7 @@ void RealEdit3d::changeCurrentNode()
 {
   Camera cam = getCamera();
   Path p(mEditionData.getCurrentNode());
-  cam.setTransformation(p.getNodeToScene());
+  cam.setTransformationToGlobal(p.getNodeToScene());
   setCamera( cam );
 }
 
