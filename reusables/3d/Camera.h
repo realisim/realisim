@@ -68,7 +68,8 @@ public:
   Orientation getOrientation() const { return mOrientation; }
   const Point3d& getPos() const { return mPos; }
   const double getPixelPerGLUnit() const { return mPixelPerGLUnit; }
-  const Matrix4d& getTransformation() const { return mTransformation; }
+  const Matrix4d& getTransformationToLocal() const { return mToLocal; }
+  const Matrix4d& getTransformationToGlobal() const { return mToGlobal; }
   const Vector3d& getUp() const { return mUp; }
   const WindowInfo& getWindowInfo() const {return mWindowInfo;}
   const double getZoom() const { return mZoomFactor; }
@@ -81,7 +82,8 @@ public:
   void setMode( Mode );
   void setPos(const Point3d&);
   void setOrientation( Orientation );
-  void setTransformation(const Matrix4d&);
+  void setTransformationToLocal(const Matrix4d&);
+  void setTransformationToGlobal(const Matrix4d&);
   void setZoom(double);
   
 protected:
@@ -93,7 +95,8 @@ protected:
   
   Mode mMode;
   Orientation mOrientation;
-  Matrix4d mTransformation;
+  Matrix4d mToLocal;
+  Matrix4d mToGlobal;
   Point3d mPos;
   Vector3d mLat;
   Point3d mLook;

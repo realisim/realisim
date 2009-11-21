@@ -172,9 +172,9 @@ Widget3d::paintGL()
   }
   
   //On place la caméra en coordonnée absolue.
-  Point3d absolutePos = getCamera().getPos() * getCamera().getTransformation();
-  Point3d absoluteLook = getCamera().getLook() * getCamera().getTransformation();
-  Vector3d absoluteUp = getCamera().getUp() * getCamera().getTransformation();
+  Point3d absolutePos = getCamera().getPos() * getCamera().getTransformationToGlobal();
+  Point3d absoluteLook = getCamera().getLook() * getCamera().getTransformationToGlobal();
+  Vector3d absoluteUp = getCamera().getUp() * getCamera().getTransformationToGlobal();
   
   gluLookAt( absolutePos.getX(),
              absolutePos.getY(), 
@@ -214,6 +214,25 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/ )
   
   if( iAnimate )
   {
+    /*L'animation de la camera va interpoler la transformation entre la
+      la vielle camera (mOldCam) et la nouvelle camera (mNewCame). Cette
+      matrice interpolé sera appliqué a la camera courante (mCam). Cette
+      méthode permet a l'usagé de modifié la position relative de la caméra 
+      durant l'animation (parce que la position globale de la camera est
+      mCam.getPos() * mCam.getTransformationToGlobal() ). On ne veut pas
+      interpolé la position, le point visé et le up de la caméra locale parce
+      que ca empêcherait l'utilisateur de les modifier durant l'animation. Par
+      contre, on veut quand même permettre de modifier la position locale de la
+      caméra, via la méthode Camera::set(Point3d, Poin3d, Vector3d), c'est 
+      pourquoi on applique la position locale de la nouvelle caméra à la caméra
+      courante. 
+      
+      Note: Pour donner l'effet d'interpoler le vecteur up (donner une 
+      impression de tanguage) ou d'interpoler sur le point visé (donner 
+      l'impression de déplace la caméra), il est très facile de le faire en
+      modifiant la transformation locale ou globale.*/
+  	mCam.set(mNewCam.getPos(), mNewCam.getLook(), mNewCam.getUp());
+  
     //we use a QTime to track animation time
     mAnimationTimer.start();
     //start a timer that will timeout as quick as possible which will trigger
@@ -261,8 +280,8 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     double t = animationTime / (double)kCameraAnimationTime;
     t = inversePower(t, 3);
     
-    Quat4d q1( mOldCam.getTransformation() );
-    Quat4d q2( mNewCam.getTransformation() );
+    Quat4d q1( mOldCam.getTransformationToLocal() );
+    Quat4d q2( mNewCam.getTransformationToLocal() );
     //on compare avec les longueurs pour prendre le plus petit angle
     if( (-q2-q1).getLength() < (q2-q1).getLength() )
     {
@@ -273,17 +292,15 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     Matrix4d iterationMatrix = q2.getUnitRotationMatrix();
     
     //trouver la translation totale a effectuer
-    iterationMatrix.setTranslation( mOldCam.getTransformation().getTranslation()*( 1 - t ) + 
-      mNewCam.getTransformation().getTranslation()*( t ) );
+    iterationMatrix.setTranslation( mOldCam.getTransformationToLocal().getTranslation()*( 1 - t ) + 
+      mNewCam.getTransformationToLocal().getTranslation()*( t ) );
     
-    getCamera().setTransformation(iterationMatrix);
-    
-    update();
+    //getCamera().set(p2, l2, u2);
+    getCamera().setTransformationToLocal(iterationMatrix);
     
     if ( animationTime >= kCameraAnimationTime )
-    {
       killTimer( mAnimationTimerId );
-    }
+    update();
   }
   else
   {

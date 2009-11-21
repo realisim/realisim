@@ -53,6 +53,7 @@ namespace math
     inline void setRow3(const T &a31, const T &a32, const T &a33, const T &a34);
     inline void setRow4(const T &a41, const T &a42, const T &a43, const T &a44);
     
+    inline void setRotation(const Matrix4<T>& iRot);
     inline void setTranslation( const Point<T>& iTrans );
 
     // --------------- fonction get --------------------------------------------
@@ -152,6 +153,16 @@ namespace math
     const T &a44)
   {
     mat_[12] = a41; mat_[13] = a42; mat_[14] = a43; mat_[15] = a44;
+  }
+  
+  
+  //permet de setter la sous matrice 3x3 qui représente la rotation
+  template<class T>
+  inline void Matrix4<T>::setRotation(const Matrix4<T>& iRot)
+  { 
+    mat_[0] = iRot(0, 0); mat_[1] = iRot(0, 1); mat_[2] = iRot(0, 2);
+    mat_[4] = iRot(1, 0); mat_[5] = iRot(1, 1); mat_[6] = iRot(1, 2);
+    mat_[8] = iRot(2, 0); mat_[9] = iRot(2, 1); mat_[10] = iRot(2, 2);
   }
   
   //! permet de setter la 4e ligne de la sous matrice 3x3 ("coin" sup gauche)
