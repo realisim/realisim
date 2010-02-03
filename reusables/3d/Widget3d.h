@@ -37,15 +37,15 @@ signals:
 
 protected:
   Camera& getCamera() {return mCam;}
-  void initializeGL();
-  virtual void paintGL();
-  void resizeGL(int iWidth, int iHeight);
+  virtual void initializeGL();
   virtual void mouseDoubleClickEvent( QMouseEvent* e );
   virtual void mouseMoveEvent( QMouseEvent* e );
   virtual void mousePressEvent( QMouseEvent* e );
   virtual void mouseReleaseEvent( QMouseEvent* e );
   virtual void wheelEvent ( QWheelEvent* e );
   QSize minimumSizeHint() const;
+  virtual void paintGL();
+  void resizeGL(int iWidth, int iHeight);
   QSize sizeHint() const;
   virtual void timerEvent( QTimerEvent* ipE );
 

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "GameObject.h"
 #include "GameWindow.h"
+#include <math.h>
 #include "MathUtils.h"
 #include <qapplication.h>
 #include <qcheckbox.h>
@@ -23,6 +24,7 @@ namespace
   const int kTimeStep = 16; //16 ms -> roughly 60 frames / sec.
   const double kcpTimeStep = kTimeStep / 1000.0;
   const Vector3d kHolderPos(0.0, -3.0, 0.0);
+  const QRectF kPlayerRegion(QPointF(-1, 0.5), QPointF(1, -0.5)); //in meters
 }
 
 //--- Options ------------------------------------------------------------------
@@ -85,51 +87,10 @@ void OptionsDialog::setOptions(const Options& i)
 }
 
 //--- Board --------------------------------------------------------------------
-Board::Board() : mSize(10.0, 10.0), // metres par metres
+Board::Board() : mSize(0.0, 0.0),
   mPlayerTransformations(),
   mNetTransformations()
-{
-  //player 0 bas
-  Matrix4d pt;
-  pt.setTranslation(Point3d(0.0, -4.5, 0.0));
-  mPlayerTransformations.push_back(pt);
-  //player 1 haut
-  pt = getRotationMatrix(180 * kDegreeToRadian,
-    Vector3d(0.0, 0.0, 1.0));
-  pt.setTranslation(Point3d(2.0, 4.5, 0.0));
-  mPlayerTransformations.push_back(pt);
-  //player 2 gauche
-  pt = getRotationMatrix(90 * kDegreeToRadian,
-    Vector3d(0.0, 0.0, 1.0));
-  pt.setTranslation(Point3d(-4.5, 0.0, 0.0));
-  mPlayerTransformations.push_back(pt);
-  //player 3 droite
-  pt = getRotationMatrix(-90 * kDegreeToRadian,
-    Vector3d(0.0, 0.0, 1.0));
-  pt.setTranslation(Point3d(4.5, 0.0, 0.0));
-  mPlayerTransformations.push_back(pt);
-
-  //net 0 bas
-  Matrix4d nt;
-  nt.setTranslation(Point3d(0.0, -5.0, 0.0));
-  mNetTransformations.push_back(nt);
-  //net 1 haut
-  nt = getRotationMatrix(180 * kDegreeToRadian,
-    Vector3d(0.0, 0.0, 1.0));
-  nt.setTranslation(Point3d(0.0, 5.0, 0.0));
-  mNetTransformations.push_back(nt);
-  //net 2 gauche
-  nt = getRotationMatrix(90 * kDegreeToRadian,
-    Vector3d(0.0, 0.0, 1.0));
-  nt.setTranslation(Point3d(-5.0, 0.0, 0.0));
-  mNetTransformations.push_back(nt);
-  //net 3 droite
-  nt = getRotationMatrix(-90 * kDegreeToRadian,
-    Vector3d(0.0, 0.0, 1.0));
-  nt.setTranslation(Point3d(5.0, 0.0, 0.0));
-  mNetTransformations.push_back(nt);
-
-}
+{}
 
 void Board::draw() const
 {
@@ -147,6 +108,76 @@ void Board::draw() const
   glPopAttrib();
 }
 
+Board2::Board2() : Board()
+{
+  setSize(5.0, 20.0);
+  
+  //player 0 bas
+  Matrix4d pt;
+  pt.setTranslation(Point3d(0.0, -9.5, 0.0));
+  mPlayerTransformations.push_back(pt);
+  //player 1 haut
+  pt = getRotationMatrix(180 * kDegreeToRadian,
+    Vector3d(0.0, 0.0, 1.0));
+  pt.setTranslation(Point3d(0.0, 9.5, 0.0));
+  mPlayerTransformations.push_back(pt);
+
+  //net 0 bas
+  Matrix4d nt;
+  nt.setTranslation(Point3d(0.0, -10.0, 0.0));
+  mNetTransformations.push_back(nt);
+  //net 1 haut
+  nt = getRotationMatrix(180 * kDegreeToRadian,
+    Vector3d(0.0, 0.0, 1.0));
+  nt.setTranslation(Point3d(0.0, 10.0, 0.0));
+  mNetTransformations.push_back(nt);
+}
+
+Board4::Board4() : Board()
+{
+  setSize(10.0, 10.0);
+  
+  //player 0 bas
+  Matrix4d pt;
+  pt.setTranslation(Point3d(0.0, -4.5, 0.0));
+  mPlayerTransformations.push_back(pt);
+  //player 1 haut
+  pt = getRotationMatrix(180 * kDegreeToRadian,
+    Vector3d(0.0, 0.0, 1.0));
+  pt.setTranslation(Point3d(0.0, 4.5, 0.0));
+  mPlayerTransformations.push_back(pt);
+  //player 2 gauche
+  pt = getRotationMatrix(-90 * kDegreeToRadian,
+    Vector3d(0.0, 0.0, 1.0));
+  pt.setTranslation(Point3d(-4.5, 0.0, 0.0));
+  mPlayerTransformations.push_back(pt);
+  //player 3 droite
+  pt = getRotationMatrix(90 * kDegreeToRadian,
+    Vector3d(0.0, 0.0, 1.0));
+  pt.setTranslation(Point3d(4.5, 0.0, 0.0));
+  mPlayerTransformations.push_back(pt);
+
+  //net 0 bas
+  Matrix4d nt;
+  nt.setTranslation(Point3d(0.0, -5.0, 0.0));
+  mNetTransformations.push_back(nt);
+  //net 1 haut
+  nt = getRotationMatrix(180 * kDegreeToRadian,
+    Vector3d(0.0, 0.0, 1.0));
+  nt.setTranslation(Point3d(0.0, 5.0, 0.0));
+  mNetTransformations.push_back(nt);
+  //net 2 gauche
+  nt = getRotationMatrix(-90 * kDegreeToRadian,
+    Vector3d(0.0, 0.0, 1.0));
+  nt.setTranslation(Point3d(-5.0, 0.0, 0.0));
+  mNetTransformations.push_back(nt);
+  //net 3 droite
+  nt = getRotationMatrix(90 * kDegreeToRadian,
+    Vector3d(0.0, 0.0, 1.0));
+  nt.setTranslation(Point3d(5.0, 0.0, 0.0));
+  mNetTransformations.push_back(nt);
+}
+
 //--- Physics ------------------------------------------------------------------
 GameWindow* Physics::mpGameWindow = 0;
 vector<cpBody*> Physics::mNets;
@@ -155,8 +186,6 @@ Physics::Physics(GameWindow* ipGW, const Board& iB, vector<Ball*>& iBall,
   mpSpace(0),
   mpBoard(0),
   mPlayers(),
-  mPlayerHolders(),
-  mJoints(),
   mBalls(),
   mShapes(),
   mDataBalls(iBall),
@@ -169,9 +198,9 @@ Physics::Physics(GameWindow* ipGW, const Board& iB, vector<Ball*>& iBall,
   mpSpace = cpSpaceNew();
   mpSpace->iterations = 5;
   mpSpace->elasticIterations = 5;
-//mpSpace->gravity = cpv(0.0f, -9.8f);
-  mpSpace->damping = 0.4;
-  cpSpaceResizeStaticHash(mpSpace, 0.1f, 100);
+//mpSpace->gravity = cpv(3.0f, -9.8f);
+//mpSpace->damping = 0.4;
+  cpSpaceResizeStaticHash(mpSpace, 2.0f, 5);
   cpSpaceResizeActiveHash(mpSpace, 0.1f, 100);
   
   //-- board
@@ -194,7 +223,7 @@ Physics::Physics(GameWindow* ipGW, const Board& iB, vector<Ball*>& iBall,
     if(i == 3)
       pSeg = cpSegmentShapeNew(mpBoard, boardVerts[i], boardVerts[0], 0.0 );
     
-    pSeg->u = 0.0f;
+    pSeg->u = 0.1f;
     pSeg->e = 1.0f;
     pSeg->collision_type = ctBoard;
     //add the static shape associate with the Board body object
@@ -207,12 +236,11 @@ Physics::Physics(GameWindow* ipGW, const Board& iB, vector<Ball*>& iBall,
   {
     w = mDataNets[i]->getSize().width() / 2.0;
     h = mDataNets[i]->getSize().height() / 2.0;
-    //on applique la transformation de la palette au coordonnees afin
-    //quelles soit en coordonnées locale du joueur
-    Point3d v0 = Point3d(-w, h, 0.0) * mDataNets[i]->getTransformation();
-    Point3d v1 = Point3d( w, h, 0.0) * mDataNets[i]->getTransformation();
-    Point3d v2 = Point3d( w, -h, 0.0) * mDataNets[i]->getTransformation();
-    Point3d v3 = Point3d(-w, -h, 0.0) * mDataNets[i]->getTransformation();
+    //on met les coordonné du net en coordonné global.
+    Point3d v0 = Point3d(-w, h, 0.0) * mDataNets[i]->getTransformationToGlobal();
+    Point3d v1 = Point3d( w, h, 0.0) * mDataNets[i]->getTransformationToGlobal();
+    Point3d v2 = Point3d( w, -h, 0.0) * mDataNets[i]->getTransformationToGlobal();
+    Point3d v3 = Point3d(-w, -h, 0.0) * mDataNets[i]->getTransformationToGlobal();
 
     cpVect netVerts[] = {
       cpv(v0.getX(), v0.getY()),
@@ -238,6 +266,7 @@ Physics::Physics(GameWindow* ipGW, const Board& iB, vector<Ball*>& iBall,
     cpBody* pBall = cpBodyNew(mDataBalls[i]->getMass(), wheelMoment);
     pBall->p = cpv(mDataBalls[i]->getPosition().getX(),
       mDataBalls[i]->getPosition().getY());
+    pBall->velocity_func = &ballVelocityFunc;
     cpSpaceAddBody(mpSpace, pBall);
     mBalls.push_back(pBall);
     
@@ -255,12 +284,11 @@ Physics::Physics(GameWindow* ipGW, const Board& iB, vector<Ball*>& iBall,
     double w = mDataPlayers[i]->getSize().width() / 2.0;
     double h = mDataPlayers[i]->getSize().height() / 2.0;
     
-    //on applique la transformation de la palette au coordonnees afin
-    //quelle soit en coordonnées globales
-    Vector3d v0 = Vector3d(-w, h, 0.0) * mDataPlayers[i]->getTransformation();
-    Vector3d v1 = Vector3d( w, h, 0.0) * mDataPlayers[i]->getTransformation();
-    Vector3d v2 = Vector3d( w, -h, 0.0) * mDataPlayers[i]->getTransformation();
-    Vector3d v3 = Vector3d(-w, -h, 0.0) * mDataPlayers[i]->getTransformation();
+    //on met les coordonné du player en global
+    Vector3d v0 = Vector3d(-w, h, 0.0) * mDataPlayers[i]->getTransformationToGlobal();
+    Vector3d v1 = Vector3d( w, h, 0.0) * mDataPlayers[i]->getTransformationToGlobal();
+    Vector3d v2 = Vector3d( w, -h, 0.0) * mDataPlayers[i]->getTransformationToGlobal();
+    Vector3d v3 = Vector3d(-w, -h, 0.0) * mDataPlayers[i]->getTransformationToGlobal();
 
     cpVect playerVerts[] = {
       cpv(v0.getX(), v0.getY()),
@@ -269,8 +297,8 @@ Physics::Physics(GameWindow* ipGW, const Board& iB, vector<Ball*>& iBall,
       cpv(v3.getX(), v3.getY()),
     };
 
-    cpFloat playerMoment = cpMomentForPoly(mDataPlayers[i]->getMass(), 4,
-      playerVerts, cpvzero);
+//    cpFloat playerMoment = cpMomentForPoly(mDataPlayers[i]->getMass(), 4,
+//      playerVerts, cpvzero);
     cpBody* pPlayer = cpBodyNew(mDataPlayers[i]->getMass(), INFINITY);
     pPlayer->p = cpv(mDataPlayers[i]->getPosition().getX(),
       mDataPlayers[i]->getPosition().getY());
@@ -283,24 +311,6 @@ Physics::Physics(GameWindow* ipGW, const Board& iB, vector<Ball*>& iBall,
     pShapePlayer->collision_type = ctPlayer;
     cpSpaceAddShape(mpSpace, pShapePlayer);
     mShapes.push_back(pShapePlayer);
-    
-    /*on met un point statique en 0, -5 (locale) qu'on va relier aux extremitees
-      de la palette afin de créer une forme stable. On applique la transfo de la
-      palette a la coordonnees locale afin de la mettre en globale.*/
-//    cpBody* pPlayerHolder = cpBodyNew(10*mDataPlayers[i]->getMass(), 2);
-//    Vector3d holderPos = kHolderPos *  mDataPlayers[i]->getTransformation();
-//    pPlayerHolder->p = cpvadd(pPlayer->p, cpv(holderPos.getX(), holderPos.getY()));
-//    cpSpaceAddBody(mpSpace, pPlayerHolder);
-//    mPlayerHolders.push_back(pPlayerHolder);
-//    
-//    cpJoint* pj1 = cpPinJointNew(pPlayerHolder, pPlayer,
-//      cpvzero, cpv(v3.getX(), v3.getY()/2.0));
-//    cpSpaceAddJoint(mpSpace, pj1);
-//    cpJoint* pj2 = cpPinJointNew(pPlayerHolder, pPlayer,
-//      cpvzero, cpv(v2.getX(), v2.getY()/2.0));
-//    cpSpaceAddJoint(mpSpace, pj2);
-//    mJoints.push_back(pj1);
-//    mJoints.push_back(pj2);
   }
   
   //Ajout des call backs de collision
@@ -316,7 +326,6 @@ Physics::~Physics()
   for(unsigned int i = 0; i < mPlayers.size(); ++i)
   {
     cpBodyFree(mPlayers[i]);
-//cpBodyFree(mPlayerHolders[i]);
     cpBodyFree(mNets[i]);
   }
   //free all of the shapes, bodies and joints that have been added to space
@@ -335,12 +344,48 @@ int Physics::ballToNetCollisionFunc(cpShape* iA, cpShape* iB,
   return 1;
 }
 
+void Physics::ballVelocityFunc(cpBody* ipBody, cpVect iGravity,
+  cpFloat iDamping, cpFloat iDt)
+{
+  cpBodyUpdateVelocity(ipBody, iGravity, iDamping, iDt);
+  double kw = 150; //vitesse maximal angulaire qui peut induire une deviation
+  //influence angulaire normalisé
+  double nw = min(kw, fabs(ipBody->w)) / kw;
+  double kv = 60;
+  double nv = min(kv, cpvlength(ipBody->v)) / kv;
+  double d = 0.03; //magnitude maximale du vecteur de déviation
+  //trouvons le vecteur laterale a la velocity
+  Vector3d lat = 
+    Vector3d(ipBody->v.x, ipBody->v.y, 0.0) ^ Vector3d(0.0, 0.0, 1.0);
+  lat.normalise();
+  cpVect cpLat = cpv((cpFloat)lat.getX(), (cpFloat)lat.getY());
+  cpLat = ipBody->w <= 0 ? cpLat : cpvmult(cpLat, -1.0);
+  ipBody->v = cpvadd(ipBody->v, cpvmult(cpLat, nw * d));
+  
+//  //faire decroitre la rotation angulaire
+//  if(abs(ipBody->w) >= 20.0)
+//    ipBody->w += iDt * 20.0 * ipBody->w >= 0.0 ? -1 : 1;
+
+//  cout << "dt: " << iDt << endl;
+//  cout << "Angular velocity: " << ipBody->w << endl;
+//  cout << "velocity: " << cpvlength(ipBody->v) << endl;
+//  cout << "velocity vect: " << ipBody->v.x << " " << ipBody->v.y << endl;
+//  cout << "velocity lat: " << cpLat.x << " " << cpLat.y << endl;
+//  cout << "Influence angulaire normalisé: " << nw << endl;
+//  cout << "Influence vitesse normalisé: " << nv << endl;
+//  cout << "Influence sur la déviation: " << nw * nv << endl << endl;
+}
+
 /*Pour chaque collision, on va mettre des flameches!*/
 int Physics::defaultCollisionFunc(cpShape* iA, cpShape* iB,
   cpContact* ipContacts, int iNumContacts, cpFloat iNormalCoef, void* ipData)
 {  
   /*Returning 0 will cause the collision to be discarded. This allows you to 
     do conditional collisions.*/
+  cpVect p = ipContacts[0].p;
+  cpVect n = ipContacts[0].n;
+  mpGameWindow->addCollision(Vector3d(p.x, p.y, 0.0),
+    Vector3d(-n.x, -n.y, 0.0));
 	return 1;
 }
 
@@ -366,9 +411,21 @@ Physics::drawCollisionsFunc(void *ptr, void *data)
   glPopAttrib();
 }
 
-void Physics::movePlayer(int iId, int x, int y)
+Point3d Physics::getClosestBallPos(Player* p) const
 {
-  cpBodyApplyForce(mPlayers[iId], cpv(x, y), cpvzero);
+  int closestBallId = 0;
+  int id = distance(mDataPlayers.begin(),
+      find(mDataPlayers.begin(), mDataPlayers.end(), p));
+  cpVect pPos = mPlayers[id]->p;
+  cpVect closestDistance = cpv(MAX_DOUBLE, MAX_DOUBLE);
+  for(unsigned int i = 0; i < mBalls.size(); ++i)
+  {
+		if(cpvlength(cpvsub(mBalls[i]->p, pPos)) < cpvlength(closestDistance))
+      closestBallId = i;
+  }
+  
+  return Point3d(mBalls[closestBallId]->p.x,
+    mBalls[closestBallId]->p.y, 0.0);
 }
 
 void Physics::removeMarkedPlayers()
@@ -379,36 +436,25 @@ void Physics::removeMarkedPlayers()
 	for(unsigned int i = 0; i < mPlayersToRemove.size(); ++i)
   {
     int id = mPlayersToRemove[i];
-    cpBody* pPlayer = mPlayers[id];
-    //remove joints that were tied to player
-    vector<cpJoint*>::iterator it = mJoints.begin();
-    for(; it != mJoints.end(); )
-    {
-      if((*it)->a == pPlayer || (*it)->b == pPlayer)
-      {
-        cpSpaceRemoveJoint(mpSpace, *it);
-        cpJointFree((*it));
-        it = mJoints.erase(it); //erase i and increment as side effect
-      }
-      else
-        ++it;
-    }
+//cpBody* pPlayer = mPlayers[id];
     
     //remove player
     removeShapes(mPlayers[id]);
     cpSpaceRemoveBody(mpSpace, mPlayers[id]);
     cpBodyFree(mPlayers[id]);
     mPlayers.erase(mPlayers.begin() + id);
-////remove player holders
-//removeShapes(mPlayerHolders[id]);
-//cpSpaceRemoveBody(mpSpace, mPlayerHolders[id]);
-//cpBodyFree(mPlayerHolders[id]);
-//mPlayerHolders.erase(mPlayerHolders.begin() + id);
+    /*voir Note de la classe Physics pour la raison qui pousse Physics a 
+      effacer les items de GameWindow*/
+    mDataPlayers.erase(mDataPlayers.begin() + id);
+    
     //remove nets
     removeStaticShapes(mNets[id]);
     cpSpaceRemoveBody(mpSpace, mNets[id]);
     cpBodyFree(mNets[id]);
+    /*voir Note de la classe Physics pour la raison qui pousse Physics a 
+      effacer les items de GameWindow*/
     mNets.erase(mNets.begin() + id);
+    mDataNets.erase(mDataNets.begin() + id);
   }
   cpSpaceRehashStatic(mpSpace);
   mPlayersToRemove.clear();
@@ -455,28 +501,16 @@ void Physics::resetBalls()
 }
 
 void Physics::updatePhysics()
-{
-//  for(unsigned int i = 0; i < mPlayerHolders.size(); ++i)
-//  {
-//    //applique la transfo de la palette a la position relative
-//    //du holder afin de le mettre en coordonnees globales
-//    Vector3d holderPos = kHolderPos * 
-//      mDataPlayers[i]->getTransformation();
-//    mPlayerHolders[i]->p = cpvadd( cpv(mDataPlayers[i]->getPosition().getX(),
-//      mDataPlayers[i]->getPosition().getY()),
-//      cpv(holderPos.getX(), holderPos.getY()));
-//  }
-  
+{  
   /*appel bodySlew pour calculer la force/vitesse de la palette, lors de la
     prochaine itération de physique, pour le déplacement effectuer par
     l'usagé*/
-
   for(unsigned int i = 0; i < mDataPlayers.size(); ++i)
     cpBodySlew(mPlayers[i],
       cpv(mDataPlayers[i]->getPosition().getX(),
       mDataPlayers[i]->getPosition().getY()), kcpTimeStep);
       
-  int nbSteps = 3;
+  int nbSteps = 10;
   //conversion en millisecondes...
   double timeStep = kcpTimeStep / nbSteps; 
   for(int i = 0; i < nbSteps; ++i)
@@ -517,12 +551,13 @@ GameWindow::GameWindow(QWidget* ipParent /*= 0*/) : Widget3d(ipParent),
   mNets(),
   mMousePosition(0, 0),
   mBalls(),
-  mpPhysics(0)
+  mpPhysics(0),
+  mGameTexture()
 {
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
   
-  //set the camera
+//  //set the camera
 //  setCameraMode( Camera::PERSPECTIVE );
 //  setCameraOrientation(Camera::FREE);
 //  Camera c = getCamera();
@@ -531,18 +566,10 @@ GameWindow::GameWindow(QWidget* ipParent /*= 0*/) : Widget3d(ipParent),
   setCameraMode( Camera::ORTHOGONAL );
   setCameraOrientation( Camera::XY );
   
-  addPlayer(new Player("Jouer Local"));
-  Player* pc2 = new Player("Computer2");
-  pc2->setType(Player::tComputer);
-  addPlayer(pc2);
-  
-  Player* pc3 = new Player("Computer3");
-  pc3->setType(Player::tComputer);
-  addPlayer(pc3);
-  
-  Player* pc4 = new Player("Computer4");
-  pc4->setType(Player::tComputer);
-  addPlayer(pc4);
+  addPlayer(new Player("Computer1"));
+  addPlayer(new Player("Computer2"));
+  addPlayer(new Player("Computer3"));
+  addPlayer(new Player("Computer4"));
   
   mpOptionsDialog = new OptionsDialog(this);
   //connect dialog to GameWindow
@@ -558,12 +585,15 @@ GameWindow::~GameWindow()
     delete mPlayers[i];
   for(unsigned int i = 0; i < mEliminatedPlayers.size(); ++i)
     delete mEliminatedPlayers[i];
-  mpLocalPlayer = 0;
   for(unsigned int i = 0; i < mNets.size(); ++i)
     delete mNets[i];
+    
   delete mpBoard;
+  
   for(unsigned int i = 0; i < mBalls.size(); ++i)
     delete mBalls[i];
+  for(unsigned int i = 0; i < cMaxCollisions; ++i)
+    delete mCollisions[i];
 }
 
 void GameWindow::addPlayer(Player* p)
@@ -571,6 +601,25 @@ void GameWindow::addPlayer(Player* p)
   mPlayers.push_back(p);
   //each player comes with is net
   mNets.push_back(new Net());
+}
+
+void GameWindow::addCollision(const Vector3d& p, const Vector3d& n)
+{
+  Collision* c = 0;
+  for(unsigned int i = 0; i < cMaxCollisions; ++i)
+    if(mCollisions[i]->isDone())
+    { c = mCollisions[i]; break; }
+
+  if(c)
+  {
+    Matrix4d m;
+    m.setTranslation(toPoint(p));
+    c->setTransformationToGlobal(m);
+    double a = atan2(n.getY(), n.getX());
+    c->setAngle(a);
+    c->setNormal(n);
+    c->animate();
+  }
 }
 
 void GameWindow::applyOptions()
@@ -590,55 +639,75 @@ void GameWindow::applyOptions()
   setUpdatesEnabled(true);
 }
 
-/*The ball entered iPlayers net*/
-void GameWindow::score(int iId)
+/*La position passé doit être en coordonné globale*/
+bool GameWindow::canPlayerMoveTo(const Player*, const Point3d& iPos) const
 {
-  int lifesLeft = mPlayers[iId]->getLifes();
-  mPlayers[iId]->setLifes(--lifesLeft);
-  if(mPlayers[iId]->getLifes() == 0)
-  {
-    //eliminate player from game, if only one player left, he won the game
-    eliminatePlayer(iId);
-  }
-  
-  //on replace les balles au centre de la game
-  mpPhysics->resetBalls();
+//  Matrix4d inv(mPlayers[iId]->getTransformation());
+//  inv.inverse();
+  //cout << "Pos: " << iPos.getX() << " " << iPos.getY() << endl;
+  return true;
 }
 
 void GameWindow::drawBalls() const
 {
   for(unsigned int i = 0; i < mBalls.size(); ++i)
-    mBalls[i]->draw();
+    mBalls[i]->draw(getCamera());
+}
+
+void GameWindow::drawCollisions()
+{  
+  for(unsigned int i = 0; i < cMaxCollisions; ++i)
+    mCollisions[i]->draw(getCamera());
 }
 
 void GameWindow::drawGameBoard() const
 { mpBoard->draw(); }
 
+void GameWindow::drawGamePanel() const
+{
+	Sprite a;
+  a.set2dPositioningOn(true);
+  a.set2dPosition(Vector3i(10, 10, 0));
+  a.setAnchorPoint(Sprite::aBottomLeft);
+  a.setTexture(mGameTexture, QRect(108, 12, 228, 60));
+  
+  a.draw(getCamera());
+}
+
 void GameWindow::drawNets() const
 {
   for(unsigned int i = 0; i < mNets.size(); ++i)
-    mNets[i]->draw();
+    mNets[i]->draw(getCamera());
 }
 
 void GameWindow::drawPlayers() const
 {
   for(unsigned int i = 0; i < mPlayers.size(); ++i)
-    mPlayers[i]->draw();
+    mPlayers[i]->draw(getCamera());
 }
 
 void GameWindow::eliminatePlayer(int iId)
 {
-  //move player to eliminate player list
-  Player* p = mPlayers[iId];
-  mPlayers.erase(mPlayers.begin() + iId);
-  mEliminatedPlayers.push_back(p);
-  
-  //remove player from physics, this remove player's paddle, player's holder
-  //and player's net
+	/*Lors de l'elimination d'un joueur, on veut enlever les elements graphiques
+    (palette et but) ainsi que les representations physiques. On ne peut pas
+    enlever les representations physique en plein milieu d'une itération de 
+    physique. C'est pourquoi, on marque un joueur a etre enlever et la methode
+    Physics::updatePhysics a la fin de chaque iteration regarde s'il y a des
+    joueurs a etre enlever et les enlevera correctement. De plus, le vecteur de
+    joueur mPlayer et de buts mNets de GameWindow et ceux de Physics doivent 
+    etre parfaitement synchronisé. C'est pourquoi la méthode 
+    Physics::removeMarkedPlayer efface les jouers de GameWindow ainsi que les
+    representation physiques.*/
   mpPhysics->markPlayerForRemoval(iId);
+}
+
+void GameWindow::initializeGL()
+{
+  Widget3d::initializeGL();
+  glClearColor(0, 0, 0, 0);
   
-  //remove graphical player net
-  mNets.erase(mNets.begin() + iId);
+  //initialize texture holding all game sprites.
+  mGameTexture.load(QImage(":/images/texture1.png"));
 }
 
 void GameWindow::keyPressEvent(QKeyEvent* e)
@@ -663,19 +732,35 @@ void GameWindow::mouseMoveEvent(QMouseEvent* e)
   
   int deltaX = e->x() - mMousePosition.x();
   int deltaY = e->y() - mMousePosition.y();
+  //cout << "mouse pos: " << e->x() << " " << e->y() <<endl;
+  //cout << "mouseDelta: " << deltaX  << " " << deltaY <<endl;
   
 	if(mpLocalPlayer)
   {
+    Player* p = mpLocalPlayer;
     Vector3d d = getCamera().pixelDeltaToGLDelta(
-      deltaX, -deltaY, mpLocalPlayer->getPosition());
-    /*on applique la transfo pour mettre le deplacement en coordonnées globales
-    parce que la caméra retourne le delta en coordonnees locales*/
-    d = d * getCamera().getTransformationToGlobal();
-    mpLocalPlayer->setPosition(mpLocalPlayer->getPosition() + d);
-    //mpPhysics->movePlayer(0, deltaX*10, -deltaY*10);
+      deltaX, -deltaY, p->getPosition());
+    
+    /*La position du joueur est en globale et le delta en local. On applique
+      donc la transfo toGlobal au delta et on l'ajoute à la pos du joueur.*/
+    d = d * p->getTransformationToGlobal();
+    if(canPlayerMoveTo(mpLocalPlayer, p->getPosition() + d))
+	    p->setPosition(p->getPosition() + d);
+      
+//    cout<<"player d: " << d.getX() << " " << d.getY() << endl;
+//    cout<<"player pos: " << p->getPosition().getX() << " " << p->getPosition().getY() << endl;
   }
   
   mMousePosition = e->pos();
+  
+  //reset mouse position to middle if it goes too close to the window edges
+  if( e->x() <= 10 || e->x() >= width() - 10 ||
+    e->y() <= 10 || e->y() >= height() - 10)
+  {
+    QPoint m(width() / 2, height() / 2);
+    mMousePosition = m;
+		QCursor::setPos(mapToGlobal(m));
+  }
 }
 
 void GameWindow::mousePressEvent(QMouseEvent* e)
@@ -691,13 +776,19 @@ void GameWindow::mouseReleaseEvent(QMouseEvent* e)
 void GameWindow::paintGL()
 {
   Widget3d::paintGL();
+  
   if(getState() == gsRunning)
-  {    
+  {  
     drawGameBoard();
     drawNets();
     drawPlayers();
     drawBalls();
+    drawCollisions();
+#ifndef NDEBUG
     mpPhysics->drawCollisions();
+#endif
+
+	  drawGamePanel();
   }
 }
 
@@ -714,11 +805,26 @@ void GameWindow::resumeGame()
   QPoint p(width()/2, height()/2);
   mMousePosition = p;
   QCursor::setPos(mapToGlobal(p));
-  //setCursor(Qt::BlankCursor);
+  setCursor(Qt::BlankCursor);
   setState(gsRunning);
   //start the game and update the
   //frame every 16 ms -> roughly 60 frames / sec
   mGameTimerId = startTimer(kTimeStep); 
+}
+
+/*The ball entered iPlayers net*/
+void GameWindow::score(int iId)
+{
+  int lifesLeft = mPlayers[iId]->getLifes();
+  mPlayers[iId]->setLifes(--lifesLeft);
+  if(mPlayers[iId]->getLifes() == 0)
+  {
+    //eliminate player from game, if only one player left, he won the game
+    eliminatePlayer(iId);
+  }
+  
+  //on replace les balles au centre de la game
+  mpPhysics->resetBalls();
 }
 
 void GameWindow::showOptions() const
@@ -729,24 +835,35 @@ void GameWindow::showOptions() const
 
 void GameWindow::startGame() 
 {
+  //initialize collision object
+  for(unsigned int i = 0; i < cMaxCollisions; ++i)
+  {
+    mCollisions[i] = new Collision();
+    mCollisions[i]->setTexture(mGameTexture, QRect(264, 168, 72, 960));
+  }
+  
   //add balls
   mBalls.push_back(new Ball());
-  
+  //load textured object
+  for(unsigned int i = 0; i < mBalls.size(); ++i)
+    mBalls[i]->setTexture(mGameTexture, QRect(12, 12, 48, 48));
+    
   //create the static board game
-  mpBoard = new Board();
+  mpBoard = new Board4();
   
   //init player position and orientation, define the local player.
   for(unsigned int i = 0; i < mPlayers.size(); ++i)
   {
-    mPlayers[i]->setTransformation(mpBoard->getPlayerTransformation(i));
-    mNets[i]->setTransformation(mpBoard->getNetTransformation(i));
+    mPlayers[i]->setTransformationToGlobal(mpBoard->getPlayerTransformation(i));
+    mNets[i]->setTransformationToGlobal(mpBoard->getNetTransformation(i));
   }
   
   mpLocalPlayer = mPlayers[0];
+  mpLocalPlayer->setType(Player::tHuman);
   Camera c = getCamera();
-  Matrix4d cm = mpLocalPlayer->getTransformation();
+  Matrix4d cm = mpLocalPlayer->getTransformationToGlobal();
   cm.setTranslation(Point3d(0.0));
-  c.setTransformationToLocal(cm);
+  c.setTransformationToGlobal(cm);
   setCamera(c);
   
   //init chipMunk and physics
@@ -760,12 +877,27 @@ void GameWindow::timerEvent(QTimerEvent* e)
   if(e->timerId() == mGameTimerId)
   {
     updateUserInput();
+    updateAi();
     updatePhysics();
     updateDisplay();
   }
   else
     Widget3d::timerEvent(e);
+}
 
+void GameWindow::updateAi()
+{
+  for(unsigned int i = 0; i < mPlayers.size(); ++i)
+  {
+    Player* p = mPlayers[i];
+    if(p->getType() == Player::tComputer)
+    {
+      Point3d ballPosGlobal = mpPhysics->getClosestBallPos(p); 
+      Point3d ballPosLocal = ballPosGlobal * p->getTransformationToLocal();
+      ballPosLocal.setXYZ(ballPosLocal.getX(), 0.0, 0.0);
+      p->setPosition(ballPosLocal * p->getTransformationToGlobal()); 
+    }
+  }
 }
 
 void GameWindow::updateDisplay()
