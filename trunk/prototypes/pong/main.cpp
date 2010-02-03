@@ -22,16 +22,17 @@ int startMainApp()
 
 int main(int argc, char** argv)
 {
+		Q_INIT_RESOURCE(images);
     QApplication app(argc, argv);
-    QMainWindow* mw = new QMainWindow();
-    Pong::GameWindow* gw = new Pong::GameWindow(mw);
-    mw->setCentralWidget(gw);
+    QMainWindow mw;
+    Pong::GameWindow gw(&mw);
+    mw.setCentralWidget(&gw);
     
-    mw->show();
-    mw->move(10, 40);
-    mw->resize(800, 600);
+    mw.move(10, 40);
+    mw.resize(800, 600);
+    mw.show();
     
-    gw->showOptions();
+    gw.showOptions();
 	
     if ( startMainApp() == 0 )
     {
@@ -39,6 +40,5 @@ int main(int argc, char** argv)
         //clean up the game and close server/connections
         //gw->terminateGame();
     }
-	
     return 0;
 }

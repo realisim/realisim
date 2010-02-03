@@ -1,6 +1,3 @@
-/*
- *  Camera.h
- */
 
 #ifndef Realisim_E3d_Camera_hh
 #define Realisim_E3d_Camera_hh
@@ -13,7 +10,7 @@
   --members
   mMode: mode de projection, Orthogonal ou Perspective
   mOrientation: Orientation de la camera
-  mTransformation: transformation appliqué au systeme d'axe de la caméra.
+mTransformation: transformation appliqué au systeme d'axe de la caméra.
     cette transformation est: syteme local à system global. Le Widget 3d
     utilisera cette transformation pour transformer la position de la caméra
     en position global (de scene).
@@ -63,7 +60,7 @@ public:
   virtual ~Camera();
   
   const Vector3d& getLat() const { return mLat; }
-  const Point3d& getLook() const { return mLook; } 
+  const Point3d& getLook() const { return mLook; }
   Mode getMode() const { return mMode; }
   Orientation getOrientation() const { return mOrientation; }
   const Point3d& getPos() const { return mPos; }

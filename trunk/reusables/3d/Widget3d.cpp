@@ -9,6 +9,7 @@
 #include "MathUtils.h"
 #include <QMouseEvent>
 #include "Widget3d.h"
+#include "OpenGLInfo.h"
 
 using namespace realisim;
 using namespace realisim::treeD;
@@ -40,10 +41,7 @@ mShowFps(true),
 mMousePressed( false ),
 mMousePosX( 0 ),
 mMousePosY( 0 )
-{
-  //on s'assure que opneGL est initialise pour ce context
-  glInit();
-}
+{}
 
 //-----------------------------------------------------------------------------
 Widget3d::~Widget3d()
@@ -53,41 +51,47 @@ Widget3d::~Widget3d()
 void
 Widget3d::initializeGL()
 {
-    //useful for lights 
-    GLfloat shininess[] = {80.0};
-    GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
-    GLfloat ambiant[]   = {0.2f, 0.2f, 0.2f, 1.0f};
-    GLfloat diffuse[]   = {0.5, 0.5, 0.5, 1.0};
-    GLfloat specular[]  = {1.0, 1.0, 1.0, 1.0};
+  QGLWidget::initializeGL();
+  
+  //print openGL info
+  OpenGLInfo i;
+  i.print();
+  
+  //useful for lights 
+  GLfloat shininess[] = {80.0};
+  GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
+  GLfloat ambiant[]   = {0.2f, 0.2f, 0.2f, 1.0f};
+  GLfloat diffuse[]   = {0.5, 0.5, 0.5, 1.0};
+  GLfloat specular[]  = {1.0, 1.0, 1.0, 1.0};
 
-    GLfloat mat_ambiant[] = {0.6f, 0.6f, 0.6f, 1.0f};
-    GLfloat mat_diffuse[] = {0.6f, 0.6f, 0.6f, 1.0f};
-    GLfloat mat_specular[]  = {0.5f, 0.5f, 0.5f, 1.0f};
+  GLfloat mat_ambiant[] = {0.6f, 0.6f, 0.6f, 1.0f};
+  GLfloat mat_diffuse[] = {0.6f, 0.6f, 0.6f, 1.0f};
+  GLfloat mat_specular[]  = {0.5f, 0.5f, 0.5f, 1.0f};
 
-    // Let OpenGL clear background to Grey
-    //glClearColor(125/255.0f, 125/255.0f, 125/255.0f, 0.0);
-    glClearColor(0.3, 0.3, 0.3, 0.0);
+  // Let OpenGL clear background to Grey
+  //glClearColor(125/255.0f, 125/255.0f, 125/255.0f, 0.0);
+  glClearColor(0.3, 0.3, 0.3, 0.0);
 
-    glShadeModel(GL_SMOOTH);
+  glShadeModel(GL_SMOOTH);
 
-    //define material props
-    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambiant);
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-    glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+  //define material props
+  glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambiant);
+  glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+  glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+  glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
 
-    //init lights
-    glLightfv(GL_LIGHT0, GL_POSITION, position);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, ambiant);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
-    
-    glEnable(GL_COLOR_MATERIAL);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glDisable(GL_TEXTURE_2D);
-    glDisable(GL_TEXTURE_3D);
+  //init lights
+  glLightfv(GL_LIGHT0, GL_POSITION, position);
+  glLightfv(GL_LIGHT0, GL_AMBIENT, ambiant);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
+  
+  glEnable(GL_COLOR_MATERIAL);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_LIGHTING);
+  glEnable(GL_LIGHT0);
+  glDisable(GL_TEXTURE_2D);
+  glDisable(GL_TEXTURE_3D);
 }
 
 //-----------------------------------------------------------------------------
@@ -198,6 +202,7 @@ Widget3d::paintGL()
 void
 Widget3d::resizeGL(int iWidth, int iHeight)
 {
+  QGLWidget::resizeGL(iWidth, iHeight);
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
   getCamera().projectionGL(iWidth, iHeight);
