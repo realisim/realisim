@@ -6,8 +6,8 @@
  #ifndef realedit_commands_changeNode_hh
  #define realedit_commands_changeNode_hh
 
-#include "Command.h"
-#include "ObjectNode.h"
+#include "utils/Command.h"
+#include "DataModel/ObjectNode.h"
 namespace realEdit{class EditionData;}
 namespace realEdit{class EditionUi;}
 

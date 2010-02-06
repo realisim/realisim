@@ -1,5 +1,5 @@
 
-#include "EditionUi.h"
+#include "UserInterface/EditionUi.h"
 
 #include <iostream>
 #include <QApplication>

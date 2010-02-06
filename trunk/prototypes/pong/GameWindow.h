@@ -15,9 +15,9 @@ class QCloseEvent;
 class QKeyEvent;
 class QMouseEvent;
 class QTimerEvent;
-#include "Texture.h"
+#include "3d/Texture.h"
 #include <vector>
-#include "Widget3d.h"
+#include "3d/Widget3d.h"
 
 namespace Pong
 {
@@ -163,7 +163,7 @@ protected:
 };
 
 
-const unsigned int cMaxCollisions = 10;
+const unsigned int cMaxCollisions = 50;
 //--- GameWindow----------------------------------------------------------------
 class GameWindow : public realisim::treeD::Widget3d
 {

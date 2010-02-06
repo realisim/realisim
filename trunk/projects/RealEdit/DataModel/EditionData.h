@@ -10,8 +10,8 @@
 #ifndef RealEdit_EditionData_hh
 #define RealEdit_EditionData_hh
 
-#include "ObjectNode.h"
-#include "Point.h"
+#include "DataModel/ObjectNode.h"
+#include "math/Point.h"
 #include <set>
 
 namespace realEdit

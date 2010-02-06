@@ -9,8 +9,8 @@ namespace realisim{namespace treeD{class Camera;}}
 #include <QRect>
 #include <QString>
 #include <QTime>
-#include "Texture.h"
-#include <Vect.h>
+#include "3d/Texture.h"
+#include "math/Vect.h"
 
 /*Sprite permet d'afficher/animer une texture à l'écran. Il y a deux façon
   de positionner un Sprite à l'écran. Méthode openGL classique qui permet
@@ -28,7 +28,10 @@ namespace realisim{namespace treeD{class Camera;}}
   L'autre méthode consiste à positionner le Sprite en 2d. Dans ce mode, le
   Sprite aura exactement la même taille que la texture (ou la sous région
   de la texture si la méthode setTexture(Texture, QRect) est utilisée)
-  utilisé.
+  utilisé. De plus le Sprite sera positionné au pixel x, y et à la 
+  profondeur z. Le système de coordonné pour le positionnement en mode 2d
+  est le suivant: (0, 0, z) se trouve dans le coin supérieur gauche de l'écran.
+  
   
   set2dPositioningOn(true);
   set2dPosition(math::Vector3(10, 10, 0));
@@ -39,6 +42,14 @@ namespace realisim{namespace treeD{class Camera;}}
   glTranslate/scale/rotate n'auront aucun effet...
   mSprite.draw(camera);
   glPopMatrix();
+  
+  La position du Sprite (mode 2d ou 3d) peut être ajustée avec la méthode
+  setAnchor. Par exemple, si on fait:
+  
+  setAnchor(aCenter);
+  set2dPosition(100, 100, 0);
+  
+  Le centre du Sprite sera positioné a (100, 100, 0).
   
   Note:
   Le mode de positionnement 2d permet aussi de spécifier la coordonnée Z

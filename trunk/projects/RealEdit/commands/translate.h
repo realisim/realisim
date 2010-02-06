@@ -7,9 +7,9 @@
  #define realedit_commands_translate_hh
 
 namespace realEdit{class EditionData;}
-#include "Command.h"
-#include "Controller.h"
-#include "Vect.h"
+#include "utils/Command.h"
+#include "RealEdit/Controller.h"
+#include "math/Vect.h"
 
 namespace realEdit
 {

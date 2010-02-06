@@ -5,9 +5,9 @@
 #ifndef RealEdit_DataModel_hh
 #define RealEdit_DataModel_hh
 
-#include "BoundingBox.h"
-#include "Point.h"
-#include "Vect.h"
+#include "math/BoundingBox.h"
+#include "math/Point.h"
+#include "math/Vect.h"
 
 #include <cassert>
 #include <vector>

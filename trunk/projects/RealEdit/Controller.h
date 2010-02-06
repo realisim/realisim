@@ -24,16 +24,16 @@ Controller.h
 #ifndef RealEdit_controller_hh
 #define RealEdit_controller_hh
 
-#include "CommandStack.h"
-#include "commands, selection.h"
-#include "DataModel.h"
-#include "DisplayData.h"
-#include "EditionData.h"
+#include "utils/CommandStack.h"
+#include "commands/selection.h"
+#include "DataModel/DataModel.h"
+#include "DataModel/DisplayData.h"
+#include "DataModel/EditionData.h"
 namespace realEdit{class EditionUi;}
 namespace realEdit{namespace commands{class ChangeMode;}}
 namespace realEdit{namespace commands{class ChangeTool;}}
 namespace realEdit{namespace commands{class Translate;}}
-#include "PlatonicSolid.h"
+#include "math/PlatonicSolid.h"
 
 namespace realEdit
 { 

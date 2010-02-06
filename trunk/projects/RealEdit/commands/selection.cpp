@@ -3,8 +3,8 @@
  *  Created by Pierre-Olivier Beaudoin on 09-08-05.
  */
 
-#include "commands, selection.h"
-#include "EditionData.h"
+#include "commands/selection.h"
+#include "DataModel/EditionData.h"
 
 using namespace realEdit;
   using namespace commands;

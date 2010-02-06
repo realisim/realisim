@@ -10,7 +10,7 @@
 #include "Camera.h"
 #include <iostream>
 #include <qgl.h>
-#include "MathUtils.h"
+#include "math/MathUtils.h"
 
 using namespace realisim;
 using namespace realisim::treeD;

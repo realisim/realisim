@@ -7,7 +7,7 @@
  #define realedit_commands_selection_hh
 
 namespace realEdit{class EditionData;}
-#include "Command.h"
+#include "utils/Command.h"
 #include <set>
 #include <vector>
 

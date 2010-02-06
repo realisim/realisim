@@ -7,11 +7,11 @@
  *
  */
 
-#include "ObjectNavigator.h"
+#include "UserInterface/ObjectNavigator.h"
 
 #include "Controller.h"
-#include "ObjectNode.h"
-#include "DataModel.h"
+#include "DataModel/ObjectNode.h"
+#include "DataModel/DataModel.h"
 
 #include <QHeaderView>
 #include <QTreeWidgetItem>

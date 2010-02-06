@@ -2,8 +2,8 @@
  
  */
 
-#include "DataModel.h"
-#include "Polygon.h"
+#include "DataModel/DataModel.h"
+#include "math/Polygon.h"
 #include <iostream>
 
 using namespace std;
