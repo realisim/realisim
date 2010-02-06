@@ -4,7 +4,7 @@
 #include "GameObject.h"
 #include "GameWindow.h"
 #include <math.h>
-#include "MathUtils.h"
+#include "math/MathUtils.h"
 #include <qapplication.h>
 #include <qcheckbox.h>
 #include <QKeyEvent>
@@ -655,9 +655,12 @@ void GameWindow::drawBalls() const
 }
 
 void GameWindow::drawCollisions()
-{  
+{
+  glPushAttrib(GL_ENABLE_BIT);
+  glDisable(GL_DEPTH_TEST);
   for(unsigned int i = 0; i < cMaxCollisions; ++i)
     mCollisions[i]->draw(getCamera());
+  glPopAttrib();
 }
 
 void GameWindow::drawGameBoard() const
@@ -668,7 +671,7 @@ void GameWindow::drawGamePanel() const
 	Sprite a;
   a.set2dPositioningOn(true);
   a.set2dPosition(Vector3i(10, 10, 0));
-  a.setAnchorPoint(Sprite::aBottomLeft);
+  a.setAnchorPoint(Sprite::aTopLeft);
   a.setTexture(mGameTexture, QRect(108, 12, 228, 60));
   
   a.draw(getCamera());

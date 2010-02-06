@@ -27,7 +27,7 @@ class QMouseEvent;
 #include <QPoint>
 class QWheelEvent;
 #include <vector>
-#include "Widget3d.h"
+#include "3d/Widget3d.h"
 
 namespace realEdit 
 {

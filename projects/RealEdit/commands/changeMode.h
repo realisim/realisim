@@ -8,7 +8,7 @@
  #ifndef realedit_commands_ChangeMode_hh
  #define realedit_commands_ChangeMode_hh
 
-#include "Command.h"
+#include "utils/Command.h"
 namespace realEdit{class EditionData;}
 namespace realEdit{class EditionUi;}
 #include "Controller.h"

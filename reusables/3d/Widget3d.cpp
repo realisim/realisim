@@ -6,10 +6,10 @@
 *
 ******************************************************************************/
 
-#include "MathUtils.h"
+#include "math/MathUtils.h"
 #include <QMouseEvent>
-#include "Widget3d.h"
-#include "OpenGLInfo.h"
+#include "3d/Widget3d.h"
+#include "3d/OpenGLInfo.h"
 
 using namespace realisim;
 using namespace realisim::treeD;

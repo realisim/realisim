@@ -7,9 +7,9 @@
  *
  */
 
-#include "commands, changeMode.h"
-#include "EditionData.h"
-#include "EditionUi.h"
+#include "commands/changeMode.h"
+#include "DataModel/EditionData.h"
+#include "UserInterface/EditionUi.h"
 
 using namespace realisim;
 using namespace realEdit;

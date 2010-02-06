@@ -2,9 +2,9 @@
 #ifndef Realisim_E3d_Camera_hh
 #define Realisim_E3d_Camera_hh
 
-#include "Matrix4x4.h"
-#include "Point.h"
-#include "Vect.h"
+#include "math/Matrix4x4.h"
+#include "math/Point.h"
+#include "math/Vect.h"
 
 /*
   --members

@@ -3,10 +3,10 @@
  *  Created by Pierre-Olivier Beaudoin on 09-08-05.
  */
 
-#include "commands, changeNode.h"
-#include "EditionData.h"
-#include "EditionUi.h"
-#include "ObjectNode.h"
+#include "commands/changeNode.h"
+#include "DataModel/EditionData.h"
+#include "UserInterface/EditionUi.h"
+#include "DataModel/ObjectNode.h"
 
 using namespace realisim;
 using namespace realEdit;

@@ -5,18 +5,18 @@
  */
 
 #include <algorithm>
-#include "DataModel.h"
-#include "DisplayData.h"
-#include "EditionData.h"
-#include "MathDef.h"
-#include "MathUtils.h"
-#include "ObjectNode.h"
+#include "DataModel/DataModel.h"
+#include "DataModel/DisplayData.h"
+#include "DataModel/EditionData.h"
+#include "math/MathDef.h"
+#include "math/MathUtils.h"
+#include "DataModel/ObjectNode.h"
 #include <QCursor>
 #include <QMouseEvent>
 #include <QRect>
-#include "RealEdit3d.h"
+#include "UserInterface/RealEdit3d.h"
 #include <set>
-#include "Vect.h"
+#include "math/Vect.h"
 
 using namespace realisim;
   using namespace math;

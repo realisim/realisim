@@ -6,7 +6,7 @@
 #define RealEdit_DisplayData_hh
 
 #include <qgl.h>
-#include "Point.h"
+#include "math/Point.h"
 
 namespace realEdit
 {

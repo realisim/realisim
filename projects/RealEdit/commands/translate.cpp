@@ -3,9 +3,9 @@
  *  Created by Pierre-Olivier Beaudoin on 09-08-05.
  */
 
-#include "commands, translate.h"
-#include "EditionData.h"
-#include "MathUtils.h"
+#include "commands/translate.h"
+#include "DataModel/EditionData.h"
+#include "math/MathUtils.h"
 
 using namespace realEdit;
   using namespace commands;

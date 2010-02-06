@@ -4,10 +4,10 @@
 
 #include <algorithm>
 #include "Camera.h"
-#include "Matrix4x4.h"
-#include "Point.h"
-#include "Sprite.h"
-#include "Vect.h"
+#include "math/Matrix4x4.h"
+#include "math/Point.h"
+#include "3d/Sprite.h"
+#include "math/Vect.h"
 
 using namespace realisim;
 using namespace math;
@@ -121,7 +121,11 @@ void Sprite::draw(const Camera& c) const
       getOriginTranslation().getY(),
       getOriginTranslation().getZ());
 
-    glTranslated(m2dPosition.getX(), m2dPosition.getY(), m2dPosition.getZ());
+    /*afin d'avoir le (0, 0, z) dans le coin supérieur gauche de l'écran, on 
+      fait le calcul suivant*/
+    int yPos = c.getWindowInfo().getHeight() - 
+      m2dPosition.getY();
+    glTranslated(m2dPosition.getX(), yPos, m2dPosition.getZ());
 
     glBindTexture(GL_TEXTURE_2D, getTexture().getTextureId());
     glBegin(GL_QUADS);

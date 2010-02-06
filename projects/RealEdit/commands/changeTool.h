@@ -10,7 +10,7 @@
  #ifndef realedit_commands_ChangeTool_hh
  #define realedit_commands_ChangeTool_hh
 
-#include "Command.h"
+#include "utils/Command.h"
 namespace realEdit{class EditionData;}
 namespace realEdit{class EditionUi;}
 #include "Controller.h"

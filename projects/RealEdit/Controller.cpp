@@ -1,12 +1,12 @@
 
-#include "commands, changeMode.h"
-#include "commands, changeNode.h"
-#include "commands, changeTool.h"
-#include "commands, translate.h"
-#include "DataModel.h"
-#include "EditionUi.h"
-#include "MathUtils.h"
-#include "PlatonicSolid.h"
+#include "commands/changeMode.h"
+#include "commands/changeNode.h"
+#include "commands/changeTool.h"
+#include "commands/translate.h"
+#include "dataModel/DataModel.h"
+#include "userInterface/EditionUi.h"
+#include "math/MathUtils.h"
+#include "math/PlatonicSolid.h"
 #include "Controller.h"
 
 using namespace realisim;

@@ -1,9 +1,9 @@
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-#include "ObjectNode.h"
-#include "Matrix4x4.h"
-#include "MathUtils.h"
-#include "Quaternion.h"
+#include "DataModel/ObjectNode.h"
+#include "math/Matrix4x4.h"
+#include "math/MathUtils.h"
+#include "math/Quaternion.h"
 
 using namespace realEdit;
 using namespace realisim;

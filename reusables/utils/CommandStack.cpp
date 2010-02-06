@@ -3,8 +3,8 @@
  *  Created by Pierre-Olivier Beaudoin on 09-08-05.
  */
 
-#include "Command.h"
-#include "CommandStack.h"
+#include "utils/Command.h"
+#include "utils/CommandStack.h"
 
 using namespace std;
 using namespace realisim;

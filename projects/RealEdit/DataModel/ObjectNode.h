@@ -3,11 +3,11 @@
 #ifndef REALEDIT_OBJECTNODE_H
 #define REALEDIT_OBJECTNODE_H
 
-#include "Quaternion.h"
-#include "Matrix4x4.h"
+#include "math/Quaternion.h"
+#include "math/Matrix4x4.h"
 #include <QString>
-#include "DataModel.h"
-#include "Vect.h"
+#include "DataModel/DataModel.h"
+#include "math/Vect.h"
 #include <vector>
 
 namespace realEdit

@@ -4,14 +4,14 @@
 #define Pong_GameObject_hh
 
 #include <cassert>
-#include "MathUtils.h"
-#include "Matrix4x4.h"
-#include "Point.h"
+#include "math/MathUtils.h"
+#include "math/Matrix4x4.h"
+#include "math/Point.h"
 #include <QSize>
 #include <QString>
 namespace realisim {namespace treeD{class Camera;}}
-#include "Sprite.h"
-#include "Vect.h"
+#include "3d/Sprite.h"
+#include "math/Vect.h"
 
 
 namespace Pong 
