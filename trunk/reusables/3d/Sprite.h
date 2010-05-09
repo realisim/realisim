@@ -94,7 +94,7 @@ public:
   virtual ~Sprite();
   
   virtual void draw(const Camera& c) const;
-  virtual math::Vector3i get2dPosition() const {return m2dPosition;}
+  virtual math::Vector3d get2dPosition() const {return m2dPosition;}
   virtual anchor getAnchorPoint() const {return mAnchor;}
   virtual int getAnimationDuration() const {return mAnimationDuration;}
   virtual QTime getAnimationTimer() const {return mAnimationTimer;}
@@ -103,7 +103,10 @@ public:
   virtual QRect getSubTextureRect() const {return mSubTextureRect;}
   virtual bool is2dPositioningOn() const {return m2dPositioningOn;}
   virtual bool isLooping() const {return mIsLooping;}
-  virtual void set2dPosition(const math::Vector3i& p) {m2dPosition = p;}
+  virtual void set2dPosition(const math::Vector3i& p);
+  virtual void set2dPosition(const math::Vector3d& p) {m2dPosition = p;}
+  virtual void set2dPosition(const int, const int);
+  virtual void set2dPosition(const int, const int, double);
   virtual void set2dPositioningOn(bool b) {m2dPositioningOn = b;}
   virtual void setAnchorPoint(anchor a) { mAnchor = a; }
   virtual void setAnimationDuration(double d) {mAnimationDuration = d;}
@@ -126,7 +129,7 @@ protected:
   QRectF mGLTexCoord;
   mutable state mState;
   anchor mAnchor;
-  math::Vector3i m2dPosition;
+  math::Vector3d m2dPosition;
   bool m2dPositioningOn;
   QTime mAnimationTimer;
   int mAnimationDuration;

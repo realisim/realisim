@@ -216,6 +216,22 @@ void Sprite::startAnimation()
 }
 
 //-----------------------------------------------------------------------------
+void Sprite::set2dPosition(const math::Vector3i& p)
+{
+  m2dPosition.setXYZ((double)p.getX(),
+                     (double)p.getY(),
+                     (double)p.getZ());
+}
+
+//-----------------------------------------------------------------------------
+void Sprite::set2dPosition(const int iX, const int iY)
+{ set2dPosition(Vector3d((double)iX, (double)iY, 0.0)); }
+
+//-----------------------------------------------------------------------------
+void Sprite::set2dPosition(const int iX, const int iY, double iZ)
+{ set2dPosition(Vector3d((double)iX, (double)iY, iZ)); }
+
+//-----------------------------------------------------------------------------
 void Sprite::setFrameSize(QSize fs)
 { mFrameSize = fs; }
 

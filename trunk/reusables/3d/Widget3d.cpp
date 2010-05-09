@@ -162,19 +162,6 @@ Widget3d::paintGL()
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
   
-  //affiche le nombre de frame par seconde
-  if(mShowFps)
-  {
-    if(mFpsFrameCount >= kFramesToComputeFps)
-    {
-      mFps = mFpsFrameCount / (double)mFpsTimer.elapsed() * 1000.0;
-      mFpsTimer = QTime::currentTime();
-      mFpsFrameCount = 0;
-    }
-    renderText(5, 15, QString("fps: ") + QString::number(mFps, 'f', 2) );
-    ++mFpsFrameCount;
-  }
-  
   //On place la caméra en coordonnée absolue.
   Point3d absolutePos = getCamera().getPos() * getCamera().getTransformationToGlobal();
   Point3d absoluteLook = getCamera().getLook() * getCamera().getTransformationToGlobal();
@@ -193,9 +180,6 @@ Widget3d::paintGL()
   //replacer les lumieres
   GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
   glLightfv(GL_LIGHT0, GL_POSITION, position);
-             
-  //Ici on dessine les objets graphiques de la scene privée du widget.
-  //drawPrimitives();
 }
 
 //-----------------------------------------------------------------------------
@@ -270,6 +254,26 @@ QSize
 Widget3d::sizeHint() const
 {
   return QSize(200, 200);
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::showFps()
+{
+  //affiche le nombre de frame par seconde
+  if(mShowFps)
+  {
+    glPushAttrib(GL_ENABLE_BIT);
+    glDisable(GL_DEPTH_TEST);
+    if(mFpsFrameCount >= kFramesToComputeFps)
+    {
+      mFps = mFpsFrameCount / (double)mFpsTimer.elapsed() * 1000.0;
+      mFpsTimer = QTime::currentTime();
+      mFpsFrameCount = 0;
+    }
+    renderText(5, 15, QString("fps: ") + QString::number(mFps, 'f', 2) );
+    ++mFpsFrameCount;
+    glPopAttrib();
+  }
 }
 
 //-----------------------------------------------------------------------------
