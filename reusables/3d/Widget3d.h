@@ -5,6 +5,10 @@
 *
 ******************************************************************************/
 
+/*
+
+*/
+
 #ifndef Realisim_Widget3d_hh
 #define Realisim_Widget3d_hh
 
@@ -47,6 +51,7 @@ protected:
   virtual void paintGL();
   void resizeGL(int iWidth, int iHeight);
   QSize sizeHint() const;
+  virtual void showFps();
   virtual void timerEvent( QTimerEvent* ipE );
 
   Camera mCam;
