@@ -10,8 +10,8 @@
 #ifndef MainDialog_hh
 #define MainDialog_hh
 
-#include "CommandStack.h"
-#include "Command.h"
+#include "utils/CommandStack.h"
+#include "utils/Command.h"
 #include <QDialog>
 class QLineEdit;
 
