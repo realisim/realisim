@@ -21,13 +21,13 @@
 #ifndef RealEdit3d_h
 #define RealEdit3d_h
 
+#include "3d/Widget3d.h"
 #include "Controller.h"
 class QKeyEvent;
 class QMouseEvent;
 #include <QPoint>
 class QWheelEvent;
 #include <vector>
-#include "3d/Widget3d.h"
 
 namespace realEdit 
 {
@@ -43,7 +43,6 @@ public:
 //RealEdit3d(const RealEdit3d&);
   virtual ~RealEdit3d ();
   virtual void changeCurrentNode();
-  virtual void paintGL ();
   
 protected:
   enum mouseState{msCamera, msCameraDrag,
@@ -73,6 +72,7 @@ protected:
   virtual void mouseMoveEvent(QMouseEvent* e);
   virtual void mousePressEvent(QMouseEvent* e);
   virtual void mouseReleaseEvent(QMouseEvent* e);
+  virtual void paintGL();
   virtual std::vector<unsigned int> pick(int, int, int = 1, int = 1);
   virtual void setMouseState(mouseState m) {mMouseState = m;}
   virtual void showSelectionBox(bool iS) {mShowSelectionBox = iS;}

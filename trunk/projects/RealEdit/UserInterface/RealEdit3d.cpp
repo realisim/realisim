@@ -638,11 +638,9 @@ void RealEdit3d::mousePressEvent(QMouseEvent* e)
   switch (getMouseState()) 
   {
   case msIdle:
-    /*Le bouton droit de la souris est réservé pour la caméra. Quand la souris
-     est idle et que le bouton droit est pressé, l'état caméra s'active. 
-     Lorsque le bouton est relaché, on revient a l'état msIdle de l'outil 
-     courant.*/
-    if(e->button() == Qt::RightButton)
+    /*La touche controle (commande sous Mac) permet de prendre contrôle
+      de la camera.*/
+    if(e->modifiers() == Qt::ControlModifier)
       setMouseState(msCamera);
     else
     {
@@ -756,6 +754,8 @@ void RealEdit3d::paintGL()
   //Draw 2d selection box on top of the other
   if(isSelectionBoxShown())
     drawSelectionBox();
+    
+  showFps();
 }
 
 //------------------------------------------------------------------------------
