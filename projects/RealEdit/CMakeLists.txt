@@ -2,6 +2,9 @@
 
 PROJECT( RealEdit )
 
+SET(QT_USE_QTOPENGL 1)
+INCLUDE(${QT_USE_FILE})
+
 SET( SOURCES ${SOURCES} "CMakeLists.txt" )
 SET( SOURCES ${SOURCES} "../../macro_component.cmake" )
 
