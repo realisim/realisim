@@ -49,8 +49,7 @@ public:
   RealEditPolygon addPolygon (const std::vector<RealEditPoint>& iPoints);
   ObjectNode* addNode (const QString iName);
 //void addNode (ObjectNode* ipNode);
-  bool hasSelection() const {return mSelection.size() > 0;}
-  bool isSelected(uint) const;
+//bool fromString(const QString&);
   const RealEditModel getCurrentModel() const {return mCurrentModel;}
   RealEditModel getCurrentModel(){return mCurrentModel;}
   const ObjectNode* getCurrentNode () const;
@@ -61,8 +60,11 @@ public:
   set<uint>& getSelection() {return mSelection;}
   const Scene& getScene () const;
   Scene& getScene ();
+  bool hasSelection() const {return mSelection.size() > 0;}
+  bool isSelected(uint) const;
   void select(const set<uint>& iS);
   void setCurrentNode (const ObjectNode* ipNode);
+//QString toString() const;
   
 private:
   RealEditModel mCurrentModel;

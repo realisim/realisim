@@ -24,7 +24,7 @@ namespace treeD
 
 class Widget3d : public QGLWidget
 {
-    Q_OBJECT
+//    Q_OBJECT
 public:
   Widget3d( QWidget* ipParent = 0,
             const QGLWidget* shareWidget = 0,
@@ -36,8 +36,8 @@ public:
   void setCameraMode( Camera::Mode iMode );
   void setCameraOrientation( Camera::Orientation iO );
   
-signals:
-    void clicked();
+//signals:
+//    void clicked();
 
 protected:
   Camera& getCamera() {return mCam;}

@@ -82,7 +82,6 @@ mPreviousTool(mController.getTool()),
 mShowSelectionBox(false),
 mHoverId(0)
 {
-  setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
 }
 
@@ -733,7 +732,7 @@ vector<unsigned int> RealEdit3d::pick(int iX, int iY, int iWidth /*= 1*/,
   hits.push_back(colorToId(Color(pixel[0],pixel[1],pixel[2],pixel[3])));
   glPopAttrib();
 
-	printf("Color: %d %d %d %d\n",pixel[0],pixel[1],pixel[2],pixel[3]);
+	//printf("Color: %d %d %d %d\n",pixel[0],pixel[1],pixel[2],pixel[3]);
   
 //  float z = 0.0;
 //  glReadPixels(iX, viewport[3]- iY, 1, 1,

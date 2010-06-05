@@ -9,17 +9,15 @@
 
 #include "commands/changeTool.h"
 #include "DataModel/EditionData.h"
-#include "UserInterface/EditionUi.h"
 
 using namespace realisim;
 using namespace realEdit;
   using namespace commands;
   
-ChangeTool::ChangeTool(Controller& iC, EditionUi& iUi,
+ChangeTool::ChangeTool(Controller& iC,
   Controller::tool iTool) :
   Command(),
   mController(iC),
-  mUi(iUi),
   mPreviousTool(iC.getTool()),
   mTool(iTool)
 {}
@@ -31,13 +29,11 @@ ChangeTool::~ChangeTool()
 void ChangeTool::execute()
 {
   mController.mTool = mTool;
-  mUi.changeTool();
 }
 
 //------------------------------------------------------------------------------
 void ChangeTool::undo()
 {
   mController.mTool = mPreviousTool;
-  mUi.changeTool();
 }
 
