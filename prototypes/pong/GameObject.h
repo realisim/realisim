@@ -87,7 +87,7 @@ protected:
 class Player : public GameObject
 {
 public:
-  enum type {tComputer, tHuman};
+  enum type {tComputer, tHuman, tSpectator};
   Player(QString);
   Player(const Player&);
   virtual ~Player(){;}
