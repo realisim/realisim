@@ -8,6 +8,8 @@
 #include <qapplication.h>
 #include <qcheckbox.h>
 #include <QKeyEvent>
+#include <qlabel.h>
+#include <qlineedit.h>
 #include <QCloseEvent>
 #include <qlayout.h>
 #include <QMouseEvent>
@@ -25,22 +27,8 @@ namespace
   const double kcpTimeStep = kTimeStep / 1000.0;
   const Vector3d kHolderPos(0.0, -3.0, 0.0);
   const QRectF kPlayerRegion(QPointF(-1, 0.5), QPointF(1, -0.5)); //in meters
-}
-
-//--- Options ------------------------------------------------------------------
-Options::Options() : mIsFullScreen(false),
-  mNumberOfPlayers(2)
-{}
-
-Options::Options(const Options& i) : mIsFullScreen(i.isFullScreen()),
-  mNumberOfPlayers(i.getNumberOfPlayers())
-{}
-
-const Options& Options::operator=(const Options& i)
-{
-  mIsFullScreen = i.isFullScreen();
-  mNumberOfPlayers = i.getNumberOfPlayers();
-  return *this;
+  
+  const quint16 kNetworkPort = 12345;
 }
 
 //--- OptionsDialog ------------------------------------------------------------
@@ -52,10 +40,26 @@ OptionsDialog::OptionsDialog(QWidget* i) : QDialog(i)
   mpFullScreen = new QCheckBox(this);
   mpFullScreen->setText("Fullscreen");
   
+  //network
+  QHBoxLayout* pHostGameLyt = new QHBoxLayout(this);
+  mpHostGame = new QCheckBox(this);
+  mpHostGame->setText("Host game");
+  mpServerAddress = new QLabel(this);
+  mpServerAddress->setText(" (Server not started)");
+  pHostGameLyt->addWidget(mpHostGame);
+  pHostGameLyt->addWidget(mpServerAddress);
+  
+  QHBoxLayout* pJoinGameLyt = new QHBoxLayout(this);
+  mpJoinGame = new QCheckBox(this);
+  mpJoinGame->setText("Join game");
+  mpHostServerAddress = new QLineEdit(this);
+	mpHostServerAddress->setText(mOptions.mHostServerAddress);
+  pJoinGameLyt->addWidget(mpJoinGame);
+  pJoinGameLyt->addWidget(mpHostServerAddress);
+  
+  //ok-cancel
   QPushButton* pOk = new QPushButton(this);
   pOk->setText("Ok");
-//  QPushButton* pCancel = new QPushButton(this);
-//  pCancel->setText("Cancel");
   QHBoxLayout* pOkCancelLyt = new QHBoxLayout(this);
   pOkCancelLyt->setSpacing(5);
   pOkCancelLyt->addStretch(1.0);
@@ -63,28 +67,31 @@ OptionsDialog::OptionsDialog(QWidget* i) : QDialog(i)
   //pOkCancelLyt->addWidget(pCancel);
     
   pMainLyt->addWidget(mpFullScreen);
+  pMainLyt->addLayout(pHostGameLyt);
+  pMainLyt->addLayout(pJoinGameLyt);
   pMainLyt->addStretch(1);
   pMainLyt->addLayout(pOkCancelLyt);
   
   
-  connect(mpFullScreen, SIGNAL(clicked()),
-    this, SLOT(optionsChanged()));
+  connect(mpFullScreen, SIGNAL(toggled(bool)),
+    this, SIGNAL(fullScreenOptionChanged(bool)));
+  connect(mpHostGame, SIGNAL(toggled(bool)),
+    this, SIGNAL(hostingGameOptionChanged(bool )));
+  connect(mpJoinGame, SIGNAL(toggled(bool)),
+    this, SIGNAL(joinGameOptionChanged(bool )));
+  connect(pOk, SIGNAL(clicked()),
+    this, SIGNAL(hideOptions()));
   connect(pOk, SIGNAL(clicked()),
     this, SLOT(accept()));
 //  connect(pCancel, SIGNAL(clicked()),
 //    this, SLOT(reject()));
 }
 
-void OptionsDialog::optionsChanged()
-{ mOptions.setFullScreen(mpFullScreen->isChecked()); }
+QString OptionsDialog::getHostServerAddress() const
+{ return mpHostServerAddress->text(); }
 
-void OptionsDialog::setOptions(const Options& i)
-{
-  mOptions = i;
-  
-  //mettre le Ui a jour
-  mpFullScreen->setChecked(mOptions.isFullScreen());
-}
+void OptionsDialog::setServerAddress(QString iT)
+{ mpServerAddress->setText("(" + iT + ")"); }
 
 //--- Board --------------------------------------------------------------------
 Board::Board() : mSize(0.0, 0.0),
@@ -541,7 +548,6 @@ void Physics::updatePhysics()
 //--- GameWindow ---------------------------------------------------------------
 GameWindow::GameWindow(QWidget* ipParent /*= 0*/) : Widget3d(ipParent),
   mpOptionsDialog(0),
-  mOptions(),
   mState(gsNotStarted),
   mGameTimerId(0),
   mPlayers(),
@@ -552,7 +558,8 @@ GameWindow::GameWindow(QWidget* ipParent /*= 0*/) : Widget3d(ipParent),
   mMousePosition(0, 0),
   mBalls(),
   mpPhysics(0),
-  mGameTexture()
+  mBackgroundSprite(),
+  mGameAssets()
 {
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
@@ -568,13 +575,19 @@ GameWindow::GameWindow(QWidget* ipParent /*= 0*/) : Widget3d(ipParent),
   
   addPlayer(new Player("Computer1"));
   addPlayer(new Player("Computer2"));
-  addPlayer(new Player("Computer3"));
-  addPlayer(new Player("Computer4"));
+//  addPlayer(new Player("Computer3"));
+//  addPlayer(new Player("Computer4"));
   
   mpOptionsDialog = new OptionsDialog(this);
   //connect dialog to GameWindow
-  connect(mpOptionsDialog, SIGNAL(accepted()),
-    this, SLOT(applyOptions()));
+  connect(mpOptionsDialog, SIGNAL(fullScreenOptionChanged(bool)),
+    this, SLOT(fullScreenOptionChanged(bool)));
+  connect(mpOptionsDialog, SIGNAL(hostingGameOptionChanged(bool)),
+    this, SLOT(hostingGameOptionChanged(bool)));
+  connect(mpOptionsDialog, SIGNAL(joinGameOptionChanged(bool)),
+    this, SLOT(joinGameOptionChanged(bool)));
+  connect(mpOptionsDialog, SIGNAL(hideOptions()),
+    this, SLOT(hideOptions()));
 }
 
 GameWindow::~GameWindow()
@@ -622,21 +635,12 @@ void GameWindow::addCollision(const Vector3d& p, const Vector3d& n)
   }
 }
 
-void GameWindow::applyOptions()
+void GameWindow::fullScreenOptionChanged(bool iIsFullScreen)
 {
-  setUpdatesEnabled(false);
-  mOptions = mpOptionsDialog->getOptions();
-  if(mOptions.isFullScreen())
+  if(iIsFullScreen)
 		parentWidget()->showFullScreen();
   else
     parentWidget()->showNormal();
-
-  //start ot resume game
-  if(getState() == gsNotStarted)
-    startGame();
-  else
-    resumeGame();
-  setUpdatesEnabled(true);
 }
 
 /*La position passé doit être en coordonné globale*/
@@ -653,6 +657,9 @@ void GameWindow::drawBalls() const
   for(unsigned int i = 0; i < mBalls.size(); ++i)
     mBalls[i]->draw(getCamera());
 }
+
+void GameWindow::drawBackground() const
+{ mBackgroundSprite.draw(getCamera()); }
 
 void GameWindow::drawCollisions()
 {
@@ -672,7 +679,7 @@ void GameWindow::drawGamePanel() const
   a.set2dPositioningOn(true);
   a.set2dPosition(Vector3i(10, 10, 0));
   a.setAnchorPoint(Sprite::aTopLeft);
-  a.setTexture(mGameTexture, QRect(108, 12, 228, 60));
+  a.setTexture(mGameAssets, QRect(108, 12, 228, 60));
   
   a.draw(getCamera());
 }
@@ -704,13 +711,47 @@ void GameWindow::eliminatePlayer(int iId)
   mpPhysics->markPlayerForRemoval(iId);
 }
 
+void GameWindow::hideOptions()
+{
+  //start ot resume game
+  if(getState() == gsNotStarted)
+    startGame();
+  else
+    resumeGame();
+}
+
+void GameWindow::hostingGameOptionChanged(bool iHosting)
+{
+  if(iHosting)
+  {
+    //mNetwork.setServerPort(kNetworkPort);
+    //mNetwork.startServer();
+    mpOptionsDialog->setServerAddress("Server started.");
+  }
+  else
+  {
+    //mNetwork.stopServer();
+    mpOptionsDialog->setServerAddress("Server not started");
+  }
+}
+
 void GameWindow::initializeGL()
 {
   Widget3d::initializeGL();
   glClearColor(0, 0, 0, 0);
   
   //initialize texture holding all game sprites.
-  mGameTexture.load(QImage(":/images/texture1.png"));
+  mGameAssets.load(QImage(":/images/texture1.png"));
+  mBackgroundSprite.setTexture(Texture(QImage(":/images/background.jpg")));
+  mBackgroundSprite.setAnchorPoint(Sprite::aCenter);
+  mBackgroundSprite.set2dPositioningOn(true);
+  mBackgroundSprite.set2dPosition(getCamera().getWindowInfo().getWidth()/2,
+    getCamera().getWindowInfo().getHeight()/2, -1.0);
+}
+
+void GameWindow::joinGameOptionChanged(bool iJoining)
+{
+  //mNetwork.connectToTcpServer(mpOptionsDialog->getHostServerAddress(), kNetworkPort);
 }
 
 void GameWindow::keyPressEvent(QKeyEvent* e)
@@ -777,11 +818,11 @@ void GameWindow::mouseReleaseEvent(QMouseEvent* e)
 }
 
 void GameWindow::paintGL()
-{
+{  
   Widget3d::paintGL();
-  
   if(getState() == gsRunning)
   {  
+    drawBackground();
     drawGameBoard();
     drawNets();
     drawPlayers();
@@ -792,6 +833,8 @@ void GameWindow::paintGL()
 #endif
 
 	  drawGamePanel();
+    
+    showFps();
   }
 }
 
@@ -800,6 +843,12 @@ void GameWindow::pauseGame()
   setCursor(Qt::ArrowCursor);
   setState(gsPaused);
   killTimer(mGameTimerId);
+}
+
+void GameWindow::resizeGL(int iWidth, int iHeight)
+{
+  Widget3d::resizeGL(iWidth, iHeight);
+  mBackgroundSprite.set2dPosition(iWidth/2, iHeight/2);
 }
 
 void GameWindow::resumeGame()
@@ -831,10 +880,7 @@ void GameWindow::score(int iId)
 }
 
 void GameWindow::showOptions() const
-{
-  mpOptionsDialog->setOptions(mOptions);
-  mpOptionsDialog->exec();
-}
+{ mpOptionsDialog->exec(); }
 
 void GameWindow::startGame() 
 {
@@ -842,17 +888,17 @@ void GameWindow::startGame()
   for(unsigned int i = 0; i < cMaxCollisions; ++i)
   {
     mCollisions[i] = new Collision();
-    mCollisions[i]->setTexture(mGameTexture, QRect(264, 168, 72, 960));
+    mCollisions[i]->setTexture(mGameAssets, QRect(264, 168, 72, 960));
   }
   
   //add balls
   mBalls.push_back(new Ball());
   //load textured object
   for(unsigned int i = 0; i < mBalls.size(); ++i)
-    mBalls[i]->setTexture(mGameTexture, QRect(12, 12, 48, 48));
+    mBalls[i]->setTexture(mGameAssets, QRect(12, 12, 48, 48));
     
   //create the static board game
-  mpBoard = new Board4();
+  mpBoard = new Board2();
   
   //init player position and orientation, define the local player.
   for(unsigned int i = 0; i < mPlayers.size(); ++i)
@@ -880,6 +926,7 @@ void GameWindow::timerEvent(QTimerEvent* e)
   if(e->timerId() == mGameTimerId)
   {
     updateUserInput();
+    updateNetwork();
     updateAi();
     updatePhysics();
     updateDisplay();
@@ -908,6 +955,10 @@ void GameWindow::updateDisplay()
   update();
 }
 
+void GameWindow::updateNetwork()
+{
+}
+
 void GameWindow::updatePhysics()
 {
   mpPhysics->updatePhysics();
@@ -917,4 +968,4 @@ void GameWindow::updateUserInput()
 {
   if(qApp->hasPendingEvents())
     qApp->processEvents();
-}//
+}

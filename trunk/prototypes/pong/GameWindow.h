@@ -3,6 +3,10 @@
 #ifndef Pong_GameWindow_hh
 #define Pong_GameWindow_hh
 
+#include "3d/Sprite.h"
+#include "3d/Texture.h"
+#include "3d/Widget3d.h"
+#include "Network.h"
 #include <chipmunk.h>
 #include <map>
 namespace Pong{class Ball;}
@@ -13,11 +17,12 @@ class QCheckBox;
 class QCloseEvent;
 #include <QDialog>
 class QKeyEvent;
+class QLabel;
+class QLineEdit;
 class QMouseEvent;
 class QTimerEvent;
-#include "3d/Texture.h"
 #include <vector>
-#include "3d/Widget3d.h"
+
 
 namespace Pong
 {
@@ -25,24 +30,6 @@ using namespace std;
 using namespace realisim;
   using namespace math;
   using namespace treeD;
-
-//--- Options -----------------------------------------------------------------
-class Options
-{
-public:
-  Options();
-  ~Options() {;}
-  Options(const Options&);
-  
-  unsigned int getNumberOfPlayers() const {return mNumberOfPlayers;}
-  bool isFullScreen() const {return mIsFullScreen;}
-  const Options& operator=(const Options&);
-  void setFullScreen(bool i){mIsFullScreen = i;}
-  void setNumberOfPlayers(int i) {mNumberOfPlayers = i;}
-private:
-  bool mIsFullScreen;
-  unsigned int mNumberOfPlayers;
-};
 
 //--- OptionsDialog-------------------------------------------------------------
 class OptionsDialog : public QDialog
@@ -52,14 +39,33 @@ public:
 	OptionsDialog(QWidget*);
   ~OptionsDialog(){;}
   
-  const Options& getOptions() const {return mOptions;}
-  void setOptions(const Options&);
+  QString getHostServerAddress() const;
+  void setServerAddress(QString);
   
-protected slots:
-  void optionsChanged();
+signals:
+  void fullScreenOptionChanged(bool);
+  void hideOptions();
+  void hostingGameOptionChanged(bool);
+  void joinGameOptionChanged(bool);
+  void hostServerAddressOptionChanged(QString);
     
 protected:
+  struct Options
+  {
+    Options() : mHostingGame(false), mHostServerAddress("127.0.0.1"),
+      mIsFullScreen(false), mNumberOfPlayers(2) {;}
+    
+    bool mHostingGame;
+    QString mHostServerAddress;
+    bool mIsFullScreen;
+    unsigned int mNumberOfPlayers;
+  };
+
   QCheckBox* mpFullScreen;
+  QCheckBox* mpJoinGame;
+  QCheckBox* mpHostGame;
+  QLabel* mpServerAddress;
+  QLineEdit* mpHostServerAddress;
   
   Options mOptions;
 };
@@ -178,12 +184,16 @@ public:
   virtual void showOptions() const;
   
 protected slots:
-  void applyOptions();
+  void fullScreenOptionChanged(bool);
+  void hostingGameOptionChanged(bool);
+  void joinGameOptionChanged(bool);
+  void hideOptions();
 
 protected:
   enum GameState {gsNotStarted, gsPaused, gsRunning};
   
   virtual bool canPlayerMoveTo(const Player*, const Point3d&) const;
+  virtual void drawBackground() const;
   virtual void drawBalls() const;
   virtual void drawCollisions();
   virtual void drawGameBoard() const;
@@ -202,18 +212,19 @@ protected:
   virtual void paintGL();
   virtual void pauseGame();
 //virtual void removePlayer(Player*);
+  void resizeGL(int iWidth, int iHeight);
   virtual void resumeGame();
   virtual void startGame();
   virtual void setState(GameState gs) {mState = gs;}
   virtual void timerEvent(QTimerEvent*);
   virtual void updateAi();
-  virtual void updateUserInput();
-  virtual void updatePhysics();
   virtual void updateDisplay();
-//  virtual void updateNetwork();
+  virtual void updateNetwork();
+  virtual void updatePhysics();
+  virtual void updateUserInput();
+
   
   OptionsDialog* mpOptionsDialog;
-  Options mOptions;
   GameState mState;
   int mGameTimerId;
   vector<Player*> mPlayers;
@@ -225,7 +236,10 @@ protected:
   vector<Ball*> mBalls;
   Physics* mpPhysics;
   Collision* mCollisions[cMaxCollisions];
-  Texture mGameTexture;
+  Texture mBackground;
+  Sprite mBackgroundSprite;
+  Texture mGameAssets;
+ // Network mNetwork;
 };
 
 }
