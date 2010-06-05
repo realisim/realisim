@@ -29,7 +29,7 @@ Controller.h
 #include "DataModel/DataModel.h"
 #include "DataModel/DisplayData.h"
 #include "DataModel/EditionData.h"
-namespace realEdit{class EditionUi;}
+namespace realEdit{class ProjectWindow;}
 namespace realEdit{namespace commands{class ChangeMode;}}
 namespace realEdit{namespace commands{class ChangeTool;}}
 namespace realEdit{namespace commands{class Translate;}}
@@ -39,7 +39,7 @@ namespace realEdit
 { 
   using namespace commands;
 
-class Controller 
+class Controller
 {
 public:
   friend class commands::ChangeMode;
@@ -48,13 +48,12 @@ public:
   enum mode{mAssembly, mEdition};
   enum tool{tSelection, tTranslation};
   
-	Controller( EditionUi& ipEditionUi );
+	Controller(ProjectWindow&);
 	~Controller();
   DisplayData& getDisplayData() {return mDisplayData;}
   const EditionData& getEditionData() const;
   mode getMode() const {return mMode;}
   tool getTool() const {return mTool;}
-  void newProject();
   void redo();
   void undo();
   
@@ -69,13 +68,13 @@ public:
 protected:
   void createPlatonicSolid(PlatonicSolid::type, int = 0);
   realisim::utils::CommandStack& getCommandStack() {return mCommandStack;}
-  EditionData& getEditionData();
-  EditionUi& getUi() {return mEditionUi;}
+  EditionData& getEditionDataPriv();
+  ProjectWindow& getProjectWindow() {return mProjectWindow;}
   
 private:
+  ProjectWindow& mProjectWindow;
   realisim::utils::CommandStack mCommandStack;
   DisplayData mDisplayData;
-  EditionUi& mEditionUi;
   EditionData mEditionData;
   mode mMode;
   tool mTool;

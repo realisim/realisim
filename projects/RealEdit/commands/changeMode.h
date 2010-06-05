@@ -10,7 +10,6 @@
 
 #include "utils/Command.h"
 namespace realEdit{class EditionData;}
-namespace realEdit{class EditionUi;}
 #include "Controller.h"
 
 namespace realEdit
@@ -21,8 +20,7 @@ namespace commands
   class ChangeMode : public realisim::utils::Command
   {
    public:
-     explicit ChangeMode(Controller&, EditionUi&,
-       Controller::mode);
+     explicit ChangeMode(Controller&, Controller::mode);
      virtual ~ChangeMode();
      
      virtual void execute();
@@ -30,7 +28,6 @@ namespace commands
      
   private:    
     Controller& mController;
-    EditionUi& mUi;
     Controller::mode mPreviousMode;
     Controller::mode mMode;
   };

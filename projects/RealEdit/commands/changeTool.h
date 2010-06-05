@@ -12,7 +12,6 @@
 
 #include "utils/Command.h"
 namespace realEdit{class EditionData;}
-namespace realEdit{class EditionUi;}
 #include "Controller.h"
 
 namespace realEdit
@@ -23,7 +22,7 @@ namespace commands
   class ChangeTool : public realisim::utils::Command
   {
    public:
-     explicit ChangeTool(Controller&, EditionUi&,
+     explicit ChangeTool(Controller&,
        Controller::tool);
      virtual ~ChangeTool();
      
@@ -32,7 +31,6 @@ namespace commands
      
   private:    
     Controller& mController;
-    EditionUi& mUi;
     Controller::tool mPreviousTool;
     Controller::tool mTool;
   };

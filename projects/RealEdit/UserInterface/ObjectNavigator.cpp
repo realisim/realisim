@@ -19,36 +19,21 @@
 using namespace realEdit;
 using namespace std;
 
-ObjectNavigator::ObjectNavigator( QWidget* ipParent, Controller& iC ) :
+ObjectNavigator::ObjectNavigator(QWidget* ipParent) :
   QTreeWidget( ipParent ),
-  mController( iC ),
-  mEditionData (const_cast<const Controller&> (iC).getEditionData ()),
+  mpController(0),
   mTreeItemToNode(),
   mNodeToTreeItem()
 {
   header()->hide();
   setAlternatingRowColors(true);
-  setAnimated(true);
-  
-  //create the object tree
-  createTree( this, mEditionData.getScene().getObjectNode() );
-  //expandAllItems();
-  
+
   connect( this, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*) ),
-           this, SLOT(doItemChanged(QTreeWidgetItem*, QTreeWidgetItem*) ) );
+         this, SLOT(doItemChanged(QTreeWidgetItem*, QTreeWidgetItem*) ) );
 }
 
 ObjectNavigator::~ObjectNavigator()
 {}
-
-//------------------------------------------------------------------------------
-void ObjectNavigator::changeCurrentNode()
-{
-  NodeToTreeItem::iterator it = 
-    mNodeToTreeItem.find(mEditionData.getCurrentNode());
-  if(it != mNodeToTreeItem.end())
-    setCurrentItem(it->second);
-}
 
 //------------------------------------------------------------------------------
 template<class TreeItem>
@@ -79,7 +64,7 @@ void ObjectNavigator::doItemChanged(QTreeWidgetItem* ipItem,
   TreeItemToNode::const_iterator it = mTreeItemToNode.find( ipItem );
   if( it != mTreeItemToNode.end() )
   {
-    mController.setCurrentNode (it->second);
+    mpController->setCurrentNode (it->second);
   }
 }
 
@@ -91,6 +76,30 @@ void ObjectNavigator::expandAllItems()
   {
     expandItem(it->first);
     ++it;
+  }
+}
+
+//------------------------------------------------------------------------------
+void ObjectNavigator::setController(Controller& iController)
+{
+  clear();
+  mNodeToTreeItem.clear();
+  mTreeItemToNode.clear();
+  mpController = &iController;
+  const EditionData& e = mpController->getEditionData();
+  createTree( this, e.getScene().getObjectNode() );
+	updateUi();
+}
+
+//------------------------------------------------------------------------------
+void ObjectNavigator::updateUi()
+{
+  NodeToTreeItem::iterator it = 
+    mNodeToTreeItem.find(mpController->getEditionData().getCurrentNode());
+  if(it != mNodeToTreeItem.end())
+  {
+    setCurrentItem(it->second);
+    scrollToItem(it->second);
   }
 }
 

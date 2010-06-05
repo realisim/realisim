@@ -5,17 +5,18 @@
 
 #include "commands/changeNode.h"
 #include "DataModel/EditionData.h"
-#include "UserInterface/EditionUi.h"
 #include "DataModel/ObjectNode.h"
+#include "UserInterface/MainWindow.h"
+#include "UserInterface/ProjectWindow.h"
 
 using namespace realisim;
 using namespace realEdit;
   using namespace commands;
   
-ChangeNode::ChangeNode(EditionData& iEd, EditionUi& iUi, const ObjectNode* ipNode) :
+ChangeNode::ChangeNode(ProjectWindow& iPw, EditionData& iEd, const ObjectNode* ipNode) :
   Command(),
+  mProjectWindow(iPw),
   mEditionData(iEd),
-  mUi(iUi),
   mpPreviousNode(mEditionData.getCurrentNode()),
   mpNode(ipNode)
 {}
@@ -27,13 +28,15 @@ ChangeNode::~ChangeNode()
 void ChangeNode::execute()
 {
   mEditionData.setCurrentNode(mpNode);
-  mUi.changeCurrentNode();
+  mProjectWindow.changeCurrentNode();
+  ((MainWindow*)mProjectWindow.parentWidget())->updateUi();
 }
 
 //------------------------------------------------------------------------------
 void ChangeNode::undo()
 {
   mEditionData.setCurrentNode(mpPreviousNode);
-  mUi.changeCurrentNode();
+  mProjectWindow.changeCurrentNode();
+  ((MainWindow*)mProjectWindow.parentWidget())->updateUi();
 }
 

@@ -19,6 +19,7 @@ static RealEditPoint mDummyPoint = RealEditPoint();
 static RealEditPolygon mDummyPolygon = RealEditPolygon();
   
 #ifndef NDEBUG
+#define DEBUG_GUTS 0
 static int newGuts = 0;
 static int deleteGuts = 0;
 static int newGutsPoly = 0;
@@ -42,7 +43,7 @@ void DataModelBase::assign()
   ++mIdCounter;
   mId = mIdCounter;
   
-#ifndef NDEBUG
+#if DEBUG_GUTS
 std::cout<<"id: "<<mId<<std::endl;
 #endif
 }
@@ -51,7 +52,7 @@ std::cout<<"id: "<<mId<<std::endl;
 RealEditPoint::Guts::Guts (const Point3d& iP) : mPoint (iP),
   mRefCount (1)
 {
-#ifndef NDEBUG
+#if DEBUG_GUTS
   ++newGuts;
   std::cout<<"new Guts Point: "<<newGuts<<std::endl;
 #endif
@@ -59,7 +60,7 @@ RealEditPoint::Guts::Guts (const Point3d& iP) : mPoint (iP),
 
 RealEditPoint::Guts::~Guts ()
 {
-#ifndef NDEBUG
+#if DEBUG_GUTS
   ++deleteGuts;
   std::cout<<"delete Guts Point: "<<deleteGuts<<std::endl;
 #endif
@@ -111,7 +112,7 @@ RealEditPolygon::Guts::Guts() : mRefCount (1),
   mPoints (),
   mNormals ()
 {
-#ifndef NDEBUG
+#if DEBUG_GUTS
   ++newGutsPoly;
   std::cout<<"new Guts Poly: "<<newGutsPoly<<std::endl;
 #endif
@@ -124,7 +125,7 @@ RealEditPolygon::Guts::Guts (const std::vector<RealEditPoint>& iP) :
 {
   computeNormals();
   
-#ifndef NDEBUG
+#if DEBUG_GUTS
   ++newGutsPoly;
   std::cout<<"new Guts Poly: "<<newGutsPoly<<std::endl;
 #endif
@@ -132,7 +133,7 @@ RealEditPolygon::Guts::Guts (const std::vector<RealEditPoint>& iP) :
 
 RealEditPolygon::Guts::~Guts()
 {
-#ifndef NDEBUG
+#if DEBUG_GUTS
   ++deleteGutsPoly;
   std::cout<<"delete Guts Poly: "<<deleteGutsPoly<<std::endl;
 #endif
@@ -222,7 +223,7 @@ RealEditModel::Guts::Guts () : mBoundingBox (),
   mRefCount (1),
   mCentroid(0.0)
 {
-#ifndef NDEBUG
+#if DEBUG_GUTS
   ++newGutsModel;
   std::cout<<"new Guts Model: "<<newGutsModel<<std::endl;
 #endif
@@ -230,7 +231,7 @@ RealEditModel::Guts::Guts () : mBoundingBox (),
 
 RealEditModel::Guts::~Guts ()
 {
-#ifndef NDEBUG
+#if DEBUG_GUTS
   ++deleteGutsModel;
   std::cout<<"delete Guts Model: "<<deleteGutsModel<<std::endl;
 #endif

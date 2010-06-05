@@ -1,5 +1,5 @@
 
-#include "UserInterface/EditionUi.h"
+#include "UserInterface/MainWindow.h"
 
 #include <iostream>
 #include <QApplication>
@@ -31,9 +31,8 @@ int main(int argc, char** argv)
   app.setWindowIcon( QIcon( ":/images/RealEdit_icon.png" ) );
   QTextCodec::setCodecForCStrings (QTextCodec::codecForName("UTF-8"));
 
-  EditionUi* p = new EditionUi();
-  //pas besoin de deleter p, Qt le fera lorsque la fenêtre sera fermée
-  p->setAttribute(Qt::WA_DeleteOnClose, true);
+  MainWindow m;
+  m.show();
   
   if ( startMainApp() == 0 )
   {

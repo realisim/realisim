@@ -226,6 +226,7 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/ )
     mAnimationTimer.start();
     //start a timer that will timeout as quick as possible which will trigger
     //the overloaded method timerEvent( QTimerEvent* )
+    killTimer(mAnimationTimerId);
     mAnimationTimerId = startTimer( 0 );
   }
   else
