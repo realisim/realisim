@@ -43,9 +43,9 @@ namespace math
     inline void set(const Point<T> &pt1, const Point<T> &pt2);
     
     // --------------- fonction get --------------------------------------------
-    inline T getX() const;
-    inline T getY() const;
-    inline T getZ() const;
+    inline const T& getX() const;
+    inline const T& getY() const;
+    inline const T& getZ() const;
     inline void get(Vect<T> &vect) const;
     inline void getXYZ(T &x, T &y, T &z) const;
     
@@ -284,7 +284,7 @@ namespace math
   //! \return la valeur X du vecteur
   //!---------------------------------------------------------------------------
   template<class T>
-  inline T Vect<T>::getX() const
+  inline const T& Vect<T>::getX() const
   {
     return x_;
   }
@@ -295,7 +295,7 @@ namespace math
   //! \return la valeur Y du vecteur
   //!---------------------------------------------------------------------------
   template<class T>
-  inline T Vect<T>::getY() const
+  inline const T& Vect<T>::getY() const
   {
     return y_;
   }
@@ -306,7 +306,7 @@ namespace math
   //! \return la valeur Z du vecteur
   //!---------------------------------------------------------------------------
   template<class T>
-  inline T Vect<T>::getZ() const
+  inline const T& Vect<T>::getZ() const
   {
     return z_;
   }

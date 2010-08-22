@@ -36,6 +36,15 @@ Texture& Texture::operator=(const Texture& iT)
 //----------------------------------------------------------------------------
 void Texture::copyGuts()
 {
+	/*expliquer le truc ici... g = mpGuts et ensuite deleteGuts, on pourrait
+    penser que ce code est bugger parce qu'apres le deleteGuts on utilise
+    le pointeur g et que celui ci pourrait ne plus être valide. Ca ne sera 
+    jamais le cas, puisque ce code est dans une condition qui s'assure qu'il
+    y a au moin 2 references, donc on peut en deleter un et le pointeur g
+    sera toujours valide. Dans le cas ou il n'y a qu'une seule reference, on
+    ne veut pas copier les guts. On copie les guts seulement quand un client
+    tente de modifier (par le biais d'une méthode non const) un guts qui a
+    plus d'une reference.*/
   if(mpGuts->mRefCount > 1)
   {
     Guts* g = mpGuts;
