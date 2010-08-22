@@ -1,8 +1,10 @@
+#120
+
 varying vec4 diffuse,ambient;
 varying vec3 normal,lightDir,halfVector;
 uniform vec3 myInput;
 
-void main()
+vec4 directionalLighting()
 {
   vec3 n,halfV;
   float NdotL,NdotHV;
@@ -27,5 +29,5 @@ void main()
         pow(NdotHV, gl_FrontMaterial.shininess);
   }
 
-  gl_FragColor = color * vec4(myInput, 1.0);
+  return color * vec4(myInput, 1.0);
 }

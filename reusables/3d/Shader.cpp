@@ -2,44 +2,18 @@
 #include "Shader.h"
 
 using namespace realisim;
-using namespace math;
-using namespace treeD;
+  using namespace math;
+  using namespace treeD;
+using namespace std;
 
 Shader::Guts::Guts() : mRefCount(1),
-  mFragmentId(0),
-  mProgramId(0),
-  mVertexId(0),
-  mFragmentSource(),
-  mVertexSource(),
+  mFragmentIds(),
+  mProgramId(),
+  mVertexIds(),
+  mFragmentSources(),
+  mVertexSources(),
   mIsValid(false)
 {}
-
-//Shader::Guts::Guts(QString iFragmentSource, QString iVertexSource) : mRefCount(1),
-// mFragmentId(0),
-// mProgramId(0),
-// mVertexId(0),
-// mFragmentSource(iFragmentSource),
-// mVertexSource(iVertexSource)
-//{
-//	mProgramId = glCreateProgram();
-//  
-//  if(!mFragmentSource.isEmpty())
-//  {
-//    mFragmentId = glCreateShader(GL_FRAGMENT_SHADER);
-//    //glShaderSource();
-//    glCompileShader(mFragmentId);
-//    glAttachShader(mProgramId, mFragmentId);
-//  }
-//  if(!mVertexSource.isEmpty())
-//  {
-//    mVertexId = glCreateShader(GL_VERTEX_SHADER);
-//    //glShaderSource();
-//    glCompileShader(mVertexId);
-//    glAttachShader(mProgramId, mVertexId);
-//  }
-//  
-//  glLinkProgram(mProgramId);
-//}
 
 //---
 Shader::Shader() : mpGuts(0)
@@ -70,14 +44,15 @@ Shader& Shader::operator=(const Shader& iT)
 }
 
 //----------------------------------------------------------------------------
-int Shader::addFragmentShaderSource(QString iSource)
+void Shader::addFragmentShaderSource(QString iSource)
 {
   if(getProgramId() == 0)
     mpGuts->mProgramId = glCreateProgram();
     
-  if(!iSource.isEmpty() && getFragmentId() == 0)
+  if(!iSource.isEmpty())
   {
-    mpGuts->mFragmentSource = iSource;
+    mpGuts->mFragmentSources.push_back(iSource);
+    int fragmentIndex = mpGuts->mFragmentSources.size() - 1;
     /*Puisque iSource peut venir d'une ressource (donc d'un QByteArray)
       il est important de passé par std string et ensuite const char*. 
       Par exemple, si on fait, .toAscii() et ensuite .data() il arrive
@@ -85,28 +60,30 @@ int Shader::addFragmentShaderSource(QString iSource)
       en plein milieu du QByteArray.*/
     std::string s = iSource.toStdString();
     const char* d = s.c_str();
-    mpGuts->mFragmentId = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(getFragmentId(), 1, &d, NULL);
-    glCompileShader(getFragmentId());
-    glAttachShader(getProgramId(), getFragmentId());
+    mpGuts->mFragmentIds.push_back(glCreateShader(GL_FRAGMENT_SHADER));
+    glShaderSource(getFragmentId(fragmentIndex), 1, &d, NULL);
+    glCompileShader(getFragmentId(fragmentIndex));
+    glAttachShader(getProgramId(), getFragmentId(fragmentIndex));
   }
 
 //Print the info log when in debug mode
 #ifndef NDEBUG
-  printShaderInfoLog(getFragmentId());
+  int fragmentIndex = mpGuts->mFragmentSources.size() - 1;
+  printf("Log for fragment shader number: %d\n", fragmentIndex);
+  printShaderInfoLog(getFragmentId(fragmentIndex));
 #endif
-  return getFragmentId();
 }
 
 //----------------------------------------------------------------------------
-int Shader::addVertexShaderSource(QString iSource)
+void Shader::addVertexShaderSource(QString iSource)
 {
   if(getProgramId() == 0)
     mpGuts->mProgramId = glCreateProgram();
 
-  if(!iSource.isEmpty() && getVertexId() == 0)
+  if(!iSource.isEmpty())
   {
-    mpGuts->mVertexSource = iSource;
+    mpGuts->mVertexSources.push_back(iSource);
+    int vertexIndex = mpGuts->mVertexSources.size() - 1;
     /*Puisque iSource peut venir d'une ressource (donc d'un QByteArray)
       il est important de passé par std string et ensuite const char*. 
       Par exemple, si on fait, .toAscii() et ensuite .data() il arrive
@@ -114,16 +91,17 @@ int Shader::addVertexShaderSource(QString iSource)
       en plein milieu du QByteArray.*/
     std::string s = iSource.toStdString();
     const char* d = s.c_str();
-    mpGuts->mVertexId = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(getVertexId(), 1, &d, NULL);
-    glCompileShader(getVertexId());
-    glAttachShader(getProgramId(), getVertexId());
+    mpGuts->mVertexIds.push_back(glCreateShader(GL_VERTEX_SHADER));
+    glShaderSource(getVertexId(vertexIndex), 1, &d, NULL);
+    glCompileShader(getVertexId(vertexIndex));
+    glAttachShader(getProgramId(), getVertexId(vertexIndex));
   }
 //Print the info log when in debug mode
 #ifndef NDEBUG
-  printShaderInfoLog(getVertexId());
+  int vertexIndex = mpGuts->mVertexSources.size() - 1;
+  printf("Log for vertex shader number: %d\n", vertexIndex);
+  printShaderInfoLog(getVertexId(vertexIndex));
 #endif
-  return getVertexId();
 }
 
 //----------------------------------------------------------------------------
@@ -138,8 +116,10 @@ int Shader::addVertexShaderSource(QString iSource)
 Shader Shader::copy()
 {
 	Shader s;
-  s.addVertexShaderSource(getVertexSource());
-  s.addFragmentShaderSource(getFragmentSource());
+  for(int i = 0; i < getVertexSourcesSize(); ++i)
+    s.addVertexShaderSource(getVertexSource(i));
+  for(int i = 0; i < getFragmentSourcesSize(); ++i)
+    s.addFragmentShaderSource(getFragmentSource(i));
   s.link();
   
   return s;
@@ -151,11 +131,17 @@ void Shader::computeValidity()
   mpGuts->mIsValid = true;
   int status;
   //check if shaders are compiled
-  glGetShaderiv(getFragmentId(), GL_COMPILE_STATUS, &status);
-  mpGuts->mIsValid = mpGuts->mIsValid & (status == GL_TRUE);
+  for(int i = 0; i < getFragmentSourcesSize(); ++i)
+  {
+    glGetShaderiv(getFragmentId(i), GL_COMPILE_STATUS, &status);
+    mpGuts->mIsValid = mpGuts->mIsValid & (status == GL_TRUE);
+  }
 
-  glGetShaderiv(getVertexId(), GL_COMPILE_STATUS, &status);
-  mpGuts->mIsValid = mpGuts->mIsValid & (status == GL_TRUE);
+  for(int i = 0; i < getVertexSourcesSize(); ++i)
+  {
+    glGetShaderiv(getVertexId(i), GL_COMPILE_STATUS, &status);
+    mpGuts->mIsValid = mpGuts->mIsValid & (status == GL_TRUE);
+  }
   
   //check if program linked
   glGetProgramiv(getProgramId(), GL_LINK_STATUS, &status);
@@ -167,10 +153,18 @@ void Shader::deleteGuts()
 {
   if(mpGuts && --mpGuts->mRefCount == 0)
   {
-    glDetachShader(getProgramId(), getFragmentId());
-    glDetachShader(getProgramId(), getVertexId());
-    glDeleteShader(getFragmentId());
-    glDeleteShader(getVertexId());
+    for(int i = 0; i < getVertexSourcesSize(); ++i)
+    {
+      glDetachShader(getProgramId(), getVertexId(i));
+      glDeleteShader(getVertexId(i));
+    }
+    
+    for(int i = 0; i < getFragmentSourcesSize(); ++i)
+    {
+    	glDetachShader(getProgramId(), getFragmentId(i));
+	    glDeleteShader(getFragmentId(i));
+    }
+
     glDeleteProgram(getProgramId());
     delete mpGuts;
     mpGuts = 0;
