@@ -7,6 +7,7 @@
 #include <math/Point.h>
 #include <math/Vect.h>
 #include <math/Matrix4x4.h>
+#include <vector>
 
 /* Cette classe sert à créer et interacgir avec un shader OpenGL. Les
    ressources nécessaires pour le(les) shaders (geometry, vertex et fragment)
@@ -60,12 +61,14 @@ public:
   virtual ~Shader();
   virtual Shader& operator=(const Shader&);
 
-  int addFragmentShaderSource(QString);
-  int addVertexShaderSource(QString);
+  void addFragmentShaderSource(QString);
+  void addVertexShaderSource(QString);
   Shader copy();
   int getProgramId() const {return mpGuts->mProgramId;} 
-  QString getFragmentSource() const {return mpGuts->mFragmentSource;} 
-  QString getVertexSource() const {return mpGuts->mVertexSource;}
+  QString getFragmentSource(int i) const {return mpGuts->mFragmentSources[i];}
+  int getFragmentSourcesSize() const {return mpGuts->mFragmentSources.size();}
+  QString getVertexSource(int i) const {return mpGuts->mVertexSources[i];}
+  int getVertexSourcesSize() const {return mpGuts->mVertexSources.size();}
   bool isValid() const;
   void link();
   
@@ -82,8 +85,8 @@ public:
   
 protected:
   void computeValidity();
-	int getFragmentId() const {return mpGuts->mFragmentId;}
-	int getVertexId() const {return mpGuts->mVertexId;}
+	int getFragmentId(int i) const {return mpGuts->mFragmentIds[i];}
+	int getVertexId(int i) const {return mpGuts->mVertexIds[i];}
   void printProgramInfoLog(GLuint);
   void printShaderInfoLog(GLuint);
 
@@ -92,11 +95,11 @@ protected:
     explicit Guts();
     unsigned int mRefCount;
     
-    int mFragmentId; //vector<int> mFragmentIds
+    std::vector<int> mFragmentIds;
     int mProgramId;  
-    int mVertexId; //vector<int> mVertexIds
-    QString mFragmentSource; //vector<QString> mFragmentSources
-    QString mVertexSource; //vector<QString> mVertexSources
+    std::vector<int> mVertexIds;
+    std::vector<QString> mFragmentSources;
+    std::vector<QString> mVertexSources;
     bool mIsValid;
   };
   

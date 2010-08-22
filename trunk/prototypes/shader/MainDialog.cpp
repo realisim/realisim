@@ -70,22 +70,29 @@ void Viewer::initializeGL()
   
   QString fragmentSource, vertexSource;
   
-	//QFile vert(":/toon.vert");
+  //--- lighting shader
   QFile vert(":/directional lighting.vert");
   vert.open(QIODevice::ReadOnly);
   vertexSource = vert.readAll();
 
-  //QFile frag(":/toon.frag");
   QFile frag(":/directional lighting.frag");
   frag.open(QIODevice::ReadOnly);
   fragmentSource = frag.readAll();
   
+  frag.close();
+  frag.setFileName(":/main with light.frag");
+  frag.open(QIODevice::ReadOnly);
+  QString fragmentSource2 = frag.readAll();
+
   qDebug(vertexSource.toStdString().c_str());
   qDebug(fragmentSource.toStdString().c_str());
+  qDebug(fragmentSource2.toStdString().c_str());
   mShader.addVertexShaderSource(vertexSource);
   mShader.addFragmentShaderSource(fragmentSource);
+  mShader.addFragmentShaderSource(fragmentSource2);
   mShader.link();
-  
+
+  //--- toon shader  
   vert.close();
   vert.setFileName(":/toon.vert");
   vert.open(QIODevice::ReadOnly);
@@ -112,8 +119,7 @@ void Viewer::paintGL()
   mShader.setUniform("myInput", Vector3f(1.0, 0.0, 0.0));
   drawPlatonicSolid(mPs);
 
-	Shader shaderTmp = mShader2.copy();  
-  pushShader(shaderTmp);
+  pushShader(mShader2);
   mShader.setUniform("myInput", Vector3f(0.0, 0.0, 1.0));
   glPushMatrix();
   glTranslated(5, 10, 3);
