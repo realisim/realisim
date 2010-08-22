@@ -16,6 +16,7 @@
 #include <map>
 #include <QTime>
 #include <QGLWidget>
+namespace realisim { namespace treeD { class Shader;} }
 
 namespace realisim
 {
@@ -32,6 +33,8 @@ public:
   virtual ~Widget3d() = 0;
 
   const Camera& getCamera() const { return mCam; }
+  void pushShader(const Shader&);
+  void popShader();
   void setCamera( const Camera& iCam, bool iAnimate = true );
   void setCameraMode( Camera::Mode iMode );
   void setCameraOrientation( Camera::Orientation iO );
@@ -69,6 +72,8 @@ private:
   bool mMousePressed;
   int mMousePosX;
   int mMousePosY;
+  
+  std::vector<Shader> mShaders;
 };
 
 } //treeD

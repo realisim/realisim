@@ -8,8 +8,9 @@
 
 #include "math/MathUtils.h"
 #include <QMouseEvent>
-#include "3d/Widget3d.h"
 #include "3d/OpenGLInfo.h"
+#include "3d/Shader.h"
+#include "3d/Widget3d.h"
 
 using namespace realisim;
 using namespace realisim::treeD;
@@ -40,7 +41,8 @@ mFpsTimer(),
 mShowFps(true),
 mMousePressed( false ),
 mMousePosX( 0 ),
-mMousePosY( 0 )
+mMousePosY( 0 ),
+mShaders()
 {}
 
 //-----------------------------------------------------------------------------
@@ -180,6 +182,26 @@ Widget3d::paintGL()
   //replacer les lumieres
   GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
   glLightfv(GL_LIGHT0, GL_POSITION, position);
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::pushShader(const Shader& iS)
+{
+  mShaders.push_back(iS);
+  if(iS.isValid())
+  {
+    glUseProgram(iS.getProgramId());
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::popShader()
+{
+  mShaders.pop_back();
+  GLint programId = 0;
+  if(!mShaders.empty())
+    programId = mShaders.back().getProgramId();
+  glUseProgram(programId);
 }
 
 //-----------------------------------------------------------------------------

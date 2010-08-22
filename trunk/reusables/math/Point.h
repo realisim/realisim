@@ -46,9 +46,9 @@ namespace math
     inline void setXYZ(const U &x, const U &y, const U &z);
 
     // --------------- fonction get --------------------------------------------
-    inline U    getX() const;
-    inline U    getY() const;
-    inline U    getZ() const;
+    inline const U& getX() const;
+    inline const U& getY() const;
+    inline const U& getZ() const;
     inline void get(Point &point) const;
     inline void getXYZ(U &x, U &y, U &z) const;
 
@@ -245,7 +245,7 @@ namespace math
   //! \return la valeur X du point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline U Point<U>::getX() const
+  inline const U& Point<U>::getX() const
   {
     return x_;
   }
@@ -256,7 +256,7 @@ namespace math
   //! \return la valeur Y du point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline U Point<U>::getY() const
+  inline const U& Point<U>::getY() const
   {
     return y_;
   }
@@ -267,7 +267,7 @@ namespace math
   //! \return la valeur Z du point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline U Point<U>::getZ() const
+  inline const U& Point<U>::getZ() const
   {
     return z_;
   }
