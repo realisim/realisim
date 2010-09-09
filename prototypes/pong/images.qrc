@@ -1,6 +1,6 @@
- <!DOCTYPE RCC><RCC version="1.0">
- <qresource>
-     <file>images/texture1.png</file>
-     <file>images/background.jpg</file>
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+  <file>./images/texture1.png</file>
+  <file>./images/background.jpg</file>
  </qresource>
- </RCC>
+</RCC>

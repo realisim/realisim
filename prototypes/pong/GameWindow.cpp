@@ -741,7 +741,7 @@ void GameWindow::initializeGL()
   glClearColor(0, 0, 0, 0);
   
   //initialize texture holding all game sprites.
-  mGameAssets.load(QImage(":/images/texture1.png"));
+  mGameAssets.set(QImage(":/images/texture1.png"));
   mBackgroundSprite.setTexture(Texture(QImage(":/images/background.jpg")));
   mBackgroundSprite.setAnchorPoint(Sprite::aCenter);
   mBackgroundSprite.set2dPositioningOn(true);

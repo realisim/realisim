@@ -9,7 +9,6 @@
 #include "math/MathUtils.h"
 #include <QMouseEvent>
 #include "3d/OpenGLInfo.h"
-#include "3d/Shader.h"
 #include "3d/Widget3d.h"
 
 using namespace realisim;
@@ -129,7 +128,7 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
     //la caméra se déplacerait en suivant la souris et ce qu'on voit a l'écran
     //s'en irait dans le sens contraire de la souris. En mettant le - on
     //donne l'impression de déplacer le contenu de l'écran.
-    getCamera().move( -delta );
+    mCam.move( -delta );
   }
   
   mMousePosX = e->x();
@@ -185,13 +184,14 @@ Widget3d::paintGL()
 }
 
 //-----------------------------------------------------------------------------
-void Widget3d::pushShader(const Shader& iS)
+void Widget3d::pushShader(const Shader& iS /*=Shader()*/)
 {
   mShaders.push_back(iS);
+  GLint programId = 0;
   if(iS.isValid())
-  {
-    glUseProgram(iS.getProgramId());
-  }
+    programId = iS.getProgramId();
+  glUseProgram(programId);
+  
 }
 
 //-----------------------------------------------------------------------------
@@ -211,7 +211,7 @@ Widget3d::resizeGL(int iWidth, int iHeight)
   QGLWidget::resizeGL(iWidth, iHeight);
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
-  getCamera().projectionGL(iWidth, iHeight);
+  mCam.projectionGL(iWidth, iHeight);
   glMatrixMode( GL_MODELVIEW );
   update();
 }
@@ -261,14 +261,14 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/ )
 //-----------------------------------------------------------------------------
 void Widget3d::setCameraMode( Camera::Mode iMode )
 {
-  getCamera().setMode( iMode );
+  mCam.setMode( iMode );
   update();
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::setCameraOrientation( Camera::Orientation iO )
 {
-  getCamera().setOrientation( iO );
+  mCam.setOrientation( iO );
   update();
 }
 
@@ -328,7 +328,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
       mNewCam.getTransformationToLocal().getTranslation()*( t ) );
     
     //getCamera().set(p2, l2, u2);
-    getCamera().setTransformationToLocal(iterationMatrix);
+    mCam.setTransformationToLocal(iterationMatrix);
     
     if ( animationTime >= kCameraAnimationTime )
       killTimer( mAnimationTimerId );
@@ -352,7 +352,7 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
       zoom = 1.15;
     double finalZoom = getCamera().getZoom() * zoom;
     if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
-      getCamera().setZoom(finalZoom);
+      mCam.setZoom(finalZoom);
   }
   else
   {

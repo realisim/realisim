@@ -558,7 +558,7 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
       //on prend -Y pcq l'axe pixel est inversé de l'axe GL
       Vector3d deltaGL = getCamera().pixelDeltaToGLDelta(mMouseInfo.delta.x(),
         -mMouseInfo.delta.y());
-      getCamera().move(-deltaGL);
+      mCam.move(-deltaGL);
       update();
     }
     break;

@@ -12,11 +12,12 @@
 #ifndef Realisim_Widget3d_hh
 #define Realisim_Widget3d_hh
 
+#include "3d/Shader.h"
 #include "Camera.h"
 #include <map>
 #include <QTime>
 #include <QGLWidget>
-namespace realisim { namespace treeD { class Shader;} }
+
 
 namespace realisim
 {
@@ -33,7 +34,7 @@ public:
   virtual ~Widget3d() = 0;
 
   const Camera& getCamera() const { return mCam; }
-  void pushShader(const Shader&);
+  void pushShader(const Shader& = Shader());
   void popShader();
   void setCamera( const Camera& iCam, bool iAnimate = true );
   void setCameraMode( Camera::Mode iMode );
@@ -43,7 +44,6 @@ public:
 //    void clicked();
 
 protected:
-  Camera& getCamera() {return mCam;}
   virtual void initializeGL();
   virtual void mouseDoubleClickEvent( QMouseEvent* e );
   virtual void mouseMoveEvent( QMouseEvent* e );
