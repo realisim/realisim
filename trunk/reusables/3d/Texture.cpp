@@ -2,19 +2,62 @@
 #include "Texture.h"
 
 using namespace realisim;
-using namespace treeD;
+  using namespace math;
+  using namespace treeD;
+  
+namespace 
+{
+  GLenum toGLFormat(Texture::dataType iDt)
+  {
+    GLenum r = GL_UNSIGNED_BYTE;
+    switch (iDt) 
+    {
+    case Texture::dtUnsignedByte: r = GL_UNSIGNED_BYTE; break;
+    case Texture::dtUnsignedShort: r = GL_UNSIGNED_SHORT; break;
+    default: assert(0); break;
+    }
+    return r;
+  }
+  
+  GLenum toGLFormat(Texture::format iF)
+  {
+    GLenum r = GL_RGBA;
+    switch (iF) 
+    {
+    case Texture::fLuminance: r = GL_LUMINANCE; break;
+    case Texture::fRgba: r = GL_RGBA; break;
+    default: assert(0); break;
+    } 
+    return r;
+  }
 
-Texture::Guts::Guts() : mTextureId(0), mSize(), mRefCount(1)
+  
+}
+
+Texture::Guts::Guts() : mTextureId(0),
+  mSize(),
+  mType(tInvalid),
+  mFormat(fRgba),
+  mDataType(dtUnsignedByte),
+  mRefCount(1)
 {}
 
 //---
 Texture::Texture() : mpGuts(0)
 { makeGuts(); }
 
-Texture::Texture(QImage i) : mpGuts(0)
+Texture::Texture(QImage i, format iF/*= fRgba*/,
+  dataType iDt /*= dtUnsignedByte*/) : mpGuts(0)
 {
   makeGuts();
-  load(i);
+  set(i, iF, iDt);
+}
+
+Texture::Texture(void* iPtr, const Vector3i& iSize, format iF/*= fRgba*/,
+  dataType iDt /*= dtUnsignedByte*/)
+{
+  makeGuts();
+  set(iPtr, iSize, iF, iDt);
 }
 
 Texture::Texture(const Texture& iT) : mpGuts(0)
@@ -52,6 +95,9 @@ void Texture::copyGuts()
     makeGuts();
     mpGuts->mTextureId = g->mTextureId;
     mpGuts->mSize = g->mSize;
+    mpGuts->mType = g->mType;
+    mpGuts->mFormat = g->mFormat;
+    mpGuts->mDataType = g->mDataType;
   }
 }
 
@@ -67,35 +113,98 @@ void Texture::deleteGuts()
 }
 
 //----------------------------------------------------------------------------
+const Vector3i& Texture::getSize() const
+{return mpGuts->mSize;}
+
+//----------------------------------------------------------------------------
 bool Texture::isValid() const
 { return (bool)glIsTexture(getTextureId()); }
 
 //----------------------------------------------------------------------------
-void Texture::load(QImage i)
-{ load(i, QRect(QPoint(0.0, 0.0), i.size())); }
+void Texture::set(QImage i, format iF/*= fRgba*/,
+  dataType iDt /*= dtUnsignedByte*/)
+{ set(i, QRect(QPoint(0.0, 0.0), i.size()), iF, iDt); }
 
 //----------------------------------------------------------------------------
-void Texture::load(QImage i, QRect r)
+void Texture::set(QImage i, QRect r, format iF/*= fRgba*/,
+  dataType iDt /*= dtUnsignedByte*/)
 {
   copyGuts();
   
+  //redimensionne l'image a la taille de r
   if(r.size() != i.size())
     i = i.copy(r); 
-  mpGuts->mSize = i.size();
+  mpGuts->mSize.setXYZ(i.width(), i.height(), 0);
   i = QGLWidget::convertToGLFormat(i);
-  assert(getTextureId() == 0);
-  glGenTextures(1, &mpGuts->mTextureId);
+  
+  /*Si le assert est déclanché:
+    set a été appeler plus d'une fois sur la même texture... Aucune ressource
+    opengl n'est perdue, mais on peut se demander pourquoi faire set sur
+    une texture plus d'une fois...*/
+  assert(getTextureId() == 0); 
+  if(!glIsTexture(getTextureId()))
+    glGenTextures(1, &mpGuts->mTextureId);
+  
+  setType(t2d);
+  setDataType(iDt);
+  GLenum dataType = toGLFormat(iDt);
+  setFormat(iF);
+  GLenum format = toGLFormat(iF);
+    
+  glPushAttrib(GL_ENABLE_BIT);
+  glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+  glEnable(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, getTextureId());
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
   glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-  glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
-  glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+  glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+  glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
         
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, i.width(), i.height(),
-    0, GL_RGBA, GL_UNSIGNED_BYTE, i.bits());
+  glTexImage2D(GL_TEXTURE_2D, 0, format, i.width(), i.height(),
+    0, format, dataType, i.bits());
 //  gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, i.width(), i.height(),
 //                    GL_RGBA, GL_UNSIGNED_BYTE, i.bits());
+  glPopClientAttrib();
+  glPopAttrib();
+}
+
+//----------------------------------------------------------------------------
+void Texture::set(void* iPtr, const Vector3i& iSize, format iF/*= fRgba*/,
+  dataType iDt /*= dtUnsignedByte*/)
+{
+  copyGuts();
+  
+  mpGuts->mSize = iSize;
+  assert(getTextureId() == 0); 
+  if(!glIsTexture(getTextureId()))
+    glGenTextures(1, &mpGuts->mTextureId);
+    
+  setType(t2d);
+  setDataType(iDt);
+  GLenum dataType = toGLFormat(iDt);
+  setFormat(iF);
+  GLenum format = toGLFormat(iF);
+  
+  glPushAttrib(GL_ENABLE_BIT);
+  glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+  glEnable(GL_TEXTURE_3D);
+  glBindTexture(GL_TEXTURE_3D, getTextureId());
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  //glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+  glTexParameteri(GL_TEXTURE_3D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_3D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+  glTexParameterf( GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+  glTexParameterf( GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+  glTexParameterf( GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT );
+        
+  glTexImage3D(GL_TEXTURE_3D, 0, format, iSize.getX(), iSize.getY(),
+    iSize.getZ(), 0, format, dataType, iPtr);
+//  gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, i.width(), i.height(),
+//                    GL_RGBA, GL_UNSIGNED_BYTE, i.bits());
+  glPopClientAttrib();
+  glPopAttrib();
 }
 
 //----------------------------------------------------------------------------
