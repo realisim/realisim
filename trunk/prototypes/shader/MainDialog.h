@@ -11,9 +11,11 @@
 #define MainDialog_hh
 
 #include <QDialog>
+class QKeyEvent;
 class QLineEdit;
 class QTimerEvent;
 #include "3d/Shader.h"
+#include "3d/Texture.h"
 #include "3d/Widget3d.h"
 #include "math/PlatonicSolid.h"
 
@@ -33,7 +35,10 @@ private:
   realisim::math::PlatonicSolid mPs;
   realisim::treeD::Shader mShader;
   realisim::treeD::Shader mShader2;
-  
+  realisim::treeD::Shader mNoiseShader;
+  realisim::treeD::Shader mSunShader;
+  realisim::treeD::Shader mRayCastShader;
+  realisim::treeD::Texture m3dNoiseTexture;
 };
 
 
