@@ -2,7 +2,7 @@
 
 varying vec4 diffuse,ambient;
 varying vec3 normal,lightDir,halfVector;
-uniform vec3 myInput;
+//uniform vec3 myInput;
 
 vec4 directionalLighting()
 {
@@ -29,5 +29,5 @@ vec4 directionalLighting()
         pow(NdotHV, gl_FrontMaterial.shininess);
   }
 
-  return color * vec4(myInput, 1.0);
+  return color;// * vec4(myInput, 1.0);
 }

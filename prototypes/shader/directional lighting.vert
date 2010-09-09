@@ -1,7 +1,7 @@
 varying vec4 diffuse,ambient;
 varying vec3 normal,lightDir,halfVector;
 
-void main()
+void directionalLighting()
 {	
   /* first transform the normal into eye space and 
   normalize the result */
@@ -20,6 +20,4 @@ void main()
   diffuse = gl_FrontMaterial.diffuse * gl_LightSource[0].diffuse;
   ambient = gl_FrontMaterial.ambient * gl_LightSource[0].ambient;
   ambient += gl_LightModel.ambient * gl_FrontMaterial.ambient;
-
-  gl_Position = ftransform();
 }
