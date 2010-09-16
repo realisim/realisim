@@ -81,6 +81,7 @@ public:
   bool setUniform(const char*, const math::Vector3i&);
   bool setUniform(const char*, const math::Vector3d&);
   bool setUniform(const char*, const math::Vector3f&);
+  bool setUniform(const char*, const math::Matrix4f&);
 //bindVextexAttrib et setVertexAttrib?
   
 protected:

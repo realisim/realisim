@@ -332,6 +332,16 @@ bool Shader::setUniform(const char* iName, const Vector3f& iValue)
   return loc >= 0 ? true : false;
 }
 
+//----------------------------------------------------------------------------
+bool Shader::setUniform(const char* iName, const Matrix4f& iValue)
+{
+	if(!isValid())
+    return false;
+    
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniformMatrix4fv(loc, 16, false, iValue.getPtr());
+  return loc >= 0 ? true : false;
+}
 
 //----------------------------------------------------------------------------
 void Shader::shareGuts(Guts* g)

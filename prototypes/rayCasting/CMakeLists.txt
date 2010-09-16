@@ -1,0 +1,22 @@
+
+PROJECT( RayCasting )
+IF(APPLE)
+SET( PROGNAME Speedcrunch )
+    #SET( MACOSX_BUNDLE_ICON_FILE Speedcrunch.icns )
+    SET( MACOSX_BUNDLE_SHORT_VERSION_STRING 0.0 )
+    SET( MACOSX_BUNDLE_VERSION 0.0 )
+    SET( MACOSX_BUNDLE_LONG_VERSION_STRING Version 0.0 )
+    #SET( CMAKE_OSX_ARCHITECTURES ppc;i386 ) #Comment out if not universal binary
+ENDIF(APPLE)
+
+SET(QT_USE_QTOPENGL 1)
+INCLUDE(${QT_USE_FILE})
+
+SET( SOURCES ${SOURCES} "./CMakeLists.txt" )
+SET( SOURCES ${SOURCES} "./CMakeLists.txt" )
+
+ADD_COMPONENT( "." "Application" )
+ADD_COMPONENT("../../reusables/3d" )
+ADD_COMPONENT("../../reusables/math" )
+
+GENERATE_EXE( ${PROJECT_NAME} )
