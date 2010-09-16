@@ -181,7 +181,7 @@ void Texture::set(void* iPtr, const Vector3i& iSize, format iF/*= fRgba*/,
   if(!glIsTexture(getTextureId()))
     glGenTextures(1, &mpGuts->mTextureId);
     
-  setType(t2d);
+  setType(t3d);
   setDataType(iDt);
   GLenum dataType = toGLFormat(iDt);
   setFormat(iF);
