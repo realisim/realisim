@@ -18,7 +18,6 @@ SET(BINDIR ${CMAKE_SOURCE_DIR}/distribution/bin)
 #Set a global group for all cxx files ( usualy moc'ed files )
 
 FIND_PACKAGE(Qt4)
-SET(QT_USE_QTXML 1)
 SET(QT_USE_QTOPENGL 1)
 INCLUDE(${QT_USE_FILE})
 
@@ -29,12 +28,33 @@ MACRO( GENERATE_EXE iExecutableName )
 #   MESSAGE( "BINDIR: ${BINDIR}" )
 #   MESSAGE( "MOC_HEADER: ${MOC_HEADERS}" )
   
-  SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINDIR} )
+#  SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINDIR} )
   
   QT_WRAP_CPP (${PROJECT_NAME} MOC_FILES ${MOC_HEADERS})
   
   INCLUDE_DIRECTORIES( ${PROJECT_INCLUDE_DIRS} )
-  ADD_EXECUTABLE( ${iExecutableName} ${INCLUDES} ${SOURCES} ${RESOURCES} ${MOC_FILES} )
+
+  IF(APPLE)
+    #-fvisibility=hidden sert a enlever les milliers de warnings de Qt depuis la version 4.5 
+    ADD_DEFINITIONS(-fvisibility=hidden)
+    #ajout des frameworks nécessaire a la compilation de QT en static
+    FIND_LIBRARY(CARBON_LIBRARY Carbon)
+    FIND_LIBRARY(APLICATIONSERVICES_LIBRARY ApplicationServices)
+    FIND_LIBRARY(APPKIT_LIBRARY AppKit)
+    SET( PROJECT_LINK_LIBRAIRIES
+      ${PROJECT_LINK_LIBRAIRIES}
+      ${CARBON_LIBRARY}
+      ${APLICATIONSERVICES_LIBRARY}
+      ${APPKIT_LIBRARY} )
+
+    ADD_EXECUTABLE( ${iExecutableName} MACOSX_BUNDLE  ${INCLUDES} ${SOURCES} ${RESOURCES} ${MOC_FILES} )
+    #ADD_CUSTOM_COMMAND( TARGET ${iExecutableName} POST_BUILD
+    #  COMMAND mkdir ARGS ${CMAKE_CURRENT_BINARY_DIR}/${iExecutableName}.app/Contents/Resources
+    #  COMMAND cp ARGS ${MACOSX_BUNDLE_ICON_FILE} ${CMAKE_CURRENT_BINARY_DIR}/${iExecutableName}.app/Contents/Resources
+    #  COMMAND cp ARGS *.qm ${CMAKE_CURRENT_BINARY_DIR}/${iExecutableName}.app/Contents/Resources )
+  ELSE(APPLE)
+    ADD_EXECUTABLE( ${iExecutableName} ${INCLUDES} ${SOURCES} ${RESOURCES} ${MOC_FILES} )
+  ENDIF(APPLE)
   TARGET_LINK_LIBRARIES(${iExecutableName} ${QT_LIBRARIES} ${PROJECT_LINK_LIBRAIRIES})
 ENDMACRO( GENERATE_EXE  )
 

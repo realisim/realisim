@@ -64,7 +64,7 @@ class Texture
 public:
   enum type {t2d, t3d, tInvalid};
   enum format {fLuminance, fRgba};
-  enum dataType {dtUnsignedByte, dtUnsignedShort};
+  enum dataType {dtShort, dtUnsignedByte, dtUnsignedShort};
   
   Texture();
 Texture(QImage, format = fRgba, dataType = dtUnsignedByte);  //void*, const math::Vector2i?

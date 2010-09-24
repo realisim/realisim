@@ -12,6 +12,7 @@ namespace
     GLenum r = GL_UNSIGNED_BYTE;
     switch (iDt) 
     {
+    case Texture::dtShort: r = GL_SHORT; break;
     case Texture::dtUnsignedByte: r = GL_UNSIGNED_BYTE; break;
     case Texture::dtUnsignedShort: r = GL_UNSIGNED_SHORT; break;
     default: assert(0); break;

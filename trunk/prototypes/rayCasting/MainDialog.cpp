@@ -17,6 +17,7 @@
 #include <QKeyEvent>
 #include <qlayout.h>
 #include <QFile.h>
+#include <qslider.h>
 
 using namespace realisim;
   using namespace math;
@@ -114,8 +115,9 @@ namespace
 Viewer::Viewer(QWidget* ipParent /*=0*/) : Widget3d(ipParent),
  mRayCastShader(),
  mCtTexture(),
+ mHounsfieldLUT(),
  mDepth(0.01),
- mColorThreshold(0.5)
+ mIsoSurfaceValue(0.3)
 {
   setFocusPolicy(Qt::StrongFocus);
 }
@@ -144,16 +146,19 @@ void Viewer::initializeGL()
   mRayCastShader.addFragmentShaderSource(fragmentSource);
   mRayCastShader.link();
   
-  //QFile f("/Users/po/Documents/travail/resonant/data/139_512_512");
-  QFile f("../Resources/139_512_512");
+  QFile f("../Resources/73_512_512");
+  //QFile f("../Resources/139_512_512");
+  //QFile f("../Resources/CThead_256_256_113");
+  //QFile f("../Resources/pelvic_91_512_512");
   if(f.open(QIODevice::ReadOnly))
   {
     QByteArray a = f.readAll();
-    mCtTexture.set(a.data(), Vector3i(139, 512, 512), Texture::fLuminance,
+    mCtTexture.set(a.data(), Vector3i(73, 512, 512), Texture::fLuminance,
       Texture::dtUnsignedShort);
     f.close();
   }
   
+  mHounsfieldLUT.set(QImage(":/hounsfieldLUT.png"));
 }
 
 //-----------------------------------------------------------------------------
@@ -162,6 +167,8 @@ void Viewer::paintGL()
   Widget3d::paintGL();
   
   draw3dTextureCube();
+  
+  showFps();
 }
 
 //-----------------------------------------------------------------------------
@@ -173,6 +180,7 @@ void Viewer::draw3dTextureCube()
   wcMat.setTranslation(Point3f(0.0, 0.0, 0.0));
   	
   glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT | GL_LINE_BIT | GL_POLYGON_BIT);
+  glActiveTexture(GL_TEXTURE0);
   glEnable(GL_TEXTURE_3D);
   glBindTexture(GL_TEXTURE_3D, mCtTexture.getTextureId());
   pushShader(mRayCastShader);
@@ -181,7 +189,12 @@ void Viewer::draw3dTextureCube()
   mRayCastShader.setUniform("stepSize", mDepth);
   Point3d camPos = getCamera().getPos() * getCamera().getTransformationToGlobal();
   mRayCastShader.setUniform("CameraPos", toVector(camPos));
-  mRayCastShader.setUniform("colorThreshold", mColorThreshold);
+  mRayCastShader.setUniform("isoSurfaceValue", getIsoSurface());
+  
+  glActiveTexture(GL_TEXTURE1);
+  glEnable(GL_TEXTURE_2D);
+  glBindTexture(GL_TEXTURE_2D, mHounsfieldLUT.getTextureId());
+  mRayCastShader.setUniform("hounsfieldLUT", 1);
   
   drawUnitCube();
   popShader();
@@ -207,8 +220,8 @@ void Viewer::keyPressEvent(QKeyEvent* ipEvent)
     case Qt::Key_Q : mDepth += 0.01; break;
     case Qt::Key_W : mDepth -= 0.01; break;
     
-    case Qt::Key_C : mColorThreshold += 0.005; break;
-    case Qt::Key_V : mColorThreshold -= 0.005; break;
+//    case Qt::Key_C : mColorThreshold += 0.005; break;
+//    case Qt::Key_V : mColorThreshold -= 0.005; break;
     default: break;
   }
   update();
@@ -218,18 +231,40 @@ void Viewer::keyPressEvent(QKeyEvent* ipEvent)
 MainDialog::MainDialog() : QDialog(),
   mpViewer(0)
 {
-  resize(200, 200);
+  resize(800, 600);
   
-  QHBoxLayout* pLyt = new QHBoxLayout(this);
+  QVBoxLayout* pLyt = new QVBoxLayout(this);
   pLyt->setMargin(5);
+  
+  //ajout du visualiseur
   mpViewer = new Viewer(this);
   mpViewer->setCameraOrientation(Camera::FREE);
   pLyt->addWidget(mpViewer);
   
+  //ajout du slider pour controler l'isosurface
+  QSlider* pSlider = new QSlider(Qt::Horizontal, this);
+  pSlider->setMinimum(0);
+  pSlider->setMaximum(65535); //16 bit volumes
+  connect(pSlider, SIGNAL(valueChanged(int)),
+    this, SLOT(isoSurfaceValueChanged(int)));
+  pLyt->addWidget(pSlider);
+  
+  //déplace la camera
   Camera c = mpViewer->getCamera();
+  c.setPos(Point3d(5.0, 5.0, 5.0));
   Matrix4d m;
   m.setTranslation(Point3d(0.5, 0.5, 0.5));
   m.setRotation(getRotationMatrix(PI_SUR_2, Vector3d(1.0, 0.0, 0.0)));
+  //m.setRotation(getRotationMatrix(-PI_SUR_2, Vector3d(1.0, 0.0, 0.0)));
   c.setTransformationToGlobal(m);
   mpViewer->setCamera(c, false);
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::isoSurfaceValueChanged(int iValue)
+{
+  //on ramene la valeur entre 0 et 1
+  float v = iValue / 65535.0;
+  mpViewer->setIsoSurface(v);
+  mpViewer->update();
 }
