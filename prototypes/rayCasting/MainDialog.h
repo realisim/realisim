@@ -26,6 +26,8 @@ public:
   Viewer(QWidget*);
   ~Viewer();
 
+  virtual float getIsoSurface() const {return mIsoSurfaceValue;}
+  virtual void setIsoSurface(float i) {mIsoSurfaceValue = i;}
 private:
   virtual void initializeGL();
   void draw3dTextureCube();
@@ -34,9 +36,10 @@ private:
   
   realisim::treeD::Shader mRayCastShader;
   realisim::treeD::Texture mCtTexture;
+  realisim::treeD::Texture mHounsfieldLUT;
   
   float mDepth;
-  float mColorThreshold;
+  float mIsoSurfaceValue;
   
 };
 
@@ -48,8 +51,8 @@ public:
 	MainDialog();
 	~MainDialog(){};
   
-public slots:
-
+protected slots:
+  virtual void isoSurfaceValueChanged(int);
                 
 protected:
   Viewer* mpViewer;

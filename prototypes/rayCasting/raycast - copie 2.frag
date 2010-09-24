@@ -90,7 +90,6 @@ void main()
       density = hitPointRefinement(density, pos, 16.0);
       density = hitPointRefinement(density, pos, 32.0);
       density = hitPointRefinement(density, pos, 64.0);
-      
       tissueColor = getTissueColor(density);
       shadeFactor = shading(pos);
       pos = vec3(1.2); //exit
