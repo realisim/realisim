@@ -25,6 +25,9 @@ using namespace realisim;
 
 namespace  			
 {
+	Vector3d gVolumeSize(73, 512, 512);
+  Vector3d gVolumeSpacing(3.0, 0.91, 0.91);
+
   void drawUnitCube()
   {
     float c0[3] = {1.0, 1.0, 0.0};
@@ -147,14 +150,16 @@ void Viewer::initializeGL()
   mRayCastShader.link();
   
   QFile f("../Resources/73_512_512");
+  gVolumeSize.setXYZ(73, 512, 512);
+  gVolumeSpacing.setXYZ(3.0, 0.91, 0.91);
   //QFile f("../Resources/139_512_512");
   //QFile f("../Resources/CThead_256_256_113");
   //QFile f("../Resources/pelvic_91_512_512");
   if(f.open(QIODevice::ReadOnly))
   {
     QByteArray a = f.readAll();
-    mCtTexture.set(a.data(), Vector3i(73, 512, 512), Texture::fLuminance,
-      Texture::dtUnsignedShort);
+    mCtTexture.set(a.data(), Vector3i(gVolumeSize.getX(), gVolumeSize.getY(),
+      gVolumeSize.getZ()), GL_LUMINANCE, GL_UNSIGNED_SHORT);
     f.close();
   }
   
@@ -190,12 +195,15 @@ void Viewer::draw3dTextureCube()
   Point3d camPos = getCamera().getPos() * getCamera().getTransformationToGlobal();
   mRayCastShader.setUniform("CameraPos", toVector(camPos));
   mRayCastShader.setUniform("isoSurfaceValue", getIsoSurface());
+  mRayCastShader.setUniform("volumeSpacing", gVolumeSpacing);
   
   glActiveTexture(GL_TEXTURE1);
   glEnable(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, mHounsfieldLUT.getTextureId());
   mRayCastShader.setUniform("hounsfieldLUT", 1);
   
+  //glScaled(gVolumeSize.getX(), gVolumeSize.getY(), gVolumeSize.getZ());
+  //glScaled(gVolumeSpacing.getX(), gVolumeSpacing.getY(), gVolumeSpacing.getZ());
   drawUnitCube();
   popShader();
  

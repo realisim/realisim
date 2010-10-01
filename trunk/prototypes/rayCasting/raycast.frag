@@ -4,6 +4,7 @@ varying vec3 MCposition;
 uniform float stepSize;
 uniform float isoSurfaceValue;
 uniform vec3 CameraPos;
+uniform vec3 volumeSpacing;
 varying vec4 diffuse,ambient;
 varying vec3 lightDir,halfVector;
 

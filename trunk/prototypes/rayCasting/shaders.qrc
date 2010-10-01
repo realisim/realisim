@@ -1,7 +1,9 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
+  <file>./raycast - copie 2.vert</file>
   <file>./raycast - copie.vert</file>
   <file>./raycast.vert</file>
+  <file>./raycast - copie 2.frag</file>
   <file>./raycast - copie.frag</file>
   <file>./raycast.frag</file>
  </qresource>
