@@ -1,0 +1,8 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+  <file>./convolution.vert</file>
+  <file>./colorize.frag</file>
+  <file>./convolution.frag</file>
+  <file>./windowing.frag</file>
+ </qresource>
+</RCC>
