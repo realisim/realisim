@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
     MainDialog m;
-    m.exec();
+    m.show();
 	
     if ( startMainApp() == 0 )
     {

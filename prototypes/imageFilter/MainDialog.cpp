@@ -16,6 +16,7 @@
 #include "MainDialog.h"
 #include <qbuttongroup.h>
 #include <qcombobox.h>
+#include <qframe.h>
 #include <QKeyEvent>
 #include <qgroupbox.h>
 #include <qlayout.h>
@@ -476,20 +477,22 @@ Viewer::ConvolutionFilter::~ConvolutionFilter()
 //-----------------------------------------------------------------------------
 // MainDialog
 //-----------------------------------------------------------------------------
-MainDialog::MainDialog() : QDialog(),
+MainDialog::MainDialog() : QMainWindow(),
   mpViewer(0)
 {
   resize(800, 600);
   
-  QVBoxLayout* pLyt = new QVBoxLayout(this);
+  QFrame* pMainFrame = new QFrame(this);
+  setCentralWidget(pMainFrame);
+  QVBoxLayout* pLyt = new QVBoxLayout(pMainFrame);
   pLyt->setMargin(5);
   
   //ajout des boutons pour choisir la vue
-  QHBoxLayout* pViewLyt = new QHBoxLayout(this);
-  QButtonGroup* pViewGroup = new QButtonGroup(this);
-  QRadioButton* pAxial = new QRadioButton(this);
-  QRadioButton* pSagittal = new QRadioButton(this);
-  QRadioButton* pCoronal = new QRadioButton(this);
+  QHBoxLayout* pViewLyt = new QHBoxLayout(pMainFrame);
+  QButtonGroup* pViewGroup = new QButtonGroup(pMainFrame);
+  QRadioButton* pAxial = new QRadioButton(pMainFrame);
+  QRadioButton* pSagittal = new QRadioButton(pMainFrame);
+  QRadioButton* pCoronal = new QRadioButton(pMainFrame);
   pAxial->setText("Axial");
   pSagittal->setText("Sagittal");
   pCoronal->setText("Coronal");
@@ -505,22 +508,22 @@ MainDialog::MainDialog() : QDialog(),
   pLyt->addLayout(pViewLyt);
   
   //ajout du visualiseur
-  mpViewer = new Viewer(this);
+  mpViewer = new Viewer(pMainFrame);
   mpViewer->setCameraMode(Camera::ORTHOGONAL);
   mpViewer->setCameraOrientation(Camera::XY);
+  //mpViewer->setCameraOrientation(Camera::FREE);
   pLyt->addWidget(mpViewer, 1);
   
-  
-  QHBoxLayout* pFilterLayout = new QHBoxLayout(this);
+  QHBoxLayout* pFilterLayout = new QHBoxLayout(pMainFrame);
   //ajout d'un checkBox pour choisir le CT ou l'ultrason
-  QCheckBox* pShowCtCB = new QCheckBox(this);
+  QCheckBox* pShowCtCB = new QCheckBox(pMainFrame);
   pShowCtCB->setText("Show CT/US");
   pShowCtCB->setCheckState(Qt::Checked);
   connect(pShowCtCB, SIGNAL(stateChanged(int)), 
     this, SLOT(showCtChanged(int)));
   
   //ajout d'un drop box pour choisir le filtre
-  QComboBox* pCombo = new QComboBox(this);
+  QComboBox* pCombo = new QComboBox(pMainFrame);
   pCombo->insertItem(Viewer::fNone, "aucun");
   pCombo->insertItem(Viewer::fMean, "moyenne");
   pCombo->insertItem(Viewer::fGausian, "gausien");
@@ -533,14 +536,14 @@ MainDialog::MainDialog() : QDialog(),
     this, SLOT(filterTypeChanged(int)));
     
   //ajout du scale factor (0 - 10)
-  QSlider* pSpinBox = new QSlider(Qt::Horizontal, this);
+  QSlider* pSpinBox = new QSlider(Qt::Horizontal, pMainFrame);
   pSpinBox->setMinimum(0);
   pSpinBox->setMaximum(100);
   connect(pSpinBox, SIGNAL(valueChanged(int)),
     this, SLOT(scaleFactorChanged(int)));
     
   //ajout du add on base
-  QCheckBox* pCheckBox = new QCheckBox(this);
+  QCheckBox* pCheckBox = new QCheckBox(pMainFrame);
   pCheckBox->setText("Superposer");
   connect(pCheckBox, SIGNAL(stateChanged(int)), 
     this, SLOT(addOnBaseChanged(int)));
@@ -552,7 +555,7 @@ MainDialog::MainDialog() : QDialog(),
   pLyt->addLayout(pFilterLayout);
   
   //ajout du slider pour controler la tranche
-  QSlider* pSlider = new QSlider(Qt::Horizontal, this);
+  QSlider* pSlider = new QSlider(Qt::Horizontal, pMainFrame);
   pSlider->setMinimum(0);
   pSlider->setMaximum(1000);
   connect(pSlider, SIGNAL(valueChanged(int)),
@@ -560,7 +563,7 @@ MainDialog::MainDialog() : QDialog(),
   pLyt->addWidget(pSlider);
   
   //ajout de 2 sliders pour controller le windowing
-  QGroupBox* pWindowingBox = new QGroupBox("Windowing", this);
+  QGroupBox* pWindowingBox = new QGroupBox("Windowing", pMainFrame);
   QVBoxLayout* pWindowingLyt = new QVBoxLayout(pWindowingBox);
   QSlider* pWindowingMin = new QSlider(Qt::Horizontal, pWindowingBox);
   pWindowingMin->setRange(0, 10000);

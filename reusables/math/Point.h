@@ -51,6 +51,7 @@ namespace math
     inline const U& getZ() const;
     inline void get(Point &point) const;
     inline void getXYZ(U &x, U &y, U &z) const;
+    inline const U* getPtr() const;
 
     // --------------- fonction utiles -----------------------------------------
     inline double dist(const Point &point) const;
@@ -86,16 +87,13 @@ namespace math
   protected:
   private:
 
-    U x_;
-    U y_;
-    U z_;
+    U mData[3];
   };
 
   //! constructeur par defaut.
   template<class U>
-  inline Point<U>::Point(): x_((U)0.0), y_((U)0.0), z_((U)0.0)
-  {
-  }
+  inline Point<U>::Point()
+  { memset( (void*)mData, 0, 3*sizeof(U) ); }
 
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametre.
@@ -106,9 +104,8 @@ namespace math
   //! \param val valeur d'initialisation
   //!---------------------------------------------------------------------------
   template<class U>
-  inline Point<U>::Point(const U &val) : x_(val), y_(val), z_(val)
-  {
-  }
+  inline Point<U>::Point(const U &val)
+  { mData[0] = mData[1] = mData[2] = val; }
 
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametres.
@@ -121,28 +118,24 @@ namespace math
   //! \param z valeur d'initialisation pour z_
   //!---------------------------------------------------------------------------
   template<class U>
-  inline Point<U>::Point(const U &x, const U &y, const U &z) : x_(x), y_(y),
-    z_(z)
-  {
-  }
+  inline Point<U>::Point(const U &x, const U &y, const U &z)
+  { setXYZ(x, y, z); }
 
   //! constructeur copie qui permet les conversion implicite légale
   // int a double par exemple.
   template<class U>
   template <class T>
-  inline Point<U>::Point(const Point<T> &point) :
-    x_(point.getX()),
-    y_(point.getY()),
-    z_(point.getZ())
+  inline Point<U>::Point(const Point<T> &point)
   {
+    mData[0] = (U)point.getX();
+    mData[1] = (U)point.getY();
+    mData[2] = (U)point.getZ();
   }
 
   //! destructeur
   template<class U>
   inline Point<U>::~Point()
-  {
-    ;
-  }
+  {}
 
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du point.
@@ -154,9 +147,7 @@ namespace math
   template<class U>
   inline void Point<U>::set(const Point &point)
   {
-    x_=point.x_;
-    y_=point.y_;
-    z_=point.z_;
+    memcpy((void*)mData, (const void*)point.mData, 3*sizeof(U));
   }
 
   //!---------------------------------------------------------------------------
@@ -168,11 +159,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class U>
   inline void Point<U>::set(const U &val)
-  {
-    x_=val;
-    y_=val;
-    z_=val;
-  }
+  { mData[0] = mData[1] = mData[2] = val; }
 
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur x_ du point.
@@ -181,9 +168,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class U>
   inline void Point<U>::setX(const U &x)
-  {
-    x_=x;
-  }
+  { mData[0] = x; }
 
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur y_ du point.
@@ -192,9 +177,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class U>
   inline void Point<U>::setY(const U &y)
-  {
-    y_=y;
-  }
+  { mData[1] = y; }
 
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur z_ du point.
@@ -203,9 +186,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class U>
   inline void Point<U>::setZ(const U &z)
-  {
-    z_=z;
-  }
+  { mData[2] = z;}
 
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du point.
@@ -218,11 +199,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class U>
   inline void Point<U>::setXYZ(const U &x, const U &y, const U &z)
-  {
-    x_=x;
-    y_=y;
-    z_=z;
-  }
+  { mData[0] = x; mData[1] = y; mData[2] = z; }
 
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir le point.
@@ -233,11 +210,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class U>
   inline void Point<U>::get(Point &point) const
-  {
-    point.x_=x_;
-    point.y_=y_;
-    point.z_=z_;
-  }
+  { memcpy((void*)point.mData, (const void*)mData, 3*sizeof(U)); }
 
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir la valeur x du point.
@@ -246,9 +219,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class U>
   inline const U& Point<U>::getX() const
-  {
-    return x_;
-  }
+  { return mData[0]; }
 
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir la valeur y du point.
@@ -257,9 +228,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class U>
   inline const U& Point<U>::getY() const
-  {
-    return y_;
-  }
+  { return mData[1]; }
 
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir la valeur z du point.
@@ -268,9 +237,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class U>
   inline const U& Point<U>::getZ() const
-  {
-    return z_;
-  }
+  { return mData[2]; }
 
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir le point.
@@ -284,10 +251,15 @@ namespace math
   template<class U>
   inline void Point<U>::getXYZ(U &x, U &y, U &z) const
   {
-    x=x_;
-    y=y_;
-    z=z_;
+    x=mData[0];
+    y=mData[1];
+    z=mData[2];
   }
+  
+  //retourne le pointeur sur le début du tableau de coordonnées.
+  template<class U>
+  inline const U* Point<U>::getPtr() const
+  { return &mData[0]; }
 
   //!---------------------------------------------------------------------------
   //! \brief  Calcule et retourne la distance entre deux points.
@@ -299,9 +271,9 @@ namespace math
   template<class U>
   inline double Point<U>::dist(const Point &point) const
   {
-    double x = point.x_-x_;
-    double y = point.y_-y_;
-    double z = point.z_-z_;
+    double x = point.mData[0] - mData[0];
+    double y = point.mData[1] - mData[1];
+    double z = point.mData[2] - mData[2];
 
     return (sqrt(x*x + y*y + z*z));
   }
@@ -316,9 +288,9 @@ namespace math
   template<class U>
   inline U Point<U>::distSqr(const Point &point) const
   {
-    U x = point.x_-x_;
-    U y = point.y_-y_;
-    U z = point.z_-z_;
+    U x = point.mData[0] - mData[0];
+    U y = point.mData[1] - mData[1];
+    U z = point.mData[2] - mData[2];
 
     return (x*x + y*y + z*z);
   }
@@ -339,9 +311,9 @@ namespace math
   {
     double max, med, min, mom;
 
-    max = x_-point.x_;
-    med = y_-point.y_;
-    min = z_-point.z_;
+    max = mData[0] - point.mData[0];
+    med = mData[1] - point.mData[1];
+    min = mData[2] - point.mData[2];
 
     max = max > 0.0  ?  max  :  -max;
     med = med > 0.0  ?  med  :  -med;
@@ -388,9 +360,7 @@ namespace math
   template<class U>
   inline Point<U>& Point<U>::operator= (const Point &point)
   {
-    x_=point.x_;
-    y_=point.y_;
-    z_=point.z_;
+    memcpy((void*)mData, (const void*)point.mData, 3*sizeof(U));
     return *this;
   }
 
@@ -398,9 +368,9 @@ namespace math
   template<class U>
   inline bool Point<U>::operator== (const Point &point) const
   {
-    U dx = x_ - point.x_;
-    U dy = y_ - point.y_;
-    U dz = z_ - point.z_;
+    U dx = mData[0] - point.mData[0];
+    U dy = mData[1] - point.mData[1];
+    U dz = mData[2] - point.mData[2];
 
     if(dx<(U)0.0)
       dx = -dx;
@@ -410,9 +380,9 @@ namespace math
       dz = -dz;
 
     if (dx<EPSILON && dy<EPSILON && dz<EPSILON)
-      return 1;
+      return true;
     else
-      return 0;
+      return false;
   }
 
   template<class U>
@@ -420,9 +390,9 @@ namespace math
   {
     Point<U> result;
 
-    result.x_ = x_ - point.x_;
-    result.y_ = y_ - point.y_;
-    result.z_ = z_ - point.z_;
+    result.mData[0] = mData[0] - point.mData[0];
+    result.mData[1] = mData[1] - point.mData[1];
+    result.mData[2] = mData[2] - point.mData[2];
 
     return result;
   }
@@ -469,9 +439,9 @@ namespace math
   {
     Point<U> result;
 
-    result.x_ = x_ + point.x_;
-    result.y_ = y_ + point.y_;
-    result.z_ = z_ + point.z_;
+    result.mData[0] = mData[0] + point.mData[0];
+    result.mData[1] = mData[1] + point.mData[1];
+    result.mData[2] = mData[2] + point.mData[2];
 
     return result;
   }
@@ -479,9 +449,9 @@ namespace math
   template<class U>
   inline Point<U>& Point<U>::operator+= (const Point &point)
   {
-    x_ += point.x_;
-    y_ += point.y_;
-    z_ += point.z_;
+    mData[0] += point.mData[0];
+    mData[1] += point.mData[1];
+    mData[2] += point.mData[2];
 
     return *this;
   }
@@ -493,9 +463,9 @@ namespace math
   {
     Point<U> point;
     
-    point.x_=x_*val;
-    point.y_=y_*val;
-    point.z_=z_*val;
+    point.mData[0] = mData[0] * val;
+    point.mData[1] = mData[1] * val;
+    point.mData[2] = mData[2] * val;
     
     return point;
   }
@@ -504,9 +474,9 @@ namespace math
   template<class U>
   inline Point<U>& Point<U>::operator*= (const U &val)
   {
-    x_*=val;
-    y_*=val;
-    z_*=val;
+    mData[0] *= val;
+    mData[1] *= val;
+    mData[2] *= val;
     return *this;
   }
   
@@ -516,16 +486,18 @@ namespace math
   inline Point<U> Point<U>::operator/ (const U &val) const
   {
     double vTmp;
-    Point<U> p(x_, y_, z_);
+    Point<U> p(*this);
     
     if(val>EPSILON || val<-EPSILON)
       vTmp=((double)1.0)/(double)val;
     else
       vTmp=(double)0.0;
     
-    p.x_*=vTmp;
-    p.y_*=vTmp;
-    p.z_*=vTmp;
+    p *= vTmp;
+//verifier si le *= fonctionne correctement
+//p.x_*=vTmp;
+//p.y_*=vTmp;
+//p.z_*=vTmp;
     
     return p;
   }
@@ -541,11 +513,12 @@ namespace math
     else
       vTmp=(double)0.0;
     
-    x_*=vTmp;
-    y_*=vTmp;
-    z_*=vTmp;
-    
-    return *this;
+		return (*this *= vTmp);    
+//    x_*=vTmp;
+//    y_*=vTmp;
+//    z_*=vTmp;
+//    
+//    return *this;
   }
 
   //----------------------------------------------------------------------------
@@ -554,9 +527,9 @@ namespace math
   {
     Point<U> result;
 
-    result.x_ = x_ - val;
-    result.y_ = y_ - val;
-    result.z_ = z_ - val;
+    result.mData[0] = mData[0] - val;
+    result.mData[1] = mData[1] - val;
+    result.mData[2] = mData[2] - val;
 
     return result;
   }
@@ -564,9 +537,9 @@ namespace math
   template<class U>
   inline Point<U>& Point<U>::operator-= (const Point &point)
   {
-    x_ -= point.x_;
-    y_ -= point.y_;
-    z_ -= point.z_;
+    mData[0] -= point.mData[0];
+    mData[1] -= point.mData[1];
+    mData[2] -= point.mData[2];
     
     return *this;
   }

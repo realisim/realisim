@@ -41,6 +41,7 @@ mShowFps(true),
 mMousePressed( false ),
 mMousePosX( 0 ),
 mMousePosY( 0 ),
+mFrameBuffers(),
 mShaders()
 {}
 
@@ -91,6 +92,8 @@ Widget3d::initializeGL()
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_LIGHTING);
   glEnable(GL_LIGHT0);
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
   glDisable(GL_TEXTURE_2D);
   glDisable(GL_TEXTURE_3D);
 }
@@ -177,10 +180,30 @@ Widget3d::paintGL()
              absoluteUp.getX(),
              absoluteUp.getY(),
              absoluteUp.getZ() );
-             
+    
   //replacer les lumieres
   GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
   glLightfv(GL_LIGHT0, GL_POSITION, position);
+
+#ifdef NDEBUG
+  if(glGetError())
+  {
+    QString error("glError: ");
+    error += QString::number(glGetError());
+    qDebug(error.toStdString().c_str());
+  }
+#endif
+
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::pushFrameBuffer(const FrameBufferObject& iF /*=FrameBufferObject()*/)
+{
+  mFrameBuffers.push_back(iF);
+  GLint frameBufferId = 0;
+  if(iF.isValid())
+    frameBufferId = iF.getFrameBufferId();
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frameBufferId);  
 }
 
 //-----------------------------------------------------------------------------
@@ -192,6 +215,16 @@ void Widget3d::pushShader(const Shader& iS /*=Shader()*/)
     programId = iS.getProgramId();
   glUseProgram(programId);
   
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::popFrameBuffer()
+{
+  mFrameBuffers.pop_back();
+  GLint frameBufferId = 0;
+  if(!mFrameBuffers.empty())
+    frameBufferId = mFrameBuffers.back().getFrameBufferId();
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frameBufferId);
 }
 
 //-----------------------------------------------------------------------------
@@ -352,7 +385,9 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
       zoom = 1.15;
     double finalZoom = getCamera().getZoom() * zoom;
     if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
+    {
       mCam.setZoom(finalZoom);
+    }
   }
   else
   {

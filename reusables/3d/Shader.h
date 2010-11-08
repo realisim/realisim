@@ -46,6 +46,9 @@
   
   Note: Usually, the program must be in use (glUseProgram) for setUniform call
   to work.
+  
+  Widget3d possède les méthodes pushShader(Shader)/popShader qui permettent
+  d'empiler/dépiler correctement les shaders.
 */
 namespace realisim
 {
@@ -61,6 +64,8 @@ public:
   virtual ~Shader();
   virtual Shader& operator=(const Shader&);
 
+//void addFragmentShader(QString); a partir d'un fichier
+//void addVertexShader(QString); a partir d'un fichier
   void addFragmentShaderSource(QString);
   void addVertexShaderSource(QString);
   Shader copy();
@@ -74,18 +79,22 @@ public:
   
   bool setUniform(const char*, int);
   bool setUniform(const char*, float);
+  bool setUniform(const char*, int, const float*);
   bool setUniform(const char*, double);
   bool setUniform(const char*, const math::Point3i&);
   bool setUniform(const char*, const math::Point3d&);
   bool setUniform(const char*, const math::Point3f&);
   bool setUniform(const char*, const math::Vector3i&);
+  bool setUniform(const char*, int, const math::Vector3i*);
   bool setUniform(const char*, const math::Vector3d&);
   bool setUniform(const char*, const math::Vector3f&);
+  bool setUniform(const char*, int, const math::Vector3f*);
   bool setUniform(const char*, const math::Matrix4f&);
+
 //bindVextexAttrib et setVertexAttrib?
   
 protected:
-  void computeValidity();
+  void validate();
 	int getFragmentId(int i) const {return mpGuts->mFragmentIds[i];}
 	int getVertexId(int i) const {return mpGuts->mVertexIds[i];}
   void printProgramInfoLog(GLuint);

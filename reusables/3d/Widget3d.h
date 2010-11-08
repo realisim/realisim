@@ -12,6 +12,7 @@
 #ifndef Realisim_Widget3d_hh
 #define Realisim_Widget3d_hh
 
+#include "3d/FrameBufferObject.h"
 #include "3d/Shader.h"
 #include "Camera.h"
 #include <map>
@@ -34,7 +35,9 @@ public:
   virtual ~Widget3d() = 0;
 
   const Camera& getCamera() const { return mCam; }
+  void pushFrameBuffer(const FrameBufferObject& = FrameBufferObject());
   void pushShader(const Shader& = Shader());
+  void popFrameBuffer();
   void popShader();
   void setCamera( const Camera& iCam, bool iAnimate = true );
   void setCameraMode( Camera::Mode iMode );
@@ -73,6 +76,7 @@ private:
   int mMousePosX;
   int mMousePosY;
   
+  std::vector<FrameBufferObject> mFrameBuffers;
   std::vector<Shader> mShaders;
 };
 

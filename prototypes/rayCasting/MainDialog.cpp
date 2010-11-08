@@ -14,6 +14,7 @@
 #include "math/Point.h"
 #include "math/MathUtils.h"
 #include "MainDialog.h"
+#include <qframe.h>
 #include <QKeyEvent>
 #include <qlayout.h>
 #include <QFile.h>
@@ -64,52 +65,52 @@ namespace
     //bottom
     glColor3fv(c4);
     glVertex3fv(v4);
-    glColor3fv(c5);
-    glVertex3fv(v5);
-    glColor3fv(c6);
-    glVertex3fv(v6);
     glColor3fv(c7);
     glVertex3fv(v7);
+    glColor3fv(c6);
+    glVertex3fv(v6);
+    glColor3fv(c5);
+    glVertex3fv(v5);
     
     //right
     glColor3fv(c4);
     glVertex3fv(v4);
-    glColor3fv(c7);
-    glVertex3fv(v7);
-    glColor3fv(c3);
-    glVertex3fv(v3);
     glColor3fv(c0);
     glVertex3fv(v0);
+    glColor3fv(c3);
+    glVertex3fv(v3);
+    glColor3fv(c7);
+    glVertex3fv(v7);
     
     //left
     glColor3fv(c5);
     glVertex3fv(v5);
-    glColor3fv(c1);
-    glVertex3fv(v1);
-    glColor3fv(c2);
-    glVertex3fv(v2);
     glColor3fv(c6);
     glVertex3fv(v6);
+    glColor3fv(c2);
+    glVertex3fv(v2);
+    glColor3fv(c1);
+    glVertex3fv(v1);
     
     //front
     glColor3fv(c4);
     glVertex3fv(v4);
-    glColor3fv(c0);
-    glVertex3fv(v0);
-    glColor3fv(c1);
-    glVertex3fv(v1);
     glColor3fv(c5);
     glVertex3fv(v5);
+    glColor3fv(c1);
+    glVertex3fv(v1);
+    glColor3fv(c0);
+    glVertex3fv(v0);
     
     //back
     glColor3fv(c7);
     glVertex3fv(v7);
-    glColor3fv(c6);
-    glVertex3fv(v6);
-    glColor3fv(c2);
-    glVertex3fv(v2);
     glColor3fv(c3);
     glVertex3fv(v3);
+    glColor3fv(c2);
+    glVertex3fv(v2);
+    glColor3fv(c6);
+    glVertex3fv(v6);
         
     glEnd();
   }
@@ -236,21 +237,23 @@ void Viewer::keyPressEvent(QKeyEvent* ipEvent)
 }
 
 //-----------------------------------------------------------------------------
-MainDialog::MainDialog() : QDialog(),
+MainDialog::MainDialog() : QMainWindow(),
   mpViewer(0)
 {
   resize(800, 600);
   
-  QVBoxLayout* pLyt = new QVBoxLayout(this);
+  QFrame* pMainFrame = new QFrame(this);
+  setCentralWidget(pMainFrame);
+  QVBoxLayout* pLyt = new QVBoxLayout(pMainFrame);
   pLyt->setMargin(5);
   
   //ajout du visualiseur
-  mpViewer = new Viewer(this);
+  mpViewer = new Viewer(pMainFrame);
   mpViewer->setCameraOrientation(Camera::FREE);
   pLyt->addWidget(mpViewer);
   
   //ajout du slider pour controler l'isosurface
-  QSlider* pSlider = new QSlider(Qt::Horizontal, this);
+  QSlider* pSlider = new QSlider(Qt::Horizontal, pMainFrame);
   pSlider->setMinimum(0);
   pSlider->setMaximum(65535); //16 bit volumes
   connect(pSlider, SIGNAL(valueChanged(int)),
