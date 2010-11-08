@@ -3,6 +3,7 @@
 #ifndef realisim_reusables_network_ServerBase_h
 #define realisim_reusables_network_ServerBase_h
 
+#include <cassert>
 #include <QAbstractSocket>
 #include <QObject>
 #include <QStringList>

@@ -74,7 +74,11 @@ namespace realisim{namespace treeD{class Camera;}}
   math::Vector3i m2dPosition; Position en pixel du Sprite. Seulement utilisé
     si m2dPositioningOn est vrai.
   bool m2dPositioningOn; Détermine si le Sprite est en mode 2d. La position
-    du Sprite est alors déterminé par m2dPosition.*/
+    du Sprite est alors déterminé par m2dPosition.
+  mIsFullScreen: Écrase toutes les option de positionnements/affichage. Même
+    si set2dPosition à été appelé. Le sprite s'affichera sur la totatlité de
+    l'écran. Très pratique en combinaison avec le framebuffer.
+  */
 
 namespace realisim
 {
@@ -87,7 +91,7 @@ public:
   enum anchor{aBottomLeft, aBottomCenter, aBottomRight,
     aCenterLeft, aCenter, aCenterRight,
     aTopLeft, aTopCenter, aTopRight};
-	enum state{sAnimating, sAnimatingDone, sStatic};  //remplacer par state
+	enum state{sAnimating, sAnimatingDone, sStatic};
   
   Sprite();
   Sprite(const Sprite&);
@@ -103,6 +107,7 @@ public:
   virtual QRect getSubTextureRect() const {return mSubTextureRect;}
   virtual bool is2dPositioningOn() const {return m2dPositioningOn;}
   virtual bool isLooping() const {return mIsLooping;}
+  virtual bool isFullScreen() const {return mIsFullScreen;}
   virtual void set2dPosition(const math::Vector3i& p);
   virtual void set2dPosition(const math::Vector3d& p) {m2dPosition = p;}
   virtual void set2dPosition(const int, const int);
@@ -111,8 +116,8 @@ public:
   virtual void setAnchorPoint(anchor a) { mAnchor = a; }
   virtual void setAnimationDuration(double d) {mAnimationDuration = d;}
   virtual void setAsLooping(bool l) {mIsLooping = l;}
+  virtual void setFullScreen(bool f) {mIsFullScreen = f;}
   virtual void setFrameSize(QSize s);
-  virtual void setState(state s) const {mState = s;}
   virtual void setTexture(const Texture& t);
   virtual void setTexture(const Texture& t, QRect);
   virtual void startAnimation();
@@ -123,6 +128,7 @@ protected:
   virtual QSize getFrameSize() const {return mFrameSize;}
   virtual math::Vector3d getOriginTranslation() const;
   virtual QRectF getGLTexCoord() const {return mGLTexCoord;}
+  virtual void setState(state s) const {mState = s;}
 
   Texture mTexture;
 	QRect mSubTextureRect;
@@ -135,6 +141,7 @@ protected:
   int mAnimationDuration;
   bool mIsLooping;
   QSize mFrameSize;
+  bool mIsFullScreen;
 };
 
 }//treeD

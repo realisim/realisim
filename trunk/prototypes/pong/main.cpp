@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QIcon>
 #include <QMainWindow>
+#include <QtPlugin>
 
 
 int startMainApp()
@@ -23,6 +24,8 @@ int startMainApp()
 int main(int argc, char** argv)
 {
 		Q_INIT_RESOURCE(images);
+    Q_IMPORT_PLUGIN(qjpeg);
+    
     QApplication app(argc, argv);
     QMainWindow mw;
     Pong::GameWindow gw(&mw);

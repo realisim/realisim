@@ -14,6 +14,7 @@
 class QKeyEvent;
 class QLineEdit;
 class QTimerEvent;
+#include "3d/FrameBufferObject.h"
 #include "3d/Shader.h"
 #include "3d/Texture.h"
 #include "3d/Widget3d.h"
@@ -26,21 +27,27 @@ public:
   Viewer(QWidget*);
   ~Viewer();
 
-  virtual float getIsoSurface() const {return mIsoSurfaceValue;}
-  virtual void setIsoSurface(float i) {mIsoSurfaceValue = i;}
+	virtual void drawScene();
+  virtual void drawGlowOverLay();
+
 private:
+  virtual void initDisplayList();
   virtual void initializeGL();
-  void draw3dTextureCube();
+  void drawPlatonicSolid(const realisim::math::PlatonicSolid&);
   virtual void paintGL();
-  virtual void keyPressEvent(QKeyEvent*);
+  virtual void resizeGL(int, int);
+  virtual void timerEvent(QTimerEvent*);
   
-  realisim::treeD::Shader mRayCastShader;
-  realisim::treeD::Texture mCtTexture;
-  realisim::treeD::Texture mHounsfieldLUT;
-  
-  float mDepth;
-  float mIsoSurfaceValue;
-  
+  realisim::math::PlatonicSolid mPs;
+  realisim::treeD::FrameBufferObject mFbo;
+  realisim::treeD::Shader mBlurShader;
+  realisim::treeD::Shader mOnlyOneTextureShader;
+  realisim::treeD::Texture mTexture;
+  realisim::treeD::Texture mTextureBlur;
+  realisim::treeD::Texture mTexture2;
+  realisim::treeD::Texture mTextureBlur2;
+  GLuint mBoxDisplayList;
+  GLuint mBoxDisplayList2;
 };
 
 
@@ -51,8 +58,8 @@ public:
 	MainDialog();
 	~MainDialog(){};
   
-protected slots:
-  virtual void isoSurfaceValueChanged(int);
+public slots:
+
                 
 protected:
   Viewer* mpViewer;

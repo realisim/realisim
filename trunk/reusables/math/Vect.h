@@ -48,6 +48,7 @@ namespace math
     inline const T& getZ() const;
     inline void get(Vect<T> &vect) const;
     inline void getXYZ(T &x, T &y, T &z) const;
+    inline const T* getPtr() const;
     
     // --------------- fonction utiles -----------------------------------------
     inline void minCoord (const Vect<T>& iVect);
@@ -73,6 +74,7 @@ namespace math
     inline Vect<T>& operator-= (const T &val);
     
     inline Vect<T>  operator*  (const T &val) const;
+    inline Vect<T>  operator*  (const Vect<T>& vect) const;
     inline Vect<T>& operator*= (const T &val);
     
     inline Vect<T>  operator/  (const T &val) const;
@@ -87,19 +89,13 @@ namespace math
   protected:
   private:
   
-    T x_;
-    T y_;
-    T z_;
+    T mData[3];
   };
   
   //! constructeur par defaut.
   template<class T>
   inline Vect<T>::Vect()
-  {
-    x_=(T)0.0;
-    y_=(T)0.0;
-    z_=(T)0.0;
-  }
+  { mData[0] = mData[1] = mData[2] = (T)0; }
   
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametre.
@@ -111,11 +107,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline Vect<T>::Vect(const T &val)
-  {
-    x_=val;
-    y_=val;
-    z_=val;
-  }
+  { set(val); }
   
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametres.
@@ -129,20 +121,12 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline Vect<T>::Vect(const T &x, const T &y, const T &z)
-  {
-    x_=x;
-    y_=y;
-    z_=z;
-  }
+  { setXYZ(x, y, z); }
   
   //! constructeur copie
   template<class T>
   inline Vect<T>::Vect(const Vect<T> &vect)
-  {
-    x_=vect.x_;
-    y_=vect.y_;
-    z_=vect.z_;
-  }
+  { memcpy((void*)mData, (const void*)vect.mData, 3 * sizeof(T)); }
   
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametres.
@@ -155,16 +139,12 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline Vect<T>::Vect(const Point<T> &pt1, const Point<T> &pt2)
-  {
-    set(pt1, pt2);
-  }
+  { set(pt1, pt2); }
   
   //! destructeur
   template<class T>
   Vect<T>::~Vect()
-  {
-    ;
-  }
+  {}
   
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du vecteur.
@@ -175,11 +155,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline void Vect<T>::set(const Vect<T> &vect)
-  {
-    x_=vect.x_;
-    y_=vect.y_;
-    z_=vect.z_;
-  }
+  { memcpy((void*)mData, (const void*)vect.mData, 3 * sizeof(T)); }
   
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du vecteur.
@@ -190,11 +166,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline void Vect<T>::set(const T &val)
-  {
-    x_=val;
-    y_=val;
-    z_=val;
-  }
+  { mData[0] = mData[1] = mData[2] = (T)val; }
   
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur x_ du vecteur.
@@ -203,9 +175,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline void Vect<T>::setX(const T &x)
-  {
-    x_=x;
-  }
+  { mData[0] = x; }
   
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur y_ du vecteur.
@@ -214,9 +184,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline void Vect<T>::setY(const T &y)
-  {
-    y_=y;
-  }
+  { mData[1] = y; }
   
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur z_ du vecteur.
@@ -225,9 +193,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline void Vect<T>::setZ(const T &z)
-  {
-    z_=z;
-  }
+  { mData[2] = z; }
   
   //!---------------------------------------------------------------------------
   //! \brief  Ajuste la valeur du vecteur.
@@ -240,11 +206,7 @@ namespace math
   //!---------------------------------------------------------------------------
     template<class T>
   inline void Vect<T>::setXYZ(const T &x, const T &y, const T &z)
-  {
-    x_=x;
-    y_=y;
-    z_=z;
-  }
+  { mData[0] =x; mData[1] = y; mData[2] = z; }
   
   //!---------------------------------------------------------------------------
   //! \brief  Constructeur avec parametres.
@@ -258,9 +220,9 @@ namespace math
   template<class T>
   inline void Vect<T>::set(const Point<T> &pt1, const Point<T> &pt2)
   {
-    x_ = (pt2.getX() - pt1.getX());
-    y_ = (pt2.getY() - pt1.getY());
-    z_ = (pt2.getZ() - pt1.getZ());
+    mData[0] = (pt2.getX() - pt1.getX());
+    mData[1] = (pt2.getY() - pt1.getY());
+    mData[2] = (pt2.getZ() - pt1.getZ());
   }
   
   //!---------------------------------------------------------------------------
@@ -272,11 +234,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline void Vect<T>::get(Vect<T> &vect) const
-  {
-    vect.x_=x_;
-    vect.y_=y_;
-    vect.z_=z_;
-  }
+  { memcpy((void*)vect.mData, (const void*)mData, 3 * sizeof(T)); }
   
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir la valeur x du vecteur.
@@ -285,9 +243,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline const T& Vect<T>::getX() const
-  {
-    return x_;
-  }
+  { return mData[0]; }
   
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir la valeur y du vecteur.
@@ -296,9 +252,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline const T& Vect<T>::getY() const
-  {
-    return y_;
-  }
+  { return mData[1]; }
   
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir la valeur z du vecteur.
@@ -307,9 +261,7 @@ namespace math
   //!---------------------------------------------------------------------------
   template<class T>
   inline const T& Vect<T>::getZ() const
-  {
-    return z_;
-  }
+  { return mData[2]; }
   
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir le vecteur.
@@ -323,10 +275,14 @@ namespace math
   template<class T>
   inline void Vect<T>::getXYZ(T &x, T &y, T &z) const
   {
-    x=x_;
-    y=y_;
-    z=z_;
+    x = mData[0];
+    y = mData[1];
+    z = mData[2];
   }
+  
+  template<class T>
+  inline const T* Vect<T>::getPtr() const
+  { return &mData[0]; }
   
   //----------------------------------------------------------------------------
   template<class T>
@@ -354,7 +310,7 @@ namespace math
   template<class T>
   inline T Vect<T>::norm() const
   {
-    return std::sqrt(x_*x_ + y_*y_ + z_*z_);
+    return std::sqrt(mData[0]*mData[0] + mData[1]*mData[1] + mData[2]*mData[2]);
   }
   
   //!---------------------------------------------------------------------------
@@ -382,9 +338,9 @@ namespace math
   {
     T max, med, min, mom;
     
-    max = x_;
-    med = y_;
-    min = z_;
+    max = getX();
+    med = getY();
+    min = getZ();
     
     max = max > 0.0  ?  max  :  -max;
     med = med > 0.0  ?  med  :  -med;
@@ -406,9 +362,9 @@ namespace math
   template<class T>
   inline bool Vect<T>::operator== (const Vect<T> &vect) const
   {
-    T dx = x_ - vect.x_;
-    T dy = y_ - vect.y_;
-    T dz = z_ - vect.z_;
+    T dx = getX() - vect.getX();
+    T dy = getY() - vect.getY();
+    T dz = getZ() - vect.getZ();
   
     if(dx<(T)0.0)
       dx = -dx;
@@ -427,9 +383,9 @@ namespace math
   template<class T>
   inline Vect<T>& Vect<T>::operator= (const Vect<T> &vect)
   {
-    x_=vect.x_;
-    y_=vect.y_;
-    z_=vect.z_;
+    mData[0] = vect.getX();
+    mData[1] = vect.getY();
+    mData[2] = vect.getZ();
     return *this;
   }
   
@@ -437,9 +393,7 @@ namespace math
   template<class T>
   inline Vect<T>& Vect<T>::operator= (const T &val)
   {
-    x_=val;
-    y_=val;
-    z_=val;
+    set(val);
     return *this;
   }
     
@@ -447,35 +401,35 @@ namespace math
   template<class T>
   inline Vect<T> Vect<T>::operator+ (const Vect<T> &vect) const
   {
-    Vect<T> vectResult;
+    Vect<T> r;
     
-    vectResult.x_=x_+vect.x_;
-    vectResult.y_=y_+vect.y_;
-    vectResult.z_=z_+vect.z_;
+    r.mData[0] = getX() + vect.getX();
+    r.mData[1] = getY() + vect.getY();
+    r.mData[2] = getZ() + vect.getZ();
     
-    return vectResult;
+    return r;
   }
   
   //! surcharge opÈrateur + avec T
   template<class T>
   inline Vect<T> Vect<T>::operator+ (const T &val) const
   {
-    Vect<T> vect;
+    Vect<T> r;
     
-    vect.x_=x_+val;
-    vect.y_=y_+val;
-    vect.z_=z_+val;
+    r.mData[0] = getX() + val;
+    r.mData[1] = getY() + val;
+    r.mData[2] = getZ() + val;
     
-    return vect;
+    return r;
   }
   
   //! surcharge opÈrateur += avec un vecteur
   template<class T>
   inline Vect<T>& Vect<T>::operator+= (const Vect<T> &vect)
   {
-    x_+=vect.x_;
-    y_+=vect.y_;
-    z_+=vect.z_;
+    mData[0] += vect.getX();
+    mData[1] += vect.getY();
+    mData[2] += vect.getZ();
     return *this;
   }
     
@@ -483,9 +437,9 @@ namespace math
   template<class T>
   inline Vect<T>& Vect<T>::operator+= (const T &val)
   {
-    x_+=val;
-    y_+=val;
-    z_+=val;
+    mData[0] += val;
+    mData[1] += val;
+    mData[2] += val;
     return *this;
   }
   
@@ -493,35 +447,35 @@ namespace math
   template<class T>  
   inline Vect<T> Vect<T>::operator- (const Vect<T> &vect) const
   {
-    Vect<T> vectResult;
+    Vect<T> r;
     
-    vectResult.x_=x_-vect.x_;
-    vectResult.y_=y_-vect.y_;
-    vectResult.z_=z_-vect.z_;
+    r.mData[0] = getX() - vect.getX();
+    r.mData[1] = getY() - vect.getY();
+    r.mData[2] = getZ() - vect.getZ();
     
-    return vectResult;
+    return r;
   }
   
   //! surcharge opÈrateur - avec T
   template<class T>
   inline Vect<T> Vect<T>::operator- (const T &val) const
   {
-    Vect<T> vect;
+    Vect<T> r;
     
-    vect.x_=x_-val;
-    vect.y_=y_-val;
-    vect.z_=z_-val;
+    r.mData[0] = getX() - val;
+    r.mData[1] = getY() - val;
+    r.mData[2] = getZ() - val;
     
-    return vect;
+    return r;
   }
   
   //! surcharge opÈrateur -
   template<class T>
   inline Vect<T>& Vect<T>::operator- ()
   {    
-    x_ = -x_;
-    y_ = -y_;
-    z_ = -z_;
+    mData[0] = -mData[0];
+    mData[1] = -mData[1];
+    mData[2] = -mData[2];
     
     return *this;
   }
@@ -530,9 +484,9 @@ namespace math
   template<class T>
   inline Vect<T>& Vect<T>::operator-= (const Vect<T> &vect)
   {
-    x_-=vect.x_;
-    y_-=vect.y_;
-    z_-=vect.z_;
+    mData[0] -= vect.getX();
+    mData[1] -= vect.getY();
+    mData[2] -= vect.getZ();
     return *this;
   }
   
@@ -540,9 +494,9 @@ namespace math
   template<class T>
   inline Vect<T>& Vect<T>::operator-= (const T &val)
   {
-    x_-=val;
-    y_-=val;
-    z_-=val;
+    mData[0] -= val;
+    mData[1] -= val;
+    mData[2] -= val;
     return *this;
   }
     
@@ -551,13 +505,27 @@ namespace math
   template<class T>
   inline Vect<T> Vect<T>::operator* (const T &val) const
   {
-    Vect<T> vect;
+    Vect<T> r;
     
-    vect.x_=x_*val;
-    vect.y_=y_*val;
-    vect.z_=z_*val;
+    r.mData[0] = getX() * val;
+    r.mData[1] = getY() * val;
+    r.mData[2] = getZ() * val;
     
-    return vect;
+    return r;
+  }
+  
+  //----------------------------------------------------------------------------
+  //! surcharge opÈrateur * avec T
+  template<class T>
+  inline Vect<T> Vect<T>::operator* (const Vect<T>& vect) const
+  {
+    Vect<T> r;
+    
+    r.mData[0] = getX() * vect.getX();
+    r.mData[1] = getY() * vect.getY();
+    r.mData[2] = getZ() * vect.getZ();
+    
+    return r;
   }
   
   //----------------------------------------------------------------------------
@@ -565,22 +533,11 @@ namespace math
   template<class T>
   inline Vect<T>& Vect<T>::operator*= (const T &val)
   {
-    x_*=val;
-    y_*=val;
-    z_*=val;
+    mData[0] *= val;
+    mData[1] *= val;
+    mData[2] *= val;
     return *this;
   }
-  
-  //----------------------------------------------------------------------------
-//  template<class T>
-//  inline Vect<T> Vect<T>::operator* (const Matrix4<T>& iMat) const
-//  {
-//    Vect<T> vect;
-//    vect.setX( x_ * iMat[0][0] + y_ * iMat[1][0] + z_ * iMat[2][0] );
-//    vect.setY( x_ * iMat[0][1] + y_ * iMat[1][1] + z_ * iMat[2][1] );
-//    vect.setZ( x_ * iMat[0][2] + y_ * iMat[1][2] + z_ * iMat[2][2] );
-//    return vect;
-//  }
   
   //----------------------------------------------------------------------------
   //! surcharge opÈrateur / avec T
@@ -588,17 +545,14 @@ namespace math
   inline Vect<T> Vect<T>::operator/ (const T &val) const
   {
     double vTmp;
-    Vect<T> vect(x_, y_, z_);
+    Vect<T> vect(*this);
     
     if(val>EPSILON || val<-EPSILON)
       vTmp=((double)1.0)/(double)val;
     else
       vTmp=(double)0.0;
       
-    vect.x_*=vTmp;
-    vect.y_*=vTmp;
-    vect.z_*=vTmp;
-    
+    vect *= vTmp;    
     return vect;
   }
   
@@ -613,10 +567,7 @@ namespace math
     else
       vTmp=(double)0.0;
       
-    x_*=vTmp;
-    y_*=vTmp;
-    z_*=vTmp;
-    
+		*this *= vTmp;
     return *this;
   }
   
@@ -624,20 +575,20 @@ namespace math
   template<class T>
   inline Vect<T> Vect<T>::operator^ (const Vect<T> &vect) const
   {
-    Vect<T> vectResult;
+    Vect<T> r;
     
-    vectResult.x_ = y_*vect.z_ - z_*vect.y_;
-    vectResult.y_ = z_*vect.x_ - x_*vect.z_;
-    vectResult.z_ = x_*vect.y_ - y_*vect.x_;
+    r.mData[0] = getY() * vect.getZ() - getZ() * vect.getY();
+    r.mData[1] = getZ() * vect.getX() - getX() * vect.getZ();
+    r.mData[2] = getX() * vect.getY() - getY() * vect.getX();
     
-    return vectResult;
+    return r;
   }
     
   //! Overload: produit scalaire
   template<class T>
   inline T Vect<T>::operator& (const Vect<T> &vect) const
   {
-    T res = x_*vect.x_ + y_*vect.y_ + z_*vect.z_;
+    T res = getX() * vect.getX() + getY() * vect.getY() + getZ() * vect.getZ();
     return res;
   }
   

@@ -126,7 +126,7 @@ Shader Shader::copy()
 }
 
 //----------------------------------------------------------------------------
-void Shader::computeValidity()
+void Shader::validate()
 {
   mpGuts->mIsValid = true;
   int status;
@@ -179,7 +179,7 @@ bool Shader::isValid() const
 void Shader::link()
 {
   glLinkProgram(getProgramId());
-  computeValidity();
+  validate();
   //Print the info log when in debug mode
 #ifndef NDEBUG
   printProgramInfoLog(getProgramId());
@@ -254,6 +254,18 @@ bool Shader::setUniform(const char* iName, float iValue)
 }
 
 //----------------------------------------------------------------------------
+/*Permet de passer un tableau de float au shader*/
+bool Shader::setUniform(const char* iName, int iSize, const float* iData)
+{
+  if(!isValid())
+    return false;
+    
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniform1fv(loc, iSize, iData);
+  return loc >= 0 ? true : false;
+}
+
+//----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, double iValue)
 {
 	if(!isValid())
@@ -310,6 +322,19 @@ bool Shader::setUniform(const char* iName, const Vector3i& iValue)
 }
 
 //----------------------------------------------------------------------------
+/*Permet de passer un tableau de vecteur3i au shader*/
+bool Shader::setUniform(const char* iName, int iSize, const math::Vector3i* iData)
+{
+  if(!isValid())
+    return false;
+    
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniform3iv(loc, iSize, iData->getPtr());
+  return loc >= 0 ? true : false;
+}
+
+
+//----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const Vector3d& iValue)
 {
 	if(!isValid())
@@ -329,6 +354,18 @@ bool Shader::setUniform(const char* iName, const Vector3f& iValue)
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform3f(loc, iValue.getX(), iValue.getY(), iValue.getZ());
+  return loc >= 0 ? true : false;
+}
+
+//----------------------------------------------------------------------------
+/*Permet de passer un tableau de vecteur3f au shader*/
+bool Shader::setUniform(const char* iName, int iSize, const math::Vector3f* iData)
+{
+  if(!isValid())
+    return false;
+    
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniform3fv(loc, iSize, iData->getPtr());
   return loc >= 0 ? true : false;
 }
 

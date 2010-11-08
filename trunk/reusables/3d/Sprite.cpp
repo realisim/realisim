@@ -25,7 +25,8 @@ Sprite::Sprite() :
  mAnimationTimer(),
  mAnimationDuration(),
  mIsLooping(false),
- mFrameSize()
+ mFrameSize(),
+ mIsFullScreen(false)
 {}
 
 Sprite::Sprite(const Sprite& s) :
@@ -39,7 +40,8 @@ Sprite::Sprite(const Sprite& s) :
  mAnimationTimer(s.getAnimationTimer()),
  mAnimationDuration(s.getAnimationDuration()),
  mIsLooping(false),
- mFrameSize(s.getFrameSize())
+ mFrameSize(s.getFrameSize()),
+ mIsFullScreen(s.isFullScreen())
 {}
 
 Sprite::~Sprite()
@@ -99,7 +101,7 @@ void Sprite::draw(const Camera& c) const
   a = texCoord.bottomRight().x();
   b = texCoord.bottomRight().y();
 
-	if(is2dPositioningOn())
+	if(is2dPositioningOn() && !isFullScreen())
   {
     glPushAttrib(GL_ENABLE_BIT);
     glDisable(GL_DEPTH_TEST);
@@ -138,6 +140,7 @@ void Sprite::draw(const Camera& c) const
     glTexCoord2d(texCoord.topLeft().x(), texCoord.topLeft().y());
     glVertex2d(0.0, getSubTextureRect().height());
     glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
@@ -147,7 +150,7 @@ void Sprite::draw(const Camera& c) const
     
     glPopAttrib();
   }
-  else 
+  else if(!isFullScreen())
   {
     glTranslated(getOriginTranslation().getX(),
       getOriginTranslation().getY(),
@@ -163,6 +166,7 @@ void Sprite::draw(const Camera& c) const
     glTexCoord2d(texCoord.topLeft().x(), texCoord.topLeft().y());
     glVertex2d(0.0, 1.0);
     glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
     
     //dessine le frame en debug  
 #ifndef NDEBUG
@@ -179,7 +183,40 @@ void Sprite::draw(const Camera& c) const
   glEnd();
   glPopAttrib();
 #endif
+  }
+  else //it is fullscreen
+  {
+    glPushAttrib(GL_ENABLE_BIT);
+    glDisable(GL_DEPTH_TEST);
 
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, c.getWindowInfo().getWidth(),
+      0, c.getWindowInfo().getHeight());
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glBindTexture(GL_TEXTURE_2D, getTexture().getTextureId());
+    glBegin(GL_QUADS);
+    glTexCoord2d(texCoord.bottomLeft().x(), texCoord.bottomLeft().y());
+    glVertex2d(0.0, 0.0);
+    glTexCoord2d(texCoord.bottomRight().x(), texCoord.bottomRight().y());
+    glVertex2d(c.getWindowInfo().getWidth(), 0.0);
+    glTexCoord2d(texCoord.topRight().x(), texCoord.topRight().y());
+    glVertex2d(c.getWindowInfo().getWidth(), c.getWindowInfo().getHeight());
+    glTexCoord2d(texCoord.topLeft().x(), texCoord.topLeft().y());
+    glVertex2d(0.0, c.getWindowInfo().getHeight());
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    
+    glPopAttrib();
   }
 
   glPopAttrib();

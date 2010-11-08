@@ -17,19 +17,36 @@
   la méthode set(QImage) ou d'une sous région d'une QImage avec la méthode
   set(QImage, QRect).
   
-  Texture permet de chargé une texture 3d openGL a partir d'un QByteArray avec
-  la méthode set(QByteArray).
+  Texture permet de chargé une texture 3d openGL a partir d'un pointeur sur les
+  données avec la méthode set(void*). Par example:
+    QFile f("../Resources/73_512_512");
+    if(f.open(QIODevice::ReadOnly))
+    {
+      QByteArray a = f.readAll();
+      mCtTexture.set(a.data(), Vector3i(gVolumeSize.getX(), gVolumeSize.getY(),
+        gVolumeSize.getZ()), GL_LUMINANCE, GL_UNSIGNED_SHORT);
+      f.close();
+    }
     
-  La classe Texture est implémenté avec le concepte de partage implicite.
+  La classe Texture est implémenté avec le concepte de partage explicite.
   Une texture instanciée par le constructeur copie ou assigné par l'opérateur
   égale pointe sur la texture originale.
   
-  Texture t1(image1);
-  Texture t2(t1); => t2 et t1 partage la même texture.
-  t2.load(image2); => t2 pointe sur image2 et t1 sur image1.
-  t2 = t1; => la texture image2 est détruite parce qu'elle n'est plus 
-              référencée et t2 et t1 pointe sur image1.
-  t1.load(image3); t1 pointe sur image3 et t2 sur image1.
+  Example:
+    Texture t1(image1);
+    Texture t2(t1); => t2 et t1 partage la même texture.
+    t2.set(image2); => t2 et t1 contienne maintenant image2
+    t2 = t1; => la texture image2 est détruite parce qu'elle n'est plus 
+                référencée et t2 et t1 pointe sur image1.
+    t1.set(image3); t1 et t2 pointe sur image3.
+  
+  On peut aussi faire ceci
+  Texture t1(image1); 
+  Texture t2(t1); //t2 et t1 pointent sur les mêmes ressources opengl
+  t2 = t1.detach() //La reference de t2 a t1 est détruite et t1 pointe
+    //sur ces propres ressources opengl.
+  t2.set(image2); //t1 pointe encore sur image1 et t2 pointe sur image2
+  
   
   Bref, ça fonctionne toujours comme on s'y attend et ça limite le nombre
   de ressource openGL/mémoire utilisé. De plus le constructeur copy est
@@ -46,11 +63,11 @@
       composante z du vecteur.
     mType: Le type de la texture; 2d ou 3d.
     mFormat: Le format de la texture (voir la doc OpenGL glTexImagexD).
-      fLuminance: GL_LUMINANCE
-      fRGBA: GL_RGBA
+      GL_LUMINANCE
+      GL_RGBA ...
     mDataType: Le type de donné (voir la doc OpenGL glTexImagexD).
-      dtUnsignedByte: GL_UNSIGNED_BYTE
-      dtUnsignedShort: GL_UNSIGNED_SHORT
+       GL_UNSIGNED_BYTE
+       GL_UNSIGNED_SHORT ...
     mRefCount: le compte de référence sur les guts.
 */
 
@@ -63,29 +80,36 @@ class Texture
 {
 public:
   enum type {t2d, t3d, tInvalid};
-  enum format {fLuminance, fRgba};
-  enum dataType {dtShort, dtUnsignedByte, dtUnsignedShort};
   
   Texture();
-Texture(QImage, format = fRgba, dataType = dtUnsignedByte);  //void*, const math::Vector2i?
-  Texture(void*, const math::Vector3i&, format = fRgba, dataType = dtUnsignedByte);
+  Texture(QImage, GLenum = GL_RGBA, GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);  //void*, const math::Vector2i?
+  Texture(void*, const math::Vector3i&, GLenum = GL_RGBA,
+    GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);
   Texture(const Texture&);
   virtual ~Texture();
   virtual Texture& operator=(const Texture&);
   
-  virtual dataType getDataType() const {return mpGuts->mDataType;}
-  virtual format getFormat() const {return mpGuts->mFormat;}
+//virtual Texture copy(); //voir detach();
+  virtual GLenum getDataType() const {return mpGuts->mDataType;}
+  virtual GLenum getFormat() const {return mpGuts->mFormat;}
+  virtual GLenum getInterpolation() const {return mpGuts->mInterpolation;}
   virtual const math::Vector3i& getSize() const;
   virtual GLuint getTextureId() const {return mpGuts->mTextureId;}
   virtual type getType() const {return mpGuts->mType;}
   virtual bool isValid() const;
-  virtual void set(QImage, format = fRgba, dataType = dtUnsignedByte);
-  virtual void set(QImage, QRect, format = fRgba, dataType = dtUnsignedByte);
-  virtual void set(void*, const math::Vector3i&, format = fRgba, dataType = dtUnsignedByte);
+  virtual void resize(int, int);
+//virtual void resize(int, int, int);
+	virtual void set(QImage, GLenum = GL_RGBA, GLenum = GL_UNSIGNED_BYTE,
+    GLenum = GL_LINEAR);
+  virtual void set(QImage, QRect, GLenum = GL_RGBA, GLenum = GL_UNSIGNED_BYTE,
+    GLenum = GL_LINEAR);
+  virtual void set(void*, const math::Vector3i&, GLenum = GL_RGBA,
+    GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);
   
 protected:
-  virtual void setDataType(dataType iT) {mpGuts->mDataType = iT;}
-  virtual void setFormat(format iF) {mpGuts->mFormat = iF;}
+  virtual void setDataType(GLenum iT) {mpGuts->mDataType = iT;}
+  virtual void setFormat(GLenum iF) {mpGuts->mFormat = iF;}
+  virtual void setInterpolation(GLenum iI) {mpGuts->mInterpolation = iI;}
   virtual void setType(type iT) {mpGuts->mType = iT;}
 
   struct Guts
@@ -95,12 +119,12 @@ protected:
     GLuint mTextureId;
     math::Vector3i mSize;
     type mType;
-    format mFormat;
-    dataType mDataType;
+    GLenum mFormat;
+    GLenum mDataType;
+    GLenum mInterpolation;
     unsigned int mRefCount;
   };
   
-  virtual void copyGuts();
   virtual void deleteGuts();
 	virtual void makeGuts();
   virtual void shareGuts(Guts*);

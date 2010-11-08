@@ -11,7 +11,7 @@
 #define MainDialog_hh
 
 #include <QCheckBox>
-#include <QDialog>
+#include <QMainWindow>
 #include <QSpinBox>
 class QKeyEvent;
 class QLineEdit;
@@ -61,7 +61,7 @@ private:
 };
 
 
-class MainDialog : public QDialog
+class MainDialog : public QMainWindow
 {
 	Q_OBJECT
 public:

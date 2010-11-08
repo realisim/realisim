@@ -10,7 +10,7 @@
 #ifndef MainDialog_hh
 #define MainDialog_hh
 
-#include <QDialog>
+#include <QMainWindow>
 class QKeyEvent;
 class QLineEdit;
 class QTimerEvent;
@@ -42,7 +42,7 @@ private:
 };
 
 
-class MainDialog : public QDialog
+class MainDialog : public QMainWindow
 {
 	Q_OBJECT
 public:

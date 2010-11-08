@@ -37,20 +37,21 @@ mWindowInfo()
 
 //-----------------------------------------------------------------------------
 Camera::Camera( const Camera& iCam ) : 
-mMode(),
-mOrientation(),
-mToLocal(),
-mToGlobal(),
-mPos(),
-mLat(),
-mLook(),
-mUp(),
-mVisibleGLUnit(),
-mPixelPerGLUnit(),
-mZoomFactor(),
-mWindowInfo()
+mMode(iCam.getMode()),
+mOrientation(iCam.getOrientation()),
+mToLocal(iCam.getTransformationToLocal()),
+mToGlobal(iCam.getTransformationToGlobal()),
+mPos(iCam.getPos()),
+mLat(iCam.getLat()),
+mLook(iCam.getLook()),
+mUp(iCam.getUp()),
+mVisibleGLUnit(iCam.mVisibleGLUnit), /*ici, on ne peut pas utiliser la méthode
+  getVisibleGLUnit parce que celle ci retourne le visibleGLUnit * zoomFactor,
+  ce qui donne le nombre de gl unit visible une fois le zoom appliqué.*/
+mPixelPerGLUnit(iCam.getPixelPerGLUnit()),
+mZoomFactor(iCam.getZoom()),
+mWindowInfo(iCam.getWindowInfo())
 {
-  operator=( iCam );
 }
 
 //-----------------------------------------------------------------------------
@@ -83,12 +84,8 @@ void Camera::move( const Vector3d& iDelta )
     case ZY:
     case XZ:
     {
-      Point3d trans = mToLocal.getTranslation() -
-        iDelta;
-      mToLocal.setTranslation(trans);
-      //important de seter la matrice local parce que ca rafraichit aussi
-      //la matrice globale.
-      setTransformationToLocal(mToLocal);
+      mPos += toPoint(iDelta);
+      mLook += toPoint(iDelta);
     }
     break;
       
@@ -204,7 +201,9 @@ Camera::operator=( const Camera& iCam )
   mLat = iCam.getLat();
   mLook = iCam.getLook();
   mUp = iCam.getUp();
-  mVisibleGLUnit = iCam.getVisibleGLUnit();
+  mVisibleGLUnit = iCam.mVisibleGLUnit; /*ici, on ne peut pas utiliser la méthode
+  getVisibleGLUnit parce que celle ci retourne le visibleGLUnit * zoomFactor,
+  ce qui donne le nombre de gl unit visible une fois le zoom appliqué.*/
   mPixelPerGLUnit = iCam.getPixelPerGLUnit();
   mZoomFactor = iCam.getZoom();
   mWindowInfo = iCam.getWindowInfo();

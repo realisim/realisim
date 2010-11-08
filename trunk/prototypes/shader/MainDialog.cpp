@@ -31,7 +31,7 @@ Viewer::Viewer(QWidget* ipParent /*=0*/) : Widget3d(ipParent),
  mRayCastShader(),
  m3dNoiseTexture()
 {
-  startTimer(16);
+  //startTimer(16);
   setFocusPolicy(Qt::StrongFocus);
 }
 
@@ -219,7 +219,7 @@ void Viewer::timerEvent(QTimerEvent* ipEvent)
 }
 
 //-----------------------------------------------------------------------------
-MainDialog::MainDialog() : QDialog(),
+MainDialog::MainDialog() : QMainWindow(),
   mpViewer(0)
 {
   resize(800, 600);
@@ -228,7 +228,8 @@ MainDialog::MainDialog() : QDialog(),
   pLyt->setMargin(5);
   mpViewer = new Viewer(this);
   mpViewer->setCameraOrientation(Camera::FREE);
-  pLyt->addWidget(mpViewer);
+  pLyt->addWidget(mpViewer, 1);
+  setCentralWidget(mpViewer);
   
   Camera c = mpViewer->getCamera();
   Matrix4d m;
