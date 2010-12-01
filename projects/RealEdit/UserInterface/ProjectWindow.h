@@ -10,6 +10,7 @@
 #include "Controller.h"
 #include "DataModel/EditionData.h"
 #include "QtGui/QWidget"
+class QCloseEvent;
 class QFocusEvent;
 namespace realEdit { class RealEdit3d; }
 #include <vector>
@@ -19,15 +20,21 @@ namespace realEdit
 
 class ProjectWindow : public QWidget
 {
+  Q_OBJECT
 public:
   ProjectWindow(QWidget* = 0);
-  ~ProjectWindow();
+  virtual ~ProjectWindow();
   
-  void changeCurrentNode();
-  Controller& getController() {return mController;}
-  void updateUi();
+  virtual void changeCurrentNode();
+  virtual Controller& getController() {return mController;}
+  virtual void updateUi();
 
-private:
+signals:
+  void aboutToClose(ProjectWindow*);
+  
+protected:
+	virtual void closeEvent(QCloseEvent*);
+
   Controller mController;
   std::vector<RealEdit3d*> mViews;
 };

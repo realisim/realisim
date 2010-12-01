@@ -27,6 +27,7 @@ public:
   
   void assign();
   unsigned int getId() const{ return mId; }
+  void setId(unsigned int iId) {mId = iId;}
 	
 protected:
 	unsigned int mId;  //identificateur unique a l'intérieur d'un projet

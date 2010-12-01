@@ -52,7 +52,7 @@ commande*/
 void CommandStack::redo()
 {
   if(mIndex < (int)mCommands.size() - 1)
-    mCommands[++mIndex]->execute();
+    mCommands[++mIndex]->redo();
 }
 
 //------------------------------------------------------------------------------

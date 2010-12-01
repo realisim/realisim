@@ -10,21 +10,34 @@ using namespace realisim;
 using namespace realisim::math;
 using namespace std;
 
+unsigned int ObjectNode::mIdCounter = 0;
+
 //------------------------------------------------------------------------------
-ObjectNode::ObjectNode( const QString iName ) : mModel (),
+ObjectNode::ObjectNode( const QString iName, unsigned int iId /* = 0*/ ) : 
+  mId(iId),
+  mModel (),
   mpParentNode( 0 ),
   mChilds(),
   mTransformation(),
   mName( iName )
 {
+	if(mId == 0)
+    mId = ++mIdCounter;
 }
 
 //------------------------------------------------------------------------------
-/*Très important que le parent de la copie du noeud ne soit pas associé parce
-qu'il faut utiliser la méthode addNode(ObjectNode*) afin de conserver la
-hiérarchie de noeud organisée.
-*/
-ObjectNode::ObjectNode (const ObjectNode& iN) : mModel (iN.mModel),
+/*Le constructeur copie fait un copie complete de l'arborescense de noeud.
+  Important de noter que le parent de la têre de l'arborescence est NULL. Il
+  faut utiliser la méthode addNode(Objectnode*) afin d'insérer la copie dans
+  un arbre. Faire très attention avec cette méthode car elle créée un duplicat
+  de ObjectNode et si celui ci se voyait inséré dans le même arbre que
+  l'original, cela créérait beaucoup de problème parce que 2 noeuds auraient le
+  même id. De plus, étant donné que le modele utilise le partage explicite, la
+  copie issue du construteur copie pointe sur le même modele que l'ObjectNode
+  original. Il faut donc faire attention.*/
+ObjectNode::ObjectNode (const ObjectNode& iN) : 
+  mId(iN.getId()),
+  mModel (iN.mModel),
   mpParentNode (0),
   mChilds (),
   mTransformation (iN.mTransformation),
@@ -51,9 +64,9 @@ ObjectNode::~ObjectNode()
 }
 
 //------------------------------------------------------------------------------
-ObjectNode* ObjectNode::addNode( const QString iName )
+ObjectNode* ObjectNode::addNode( const QString iName, unsigned int iId /*=0*/ )
 {
-  ObjectNode* pNode = new ObjectNode( iName );
+  ObjectNode* pNode = new ObjectNode( iName, iId );
   this->mChilds.push_back( pNode );
   pNode->mpParentNode = this;
   
@@ -61,22 +74,20 @@ ObjectNode* ObjectNode::addNode( const QString iName )
 }
 
 //------------------------------------------------------------------------------
-//void ObjectNode::addNode( ObjectNode* ipNode )
-//{
-//  this->mChilds.push_back( ipNode );
-//  ipNode->mpParentNode = this;
-//}
+void ObjectNode::addNode( ObjectNode* ipNode )
+{
+  this->mChilds.push_back( ipNode );
+  ipNode->mpParentNode = this;
+}
 
 //------------------------------------------------------------------------------
-const ObjectNode*
-ObjectNode::getChild( int iChildNumber ) const
+const ObjectNode* ObjectNode::getChild( int iChildNumber ) const
 {
   return mChilds[iChildNumber];
 }
 
 //------------------------------------------------------------------------------
-ObjectNode*
-ObjectNode::getChild( int iChildNumber )
+ObjectNode* ObjectNode::getChild( int iChildNumber )
 {
   return const_cast<ObjectNode*>(
     static_cast<const ObjectNode*>(this)->getChild( iChildNumber ) );
@@ -118,6 +129,18 @@ const Matrix4d&
 ObjectNode::getTransformation() const
 { 
   return mTransformation; 
+}
+
+//------------------------------------------------------------------------------
+void ObjectNode::removeChild(ObjectNode* ipNode)
+{
+  vector<ObjectNode*>::iterator it = 
+    find(mChilds.begin(), mChilds.end(), ipNode);
+  assert(it != mChilds.end());
+  mChilds.erase(it);
+  /*Il ne faut pas oublier que delete (voir ~ObjectNode) detruira aussi
+    tous les enfant de ipNode.*/
+  delete ipNode;
 }
 
 //------------------------------------------------------------------------------

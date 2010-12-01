@@ -19,17 +19,18 @@ namespace commands
   using namespace std;
   class ChangeMode : public realisim::utils::Command
   {
-   public:
-     explicit ChangeMode(Controller&, Controller::mode);
-     virtual ~ChangeMode();
+  	public:
+    	explicit ChangeMode(Controller&, Controller::mode);
+     	virtual ~ChangeMode();
      
-     virtual void execute();
-     virtual void undo();
+     	virtual void execute();
      
-  private:    
-    Controller& mController;
-    Controller::mode mPreviousMode;
-    Controller::mode mMode;
+    protected:
+      virtual void undo();
+      
+      Controller& mController;
+      Controller::mode mPreviousMode;
+      Controller::mode mMode;
   };
 }
 }
