@@ -25,10 +25,11 @@ namespace commands
      virtual ~Selection();
      
      virtual void execute();
-     virtual void undo();
      virtual void update(const unsigned int, mode);
      
   protected:
+    virtual void undo();
+    
     realEdit::EditionData& mEditionData;
     set<unsigned int> mPreviousSelection;
     vector<pair<unsigned int, mode> > mSelection;

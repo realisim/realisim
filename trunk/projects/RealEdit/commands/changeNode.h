@@ -9,7 +9,7 @@
 #include "utils/Command.h"
 #include "DataModel/ObjectNode.h"
 namespace realEdit{class EditionData;}
-namespace realEdit{class ProjectWindow;}
+namespace realEdit{class Controller;}
 
 namespace realEdit
 {
@@ -19,17 +19,17 @@ namespace commands
   class ChangeNode : public realisim::utils::Command
   {
    public:
-     explicit ChangeNode(ProjectWindow&, EditionData&, const ObjectNode*);
+     explicit ChangeNode(Controller&, unsigned int);
      virtual ~ChangeNode();
      
      virtual void execute();
-     virtual void undo();
      
-  private:
-    ProjectWindow& mProjectWindow;
-    EditionData& mEditionData;
-    const ObjectNode* mpPreviousNode;
-    const ObjectNode* mpNode;
+  protected:
+    virtual void undo();
+    
+    Controller& mController;
+    unsigned int mPreviousNodeId;
+    unsigned int mNodeId;
   };
 }
 }

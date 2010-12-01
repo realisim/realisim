@@ -28,12 +28,12 @@ ChangeTool::~ChangeTool()
 //------------------------------------------------------------------------------
 void ChangeTool::execute()
 {
-  mController.mTool = mTool;
+  mController.setTool(mTool);
 }
 
 //------------------------------------------------------------------------------
 void ChangeTool::undo()
 {
-  mController.mTool = mPreviousTool;
+  mController.setTool(mPreviousTool);
 }
 

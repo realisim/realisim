@@ -27,9 +27,10 @@ namespace commands
      virtual ~ChangeTool();
      
      virtual void execute();
-     virtual void undo();
      
-  private:    
+  protected:
+    virtual void undo();
+        
     Controller& mController;
     Controller::tool mPreviousTool;
     Controller::tool mTool;

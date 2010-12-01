@@ -69,9 +69,16 @@ void ProjectWindow::changeCurrentNode()
 }
 
 //-----------------------------------------------------------------------------
+void ProjectWindow::closeEvent(QCloseEvent* ipEvent)
+{
+  ipEvent->accept();
+  emit aboutToClose(this);
+}
+
+//-----------------------------------------------------------------------------
 void ProjectWindow::updateUi()
 {
-for(unsigned int i = 0; i < mViews.size(); ++i)
+  for(unsigned int i = 0; i < mViews.size(); ++i)
     mViews[i]->update();
 }
 

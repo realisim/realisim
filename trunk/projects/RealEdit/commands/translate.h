@@ -26,10 +26,11 @@ namespace commands
      virtual ~Translate();
      
      virtual void execute();
-     virtual void undo();
      virtual void update(const Vector3d&);
      
   protected:
+    virtual void undo();
+    
     realEdit::EditionData& mEditionData;
     Vector3d mDelta;
     Vector3d mTotalDelta;

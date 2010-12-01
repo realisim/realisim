@@ -17,41 +17,19 @@ using namespace realisim;
 using namespace realEdit;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//                    Scene
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Scene::Scene() : mNodes( "Root" )
-{
-}
-
-//-----------------------------------------------------------------------------
-Scene::~Scene()
-{
-}
-
-//-----------------------------------------------------------------------------
-const ObjectNode* Scene::getObjectNode() const
-{
-  return &mNodes;
-}
-
-//-----------------------------------------------------------------------------
-ObjectNode* Scene::getObjectNode()
-{
-  return const_cast<ObjectNode*>(
-    static_cast<const Scene&> (*this).getObjectNode() );
-}
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                    EditionData
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-EditionData::EditionData() : mCurrentModel (),
-  mpCurrentNode (0),
-  mScene (),
+ObjectNode EditionData::mDummyNode = ObjectNode("dummyNode");
+
+EditionData::EditionData() :
+  mNodes("Root"),
+  mCurrentModel(),
+  mpCurrentNode(0),
   mSelection(),
   mSelectedPoints(),
   mSelectedPolygons()
 {
-  setCurrentNode (getScene (). getObjectNode ());
+  setCurrentNode(getRootNode());
 }
 
 //-----------------------------------------------------------------------------
@@ -59,54 +37,51 @@ EditionData::~EditionData()
 {}
 
 //-----------------------------------------------------------------------------
-ObjectNode* EditionData::addNode (const QString iName)
-{ return mpCurrentNode->addNode (iName); }
-
-//-----------------------------------------------------------------------------
-//void EditionData::addNode (ObjectNode* ipNode)
-//{ mpCurrentNode->addNode (ipNode); }
-
-//-----------------------------------------------------------------------------
-RealEditPoint EditionData::addPoint (const Point3d& iPoint)
-{
-  RealEditPoint point (iPoint);
-  getCurrentModel().addPoint (point);
-  return point;
-}
-
-//-----------------------------------------------------------------------------
-RealEditPolygon EditionData::addPolygon (const std::vector<RealEditPoint>& iPoints)
-{
-  RealEditPolygon poly( iPoints );
-  getCurrentModel().addPolygon(poly);
-  return poly;
-}
-
-//-----------------------------------------------------------------------------
 const ObjectNode* EditionData::getCurrentNode () const
-{
-  return mpCurrentNode;
-}
+{ return mpCurrentNode; }
 
 //-----------------------------------------------------------------------------
 ObjectNode* EditionData::getCurrentNode ()
+{ return mpCurrentNode; }
+
+//-----------------------------------------------------------------------------
+const ObjectNode* EditionData::getNode(unsigned int iId) const
+{ return getNode(&mNodes, iId); }
+
+//-----------------------------------------------------------------------------
+/*Méthode pour piggy-backé la version const de la même méthode au lieu de 
+  dupliquer le code.*/
+ObjectNode* EditionData::getNode(unsigned int iId)
 {
   return const_cast<ObjectNode*>(
-    static_cast<const EditionData&> (*this).getCurrentNode() );
+    const_cast<const EditionData*>(this)->getNode(iId));
 }
 
 //-----------------------------------------------------------------------------
-const Scene& EditionData::getScene () const
-{ 
-  return mScene;
-}
-
-//-----------------------------------------------------------------------------
-Scene& EditionData::getScene ()
+const ObjectNode* EditionData::getNode(const ObjectNode* ipNode,
+  unsigned int iId) const
 {
-  return const_cast<Scene&>(
-   static_cast<const EditionData&>(*this).getScene() );
+  if(ipNode->getId() == iId)
+    return ipNode;
+  else
+  {
+    const ObjectNode* foundInChild = 0;
+    for(unsigned int i = 0; i < ipNode->getChildCount(); ++i)
+    {
+      foundInChild = getNode(ipNode->getChild(i), iId);
+      if(foundInChild != &mDummyNode) return foundInChild;
+    }
+		return &mDummyNode;
+  }
 }
+
+//-----------------------------------------------------------------------------
+const ObjectNode* EditionData::getRootNode() const
+{ return &mNodes; }
+
+//-----------------------------------------------------------------------------
+ObjectNode* EditionData::getRootNode()
+{ return &mNodes; }
 
 //-----------------------------------------------------------------------------
 bool EditionData::isSelected(uint iId) const

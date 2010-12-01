@@ -41,7 +41,7 @@ DataModelBase::~DataModelBase()
 void DataModelBase::assign()
 {
   ++mIdCounter;
-  mId = mIdCounter;
+  setId(mIdCounter);
   
 #if DEBUG_GUTS
 std::cout<<"id: "<<mId<<std::endl;

@@ -28,11 +28,11 @@ ChangeMode::~ChangeMode()
 //------------------------------------------------------------------------------
 void ChangeMode::execute()
 {
-  mController.mMode = mMode;
+  mController.setMode(mMode);
 }
 
 //------------------------------------------------------------------------------
 void ChangeMode::undo()
 {
-  mController.mMode = mPreviousMode;
+  mController.setMode(mPreviousMode);
 }

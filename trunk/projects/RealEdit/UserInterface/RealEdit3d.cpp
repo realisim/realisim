@@ -5,6 +5,7 @@
  */
 
 #include <algorithm>
+#include "Commands/selection.h"
 #include "DataModel/DataModel.h"
 #include "DataModel/DisplayData.h"
 #include "DataModel/EditionData.h"
@@ -75,7 +76,7 @@ RealEdit3d::RealEdit3d (QWidget* ipParent,
 Widget3d(ipParent, ipSharedWidget),
 mController (iC),
 mDisplayData (iC.getDisplayData ()),
-mEditionData (const_cast<const Controller&>(iC).getEditionData ()),
+mEditionData (iC.getEditionData ()),
 mMouseInfo(),
 mMouseState(msIdle),
 mPreviousTool(mController.getTool()),
@@ -507,6 +508,7 @@ void RealEdit3d::enableSmoothLines() const
 }
 
 //------------------------------------------------------------------------------
+//voir mouseMoveEvent
 void RealEdit3d::keyPressEvent(QKeyEvent* e)
 {
   makeCurrent();
@@ -525,10 +527,16 @@ void RealEdit3d::keyPressEvent(QKeyEvent* e)
 }
 
 //------------------------------------------------------------------------------
+//voir mouseMoveEvent
 void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* e)
 {makeCurrent();}
 
 //------------------------------------------------------------------------------
+/*On pourrait penser que ces méthodes devraient être dans le controller parce 
+  qu'elles contiennent la logique des outils. La gestion de la machine à état
+  est responsable de l'expérience de l'usager. C'est pourquoi je considère que 
+  cette logique de gestion des outils fait partie du l'interface usager et c'est
+  pourquoi ce code est ici et non dans Controller.  */
 void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
 {
   makeCurrent();
@@ -602,8 +610,8 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
           vector<unsigned int> hits = pick(e->x(), e->y());
           //puisque les Hits sont tries en Z, on prend le premier de la liste
           //en sachant que c'est le plus proche de la camera.
-          if(!hits.empty())
-            mController.select(hits.front(), sMode);
+//          if(!hits.empty())
+//            mController.select(hits.front(), sMode);
           update();
         }
         break;
@@ -615,7 +623,7 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
           Vector3d deltaGL =
             getCamera().pixelDeltaToGLDelta(mMouseInfo.delta.x(),
               -mMouseInfo.delta.y(), c);
-          mController.translate(deltaGL);
+//          mController.translate(deltaGL);
         }
           break;
         default: break;
@@ -628,6 +636,7 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
 }
 
 //------------------------------------------------------------------------------
+//voir mouseMoveEvent
 void RealEdit3d::mousePressEvent(QMouseEvent* e)
 {
   makeCurrent();
@@ -658,10 +667,10 @@ void RealEdit3d::mousePressEvent(QMouseEvent* e)
           vector<unsigned int> hits = pick(e->x(), e->y());
           //puisque les Hits sont tries en Z, on prend le premier de la liste
           //en sachant que c'est le plus proche de la camera.
-          if(!hits.empty())
-            mController.select(hits.front(), sMode);
-          else
-            mController.select(0, sMode);
+//          if(!hits.empty())
+//            mController.select(hits.front(), sMode);
+//          else
+//            mController.select(0, sMode);
         }
           break;
         default: break;
@@ -675,6 +684,7 @@ void RealEdit3d::mousePressEvent(QMouseEvent* e)
 }
 
 //------------------------------------------------------------------------------
+//voir mouseMoveEvent
 void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
 {
   makeCurrent();
@@ -687,7 +697,9 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
       setMouseState(msIdle);
       switch (mController.getTool()) 
       {
-        case Controller::tSelection: mController.selectEnd(); break;
+        case Controller::tSelection: 
+          //mController.selectEnd();
+          break;
         default: break;
       }      
       break;
@@ -695,8 +707,12 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
       setMouseState(msIdle);
       switch (mController.getTool()) 
       {
-        case Controller::tSelection: mController.selectEnd(); break;
-        case Controller::tTranslation: mController.translateEnd(); break;
+        case Controller::tSelection: 
+          //mController.selectEnd();
+          break;
+        case Controller::tTranslation:
+          //mController.translateEnd();
+          break;
         default: break;
       }
       break;
@@ -718,18 +734,22 @@ vector<unsigned int> RealEdit3d::pick(int iX, int iY, int iWidth /*= 1*/,
 
 	glGetIntegerv(GL_VIEWPORT,viewport);
 
-  glPushAttrib(GL_ENABLE_BIT);
+  glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
   glDisable(GL_DITHER);
   glDisable(GL_LIGHTING);
   glDisable(GL_COLOR_MATERIAL);
   //draw the scene in picking mode...
+  /*On s'assure que le clear color est completement noir parce qu'il
+    représentera le id 0 et n'interferera donc pas dans la sélection.*/
+  glClearColor(0, 0, 0, 0);
   Widget3d::paintGL();
-  drawSceneForPicking(mEditionData.getScene().getObjectNode());
+  drawSceneForPicking(mEditionData.getRootNode());
   
 	glReadPixels(iX, viewport[3]- iY, 1, 1,
 		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixel);
   
-  hits.push_back(colorToId(Color(pixel[0],pixel[1],pixel[2],pixel[3])));
+  if(pixel[0] != 0 || pixel[1] != 0 || pixel[2] != 0 || pixel[3] != 0)
+    hits.push_back(colorToId(Color(pixel[0],pixel[1],pixel[2],pixel[3])));
   glPopAttrib();
 
 	//printf("Color: %d %d %d %d\n",pixel[0],pixel[1],pixel[2],pixel[3]);
@@ -747,7 +767,7 @@ vector<unsigned int> RealEdit3d::pick(int iX, int iY, int iWidth /*= 1*/,
 void RealEdit3d::paintGL()
 {
   Widget3d::paintGL();
-  drawScene( mEditionData.getScene().getObjectNode() );
+  drawScene( mEditionData.getRootNode() );
   drawAxis();
   
   //Draw 2d selection box on top of the other

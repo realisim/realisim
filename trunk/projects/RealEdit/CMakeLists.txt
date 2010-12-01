@@ -14,6 +14,7 @@ ADD_COMPONENT( "DataModel" "Data Model")
 ADD_COMPONENT( "images" )
 ADD_COMPONENT( "../../reusables/math" )
 ADD_COMPONENT( "UserInterface" "UI")
+ADD_COMPONENT( "UserInterface/Palettes" "UI/Palettes")
 ADD_COMPONENT( "../../reusables/utils" )
 ADD_COMPONENT( "../../reusables/3d" )
 
