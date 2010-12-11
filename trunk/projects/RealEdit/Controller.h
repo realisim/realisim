@@ -40,14 +40,15 @@ Controller.h
 #ifndef RealEdit_controller_hh
 #define RealEdit_controller_hh
 
-#include "utils/CommandStack.h"
+
 #include "DataModel/DataModel.h"
 #include "DataModel/DisplayData.h"
 #include "DataModel/EditionData.h"
 #include "math/PlatonicSolid.h"
-namespace realEdit{class MainWindow;}
 namespace realEdit{class ProjectWindow;}
+namespace realEdit{class MainWindow;}
 namespace realisim{namespace utils{class Command;}}
+#include "utils/CommandStack.h"
 
 namespace realEdit
 { 
@@ -56,7 +57,7 @@ class Controller
 {
 public:
   enum mode{mAssembly, mEdition};
-  enum tool{tSelection, tTranslation};
+  enum tool{tSelect, tTranslate};
   
 	Controller(ProjectWindow&);
 	virtual ~Controller();

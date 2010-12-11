@@ -1,14 +1,6 @@
-/*
- *  changeTool.cpp
- *  Project
- *
- *  Created by Pierre-Olivier Beaudoin on 09-09-07.
- *  Copyright 2009 __MyCompanyName__. All rights reserved.
- *
- */
-
 #include "commands/changeTool.h"
-#include "DataModel/EditionData.h"
+#include "UserInterface/MainWindow.h"
+#include "UserInterface/Palettes/Tools.h"
 
 using namespace realisim;
 using namespace realEdit;
@@ -29,11 +21,17 @@ ChangeTool::~ChangeTool()
 void ChangeTool::execute()
 {
   mController.setTool(mTool);
+  MainWindow& mw = mController.getMainWindow();
+  palette::Tools* p = mw.getPalette<palette::Tools>(MainWindow::pEditionTools);
+  p->updateUi();
 }
 
 //------------------------------------------------------------------------------
 void ChangeTool::undo()
 {
   mController.setTool(mPreviousTool);
+  MainWindow& mw = mController.getMainWindow();
+  palette::Tools* p = mw.getPalette<palette::Tools>(MainWindow::pEditionTools);
+  p->updateUi();
 }
 

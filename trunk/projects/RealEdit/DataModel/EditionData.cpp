@@ -85,9 +85,7 @@ ObjectNode* EditionData::getRootNode()
 
 //-----------------------------------------------------------------------------
 bool EditionData::isSelected(uint iId) const
-{
-  return find(mSelection.begin(), mSelection.end(), iId) != mSelection.end();  
-}
+{ return mSelection.find(iId) != mSelection.end();   }
 
 //-----------------------------------------------------------------------------
 void EditionData::setCurrentNode (const ObjectNode* ipNode)

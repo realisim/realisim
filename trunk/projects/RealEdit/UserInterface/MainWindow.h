@@ -13,9 +13,9 @@ class QPushButton;
 #include <QTreeWidget>
 namespace realEdit{ class Controller; }
 namespace realEdit{ class ObjectNode; }
-namespace realEdit{ namespace palette { class Tools; } }
 namespace realEdit{ class RealEdit3d; }
 #include "UserInterface/ProjectWindow.h"
+#include "UserInterface/Palettes/Tools.h"
 
 /*Cette classe est la fenêtre principale de l'application. C'est ici que les
   menus File, Edit, Window etc... ainsi que leurs actions sont créés et gérés.
@@ -48,7 +48,10 @@ public:
 	MainWindow();
 	~MainWindow();
   
+  enum paletteId{pEditionTools, pAssemblyTools, pTexture};
+  
   void addNode(unsigned int);
+  template<class T> T* getPalette(paletteId);
   void removeNode(unsigned int);
   void renameNode(unsigned int);
   void updateUi();
@@ -90,10 +93,29 @@ private:
   NodeIdToTreeItem mNodeIdToTreeItem;
   ProjectWindow* mpActiveProjectWindow;
   std::vector<ProjectWindow*> mProjectWindows;
-  palette::Tools* mpTools;
+  std::map<paletteId, palette::Palette*> mPalettes;
   QPushButton* mpAdd;
   QPushButton* mpRemove;
 };
+
+template<class T>
+T* MainWindow::getPalette(paletteId iId)
+{
+  if(mPalettes.find(iId) != mPalettes.end())
+		switch (iId) 
+    {
+      case pEditionTools:
+        {
+          palette::Tools* p =dynamic_cast<palette::Tools*>(mPalettes[iId]);
+          assert(p);
+          return p;
+        }
+        break;
+      default:
+        break;
+    }
+  return 0;
+}
 
 } //realEdit
 

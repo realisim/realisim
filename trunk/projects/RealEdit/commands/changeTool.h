@@ -1,14 +1,5 @@
-/*
- *  changeTool.h
- *  Project
- *
- *  Created by Pierre-Olivier Beaudoin on 09-09-07.
- *  Copyright 2009 __MyCompanyName__. All rights reserved.
- *
- */
-
- #ifndef realedit_commands_ChangeTool_hh
- #define realedit_commands_ChangeTool_hh
+#ifndef realedit_commands_ChangeTool_hh
+#define realedit_commands_ChangeTool_hh
 
 #include "utils/Command.h"
 namespace realEdit{class EditionData;}

@@ -27,6 +27,7 @@ class QKeyEvent;
 class QMouseEvent;
 #include <QPoint>
 class QWheelEvent;
+namespace realEdit {namespace commands {class Select;}}
 #include <vector>
 
 namespace realEdit 
@@ -68,6 +69,7 @@ protected:
   virtual bool isSelectionBoxShown() const {return mShowSelectionBox;}
   virtual mouseState getMouseState() const {return mMouseState;}
   virtual void keyPressEvent(QKeyEvent*);
+  virtual void keyReleaseEvent(QKeyEvent*);
   virtual void mouseDoubleClickEvent(QMouseEvent* e);
   virtual void mouseMoveEvent(QMouseEvent* e);
   virtual void mousePressEvent(QMouseEvent* e);
@@ -87,6 +89,9 @@ private:
   Controller::tool mPreviousTool;
   bool mShowSelectionBox;
   unsigned int mHoverId;
+  
+  //commands
+  commands::Select* mpSelect;
 };
 
 } //realEdit
