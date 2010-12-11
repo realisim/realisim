@@ -17,7 +17,7 @@ Controller::Controller(ProjectWindow& iProjectWindow) :
   mDisplayData(),
   mEditionData(),
   mMode(mEdition),
-  mTool(tSelection)
+  mTool(tSelect)
 {
   ObjectNode* pRootNode = mEditionData.getCurrentNode();
   createPlatonicSolid(PlatonicSolid::tTetrahedron);

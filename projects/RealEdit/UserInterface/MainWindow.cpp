@@ -11,7 +11,6 @@
 #include "commands/renameNode.h"
 #include "Controller.h"
 #include "MainWindow.h"
-#include "Palettes/Tools.h"
 #include <QApplication>
 #include <QButtonGroup>
 #include <QDockWidget>
@@ -35,7 +34,7 @@ MainWindow::MainWindow()
   mNodeIdToTreeItem(),
   mpActiveProjectWindow(0),
   mProjectWindows(),
-  mpTools(0),
+  mPalettes(),
   mpAdd(0),
   mpRemove(0)
 {	
@@ -80,7 +79,7 @@ MainWindow::MainWindow()
   ++row;
   
   //--création des palettes
-  mpTools = new palette::Tools(this);
+  mPalettes[pEditionTools] = new palette::Tools(this);
   
   setActiveProjectWindow(&mDummyProjectWindow);
 }
@@ -390,14 +389,18 @@ void MainWindow::setController(Controller& iC)
   createTree( mpObjectNavigator, e.getRootNode() );
   mpObjectNavigator->blockSignals(false);
   
-  mpTools->setController(iC);
+  std::map<paletteId, palette::Palette*>::iterator it = mPalettes.begin();
+  for(; it != mPalettes.end(); ++it )
+    it->second->setController(iC);
   
   updateUi();
 }
 
 //------------------------------------------------------------------------------
 void MainWindow::showTools()
-{ mpTools->show(); }
+{
+  getPalette<palette::Tools>(pEditionTools)->show();
+}
 
 //------------------------------------------------------------------------------
 void MainWindow::updateUi()
