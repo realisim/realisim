@@ -19,7 +19,7 @@ class QTimerEvent;
 #include "3d/Texture.h"
 #include "3d/Widget3d.h"
 #include "math/PlatonicSolid.h"
-#include "openCL/ParticuleSystem.h"
+#include "ParticuleSystem.h"
 
 class QFrame;
 class QLabel;

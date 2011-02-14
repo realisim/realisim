@@ -13,7 +13,7 @@
 #include "math/Matrix4x4.h"
 #include "math/Point.h"
 #include "math/MathUtils.h"
-#include "openCL/ParticuleSystem.h"
+#include "ParticuleSystem.h"
 #include "Viewer.h"
 #include <QColor>
 #include <QKeyEvent>
