@@ -7,6 +7,7 @@
 #define RealEdit_MainWindow_hh
 
 #include <map>
+class QKeyEvent;
 #include <QMainWindow.h>
 class QMenuBar;
 class QPushButton;
@@ -55,7 +56,11 @@ public:
   void removeNode(unsigned int);
   void renameNode(unsigned int);
   void updateUi();
-    
+
+protected:
+  virtual void keyPressEvent(QKeyEvent*);
+  virtual void keyReleaseEvent(QKeyEvent*);
+  
 private slots:
   void addObjectNode();
   void doUndo();
@@ -66,6 +71,8 @@ private slots:
   void objectNodeSelectionChanged(QTreeWidgetItem*, QTreeWidgetItem*);
   void projectWindowAboutToClose(ProjectWindow*);
   void removeObjectNode();
+  void shortcutSelect();
+  void shortcutTranslate();
   void showTools();
 	//void openProject();
   

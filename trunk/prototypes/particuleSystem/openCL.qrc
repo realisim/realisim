@@ -1,0 +1,8 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+  <file>./example.cl</file>
+  <file>./particuleSystemCPU.cl</file>
+  <file>./particuleSystemCPU_2D.cl</file>
+  <file>./particuleSystemGPU.cl</file>
+ </qresource>
+</RCC>

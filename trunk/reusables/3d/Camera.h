@@ -86,7 +86,7 @@ public:
 protected:
   void computeLatAndUp();
   void computeProjection();
-  double getVisibleGLUnit() const { return mVisibleGLUnit * getZoom(); }
+  double getVisibleGLUnit() const;
   void setLat( const Vector3d& iLat );
   void setUp( const Vector3d& iUp );
   

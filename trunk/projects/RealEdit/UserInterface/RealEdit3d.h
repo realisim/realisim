@@ -28,6 +28,7 @@ class QMouseEvent;
 #include <QPoint>
 class QWheelEvent;
 namespace realEdit {namespace commands {class Select;}}
+namespace realEdit {namespace commands {class Translate;}}
 #include <vector>
 
 namespace realEdit 
@@ -63,6 +64,7 @@ protected:
   virtual void drawPoints(const RealEditModel&, bool = false) const;
   virtual void drawPolygons(const RealEditModel&, bool = false) const;
   virtual void drawScene(const ObjectNode* iObjectNode) const;
+  virtual void drawSceneForPicking() const;
   virtual void drawSceneForPicking(const ObjectNode* iObjectNode) const;
   virtual void drawSelectionBox() const;
   virtual void enableSmoothLines() const;
@@ -75,7 +77,6 @@ protected:
   virtual void mousePressEvent(QMouseEvent* e);
   virtual void mouseReleaseEvent(QMouseEvent* e);
   virtual void paintGL();
-  virtual std::vector<unsigned int> pick(int, int, int = 1, int = 1);
   virtual void setMouseState(mouseState m) {mMouseState = m;}
   virtual void showSelectionBox(bool iS) {mShowSelectionBox = iS;}
   virtual void wheelEvent(QWheelEvent* e);
@@ -92,6 +93,7 @@ private:
   
   //commands
   commands::Select* mpSelect;
+  commands::Translate* mpTranslate;
 };
 
 } //realEdit

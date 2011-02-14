@@ -6,8 +6,12 @@
 *
 ******************************************************************************/
 
+#include <cmath>
 #include "math/MathUtils.h"
+//#include <qcolor.h>
+#include <QKeyEvent>
 #include <QMouseEvent>
+#include "3d/Utilities.h"
 #include "3d/OpenGLInfo.h"
 #include "3d/Widget3d.h"
 
@@ -21,7 +25,7 @@ namespace
   const int kFramesToComputeFps = 10;
   
   const double kMaxZoom = 1/128.0;
-  const double kMinZoom = 128;
+  const double kMinZoom = 65536;
 }
 
 //-----------------------------------------------------------------------------
@@ -48,10 +52,9 @@ mShaders()
 //-----------------------------------------------------------------------------
 Widget3d::~Widget3d()
 {}
-
+  
 //-----------------------------------------------------------------------------
-void
-Widget3d::initializeGL()
+void Widget3d::initializeGL()
 {
   QGLWidget::initializeGL();
   
@@ -77,10 +80,10 @@ Widget3d::initializeGL()
   glShadeModel(GL_SMOOTH);
 
   //define material props
-  glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambiant);
-  glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-  glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-  glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_ambiant);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_diffuse);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_specular);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shininess);
 
   //init lights
   glLightfv(GL_LIGHT0, GL_POSITION, position);
@@ -99,8 +102,14 @@ Widget3d::initializeGL()
 }
 
 //-----------------------------------------------------------------------------
-QSize
-Widget3d::minimumSizeHint() const
+void Widget3d::keyPressEvent(QKeyEvent* ipE)
+{
+	//ipE->ignore();
+  QGLWidget::keyPressEvent(ipE);
+}
+
+//-----------------------------------------------------------------------------
+QSize Widget3d::minimumSizeHint() const
 {
   return QSize(50, 50);
 }
@@ -193,7 +202,86 @@ Widget3d::paintGL()
     qDebug(error.toStdString().c_str());
   }
 #endif
+}
 
+//-----------------------------------------------------------------------------
+/*voir http://www.lighthouse3d.com/opengl/picking/index.php?color1
+  pour plus d'info*/
+vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
+  int iHeight /*= 1*/ )
+{
+	using namespace utilities; //pour colorToId
+  
+  GLint viewport[4]; //x, y, width, height
+  glGetIntegerv(GL_VIEWPORT,viewport);
+  
+  /*glReadpixel prend le coin inférieur gauche et la taille, donc
+    on va s'assurer de lui passer le coin inférieur gauche de la boite.*/
+  int x1,y1,x2,y2;
+  //on definit les 4 coins de la fenetre de selection
+  //x1 = iX; y1 = iY; x2 = x1 + iWidth; y2 = y1 + iHeight;
+  //on trouve le coin inférieur gauche de la boite de selection
+  x1 = min(iX, iX + iWidth);
+  y1 = max(iY, iY + iHeight);
+  //le coin superieur droit
+  x2 = max(iX, iX + iWidth);
+  y2 = min(iY, iY + iHeight);
+
+  //on cap le coin inferieur gauche sur le viewport
+  x1 = max(x1, viewport[0]);
+  y1 = max(y1, viewport[1]);
+  x1 = min(x1, viewport[0] + viewport[2]);
+  y1 = min(y1, viewport[1] + viewport[3]);
+  //on cap le coin superieur droit sur la taille du viewport.
+  x2 = max(x2, viewport[0]);
+  y2 = max(y2, viewport[1]);
+	x2 = min(x2, viewport[0] + viewport[2]);
+  y2 = min(y2, viewport[1] + viewport[3]);
+  
+	int absWidth = x2 - x1;
+  int absHeight = y1 - y2;
+  vector<unsigned int> hits;
+	GLubyte pixels[absWidth * absHeight * 4];
+
+  glPushAttrib(GL_COLOR_BUFFER_BIT | GL_POLYGON_BIT);
+  //draw the scene in picking mode...
+  /*On s'assure que le clear color est completement noir parce qu'il
+    représentera le id 0 et n'interferera donc pas dans la sélection.*/
+  glClearColor(0, 0, 0, 0);
+  Widget3d::paintGL();
+  drawSceneForPicking();
+  
+  glReadPixels(x1, viewport[3] - y1, absWidth, absHeight,
+		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
+  for(int i = 0; i < absHeight; ++i)
+    for(int j = 0; j < absWidth; ++j)    
+      if(pixels[i*absWidth*4 + j*4] != 0 || pixels[i*absWidth*4 + j*4 + 1] != 0 || pixels[i*absWidth*4 + j*4 + 2] != 0 || pixels[i*absWidth*4 + j*4 + 3] != 0)
+        hits.push_back(colorToId(QColor(pixels[i*absWidth*4 + j*4],pixels[i*absWidth*4 + j*4 + 1],pixels[i*absWidth*4 + j*4 + 2],pixels[i*absWidth*4 + j*4 + 3])));
+  
+  /*Quand la boite fait plus de 1x1, on fais une selection sur les back facing
+    polygones aussi, ainsi permettant une selection qui passe au travers
+    de la surface.*/
+  if(absWidth > 1 || absHeight > 1 )
+  {
+  	glCullFace(GL_FRONT);
+    Widget3d::paintGL();
+    drawSceneForPicking();
+    
+    glReadPixels(x1, viewport[3] - y1, absWidth, absHeight,
+  		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
+    for(int i = 0; i < absHeight; ++i)
+      for(int j = 0; j < absWidth; ++j)    
+        if(pixels[i*absWidth*4 + j*4] != 0 || pixels[i*absWidth*4 + j*4 + 1] != 0 || pixels[i*absWidth*4 + j*4 + 2] != 0 || pixels[i*absWidth*4 + j*4 + 3] != 0)
+          hits.push_back(colorToId(QColor(pixels[i*absWidth*4 + j*4],pixels[i*absWidth*4 + j*4 + 1],pixels[i*absWidth*4 + j*4 + 2],pixels[i*absWidth*4 + j*4 + 3])));    
+
+  }
+  glPopAttrib();
+      
+  //on s'assure que les hits sont unique
+  sort(hits.begin(), hits.end());
+  hits.erase(unique(hits.begin(), hits.end()), hits.end());
+  
+  return hits;
 }
 
 //-----------------------------------------------------------------------------
@@ -242,10 +330,7 @@ void
 Widget3d::resizeGL(int iWidth, int iHeight)
 {
   QGLWidget::resizeGL(iWidth, iHeight);
-  glMatrixMode( GL_PROJECTION );
-  glLoadIdentity();
   mCam.projectionGL(iWidth, iHeight);
-  glMatrixMode( GL_MODELVIEW );
   update();
 }
 
@@ -393,12 +478,15 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
   {
     int wheelDir = ipE->delta() > 0 ? 1.0 : -1.0;
     Vector3d lookDirection(getCamera().getPos(), getCamera().getLook());
-    Point3d p = getCamera().getPos() + lookDirection * 0.2 * wheelDir;
-    Camera c = getCamera();
-    c.setPos(p);
-    setCamera(c, false);
+    
+      double logLook = log(lookDirection.fastNorm());
+      Point3d p = getCamera().getPos() +
+        lookDirection.normalise() * logLook * 0.8 * wheelDir;
+      
+      Camera c = getCamera();
+      c.setPos(p);
+      setCamera(c, false);
   }
-
 
   update();
 }

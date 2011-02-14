@@ -6,10 +6,9 @@
  #ifndef realedit_commands_translate_hh
  #define realedit_commands_translate_hh
 
-namespace realEdit{class EditionData;}
-#include "utils/Command.h"
-#include "RealEdit/Controller.h"
 #include "math/Vect.h"
+namespace realEdit{class Controller;}
+#include "utils/Command.h"
 
 namespace realEdit
 {
@@ -21,8 +20,7 @@ namespace commands
   {
    public:
      
-     explicit Translate(EditionData&, const Vector3d&,
-       Controller::mode);
+     explicit Translate(Controller&);
      virtual ~Translate();
      
      virtual void execute();
@@ -31,10 +29,9 @@ namespace commands
   protected:
     virtual void undo();
     
-    realEdit::EditionData& mEditionData;
+    Controller& mC;
     Vector3d mDelta;
     Vector3d mTotalDelta;
-    Controller::mode mMode;
   };
 }
 }

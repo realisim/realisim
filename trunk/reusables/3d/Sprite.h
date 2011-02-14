@@ -97,7 +97,7 @@ public:
   Sprite(const Sprite&);
   virtual ~Sprite();
   
-  virtual void draw(const Camera& c) const;
+  virtual void draw(const Camera& c, bool = false) const;
   virtual math::Vector3d get2dPosition() const {return m2dPosition;}
   virtual anchor getAnchorPoint() const {return mAnchor;}
   virtual int getAnimationDuration() const {return mAnimationDuration;}

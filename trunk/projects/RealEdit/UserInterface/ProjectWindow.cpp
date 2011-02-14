@@ -10,6 +10,7 @@
 #include "UserInterface/MainWindow.h"
 #include "UserInterface/ProjectWindow.h"
 
+#include <QKeyEvent>
 #include "QtGui/QFocusEvent"
 #include "QtGui/QFrame"
 #include "QtGui/QLayout"
@@ -73,6 +74,14 @@ void ProjectWindow::closeEvent(QCloseEvent* ipEvent)
 {
   ipEvent->accept();
   emit aboutToClose(this);
+}
+
+//-----------------------------------------------------------------------------
+void ProjectWindow::keyPressEvent(QKeyEvent* ipE)
+{
+	//On passe l'évenement au parent
+	ipE->ignore();
+  QWidget::keyPressEvent(ipE);
 }
 
 //-----------------------------------------------------------------------------
