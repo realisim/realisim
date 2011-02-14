@@ -16,6 +16,7 @@
 #include "3d/Shader.h"
 #include "Camera.h"
 #include <map>
+class QKeyEvent;
 #include <QTime>
 #include <QGLWidget>
 
@@ -47,7 +48,9 @@ public:
 //    void clicked();
 
 protected:
+	virtual void drawSceneForPicking() const {};  
   virtual void initializeGL();
+  virtual void keyPressEvent(QKeyEvent*);
   virtual void mouseDoubleClickEvent( QMouseEvent* e );
   virtual void mouseMoveEvent( QMouseEvent* e );
   virtual void mousePressEvent( QMouseEvent* e );
@@ -55,6 +58,7 @@ protected:
   virtual void wheelEvent ( QWheelEvent* e );
   QSize minimumSizeHint() const;
   virtual void paintGL();
+  vector<unsigned int> pick(int, int, int = 1,int= 1 );
   void resizeGL(int iWidth, int iHeight);
   QSize sizeHint() const;
   virtual void showFps();

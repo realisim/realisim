@@ -74,6 +74,14 @@ Camera::~Camera()
 //  mUp.normalise();
 //}
 
+double Camera::getVisibleGLUnit() const
+{
+  if(getMode() == ORTHOGONAL)
+    return mVisibleGLUnit * getZoom();
+  else //PERSPECTIVE
+    return mVisibleGLUnit;
+}
+
 //-----------------------------------------------------------------------------
 /*déplace la caméra. Le delta est en coordonnée GL et locale à la caméra.*/
 void Camera::move( const Vector3d& iDelta )
@@ -330,6 +338,9 @@ void Camera::projectionGL( int iWidth, int iHeight )
 //-----------------------------------------------------------------------------
 void Camera::computeProjection()
 {
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  
   int windowLongSide = getWindowInfo().mLongSide;
   int windowShortSide = getWindowInfo().mShortSide;
   float projectionLongSide = getVisibleGLUnit();
@@ -388,6 +399,7 @@ void Camera::computeProjection()
         break;
     }   
   }
+  glMatrixMode(GL_MODELVIEW);
 }
 
 //-----------------------------------------------------------------------------
@@ -424,7 +436,10 @@ void Camera::setLat( const Vector3d& iLat )
 
 //-----------------------------------------------------------------------------
 void Camera::setMode( Mode iMode )
-{ mMode = iMode; }
+{
+  mMode = iMode;
+  computeProjection();
+}
 
 //-----------------------------------------------------------------------------
 void Camera::setPos( const Point3d& iPos)
@@ -496,8 +511,5 @@ void Camera::setUp( const Vector3d& iUp )
 void Camera::setZoom(double iZoom)
 {
   mZoomFactor = iZoom;
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
   computeProjection();
-  glMatrixMode(GL_MODELVIEW);
 }

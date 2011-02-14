@@ -48,7 +48,7 @@ Sprite::~Sprite()
 {}
 
 //-----------------------------------------------------------------------------
-void Sprite::draw(const Camera& c) const
+void Sprite::draw(const Camera& c, bool iPicking /*= false*/) const
 {
   //il n'y a rien a dessiner si l'animation est terminé et que le looping
   //n'est pas activé
@@ -91,10 +91,20 @@ void Sprite::draw(const Camera& c) const
         QSizeF(fs.width(), -fs.height()) );
   }
 
-  glEnable(GL_TEXTURE_2D);
-  glDisable(GL_LIGHTING);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	if(!iPicking)
+  {
+    glEnable(GL_TEXTURE_2D);
+    glDisable(GL_LIGHTING);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  }
+  else
+  {
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_BLEND);
+  }
+
   
   float a = texCoord.bottomLeft().x();
   float b = texCoord.bottomLeft().y();
@@ -174,7 +184,7 @@ void Sprite::draw(const Camera& c) const
   glPushAttrib(GL_CURRENT_BIT | GL_POLYGON_BIT | GL_LINE_BIT);
   glLineWidth(2.0);
   glColor3ub(255, 255, 255);
-  glPolygonMode(GL_FRONT, GL_LINE);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   glBegin(GL_QUADS);
   glVertex2d(0.0, 0.0);
   glVertex2d(1.0, 0.0);

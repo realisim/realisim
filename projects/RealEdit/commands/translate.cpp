@@ -4,21 +4,19 @@
  */
 
 #include "commands/translate.h"
-#include "DataModel/EditionData.h"
+#include "Controller.h"
 #include "math/MathUtils.h"
+#include "UserInterface/ProjectWindow.h"
 
 using namespace realEdit;
   using namespace commands;
 using namespace std;
   
-Translate::Translate(EditionData& iEd, const Vector3d& iDelta,
-  Controller::mode iMode) : Command(),
-  mEditionData(iEd),
-  mDelta(iDelta),
-  mTotalDelta(iDelta),
-  mMode(iMode)
-{
-}
+Translate::Translate(Controller& iC) : Command(),
+  mC(iC),
+  mDelta(0.0),
+  mTotalDelta(0.0)
+{}
 
 Translate::~Translate()
 {}
@@ -26,20 +24,23 @@ Translate::~Translate()
 //------------------------------------------------------------------------------
 void Translate::execute()
 {
-  if(mEditionData.hasSelection())
+  EditionData& e = mC.getEditionData();
+  if(e.hasSelection())
   {
-    if(mMode == Controller::mEdition)
+    if(mC.getMode() == Controller::mEdition)
     {
-      for(uint i = 0; i < mEditionData.getSelectedPoints().size(); ++i)
+      for(uint i = 0; i < e.getSelectedPoints().size(); ++i)
       {
-        RealEditPoint p = mEditionData.getSelectedPoints()[i];
+        RealEditPoint p = e.getSelectedPoints()[i];
         p.set(p.pos() + mDelta);      
       }
-      mEditionData.getCurrentModel().updateNormals();
-      mEditionData.getCurrentModel().updateBoundingBox();
+      e.getCurrentModel().updateNormals();
+      e.getCurrentModel().updateBoundingBox();
     }
     else
-      mEditionData.getCurrentNode()->translate(mDelta);
+      e.getCurrentNode()->translate(mDelta);
+      
+    mC.getProjectWindow().updateUi();
   }
 }
 
@@ -56,4 +57,5 @@ void Translate::update(const Vector3d& iDelta)
 {
   mDelta = iDelta;
   mTotalDelta += mDelta;
+  execute();
 }

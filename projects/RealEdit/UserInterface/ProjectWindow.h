@@ -12,6 +12,7 @@
 #include "QtGui/QWidget"
 class QCloseEvent;
 class QFocusEvent;
+class QKeyEvent;
 namespace realEdit { class RealEdit3d; }
 #include <vector>
  
@@ -34,6 +35,7 @@ signals:
   
 protected:
 	virtual void closeEvent(QCloseEvent*);
+  virtual void keyPressEvent(QKeyEvent*);
 
   Controller mController;
   std::vector<RealEdit3d*> mViews;

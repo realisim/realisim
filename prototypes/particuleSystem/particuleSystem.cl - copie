@@ -1,0 +1,25 @@
+__kernel void 
+iterate(__global float4* ipPositions,
+  __global float4* ipVelocities,
+  __global float* ipLife,
+  const float iDeltaTsec,
+  const int iNumGravHoles,
+  __global const float4* iGravHolePos)
+{
+  int gid = get_global_id(0);
+
+  ipPositions[gid].xyz += ipVelocities[gid].xyz * iDeltaTsec;
+ 
+  float4 f = (float4)(iGhx, iGhy, iGhz, 1.0);
+  f = f - ipPositions[gid];
+  float norm = sqrt(f.x*f.x + f.y*f.y + f.z*f.z);
+
+  f = (f / norm);
+  f.x = f.x  * (1.0 / norm * 5000.0);
+  f.y = f.y  * (1.0 / norm * 5000.0);
+  f.z = f.z  * (1.0 / norm * 5000.0);
+
+  ipVelocities[gid] += (float4)(f.xyz * iDeltaTsec, 1.0);
+
+  ipLife[gid] -= 1;
+}

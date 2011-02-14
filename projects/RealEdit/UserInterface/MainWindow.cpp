@@ -7,6 +7,7 @@
 
 #include "commands/addNode.h"
 #include "commands/changeNode.h"
+#include "commands/changeTool.h"
 #include "commands/removeNode.h"
 #include "commands/renameNode.h"
 #include "Controller.h"
@@ -16,10 +17,12 @@
 #include <QDockWidget>
 #include <QFrame>
 #include <QHeaderView>
+#include <QKeyEvent>
 #include <QLayout>
 #include <QListWidget>
 #include <QMenuBar>
 #include <QPushButton>
+#include <QShortcut>
 #include <QTreeWidgetItem>
 
 using namespace realisim;
@@ -38,6 +41,7 @@ MainWindow::MainWindow()
   mpAdd(0),
   mpRemove(0)
 {	
+  setFocusPolicy(Qt::StrongFocus);
   move(0, 25);
 	resize(200, 400);
 	QFrame* pMainFrame = new QFrame( this );
@@ -80,6 +84,15 @@ MainWindow::MainWindow()
   
   //--création des palettes
   mPalettes[pEditionTools] = new palette::Tools(this);
+  
+  //creations des shortcuts clavier
+  QShortcut* pSelectShortcut = new QShortcut(QKeySequence("S"), this);
+  pSelectShortcut->setContext(Qt::ApplicationShortcut);
+  connect(pSelectShortcut, SIGNAL(activated()), this, SLOT(shortcutSelect()));
+  
+  QShortcut* pTranslateShortcut = new QShortcut(QKeySequence("T"), this);
+  pTranslateShortcut->setContext(Qt::ApplicationShortcut);
+  connect(pTranslateShortcut, SIGNAL(activated()), this, SLOT(shortcutTranslate()));
   
   setActiveProjectWindow(&mDummyProjectWindow);
 }
@@ -263,6 +276,24 @@ void MainWindow::handleFocusChanged(QWidget* ipOld, QWidget* ipNew)
 }
 
 //------------------------------------------------------------------------------
+void MainWindow::keyPressEvent(QKeyEvent* ipE)
+{
+	//on élimine les auto repeat
+  if(ipE->isAutoRepeat())
+    return;
+    
+  switch (ipE->key()) 
+  {
+    default: ipE->ignore(); QWidget::keyPressEvent(ipE); break;
+  }
+}
+
+//------------------------------------------------------------------------------
+void MainWindow::keyReleaseEvent(QKeyEvent*)
+{
+}
+
+//------------------------------------------------------------------------------
 void MainWindow::newProject()
 {
   ProjectWindow* pW = new ProjectWindow(this);
@@ -394,6 +425,24 @@ void MainWindow::setController(Controller& iC)
     it->second->setController(iC);
   
   updateUi();
+}
+
+//------------------------------------------------------------------------------
+void MainWindow::shortcutSelect()
+{
+  commands::ChangeTool* c = 
+    new commands::ChangeTool(*mpController, Controller::tSelect);
+  c->execute();
+  mpController->addCommand(c);
+}
+
+//------------------------------------------------------------------------------
+void MainWindow::shortcutTranslate()
+{
+  commands::ChangeTool* c = 
+    new commands::ChangeTool(*mpController, Controller::tTranslate);
+  c->execute();
+  mpController->addCommand(c);
 }
 
 //------------------------------------------------------------------------------

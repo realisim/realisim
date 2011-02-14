@@ -17,9 +17,11 @@ namespace treeD
 {
 namespace utilities
 {
+  unsigned int colorToId(const QColor&);
 //Texture get1dNoiseTexture();  
   Texture get2dNoiseTexture(int, int);//const Vector2i&);
   Texture get3dNoiseTexture(const math::Vector3i&);
+  QColor idToColor(unsigned int);
   
 }//utilities
 }//treeD

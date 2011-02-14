@@ -10,6 +10,14 @@ namespace treeD
 namespace utilities 
 {
 
+//-----------------------------------------------------------------------------
+//decode un QColor en id. Voir méthode idToColor
+unsigned int colorToId(const QColor& iC)
+{
+  return iC.alpha() + iC.blue() *255 + iC.green() * 255*255 +
+    iC.red() *255*255*255; 
+}
+
 //------------------------------------------------------------------------------
 Texture get2dNoiseTexture(int iWidth, int iHeight)
 {
@@ -62,6 +70,25 @@ Texture get3dNoiseTexture(const Vector3i& iSize)
   free(noise3dTexPtr);
   return r;
 }
+
+//-----------------------------------------------------------------------------
+/*encode un id 32 bits en Qcolor pour faciliter le colorPicking (voir
+  méthode widget3d::pick() )*/
+QColor idToColor(unsigned int iId)
+{
+  int r,g,b,a;
+  r = g = b = a = 0;
+  int remaining = iId / 255;
+  a = iId % 255;
+  b = remaining % 255;
+  remaining /= 255;
+  g = remaining % 255;
+  remaining /= 255;
+  r = remaining % 255;
+  
+  return QColor(r, g, b, a);
+}
+
 
 }
 }

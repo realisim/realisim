@@ -1,0 +1,8 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+  <file>./images/gravityHole.png</file>
+  <file>./images/particule.png</file>
+  <file>./images/particule2.png</file>
+  <file>./images/plusMinus.png</file>
+ </qresource>
+</RCC>

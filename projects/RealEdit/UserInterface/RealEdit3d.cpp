@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include "Commands/select.h"
+#include "Commands/translate.h"
 #include "DataModel/DataModel.h"
 #include "DataModel/DisplayData.h"
 #include "DataModel/EditionData.h"
@@ -18,57 +19,31 @@
 #include "UserInterface/RealEdit3d.h"
 #include <set>
 #include "math/Vect.h"
+#include "3d/Utilities.h"
 
 using namespace realisim;
   using namespace math;
   using namespace treeD;
+  	using namespace utilities;
 using namespace realEdit;
   using namespace commands;
 using namespace std;
 
 namespace
 {
-  struct Color
-  {
-    Color() : r(255), g(255), b(255), a(255) {;}
-    Color(GLubyte iR, GLubyte iG, GLubyte iB, GLubyte iA) : 
-      r(iR), g(iG), b(iB), a(iA) {;}
-    GLubyte r; GLubyte g; GLubyte b; GLubyte a;
-  };
-  
-  void color(const Color& iC) {glColor4ub(iC.r, iC.g, iC.b,iC.a);}
-  
-  //encode the id into color for color picking
-  void idToColor(unsigned int iId)
-  {
-    int r,g,b,a;
-    r = g = b = a = 0;
-    int remaining = iId / 255;
-    a = iId % 255;
-    b = remaining % 255;
-    remaining /= 255;
-    g = remaining % 255;
-    remaining /= 255;
-    r = remaining % 255;
-    
-    glColor4ub(r, g, b, a);
-  }
-  
-  //de-encode color to id.
-  unsigned int colorToId(const Color& iC)
-  { return iC.a + iC.b *255 + iC.g * 255*255 + iC.r *255*255*255; }
+  void color(const QColor& iC) {glColor4ub(iC.red(), iC.green(), iC.blue(), iC.alpha());}
 
   const int kDragTreshold = 3; //3 pixels to go into drag mode
-  const Color kcHover(255, 0, 255, 255);
-  const Color kcLine(0, 255, 51, 255);
-  const Color kcModel();
-  const Color kcNormal(255, 255, 255, 255);
-  const Color kcPoint(0, 85, 176, 255);
-  const Color kcPolygon(217, 217, 217, 255);
-  const Color kcSelectedModel();
-  const Color kcSelectedPoint(255, 0, 0, 255);
-  const Color kcSelectedPolygon(255, 0, 0, 255);
-  const Color kcSelectionBox(255, 255, 255, 255);
+  const QColor kcHover(255, 0, 255, 255);
+  const QColor kcLine(0, 255, 51, 255);
+  const QColor kcModel();
+  const QColor kcNormal(255, 255, 255, 255);
+  const QColor kcPoint(0, 85, 176, 255);
+  const QColor kcPolygon(217, 217, 217, 255);
+  const QColor kcSelectedModel();
+  const QColor kcSelectedPoint(255, 0, 0, 255);
+  const QColor kcSelectedPolygon(255, 0, 0, 255);
+  const QColor kcSelectionBox(255, 255, 255, 255);
 }
 
 RealEdit3d::RealEdit3d (QWidget* ipParent, 
@@ -83,9 +58,10 @@ mMouseState(msIdle),
 mPreviousTool(mController.getTool()),
 mShowSelectionBox(false),
 mHoverId(0),
-mpSelect(0)
+mpSelect(0),
+mpTranslate(0)
 {
-//  setFocusPolicy(Qt::StrongFocus);
+  setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
 }
 
@@ -180,7 +156,7 @@ void RealEdit3d::drawBoundingBox(const RealEditModel& iM,
   bool iPicking /*= false*/) const
 {
   if(iPicking)
-    idToColor(iM.getId());
+    color(idToColor(iM.getId()));
 
   glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
                  GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
@@ -298,7 +274,7 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
       color(kcPoint);
     
     if(iPicking)
-      idToColor(p.getId());
+      color(idToColor(p.getId()));
     
     glVertex3d(p.pos().getX(), p.pos().getY(), p.pos().getZ());
   }
@@ -327,7 +303,7 @@ void RealEdit3d::drawPolygons(const RealEditModel& iM,
       color(kcPolygon);
     
     if(iPicking)
-      idToColor(poly.getId());
+      color(idToColor(poly.getId()));
     
     glBegin(GL_POLYGON);
     glNormal3d(poly.getNormals()[0].getX(),
@@ -422,6 +398,10 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
   }
   glPopMatrix();
 }
+
+//------------------------------------------------------------------------------
+void RealEdit3d::drawSceneForPicking() const
+{ drawSceneForPicking(mEditionData.getRootNode()); }
 
 //------------------------------------------------------------------------------
 void
@@ -539,7 +519,7 @@ void RealEdit3d::keyPressEvent(QKeyEvent* e)
         showSelectionBox(false);
         update();
       break;
-    default: break;
+    default: e->ignore(); Widget3d::keyPressEvent(e); break;
   }
   
   changeCursor();
@@ -551,7 +531,7 @@ void RealEdit3d::keyReleaseEvent(QKeyEvent* e)
 {
   switch (e->key())
   { 
-    default: break;
+    default: e->ignore(); break;
   }
   changeCursor();
 }
@@ -570,7 +550,7 @@ void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* e)
 void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
 {
   makeCurrent();
-  mMouseInfo.delta = mapFromGlobal( QPoint(e->globalX(), e->globalY()) ) - mMouseInfo.end;
+  mMouseInfo.delta = QPoint(e->x(), e->y()) - mMouseInfo.end;
   /*mouse delta vaut (0, 0) quand on appel mouseMoveEvent a partir de celle-ci
   avec le même évènement (voir case msDown:). Ça veut dire qu'on vient de passer
   le drag threshold. Le mouse delta doit donc être de (end - origin)*/
@@ -657,7 +637,7 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
           Vector3d deltaGL =
             getCamera().pixelDeltaToGLDelta(mMouseInfo.delta.x(),
               -mMouseInfo.delta.y(), c);
-//          mController.translate(deltaGL);
+          mpTranslate->update(deltaGL);
         }
           break;
         default: break;
@@ -689,6 +669,8 @@ void RealEdit3d::mousePressEvent(QMouseEvent* e)
       {
         case Controller::tSelect:
           {
+            assert(!mpSelect && "Il ne devrait pas y avoir de commande au moment \
+              ou l'on appuit sur la souris sinon on a une fuite.");
             if(!mpSelect)
               mpSelect = new Select(mController);                
              
@@ -707,6 +689,14 @@ void RealEdit3d::mousePressEvent(QMouseEvent* e)
               else
                 mpSelect->update(0, sMode);
             }
+          }
+          break;
+        case Controller::tTranslate:
+          {
+          	assert(!mpTranslate && "Il ne devrait pas y avoir de commande au moment \
+              ou l'on appuit sur la souris sinon on a une fuite.");
+            if(!mpTranslate)
+              mpTranslate = new Translate(mController);
           }
           break;
         default: break;
@@ -762,15 +752,14 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
               mMouseInfo.origin.y(), selectionBoxSize.x(), selectionBoxSize.y());
             if(!hits.empty())
               mpSelect->update(hits, sMode);
-          }
-
-          
+          }          
           mpSelect->execute();
           mController.addCommand(mpSelect);
           mpSelect = 0;
           break;
         case Controller::tTranslate:
-          //mController.translateEnd();
+					mController.addCommand(mpTranslate);
+          mpTranslate = 0;
           break;
         default: break;
       }
@@ -779,82 +768,6 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
   }
   
   changeCursor();
-}
-
-//------------------------------------------------------------------------------
-/*voir http://www.lighthouse3d.com/opengl/picking/index.php?color1
-  pour plus d'info*/
-vector<unsigned int> RealEdit3d::pick(int iX, int iY, int iWidth /*= 1*/,
-  int iHeight /*= 1*/ )
-{
-  GLint viewport[4]; //x, y, width, height
-  glGetIntegerv(GL_VIEWPORT,viewport);
-  
-  /*glReadpixel prend le coin inférieur gauche et la taille, donc
-    on va s'assurer de lui passer le coin inférieur gauche de la boite.*/
-  int x1,y1,x2,y2;
-  //on definit les 4 coins de la fenetre de selection
-  //x1 = iX; y1 = iY; x2 = x1 + iWidth; y2 = y1 + iHeight;
-  //on trouve le coin inférieur gauche de la boite de selection
-  x1 = min(iX, iX + iWidth);
-  y1 = max(iY, iY + iHeight);
-  //le coin superieur droit
-  x2 = max(iX, iX + iWidth);
-  y2 = min(iY, iY + iHeight);
-//  cout<<endl;
-//  cout<<"vSize: "<<viewport[0]<<" "<<viewport[1]<<" "<<viewport[0]+viewport[2]<<" "<<viewport[1]+viewport[3]<<endl;
-//  cout<<"box size: "<<abs(iWidth)<<" "<<abs(iHeight)<<endl;
-//  cout<<"ll: "<<x1<<" "<<y1<<endl;
-  //on cap le coin inferieur gauche sur le viewport
-  x1 = max(x1, viewport[0]);
-  y1 = max(y1, viewport[1]);
-  x1 = min(x1, viewport[0] + viewport[2]);
-  y1 = min(y1, viewport[1] + viewport[3]);
-//  cout<<"cap ll: "<<x1<<" "<<y1<<endl;
-//  cout<<"ur: "<<x2<<" "<<y2<<endl; 
-  //on cap le coin superieur droit sur la taille du viewport.
-  x2 = max(x2, viewport[0]);
-  y2 = max(y2, viewport[1]);
-	x2 = min(x2, viewport[0] + viewport[2]);
-  y2 = min(y2, viewport[1] + viewport[3]);
-//  cout<<"cap ur: "<<x2<<" "<<y2<<endl;
-  
-	int absWidth = x2 - x1;
-  int absHeight = y1 - y2;
-//  cout<<"cap box size: "<<absWidth<<" "<<absHeight<<endl;
-  vector<unsigned int> hits;
-	GLubyte pixels[absWidth * absHeight * 4];
-
-  glPushAttrib(GL_COLOR_BUFFER_BIT);
-  //draw the scene in picking mode...
-  /*On s'assure que le clear color est completement noir parce qu'il
-    représentera le id 0 et n'interferera donc pas dans la sélection.*/
-  glClearColor(0, 0, 0, 0);
-  Widget3d::paintGL();
-  drawSceneForPicking(mEditionData.getRootNode());
-  glPopAttrib();
-      
-	glReadPixels(x1, viewport[3] - y1, absWidth, absHeight,
-		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
-  
-  for(int i = 0; i < absHeight; ++i)
-    for(int j = 0; j < absWidth; ++j)    
-      if(pixels[i*absWidth*4 + j*4] != 0 || pixels[i*absWidth*4 + j*4 + 1] != 0 || pixels[i*absWidth*4 + j*4 + 2] != 0 || pixels[i*absWidth*4 + j*4 + 3] != 0)
-        hits.push_back(colorToId(Color(pixels[i*absWidth*4 + j*4],pixels[i*absWidth*4 + j*4 + 1],pixels[i*absWidth*4 + j*4 + 2],pixels[i*absWidth*4 + j*4 + 3])));
-
-  //on s'assure que les hits sont unique
-  sort(hits.begin(), hits.end());
-  hits.erase(unique(hits.begin(), hits.end()), hits.end());
-  
-	//printf("Color: %d %d %d %d\n",pixel[0],pixel[1],pixel[2],pixel[3]);
-  
-//  float z = 0.0;
-//  glReadPixels(iX, viewport[3]- iY, 1, 1,
-//		 GL_DEPTH_COMPONENT, GL_FLOAT, &z );
-//  printf("depth: %f\n",z);
-  
-  
-  return hits;
 }
 
 //------------------------------------------------------------------------------
