@@ -20,12 +20,14 @@ class QKeyEvent;
 #include <QTime>
 #include <QGLWidget>
 
+/*
+	Documenter la relation entre pick() et drawSceneForPicking()
+*/
 
 namespace realisim
 {
 namespace treeD
 {
-
 class Widget3d : public QGLWidget
 {
 //    Q_OBJECT

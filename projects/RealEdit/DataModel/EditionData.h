@@ -37,6 +37,7 @@ public:
   ObjectNode* getNode(unsigned int);
   vector<RealEditPoint>& getSelectedPoints() {return mSelectedPoints;}
   vector<RealEditPolygon>& getSelectedPolygons() {return mSelectedPolygons;}
+  vector<RealEditSegment>& getSelectedSegments() {return mSelectedSegments;}
   const set<uint>& getSelection() const {return mSelection;}
   set<uint>& getSelection() {return mSelection;}
   const ObjectNode* getRootNode() const;
@@ -57,6 +58,7 @@ private:
   set<uint> mSelection;
   vector<RealEditPoint> mSelectedPoints;
   vector<RealEditPolygon> mSelectedPolygons;
+  vector<RealEditSegment> mSelectedSegments;
 };
 
 } // realEdit

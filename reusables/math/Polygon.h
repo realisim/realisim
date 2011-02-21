@@ -20,9 +20,7 @@
 //! Il s'agit d'une classe polygon tout ce qu'il a de plus simple. Recherche 
 //! d'une certaine efficacitÈ a l'exÈcution. La classe prend 3 points afin de 
 //! creer des Polygones triangulaires. Le fait de limiter les polygones a 3
-//! points assure que ceux-ci sont coplanaire. Egalement faire attention si 
-//!cette classeest utilisÈ avec OpenGL, bien se rapeller qu'OpenGL n'affiche que
-//! des polygones concaves (ou convexes, me souviens plus... TODO vÈrifiÈ ca)
+//! points assure que ceux-ci sont coplanaire. 
 //!-----------------------------------------------------------------------------
 namespace realisim
 {

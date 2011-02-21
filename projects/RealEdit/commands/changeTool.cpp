@@ -22,8 +22,7 @@ void ChangeTool::execute()
 {
   mController.setTool(mTool);
   MainWindow& mw = mController.getMainWindow();
-  palette::Tools* p = mw.getPalette<palette::Tools>(MainWindow::pEditionTools);
-  p->updateUi();
+  mw.getPalette(MainWindow::pEditionTools)->updateUi();
 }
 
 //------------------------------------------------------------------------------
@@ -31,7 +30,6 @@ void ChangeTool::undo()
 {
   mController.setTool(mPreviousTool);
   MainWindow& mw = mController.getMainWindow();
-  palette::Tools* p = mw.getPalette<palette::Tools>(MainWindow::pEditionTools);
-  p->updateUi();
+  mw.getPalette(MainWindow::pEditionTools)->updateUi();
 }
 

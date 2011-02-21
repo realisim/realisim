@@ -58,7 +58,7 @@ QString asString(QAbstractSocket::SocketError iError)
     {r = "The SSL/TLS handshake failed, so the connection was closed (only used in QSslSocket)"; break;}
     case QAbstractSocket::UnfinishedSocketOperationError :
     {r = "Used by QAbstractSocketEngine only, The last operation attempted has not finished yet (still in progress in the background)."; break;}
-/*  Only in QT 4.5 and higher
+//  Only in QT 4.5 and higher
     case QAbstractSocket::ProxyConnectionRefusedError :
     {r = "Could not contact the proxy server because the connection to that server was denied"; break;}
     case QAbstractSocket::ProxyConnectionClosedError :
@@ -68,7 +68,7 @@ QString asString(QAbstractSocket::SocketError iError)
     case QAbstractSocket::ProxyNotFoundError :
     {r = "The proxy address set with setProxy() (or the application proxy) was not found."; break;}
     case QAbstractSocket::ProxyProtocolError :
-    {r = "The connection negotiation with the proxy server because the response from the proxy server could not be understood."; break;}*/
+    {r = "The connection negotiation with the proxy server because the response from the proxy server could not be understood."; break;}
     case QAbstractSocket::UnknownSocketError :
     {r = "An unidentified error occurred."; break;}
 

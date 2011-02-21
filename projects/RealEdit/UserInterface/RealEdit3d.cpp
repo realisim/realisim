@@ -35,14 +35,15 @@ namespace
 
   const int kDragTreshold = 3; //3 pixels to go into drag mode
   const QColor kcHover(255, 0, 255, 255);
-  const QColor kcLine(0, 255, 51, 255);
   const QColor kcModel();
   const QColor kcNormal(255, 255, 255, 255);
   const QColor kcPoint(0, 85, 176, 255);
   const QColor kcPolygon(217, 217, 217, 255);
+  const QColor kcSegment(0, 255, 51, 255);
   const QColor kcSelectedModel();
   const QColor kcSelectedPoint(255, 0, 0, 255);
   const QColor kcSelectedPolygon(255, 0, 0, 255);
+  const QColor kcSelectedSegment(255, 0, 0, 255);
   const QColor kcSelectionBox(255, 255, 255, 255);
 }
 
@@ -168,41 +169,6 @@ void RealEdit3d::drawBoundingBox(const RealEditModel& iM,
 }
 
 //------------------------------------------------------------------------------
-void RealEdit3d::drawEdges(const RealEditModel& iM) const
-{
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  
-  map<unsigned int, RealEditPolygon>::const_iterator it =
-    iM.getPolygons().begin();
-  for(; it != iM.getPolygons().end(); ++it)
-  {
-    const RealEditPolygon& poly = it->second;    
-    color(kcLine);
-    
-    glBegin(GL_POLYGON);
-    glNormal3d(poly.getNormals()[0].getX(),
-               poly.getNormals()[0].getY(),
-               poly.getNormals()[0].getZ());
-    glVertex3d(poly.getPoints()[0].x (),
-               poly.getPoints()[0].y (),
-               poly.getPoints()[0].z ());    
-    glNormal3d(poly.getNormals()[1].getX(),
-               poly.getNormals()[1].getY(),
-               poly.getNormals()[1].getZ());
-    glVertex3d(poly.getPoints()[1].x (),
-               poly.getPoints()[1].y (),
-               poly.getPoints()[1].z ());
-    glNormal3d(poly.getNormals()[2].getX(),
-               poly.getNormals()[2].getY(),
-               poly.getNormals()[2].getZ());
-    glVertex3d(poly.getPoints()[2].x (),
-               poly.getPoints()[2].y (),
-               poly.getPoints()[2].z ());
-    glEnd();
-  }
-}
-
-//------------------------------------------------------------------------------
 void RealEdit3d::drawNormals(const RealEditModel& iM) const
 {
   map<unsigned int, RealEditPolygon>::const_iterator it =
@@ -217,9 +183,7 @@ void RealEdit3d::drawNormals(const RealEditModel& iM) const
                  poly.getPoints()[0].z());
     glBegin(GL_LINES);      
       glVertex3d(0.0, 0.0, 0.0);
-      glVertex3d(poly.getNormals()[0].getX(),
-                 poly.getNormals()[0].getY(),
-                 poly.getNormals()[0].getZ());
+      glVertex3dv(poly.getNormals()[0].getPtr());
     glEnd();
     glPopMatrix();
     
@@ -229,9 +193,7 @@ void RealEdit3d::drawNormals(const RealEditModel& iM) const
                  poly.getPoints()[1].z ());
     glBegin(GL_LINES);      
       glVertex3d(0.0, 0.0, 0.0);
-      glVertex3d(poly.getNormals()[1].getX(),
-                 poly.getNormals()[1].getY(),
-                 poly.getNormals()[1].getZ());
+      glVertex3dv(poly.getNormals()[1].getPtr());
     glEnd();
     glPopMatrix();
 
@@ -241,9 +203,7 @@ void RealEdit3d::drawNormals(const RealEditModel& iM) const
                  poly.getPoints()[2].z ());
     glBegin(GL_LINES);      
       glVertex3d(0.0, 0.0, 0.0);
-      glVertex3d(poly.getNormals()[2].getX(),
-                 poly.getNormals()[2].getY(),
-                 poly.getNormals()[2].getZ());
+      glVertex3dv(poly.getNormals()[2].getPtr());
     glEnd();
     glPopMatrix();
   }
@@ -276,7 +236,7 @@ void RealEdit3d::drawPoints(const RealEditModel& iM,
     if(iPicking)
       color(idToColor(p.getId()));
     
-    glVertex3d(p.pos().getX(), p.pos().getY(), p.pos().getZ());
+    glVertex3dv(p.pos().getPtr());
   }
   glEnd();
   glPopAttrib();
@@ -306,24 +266,42 @@ void RealEdit3d::drawPolygons(const RealEditModel& iM,
       color(idToColor(poly.getId()));
     
     glBegin(GL_POLYGON);
-    glNormal3d(poly.getNormals()[0].getX(),
-               poly.getNormals()[0].getY(),
-               poly.getNormals()[0].getZ());
-    glVertex3d(poly.getPoints()[0].x (),
-               poly.getPoints()[0].y (),
-               poly.getPoints()[0].z ());    
-    glNormal3d(poly.getNormals()[1].getX(),
-               poly.getNormals()[1].getY(),
-               poly.getNormals()[1].getZ());
-    glVertex3d(poly.getPoints()[1].x (),
-               poly.getPoints()[1].y (),
-               poly.getPoints()[1].z ());
-    glNormal3d(poly.getNormals()[2].getX(),
-               poly.getNormals()[2].getY(),
-               poly.getNormals()[2].getZ());
-    glVertex3d(poly.getPoints()[2].x (),
-               poly.getPoints()[2].y (),
-               poly.getPoints()[2].z ());
+    glNormal3dv(poly.getNormals()[0].getPtr());
+    glVertex3dv(poly.getPoints()[0].pos().getPtr());    
+    glNormal3dv(poly.getNormals()[1].getPtr());
+    glVertex3dv(poly.getPoints()[1].pos().getPtr());
+    glNormal3dv(poly.getNormals()[2].getPtr());
+    glVertex3dv(poly.getPoints()[2].pos().getPtr());
+    glEnd();
+  }
+}
+
+//------------------------------------------------------------------------------
+void RealEdit3d::drawSegments(const RealEditModel& iM,
+  bool iPicking /*= false*/) const
+{
+  map<unsigned int, RealEditSegment>::const_iterator it =
+    iM.getSegments().begin();
+  for(; it != iM.getSegments().end(); ++it)
+  {
+    const RealEditSegment& s = it->second;
+    if(mEditionData.isSelected(s.getId()))
+      color(kcSelectedSegment);
+    else if(s.getId() == mHoverId)
+      color(kcHover);
+    else
+      color(kcSegment);
+    
+    glLineWidth(1.0);
+    if(iPicking)
+    {
+      glLineWidth(5.0);
+      color(idToColor(s.getId()));
+    }
+    
+    glBegin(GL_LINES);
+    glVertex3dv(s.getPoint1().pos().getPtr());
+    glVertex3dv(s.getPoint2().pos().getPtr());
     glEnd();
   }
 }
@@ -356,7 +334,7 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
                      GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
           glDisable(GL_LIGHTING);
           enableSmoothLines();
-          drawEdges(model);
+          drawSegments(model);
         glPopAttrib();
       }
     }
@@ -378,7 +356,7 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
          
           glDisable(GL_LIGHTING);
           enableSmoothLines();
-          drawEdges(model);
+          drawSegments(model);
         glPopAttrib();
       
         //dessine les normals du modèle
@@ -400,6 +378,8 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
 }
 
 //------------------------------------------------------------------------------
+/*Surcharge de la classe du base. Cette méthode est appelé lorsqu'on appelle
+  la méthode Widget3d::pick(...)*/
 void RealEdit3d::drawSceneForPicking() const
 { drawSceneForPicking(mEditionData.getRootNode()); }
 
@@ -433,6 +413,7 @@ RealEdit3d::drawSceneForPicking(const realEdit::ObjectNode* ipObjectNode) const
         glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT);
           drawPoints(model, true);
           drawPolygons(model, true);
+          drawSegments(model, true);
         glPopAttrib();
       }
     }
