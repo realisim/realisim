@@ -59,10 +59,10 @@ protected:
   virtual void changeCursor();
   virtual void drawAxis() const;
   virtual void drawBoundingBox(const RealEditModel&, bool = false) const;
-  virtual void drawEdges(const RealEditModel&) const;
   virtual void drawNormals(const RealEditModel&) const;
   virtual void drawPoints(const RealEditModel&, bool = false) const;
   virtual void drawPolygons(const RealEditModel&, bool = false) const;
+  virtual void drawSegments(const RealEditModel&, bool = false) const;
   virtual void drawScene(const ObjectNode* iObjectNode) const;
   virtual void drawSceneForPicking() const;
   virtual void drawSceneForPicking(const ObjectNode* iObjectNode) const;

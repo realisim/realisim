@@ -36,7 +36,9 @@ namespace realEdit{ class RealEdit3d; }
   mNodeIdToTreeItem: une map des id vers les items de la liste des noeuds.
   mpActiveProjectWindow: La fenêtre de projet active.
   mProjectWindows: La liste de toutes les fenêtres de projet.
-  palette::Tools* mpTools: une palette
+  mPalettes: La map des palettes. Le Ui des palettes est crée sur
+    demande, donc quand on montre la palette pour la premiere fois, elle
+    elle créée et inséré dans la map.
   mpAdd: le bouton qui sert a ajouter un noeud à la liste
   mpRemove: le bouton qui sert a enlever un noeud à la liste.
   */
@@ -52,7 +54,7 @@ public:
   enum paletteId{pEditionTools, pAssemblyTools, pTexture};
   
   void addNode(unsigned int);
-  template<class T> T* getPalette(paletteId);
+  palette::Palette* getPalette(paletteId);
   void removeNode(unsigned int);
   void renameNode(unsigned int);
   void updateUi();
@@ -94,6 +96,7 @@ private:
   typedef std::map<unsigned int, QTreeWidgetItem*> NodeIdToTreeItem;
   
   ProjectWindow mDummyProjectWindow;
+  palette::Palette mDummyPalette;
   Controller* mpController; //ne sera jamais null
   QTreeWidget* mpObjectNavigator;
   TreeItemToNodeId mTreeItemToNodeId;
@@ -104,25 +107,6 @@ private:
   QPushButton* mpAdd;
   QPushButton* mpRemove;
 };
-
-template<class T>
-T* MainWindow::getPalette(paletteId iId)
-{
-  if(mPalettes.find(iId) != mPalettes.end())
-		switch (iId) 
-    {
-      case pEditionTools:
-        {
-          palette::Tools* p =dynamic_cast<palette::Tools*>(mPalettes[iId]);
-          assert(p);
-          return p;
-        }
-        break;
-      default:
-        break;
-    }
-  return 0;
-}
 
 } //realEdit
 

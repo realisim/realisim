@@ -27,10 +27,12 @@
 
 using namespace realisim;
 using namespace realEdit;
+  using namespace palette;
 
 MainWindow::MainWindow() 
   : QMainWindow(),
   mDummyProjectWindow(this),
+  mDummyPalette(),
   mpController(0),
   mpObjectNavigator( 0 ),
   mTreeItemToNodeId(),
@@ -81,9 +83,6 @@ MainWindow::MainWindow()
   ++row;
   pGLyt->addLayout(pButtonLyt, row, 0);
   ++row;
-  
-  //--création des palettes
-  mPalettes[pEditionTools] = new palette::Tools(this);
   
   //creations des shortcuts clavier
   QShortcut* pSelectShortcut = new QShortcut(QKeySequence("S"), this);
@@ -236,6 +235,19 @@ void MainWindow::expandAllItems()
 }
 
 //------------------------------------------------------------------------------
+//voir getObjectNode
+QTreeWidgetItem* MainWindow::getNavigatorItem(unsigned int iId)
+{
+  NodeIdToTreeItem::const_iterator it = mNodeIdToTreeItem.find(iId);
+  if( it != mNodeIdToTreeItem.end() )
+  {
+    return it->second;
+  }
+  assert(0 && "Ceci ne devrait pas arriver... il y a un probleme avec la map...");
+  return 0;
+}
+
+//------------------------------------------------------------------------------
 /*Cette méthode retourne l'id de l'object node représenté par le QTreeWidgetItem
   iptem. Règle générale, il y a toujours un id pour un ipItem sauf dans le cas
   où la méthode est appelé sur un item qui n'a pas encore été inséré dans la
@@ -254,16 +266,14 @@ unsigned int MainWindow::getObjectNode(QTreeWidgetItem* ipItem) const
 }
 
 //------------------------------------------------------------------------------
-//voir getObjectNode
-QTreeWidgetItem* MainWindow::getNavigatorItem(unsigned int iId)
+palette::Palette* MainWindow::getPalette(paletteId iId)
 {
-  NodeIdToTreeItem::const_iterator it = mNodeIdToTreeItem.find(iId);
-  if( it != mNodeIdToTreeItem.end() )
-  {
-    return it->second;
-  }
-  assert(0 && "Ceci ne devrait pas arriver... il y a un probleme avec la map...");
-  return 0;
+	std::map<paletteId, Palette*>::iterator it =
+    mPalettes.find(iId);
+  Palette* p = &mDummyPalette;
+	if(it != mPalettes.end())
+  	p = it->second;
+  return p;
 }
   
 //------------------------------------------------------------------------------
@@ -392,18 +402,6 @@ void MainWindow::setActiveProjectWindow(ProjectWindow* ipW)
     
   mpActiveProjectWindow = ipW;
   setController(mpActiveProjectWindow->getController());
-  
-  if(mpActiveProjectWindow == &mDummyProjectWindow)
-  {
-		mpAdd->setDisabled(true);
-    mpRemove->setDisabled(true);
-  }
-  else
-  {
-    mpAdd->setEnabled(true);
-    mpRemove->setEnabled(true);
-  }
-
 }
 
 //------------------------------------------------------------------------------
@@ -420,6 +418,7 @@ void MainWindow::setController(Controller& iC)
   createTree( mpObjectNavigator, e.getRootNode() );
   mpObjectNavigator->blockSignals(false);
   
+  //on s'assure que toutes les palettes créées ont un controlleur
   std::map<paletteId, palette::Palette*>::iterator it = mPalettes.begin();
   for(; it != mPalettes.end(); ++it )
     it->second->setController(iC);
@@ -448,7 +447,15 @@ void MainWindow::shortcutTranslate()
 //------------------------------------------------------------------------------
 void MainWindow::showTools()
 {
-  getPalette<palette::Tools>(pEditionTools)->show();
+	//on crée la palette sur demande
+  Palette* p = getPalette(pEditionTools);
+  if(p == &mDummyPalette)
+  {
+  	mPalettes[pEditionTools] = new palette::Tools(this);
+    mPalettes[pEditionTools]->setController(*mpController);
+  }
+  getPalette(pEditionTools)->updateUi();
+  getPalette(pEditionTools)->show();
 }
 
 //------------------------------------------------------------------------------
@@ -462,6 +469,10 @@ void MainWindow::updateUi()
   mpObjectNavigator->setCurrentItem(pItem);
   mpObjectNavigator->scrollToItem(pItem);
   mpObjectNavigator->blockSignals(false);
+  
+  //Si le active project window est dummy, on désactive les Add remove
+  mpAdd->setEnabled(mpActiveProjectWindow != &mDummyProjectWindow);
+  mpRemove->setEnabled(mpActiveProjectWindow != &mDummyProjectWindow);
   
   /*Si le noeud courant n'a plus de parent (donc le root node) on désactive
     le bouton remove. On ne permet pas d'enlever le root. Il n'y a pas vraiment

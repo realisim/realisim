@@ -27,7 +27,8 @@ EditionData::EditionData() :
   mpCurrentNode(0),
   mSelection(),
   mSelectedPoints(),
-  mSelectedPolygons()
+  mSelectedPolygons(),
+  mSelectedSegments()
 {
   setCurrentNode(getRootNode());
 }
@@ -100,6 +101,7 @@ void EditionData::select(const set<uint>& iS)
   mSelection = iS;
   mSelectedPoints.clear();
   mSelectedPolygons.clear();
+  mSelectedSegments.clear();
   
   /*a partir de la selection, on crée la liste de tous les points (unique)
   selectionnés. Les commandes (translate, rotate, scale etc...) s'effectueront
@@ -117,6 +119,14 @@ void EditionData::select(const set<uint>& iS)
       mSelectedPolygons.push_back(p);
       for(unsigned int j = 0; j < p.getPointCount(); ++j )
         uniquePointIds.insert(p.getPoint(j).getId());
+    }
+    else if(getCurrentModel().hasSegment(*it))
+    {
+    	const RealEditSegment& s =
+        getCurrentModel().getSegment(*it);
+      mSelectedSegments.push_back(s);
+      uniquePointIds.insert(s.getPoint1().getId());
+      uniquePointIds.insert(s.getPoint2().getId());
     }
   }
   

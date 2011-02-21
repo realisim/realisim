@@ -12,6 +12,7 @@
 #include <cassert>
 #include <vector>
 #include <map>
+#include <set>
 
 namespace realEdit
 {
@@ -65,31 +66,46 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-//class RealEditEdge : public DataModelBase 
-//{
-//public:
-//  RealEditEdge();
-//  RealEditEdge(const RealEditEdge&);
-//  RealEditEdge& operator=(const RealEditEdge&);
-//  virtual ~RealEditEdge();
-//
-//private:
-//	struct Guts
-//  {
-//    Guts();
-//    Guts(RealEditPoint, RealEditPoint);
-//    ~Guts();
-//    
-//    unsigned int mRefCount;
-//    RealEditPoint mPoint1;
-//    RealEditPoint mPoint2;
-//  };
-//  
-//  Guts* mpGuts;
-//
-//};
-//
+/*Les deux point qui constituent le segment sont toujours dans l'ordre suivant
+  mPoint1 est le point qui a le id le plus petit.*/
+class RealEditSegment : public DataModelBase 
+{
+public:
+  RealEditSegment();
+  RealEditSegment(RealEditPoint, RealEditPoint);
+  RealEditSegment(const RealEditSegment&);
+  RealEditSegment& operator=(const RealEditSegment&);
+  virtual ~RealEditSegment();
+  
+  virtual const RealEditPoint& getPoint1() const;
+  virtual const RealEditPoint& getPoint2() const;
+  
+  struct Comparator
+	{
+  	bool operator()(const RealEditSegment& iS1, const RealEditSegment& iS2) const;
+	};
+
+private:
+	struct Guts
+  {
+    Guts();
+    Guts(RealEditPoint, RealEditPoint);
+    ~Guts();
+    
+    unsigned int mRefCount;
+    RealEditPoint mPoint1;
+    RealEditPoint mPoint2;
+  };
+  
+  Guts* mpGuts;
+
+};
+
 //-----------------------------------------------------------------------------
+/* Un polygon peut être créé a partir de 3 (ou plus point).
+   Il contient, la liste des points, une normale en chaque point
+   (pour des raison de stockage lorsqu'on utilise une moyenne des
+   normale pour faire un smooth shade) et la liste des segments. */
 class RealEditPolygon : public DataModelBase
 {
 public:
@@ -104,6 +120,8 @@ public:
   virtual const std::vector<RealEditPoint>& getPoints() const;
   virtual unsigned int getPointCount() const;
   virtual const std::vector<Vector3d>& getNormals() const;
+  virtual const std::vector<RealEditSegment>& getSegments() const;
+  virtual void setSegment(unsigned int, RealEditSegment);
   
 private:
   struct Guts
@@ -113,9 +131,11 @@ private:
     ~Guts();
     
     void computeNormals();
+    void makeSegments();
     
     unsigned int mRefCount;
     std::vector<RealEditPoint> mPoints;
+    std::vector<RealEditSegment> mSegments;
     std::vector<Vector3d> mNormals;
   };
   
@@ -127,34 +147,32 @@ class RealEditModel : public DataModelBase
 {
 public:  
 	RealEditModel ();
-  RealEditModel (const RealEditModel& iModel);
-  RealEditModel& operator= (const RealEditModel& iM);
-	virtual ~RealEditModel ();
+  RealEditModel (const RealEditModel&);
+  RealEditModel& operator= (const RealEditModel&);
+	virtual ~RealEditModel();
 	
-  virtual void addPoint (RealEditPoint iP);
-  virtual void addPolygon (RealEditPolygon ipPoly);
+  virtual void addPoint (RealEditPoint);
+  virtual void addPolygon (RealEditPolygon);
+  virtual void addSegment(RealEditSegment);
   virtual const BB3d& getBoundingBox () const;
   virtual const Point3d& getCentroid() const;
-  virtual unsigned int getPointCount () const;
-/*c'est méthode const sont dangereuses parce quelle retourne une reference
-sur un object qui est partagé implicitement. Donc si l'utilisateur fait une
-copie et modifie la copie, il modifiera aussi l'object référencé qui se
-veut const!!!*/
-virtual const RealEditPoint& getPoint(unsigned int) const;
-virtual const std::map<unsigned int, RealEditPoint>& getPoints() const;
-  virtual unsigned int getPolygonCount () const;
-/*c'est méthode const sont dangereuses parce quelle retourne une reference
-sur un object qui est partagé implicitement. Donc si l'utilisateur fait une
-copie et modifie la copie, il modifiera aussi l'object référencé qui se
-veut const!!!*/  
-virtual const RealEditPolygon& getPolygon(unsigned int) const;
-virtual const std::map<unsigned int, RealEditPolygon>& getPolygons() const;
+  virtual const RealEditPoint& getPoint(unsigned int) const;
+  virtual const std::map<unsigned int, RealEditPoint>& getPoints() const;
+  virtual const RealEditPolygon& getPolygon(unsigned int) const;
+  virtual const std::map<unsigned int, RealEditPolygon>& getPolygons() const;
+  virtual const RealEditSegment& getSegment(unsigned int) const;
+  virtual const std::map<unsigned int, RealEditSegment>& getSegments() const;
   virtual bool hasPoint(unsigned int) const;
   virtual bool hasPolygon(unsigned int) const;
+  virtual bool hasSegment(unsigned int) const;
   virtual void updateBoundingBox();
   virtual void updateNormals();
 
 private:
+  virtual unsigned int getPointCount () const;
+  virtual unsigned int getPolygonCount () const;
+  //virtual unsigned int getSegmentCount() const;
+  
   struct Guts
   {
     Guts();
@@ -162,8 +180,9 @@ private:
     
     BB3d mBoundingBox;
     std::map<unsigned int, RealEditPoint> mPoints;
-    //std::vector<LineSegment> mLineSegments;
     std::map<unsigned int, RealEditPolygon> mPolygons;
+    std::map<unsigned int, RealEditSegment> mSegments;
+    std::set<RealEditSegment, RealEditSegment::Comparator> mSegmentPool;
     unsigned int mRefCount;
     mutable Point3d mCentroid;
   };
