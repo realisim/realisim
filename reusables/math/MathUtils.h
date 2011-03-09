@@ -123,6 +123,19 @@ namespace math
   }
   
   //---------------------------------------------------------------------------
+  template<class V>
+  inline Vect<V> operator* (const V& iVal, const Vect<V>& vect)
+  {
+    Vect<V> result;
+    
+    result.setX(iVal * vect.getX());
+    result.setY(iVal * vect.getY());
+    result.setZ(iVal * vect.getZ());
+    
+    return result;
+  }
+  
+  //---------------------------------------------------------------------------
   //retourne la matrice de rotation correpondant a la rotation de iAngle
   //radian autour de l'axe iAxis
   template<class T>
@@ -134,6 +147,28 @@ namespace math
     quat.setRot(iAngle, iAxis);
     
     return quat.getUnitRotationMatrix();
+  }
+  
+  //---------------------------------------------------------------------------
+  template<class T>
+  inline Matrix4<T> interpolate(const Matrix4<T>& iM1, const Matrix4<T>& iM2, 
+    double iT)
+  {
+  	Quat4d q1( iM1 );
+    Quat4d q2( iM2 );
+    //on compare avec les longueurs pour prendre le plus petit angle
+    if( (-q2-q1).getLength() < (q2-q1).getLength() )
+    {
+      q2 = -q2;
+    }
+    
+    q2 = q1*( 1 - iT ) + q2*iT;
+    Matrix4d iterationMatrix = q2.getUnitRotationMatrix();
+    
+    //trouver la translation totale a effectuer
+    iterationMatrix.setTranslation( iM1.getTranslation()*( 1 - iT ) + 
+      iM2.getTranslation()*( iT ) );
+    return iterationMatrix;
   }
   
   //---------------------------------------------------------------------------

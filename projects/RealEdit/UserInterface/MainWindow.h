@@ -73,6 +73,8 @@ private slots:
   void objectNodeSelectionChanged(QTreeWidgetItem*, QTreeWidgetItem*);
   void projectWindowAboutToClose(ProjectWindow*);
   void removeObjectNode();
+  void shortcutExtrude();
+  void shortcutRemove();
   void shortcutSelect();
   void shortcutTranslate();
   void showTools();

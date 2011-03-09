@@ -9,7 +9,7 @@
 /*Classe de base pour les commandes du système de undo/redo. Il suffit de la
   sous classer et de l'ajouter a utils::CommandStack. Ensuite, via le 
   CommandStack, on peut appeler CommandStack::undo qui appelle le Command::undo
-  ou CommandStack::redo qui appelle Command::redo.
+  ou CommandStack::redo qui appelle Command::redo. 
   
   notes sur les méthodes:
   execute(): sert à executer la commande une première fois. L'utilisateur de la
@@ -27,15 +27,11 @@ namespace utils
 {
   class Command
   {
-    friend class CommandStack;
-    
     public:
       Command(){};
       virtual ~Command(){};
       
       virtual void execute() = 0;
-      
-    protected:
       virtual void undo() = 0;
       virtual void redo() {execute();}
   };

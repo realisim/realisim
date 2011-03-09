@@ -336,6 +336,15 @@ void Camera::projectionGL( int iWidth, int iHeight )
   computeProjection();
 }
 //-----------------------------------------------------------------------------
+void Camera::print() const
+{
+  using namespace std;
+  cout<<"\n\nPos: "<<mPos.getX()<<" "<<mPos.getY()<<" "<<mPos.getZ();
+  cout<<"\nLook: "<<mLook.getX()<<" "<<mLook.getY()<<" "<<mLook.getZ();
+  cout<<"\nLat: "<<mLat.getX()<<" "<<mLat.getY()<<" "<<mLat.getZ();
+  cout<<"\nUp: "<<mUp.getX()<<" "<<mUp.getY()<<" "<<mUp.getZ();
+}
+//-----------------------------------------------------------------------------
 void Camera::computeProjection()
 {
   glMatrixMode(GL_PROJECTION);
@@ -421,7 +430,19 @@ void Camera::set( const Point3d& iPos,
   mLat = lookVect ^ getUp();
   mLat.normalise();
   
-  mUp = getLat() ^lookVect;
+  mUp = getLat() ^ lookVect;
+  mUp.normalise();
+}
+
+//-----------------------------------------------------------------------------
+void Camera::set( const Point3d& iPos, const Point3d& iLook,
+  const Vector3d& iUp, const Vector3d& iLat)
+{
+  mPos = iPos;
+  mLook = iLook;
+  mUp = iUp;
+  mLat = iLat;
+  mLat.normalise();
   mUp.normalise();
 }
 
@@ -433,6 +454,10 @@ void Camera::setLat( const Vector3d& iLat )
   
   mUp = ( mLat ^ Vector3d( getPos(), getLook() ) ).normalise();
 }
+
+//-----------------------------------------------------------------------------
+void Camera::setLook(const Point3d& iLook)
+{ set(getPos(), iLook, getUp()); }
 
 //-----------------------------------------------------------------------------
 void Camera::setMode( Mode iMode )

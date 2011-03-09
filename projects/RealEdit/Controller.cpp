@@ -17,24 +17,25 @@ Controller::Controller(ProjectWindow& iProjectWindow) :
   mDisplayData(),
   mEditionData(),
   mMode(mEdition),
-  mTool(tSelect)
+  mTool(tSelect),
+  mCanChangeTool(true)
 {
   ObjectNode* pRootNode = mEditionData.getCurrentNode();
   createPlatonicSolid(PlatonicSolid::tTetrahedron);
 
-//  ObjectNode* pBouetteNode =  pRootNode->addNode( "étron" );
-//  pBouetteNode->translate( Point3d( -8.0, 0.0, 0.0 ) );
-//  pBouetteNode->rotate( PI/2.0,
-//    Vector3d( 0.0, 0.0, 1.0 ) );
-//  mEditionData.setCurrentNode( pBouetteNode );
-//  createPlatonicSolid(PlatonicSolid::tCube, 2);
-//  
-//  ObjectNode* pNode = pBouetteNode->addNode( "bâche" );
-//  pNode->rotate( PI/4.0,
-//    Vector3d( 0.0, 0.0, 1.0 ) );
-//  pNode->translate( Vector3d( -800.0, 0.0, 0.0 ) );
-//  mEditionData.setCurrentNode( pNode );
-//  createPlatonicSolid(PlatonicSolid::tIsocahedron, 3);
+  ObjectNode* pBouetteNode =  pRootNode->addNode( "étron" );
+  pBouetteNode->translate( Point3d( -8.0, 0.0, 0.0 ) );
+  pBouetteNode->rotate( PI/2.0,
+    Vector3d( 0.0, 0.0, 1.0 ) );
+  mEditionData.setCurrentNode( pBouetteNode );
+  createPlatonicSolid(PlatonicSolid::tCube, 2);
+  
+  ObjectNode* pNode = pBouetteNode->addNode( "bâche" );
+  pNode->rotate( PI/4.0,
+    Vector3d( 0.0, 0.0, 1.0 ) );
+  pNode->translate( Vector3d( -800.0, 0.0, 0.0 ) );
+  mEditionData.setCurrentNode( pNode );
+  createPlatonicSolid(PlatonicSolid::tIsocahedron, 3);
 }
 
 Controller::~Controller()

@@ -1,11 +1,5 @@
-/*
- *  Vierwer.h
- *  Realisim
- *
- *  Created by Pierre-Olivier Beaudoin on 
- */
-
 #include "Commands/changeTool.h"
+#include "Commands/extrude.h"
 #include "Controller.h"
 #include "Palettes/Tools.h"
 #include <QtGui>
@@ -43,11 +37,15 @@ Tools::Tools(QWidget* ipParent /* = 0*/) : Palette(ipParent)
   pSelect->setCheckable(true);
   QPushButton* pTranslate = new QPushButton("t", this);
   pTranslate->setCheckable(true);
+  QPushButton* pExtrude = new QPushButton("e", this);
+  pExtrude->setCheckable(false);
   
   mpButtonGroup->addButton(pSelect, idSelect);
   mpButtonGroup->addButton(pTranslate, idTranslate);
+  mpButtonGroup->addButton(pExtrude, idExtrude);
   pLyt->addWidget(pSelect);
   pLyt->addWidget(pTranslate);
+  pLyt->addWidget(pExtrude);
   pLyt->addStretch(1);
 
   connect(mpButtonGroup, SIGNAL(buttonClicked(int)), this, SLOT(toolSelected(int)));
@@ -60,6 +58,9 @@ Tools::~Tools()
 void Tools::toolSelected(int iId)
 {
   using namespace commands;
+  if(!mpController->canChangeTool())
+  	return;
+  
   switch ((toolId)iId) 
   {
     case idSelect:
@@ -72,6 +73,13 @@ void Tools::toolSelected(int iId)
     case idTranslate:
       {
         ChangeTool* c = new ChangeTool(*mpController, Controller::tTranslate);
+        c->execute();
+        mpController->addCommand(c);
+      }
+      break;
+    case idExtrude:
+      {
+        Extrude* c = new Extrude(*mpController);
         c->execute();
         mpController->addCommand(c);
       }
@@ -102,6 +110,7 @@ void Tools::updateUi()
         p->setChecked(true);
         break;
     }
+    case Controller::tExtrude: break;
     default: break;
   }
   mpButtonGroup->blockSignals(false);

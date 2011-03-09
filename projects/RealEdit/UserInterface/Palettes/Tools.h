@@ -36,7 +36,7 @@ protected slots:
 	virtual void toolSelected(int);
   
 protected:
-	enum toolId{idSelect, idTranslate};
+	enum toolId{idSelect, idTranslate, idExtrude};
 
   QButtonGroup* mpButtonGroup;
 };

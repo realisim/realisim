@@ -12,19 +12,17 @@ namespace commands
   using namespace std;
   class ChangeTool : public realisim::utils::Command
   {
-   public:
-     explicit ChangeTool(Controller&,
-       Controller::tool);
-     virtual ~ChangeTool();
-     
-     virtual void execute();
-     
-  protected:
-    virtual void undo();
-        
-    Controller& mController;
-    Controller::tool mPreviousTool;
-    Controller::tool mTool;
+    public:
+      explicit ChangeTool(Controller&, Controller::tool);
+      virtual ~ChangeTool();
+
+      virtual void execute();
+      virtual void undo();
+      
+    private:
+      Controller& mController;
+      Controller::tool mPreviousTool;
+      Controller::tool mTool;
   };
 }
 }

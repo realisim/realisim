@@ -16,20 +16,18 @@ namespace commands
 {
   class AddNode : public realisim::utils::Command
   {
-   public:
-     
-     explicit AddNode(Controller&, unsigned int iParentId);
-     virtual ~AddNode();
-     
-     virtual void execute();
-     virtual unsigned int getNodeId() const;
-     
-  protected:
-    virtual void undo();
+    public:
+      explicit AddNode(Controller&, unsigned int iParentId);
+      virtual ~AddNode();
+
+      virtual void execute();
+      virtual unsigned int getNodeId() const;
+      virtual void undo();
     
-    Controller& mController;
-    unsigned int mNodeId;
-    unsigned int mParentId;
+    private:
+      Controller& mController;
+      unsigned int mNodeId;
+      unsigned int mParentId;
   };
 }
 }

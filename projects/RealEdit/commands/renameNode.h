@@ -16,20 +16,18 @@ namespace commands
 {
   class RenameNode : public realisim::utils::Command
   {
-   public:
-     
-     explicit RenameNode(Controller&, unsigned int, QString);
-     virtual ~RenameNode();
-     
-     virtual void execute();
-     
-  protected:
-    virtual void undo();
+  	public:
+      explicit RenameNode(Controller&, unsigned int, QString);
+      virtual ~RenameNode();
+
+      virtual void execute();
+      virtual void undo();
   
-    Controller& mC;
-    unsigned int mId;
-    QString mOldName;
-    QString mNewName;
+    private:
+      Controller& mC;
+      unsigned int mId;
+      QString mOldName;
+      QString mNewName;
   };
 }
 }

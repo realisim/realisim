@@ -320,8 +320,24 @@ unsigned int RealEditPolygon::getPointCount () const
 { return mpGuts->mPoints.size(); }
 
 //------------------------------------------------------------------------------
+const Vector3d& RealEditPolygon::getNormal (unsigned int iIndex) const
+{
+  assert(iIndex < getNormals().size());
+  return getNormals()[iIndex];
+}
+
+//------------------------------------------------------------------------------
 const vector<Vector3d>& RealEditPolygon::getNormals () const
 { return mpGuts->mNormals;}
+
+//------------------------------------------------------------------------------
+const RealEditSegment& RealEditPolygon::getSegment(unsigned int iIndex) const
+{
+ if(iIndex < getSegments().size())
+    return getSegments()[iIndex];
+  else
+    return mDummySegment;
+}
 
 //------------------------------------------------------------------------------
 const vector<RealEditSegment>& RealEditPolygon::getSegments() const
@@ -418,9 +434,7 @@ void RealEditModel::addPolygon (RealEditPolygon iP)
       iP.setSegment(i, *it);
     }
     else
-    {
-    	/*Les segments est nouveau. On l'ajoute au pool et au model.*/
-    	mpGuts->mSegmentPool.insert(s[i]);
+    {    	
       addSegment(s[i]);
     }
   }
@@ -428,7 +442,11 @@ void RealEditModel::addPolygon (RealEditPolygon iP)
 
 //------------------------------------------------------------------------------
 void RealEditModel::addSegment (RealEditSegment iS)
-{ mpGuts->mSegments.insert(make_pair(iS.getId(), iS)); }
+{
+  mpGuts->mSegments.insert(make_pair(iS.getId(), iS)); 
+  /*Les segments est nouveau. On l'ajoute au pool et au model.*/
+  mpGuts->mSegmentPool.insert(iS);
+}
 
 //------------------------------------------------------------------------------
 const BB3d& RealEditModel::getBoundingBox () const
@@ -454,7 +472,7 @@ unsigned int RealEditModel::getPointCount () const
 sur un object qui est partagé implicitement. Donc si l'utilisateur fait une
 copie et modifie la copie, il modifiera aussi l'object référencé qui se
 veut const!!!*/  
-const RealEditPoint& RealEditModel::getPoint(unsigned int iId) const
+RealEditPoint& RealEditModel::getPoint(unsigned int iId) const
 {
   map<unsigned int, RealEditPoint>::iterator it = mpGuts->mPoints.find(iId);
   if(it != mpGuts->mPoints.end())
@@ -472,7 +490,7 @@ unsigned int RealEditModel::getPolygonCount () const
 
 //------------------------------------------------------------------------------
 /*Attention! voir RealEditModel::getPoint(unsigned int)*/ 
-const RealEditPolygon& RealEditModel::getPolygon(unsigned int iId) const
+RealEditPolygon& RealEditModel::getPolygon(unsigned int iId) const
 {
   map<unsigned int, RealEditPolygon>::iterator it = mpGuts->mPolygons.find(iId);
   if(it != mpGuts->mPolygons.end())
@@ -485,17 +503,80 @@ const map<unsigned int, RealEditPolygon>& RealEditModel::getPolygons() const
 { return mpGuts->mPolygons; }
 
 //------------------------------------------------------------------------------
-const std::map<unsigned int, RealEditSegment>& RealEditModel::getSegments() const
+vector<RealEditPolygon> RealEditModel::getPolygonsContainingPoint(unsigned int iId) const
+{
+	vector<RealEditPolygon> r;
+  if(!hasPoint(iId))
+  	return r;
+    
+	map<unsigned int, RealEditPolygon>::const_iterator it = getPolygons().begin();
+	for(; it != getPolygons().end(); ++it)
+  {
+  	const RealEditPolygon& p = it->second;
+    for(unsigned int j = 0; j < p.getPoints().size(); ++j)
+    {
+    	if(p.getPoint(j).getId() == iId)
+      {
+      	r.push_back(p);
+        break;
+      }
+    }
+  }
+  return r;
+}
+
+//------------------------------------------------------------------------------
+vector<RealEditPolygon> RealEditModel::getPolygonsContainingSegment(unsigned int iId) const
+{
+  vector<RealEditPolygon> r;
+  if(!hasSegment(iId))
+  	return r;
+    
+	map<unsigned int, RealEditPolygon>::const_iterator it = getPolygons().begin();
+	for(; it != getPolygons().end(); ++it)
+  {
+  	const RealEditPolygon& p = it->second;
+    for(unsigned int j = 0; j < p.getSegments().size(); ++j)
+    {
+    	if(p.getSegment(j).getId() == iId)
+      {
+      	r.push_back(p);
+        break;
+      }
+    }
+  }
+  return r;
+}
+
+//------------------------------------------------------------------------------
+const map<unsigned int, RealEditSegment>& RealEditModel::getSegments() const
 {return mpGuts->mSegments;}
 
 //------------------------------------------------------------------------------
 /*Attention! voir RealEditModel::getPoint(unsigned int)*/ 
-const RealEditSegment& RealEditModel::getSegment(unsigned int iId) const
+RealEditSegment& RealEditModel::getSegment(unsigned int iId) const
 {
   map<unsigned int, RealEditSegment>::iterator it = mpGuts->mSegments.find(iId);
   if(it != mpGuts->mSegments.end())
     return it->second;
   return mDummySegment;
+}
+
+//------------------------------------------------------------------------------
+vector<RealEditSegment> RealEditModel::getSegmentsContainingPoint(unsigned int iId) const
+{
+  vector<RealEditSegment> r;
+  if(!hasPoint(iId))
+  	return r;
+  
+	map<unsigned int, RealEditSegment>::const_iterator it = getSegments().begin();
+	for(; it != getSegments().end(); ++it)
+  {
+  	const RealEditSegment& s = it->second;
+    if(s.getPoint1().getId() == iId || s.getPoint2().getId() == iId)
+    	r.push_back(s);
+  }
+  return r;
 }
 
 //------------------------------------------------------------------------------
@@ -526,6 +607,33 @@ bool RealEditModel::hasSegment (unsigned int iId) const
   if(it != mpGuts->mSegments.end())
       return true;
   return false;
+}
+
+//------------------------------------------------------------------------------
+void RealEditModel::removePoint(unsigned int iId)
+{
+	if(!hasPoint(iId))
+  	return;
+  mpGuts->mPoints.erase(iId);
+}
+
+//------------------------------------------------------------------------------
+void RealEditModel::removePolygon(unsigned int iId)
+{
+	if(!hasPolygon(iId))
+  	return;
+  mpGuts->mPolygons.erase(iId);
+}
+
+//------------------------------------------------------------------------------
+void RealEditModel::removeSegment(unsigned int iId)
+{
+  if(!hasSegment(iId))
+    return;
+  //on enleve le segment du pool avant d'enelever le segment du model,
+  //sinon la méthode getSegment va échouer!
+  mpGuts->mSegmentPool.erase(getSegment(iId));
+  mpGuts->mSegments.erase(iId);
 }
 
 //------------------------------------------------------------------------------

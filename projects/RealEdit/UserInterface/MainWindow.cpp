@@ -8,6 +8,8 @@
 #include "commands/addNode.h"
 #include "commands/changeNode.h"
 #include "commands/changeTool.h"
+#include "commands/extrude.h"
+#include "commands/remove.h"
 #include "commands/removeNode.h"
 #include "commands/renameNode.h"
 #include "Controller.h"
@@ -92,6 +94,14 @@ MainWindow::MainWindow()
   QShortcut* pTranslateShortcut = new QShortcut(QKeySequence("T"), this);
   pTranslateShortcut->setContext(Qt::ApplicationShortcut);
   connect(pTranslateShortcut, SIGNAL(activated()), this, SLOT(shortcutTranslate()));
+  
+  QShortcut* pExtrudeShortcut = new QShortcut(QKeySequence("E"), this);
+  pExtrudeShortcut->setContext(Qt::ApplicationShortcut);
+  connect(pExtrudeShortcut, SIGNAL(activated()), this, SLOT(shortcutExtrude()));
+  
+  QShortcut* pRemoveShortcut = new QShortcut(QKeySequence("Backspace"), this);
+  pRemoveShortcut->setContext(Qt::ApplicationShortcut);
+  connect(pRemoveShortcut, SIGNAL(activated()), this, SLOT(shortcutRemove()));
   
   setActiveProjectWindow(&mDummyProjectWindow);
 }
@@ -427,21 +437,45 @@ void MainWindow::setController(Controller& iC)
 }
 
 //------------------------------------------------------------------------------
-void MainWindow::shortcutSelect()
+void MainWindow::shortcutExtrude()
 {
-  commands::ChangeTool* c = 
-    new commands::ChangeTool(*mpController, Controller::tSelect);
+  commands::Extrude* c = 
+    new commands::Extrude(*mpController);
   c->execute();
   mpController->addCommand(c);
 }
 
 //------------------------------------------------------------------------------
-void MainWindow::shortcutTranslate()
+void MainWindow::shortcutRemove()
 {
-  commands::ChangeTool* c = 
-    new commands::ChangeTool(*mpController, Controller::tTranslate);
+  commands::Remove* c = 
+    new commands::Remove(*mpController);
   c->execute();
   mpController->addCommand(c);
+}
+
+//------------------------------------------------------------------------------
+void MainWindow::shortcutSelect()
+{
+	if(mpController->canChangeTool())
+  {
+    commands::ChangeTool* c = 
+      new commands::ChangeTool(*mpController, Controller::tSelect);
+    c->execute();
+    mpController->addCommand(c);
+  }
+}
+
+//------------------------------------------------------------------------------
+void MainWindow::shortcutTranslate()
+{
+  if(mpController->canChangeTool())
+  {
+    commands::ChangeTool* c = 
+      new commands::ChangeTool(*mpController, Controller::tTranslate);
+    c->execute();
+    mpController->addCommand(c);
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -470,14 +504,16 @@ void MainWindow::updateUi()
   mpObjectNavigator->scrollToItem(pItem);
   mpObjectNavigator->blockSignals(false);
   
-  //Si le active project window est dummy, on désactive les Add remove
+  //Si le active project window est dummy, on désactive le Add
   mpAdd->setEnabled(mpActiveProjectWindow != &mDummyProjectWindow);
-  mpRemove->setEnabled(mpActiveProjectWindow != &mDummyProjectWindow);
-  
+  //Si le active project window est dummy, on désactive le remove
   /*Si le noeud courant n'a plus de parent (donc le root node) on désactive
-    le bouton remove. On ne permet pas d'enlever le root. Il n'y a pas vraiment
-    de raison qui empêche de l'enlever, mais je ne vois pas à quoi cela
-    pourrait servir.*/
-  mpRemove->setDisabled(!n->getParentNode());
+  le bouton remove. On ne permet pas d'enlever le root. Il n'y a pas vraiment
+  de raison qui empêche de l'enlever, mais je ne vois pas à quoi cela
+  pourrait servir.*/
+  mpRemove->setEnabled(mpActiveProjectWindow != &mDummyProjectWindow &&
+    n->getParentNode());
+  
+
 }
 

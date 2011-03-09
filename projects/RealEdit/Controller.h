@@ -57,12 +57,13 @@ class Controller
 {
 public:
   enum mode{mAssembly, mEdition};
-  enum tool{tSelect, tTranslate};
+  enum tool{tSelect, tTranslate, tExtrude};
   
 	Controller(ProjectWindow&);
 	virtual ~Controller();
   
   virtual void addCommand(utils::Command*);
+  virtual bool canChangeTool() const {return mCanChangeTool;}
   virtual DisplayData& getDisplayData() {return mDisplayData;}
   virtual const EditionData& getEditionData() const;
   virtual EditionData& getEditionData();
@@ -72,6 +73,7 @@ public:
   virtual tool getTool() const {return mTool;}
   virtual void redo();
   virtual void undo();
+  virtual void setCanChangeTool(bool b) {mCanChangeTool = b;}
   virtual void setMode(mode iM);
   virtual void setTool(tool);
 
@@ -86,6 +88,7 @@ private:
   EditionData mEditionData;
   mode mMode;
   tool mTool;
+  bool mCanChangeTool;
 //bool mNeedToSave;
 };
 

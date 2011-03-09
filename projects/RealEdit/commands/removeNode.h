@@ -27,20 +27,18 @@ namespace commands
 {
   class RemoveNode : public realisim::utils::Command
   {
-   public:
-     
+  public:
      explicit RemoveNode(Controller&, unsigned int);
      virtual ~RemoveNode();
      
      virtual void execute();
      virtual unsigned int getNodeId() const;
-     
-  protected:
-    virtual void undo();
-    
-    Controller& mController;
-    ObjectNode mNode;
-    unsigned int mParentId;
+     virtual void undo();
+   
+		private:
+     Controller& mController;
+     ObjectNode mNode;
+     unsigned int mParentId;
   };
 }
 }

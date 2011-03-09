@@ -42,7 +42,7 @@ public:
   void pushShader(const Shader& = Shader());
   void popFrameBuffer();
   void popShader();
-  void setCamera( const Camera& iCam, bool iAnimate = true );
+  void setCamera( const Camera& iCam, bool iAnimate = true, int iDuration = 1000 );
   void setCameraMode( Camera::Mode iMode );
   void setCameraOrientation( Camera::Orientation iO );
   
@@ -73,6 +73,7 @@ protected:
 private:  
   QTime mAnimationTimer;
   int mAnimationTimerId;
+  int mAnimationDuration;
   double mFps;
   int mFpsFrameCount;
   QTime mFpsTimer;
