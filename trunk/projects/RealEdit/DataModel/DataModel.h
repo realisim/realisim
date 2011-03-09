@@ -119,7 +119,9 @@ public:
   virtual const RealEditPoint& getPoint(unsigned int iIndex) const;
   virtual const std::vector<RealEditPoint>& getPoints() const;
   virtual unsigned int getPointCount() const;
+  virtual const Vector3d& getNormal(unsigned int) const;
   virtual const std::vector<Vector3d>& getNormals() const;
+  virtual const RealEditSegment& getSegment(unsigned int) const;
   virtual const std::vector<RealEditSegment>& getSegments() const;
   virtual void setSegment(unsigned int, RealEditSegment);
   
@@ -143,6 +145,20 @@ private:
 };
 
 //-----------------------------------------------------------------------------
+/*
+
+  Notes :Pas de const sur les méthodes get à cause du partage implicite...
+  Il suffit de faire une copie de la reference const et on peut ensuite la
+  modifier... donc pas de const.
+  
+  Les segments sont générés à partir du polygone lorsque celui ci est ajouté
+  au modèle. Il s'agit d'un convénience. On peut très bien ajouter les
+  segments a bras avant d'jouter les polygones. Les segments générés
+  automatiquement lors de l'ajout d'un polygone ne peuvent pas créer de doublon
+  i.e: deux segments formés des même points. Par contre, l'ajout de segment via
+  la méthode addSegment laisse la création du 2 segments ayant les mêmes points.
+  Tout comme les méthodes addPoint et addPolygon.
+  */
 class RealEditModel : public DataModelBase
 {
 public:  
@@ -156,15 +172,21 @@ public:
   virtual void addSegment(RealEditSegment);
   virtual const BB3d& getBoundingBox () const;
   virtual const Point3d& getCentroid() const;
-  virtual const RealEditPoint& getPoint(unsigned int) const;
+  virtual RealEditPoint& getPoint(unsigned int) const;
   virtual const std::map<unsigned int, RealEditPoint>& getPoints() const;
-  virtual const RealEditPolygon& getPolygon(unsigned int) const;
+  virtual RealEditPolygon& getPolygon(unsigned int) const;
   virtual const std::map<unsigned int, RealEditPolygon>& getPolygons() const;
-  virtual const RealEditSegment& getSegment(unsigned int) const;
+virtual std::vector<RealEditPolygon> getPolygonsContainingPoint(unsigned int) const;
+virtual std::vector<RealEditPolygon> getPolygonsContainingSegment(unsigned int) const;
+  virtual RealEditSegment& getSegment(unsigned int) const;
   virtual const std::map<unsigned int, RealEditSegment>& getSegments() const;
+virtual std::vector<RealEditSegment> getSegmentsContainingPoint(unsigned int) const;
   virtual bool hasPoint(unsigned int) const;
   virtual bool hasPolygon(unsigned int) const;
   virtual bool hasSegment(unsigned int) const;
+  virtual void removePoint(unsigned int);
+  virtual void removePolygon(unsigned int);
+  virtual void removeSegment(unsigned int);
   virtual void updateBoundingBox();
   virtual void updateNormals();
 

@@ -28,13 +28,17 @@ public:
   EditionData ();
   ~EditionData ();
   
+  enum filter
+  {fPoints = 0x0001, fSegments = 0x0010, fPolygons = 0x0100, fAll = 0x0111};
+  
 //bool fromString(const QString&);
-  const RealEditModel getCurrentModel() const {return mCurrentModel;}
-  RealEditModel getCurrentModel(){return mCurrentModel;}
+  const RealEditModel& getCurrentModel() const {return mCurrentModel;}
+  RealEditModel& getCurrentModel(){return mCurrentModel;}
   const ObjectNode* getCurrentNode () const;
   ObjectNode* getCurrentNode ();
   const ObjectNode* getNode(unsigned int) const;
   ObjectNode* getNode(unsigned int);
+  vector<RealEditPoint> getAllPointsFromSelection(filter = fAll);
   vector<RealEditPoint>& getSelectedPoints() {return mSelectedPoints;}
   vector<RealEditPolygon>& getSelectedPolygons() {return mSelectedPolygons;}
   vector<RealEditSegment>& getSelectedSegments() {return mSelectedSegments;}

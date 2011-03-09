@@ -76,18 +76,22 @@ public:
   Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
   void projectionGL( int, int );
   void set( const Point3d&, const Point3d&, const Vector3d& );
+  void set( const Point3d&, const Point3d&, const Vector3d&, const Vector3d& );
   void setMode( Mode );
   void setPos(const Point3d&);
+  void setLook(const Point3d&);
   void setOrientation( Orientation );
   void setTransformationToLocal(const Matrix4d&);
   void setTransformationToGlobal(const Matrix4d&);
   void setZoom(double);
+//  QString toString() const;
+void print() const;
   
 protected:
   void computeLatAndUp();
   void computeProjection();
   double getVisibleGLUnit() const;
-  void setLat( const Vector3d& iLat );
+  void setLat( const Vector3d& iLat );  
   void setUp( const Vector3d& iUp );
   
   Mode mMode;

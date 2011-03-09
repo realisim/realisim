@@ -21,8 +21,7 @@ using namespace std;
 
 namespace
 {
-  const int kCameraAnimationTime = 1000; //ms
-  const int kFramesToComputeFps = 10;
+  const int kFramesToComputeFps = 50;
   
   const double kMaxZoom = 1/128.0;
   const double kMinZoom = 65536;
@@ -38,6 +37,7 @@ mOldCam(),
 mNewCam(),
 mAnimationTimer(),
 mAnimationTimerId(),
+mAnimationDuration(0),
 mFps(0.0),
 mFpsFrameCount(0),
 mFpsTimer(),
@@ -95,8 +95,7 @@ void Widget3d::initializeGL()
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_LIGHTING);
   glEnable(GL_LIGHT0);
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
+  glDisable(GL_CULL_FACE);
   glDisable(GL_TEXTURE_2D);
   glDisable(GL_TEXTURE_3D);
 }
@@ -263,6 +262,7 @@ vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
     de la surface.*/
   if(absWidth > 1 || absHeight > 1 )
   {
+  	glEnable(GL_CULL_FACE);
   	glCullFace(GL_FRONT);
     Widget3d::paintGL();
     drawSceneForPicking();
@@ -336,33 +336,20 @@ Widget3d::resizeGL(int iWidth, int iHeight)
 
 //-----------------------------------------------------------------------------
 void
-Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/ )
+Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
+  int iDuration /*=1000ms*/ )
 {
-  mOldCam = mCam;
+  mOldCam = mCam;  
   mNewCam = iCam;
   
   if( iAnimate )
   {
     /*L'animation de la camera va interpoler la transformation entre la
       la vielle camera (mOldCam) et la nouvelle camera (mNewCame). Cette
-      matrice interpolé sera appliqué a la camera courante (mCam). Cette
-      méthode permet a l'usagé de modifié la position relative de la caméra 
-      durant l'animation (parce que la position globale de la camera est
-      mCam.getPos() * mCam.getTransformationToGlobal() ). On ne veut pas
-      interpolé la position, le point visé et le up de la caméra locale parce
-      que ca empêcherait l'utilisateur de les modifier durant l'animation. Par
-      contre, on veut quand même permettre de modifier la position locale de la
-      caméra, via la méthode Camera::set(Point3d, Poin3d, Vector3d), c'est 
-      pourquoi on applique la position locale de la nouvelle caméra à la caméra
-      courante. 
+      matrice interpolé sera appliqué a la camera courante (mCam).*/
       
-      Note: Pour donner l'effet d'interpoler le vecteur up (donner une 
-      impression de tanguage) ou d'interpoler sur le point visé (donner 
-      l'impression de déplace la caméra), il est très facile de le faire en
-      modifiant la transformation locale ou globale.*/
-  	mCam.set(mNewCam.getPos(), mNewCam.getLook(), mNewCam.getUp());
-  
     //we use a QTime to track animation time
+    mAnimationDuration = iDuration;
     mAnimationTimer.start();
     //start a timer that will timeout as quick as possible which will trigger
     //the overloaded method timerEvent( QTimerEvent* )
@@ -425,29 +412,53 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
 {
   if ( ipE->timerId() == mAnimationTimerId )
   {
-    double animationTime = min( kCameraAnimationTime, mAnimationTimer.elapsed() );
-    double t = animationTime / (double)kCameraAnimationTime;
+    double animationTime = min( mAnimationDuration, mAnimationTimer.elapsed() );
+    double t = animationTime / (double)mAnimationDuration;
     t = inversePower(t, 3);
     
-    Quat4d q1( mOldCam.getTransformationToLocal() );
-    Quat4d q2( mNewCam.getTransformationToLocal() );
-    //on compare avec les longueurs pour prendre le plus petit angle
-    if( (-q2-q1).getLength() < (q2-q1).getLength() )
-    {
-      q2 = -q2;
-    }
+    //animation du système de coordonnées de la caméra
+    Matrix4d iterationMatrix = 
+      math::interpolate(mOldCam.getTransformationToGlobal(),
+        mNewCam.getTransformationToGlobal(), t);
+
+    mCam.setTransformationToGlobal(iterationMatrix);
+        
+    /*animation de la position de la camera à l'intérieur
+      du systeme de coordonnées*/
     
-    q2 = q1*( 1 - t ) + q2*t;
-    Matrix4d iterationMatrix = q2.getUnitRotationMatrix();
+    /*Ici, on bircole une matrice (main droite) orthonormale qui réprésente
+      l'orientation de la caméra (pos, lat, up, look). On interpolera
+      la vielle orientation avec la nouvelle afin d'obtenir les positions,
+      ainsi que les vecteurs lat, up er look intermédiaires.*/
+    Vector3d look;
+    Matrix4d m1;    
+    m1.setRow1(mOldCam.getLat().getX(), mOldCam.getLat().getY(),mOldCam.getLat().getZ(), 0);
+    m1.setRow2(mOldCam.getUp().getX(), mOldCam.getUp().getY(),mOldCam.getUp().getZ(), 0);    
+		//La matrice doit être une matrice main droite (voir quaternion.h)
+    look.set(mOldCam.getLook(), mOldCam.getPos());
+    look.normalise();
+    m1.setRow3(look.getX(), look.getY(),look.getZ(), 0);
+    m1.setTranslation(mOldCam.getPos());
     
-    //trouver la translation totale a effectuer
-    iterationMatrix.setTranslation( mOldCam.getTransformationToLocal().getTranslation()*( 1 - t ) + 
-      mNewCam.getTransformationToLocal().getTranslation()*( t ) );
+    Matrix4d m2;
+    m2.setRow1(mNewCam.getLat().getX(), mNewCam.getLat().getY(),mNewCam.getLat().getZ(), 0);
+    m2.setRow2(mNewCam.getUp().getX(), mNewCam.getUp().getY(),mNewCam.getUp().getZ(), 0);
+    //La matrice doit être une matrice main droite (voir quaternion.h)
+    look.set(mNewCam.getLook(), mNewCam.getPos());
+    look.normalise();
+    m2.setRow3(look.getX(), look.getY(),look.getZ(), 0);
+    m2.setTranslation(mNewCam.getPos());
+
+		iterationMatrix = math::interpolate(m1, m2, t);
+    Vector3d interpolatedLook = toVector(mOldCam.getLook()) * (1 - t) +
+      toVector(mNewCam.getLook()) * t;
+    mCam.set(iterationMatrix.getTranslation(),
+    	toPoint(interpolatedLook),
+      iterationMatrix.getBaseY(),
+      iterationMatrix.getBaseX());
+
     
-    //getCamera().set(p2, l2, u2);
-    mCam.setTransformationToLocal(iterationMatrix);
-    
-    if ( animationTime >= kCameraAnimationTime )
+    if ( animationTime >= mAnimationDuration )
     {
       killTimer( mAnimationTimerId );
       mAnimationTimerId = 0;
@@ -479,15 +490,20 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
   else
   {
     int wheelDir = ipE->delta() > 0 ? 1.0 : -1.0;
-    Vector3d lookDirection(getCamera().getPos(), getCamera().getLook());
+    Camera c = getCamera();
+    Vector3d lookDirection(c.getPos(), c.getLook());
     
-      double logLook = log(lookDirection.fastNorm());
-      Point3d p = getCamera().getPos() +
-        lookDirection.normalise() * logLook * 0.8 * wheelDir;
+    double logLook = log(lookDirection.fastNorm());
+    Point3d p = getCamera().getPos() +
+      lookDirection.normalise() * logLook * 0.8 * wheelDir;
       
-      Camera c = getCamera();
+    if( Vector3d(p, c.getLook()).norm() >= 1.0 )
+    {
       c.setPos(p);
       setCamera(c, false);
+//      printf("\n\nLook: %3.2f, %3.2f, %3.2f", c.getLook().getX(), c.getLook().getY(), c.getLook().getZ());
+//      printf("\nPos: %3.2f, %3.2f, %3.2f", p.getX(), p.getY(), p.getZ());
+    }
   }
 
   update();

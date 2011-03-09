@@ -29,10 +29,11 @@ void Translate::execute()
   {
     if(mC.getMode() == Controller::mEdition)
     {
-      for(uint i = 0; i < e.getSelectedPoints().size(); ++i)
+      vector<RealEditPoint> vp = e.getAllPointsFromSelection();
+      for(unsigned int i = 0; i < vp.size(); ++i)
       {
-        RealEditPoint p = e.getSelectedPoints()[i];
-        p.set(p.pos() + mDelta);      
+        RealEditPoint& p = vp[i];
+        p.set(p.pos() + mDelta); 
       }
       e.getCurrentModel().updateNormals();
       e.getCurrentModel().updateBoundingBox();

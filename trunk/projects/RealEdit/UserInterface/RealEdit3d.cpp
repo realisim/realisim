@@ -10,9 +10,10 @@
 #include "DataModel/DataModel.h"
 #include "DataModel/DisplayData.h"
 #include "DataModel/EditionData.h"
+#include "DataModel/ObjectNode.h"
+#include "math.h"
 #include "math/MathDef.h"
 #include "math/MathUtils.h"
-#include "DataModel/ObjectNode.h"
 #include <QCursor>
 #include <QMouseEvent>
 #include <QRect>
@@ -519,8 +520,117 @@ void RealEdit3d::keyReleaseEvent(QKeyEvent* e)
 
 //------------------------------------------------------------------------------
 //voir mouseMoveEvent
-void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* e)
-{makeCurrent();}
+void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* ipE)
+{
+  makeCurrent();
+  
+ 	//bouton droit pour deplacer la caméra a l'endroit visé
+  switch (ipE->button()) 
+  {
+    case Qt::RightButton:
+    case Qt::LeftButton:
+    {
+      const EditionData& e = mController.getEditionData();
+      const RealEditModel& m = e.getCurrentModel();
+      vector<uint> p = pick(ipE->x(), ipE->y());
+      if(!p.empty())
+      {
+      	uint id = p.front();
+				Vector3d normal;
+        Camera c = getCamera();
+        Point3d aimed;
+        if(m.hasPoint(id))
+        {        	
+        	aimed = m.getPoint(id).pos();
+          uint count = 0;
+          vector<RealEditPolygon> p = m.getPolygonsContainingPoint(id);
+          for(uint i = 0; i < p.size(); ++i )
+          {
+          	for(uint j = 0; j < p[i].getNormals().size(); ++j )
+            {
+            	normal += p[i].getNormal(j);
+              count++;
+            }
+          }
+          normal /= count;
+        }
+        else if(m.hasSegment(id))
+        {
+          aimed = ( m.getSegment(id).getPoint1().pos() +
+            m.getSegment(id).getPoint2().pos() ) / 2.0;
+          uint count = 0;
+          //normal moyenne au point 1
+          vector<RealEditPolygon> p = m.getPolygonsContainingPoint( m.getSegment(id).getPoint1().getId());
+          for(uint i = 0; i < p.size(); ++i )
+          {
+          	for(uint j = 0; j < p[i].getNormals().size(); ++j )
+            {
+            	normal += p[i].getNormal(j);
+              count++;
+            }
+          }
+          //normal moyenne au point 2
+          p = m.getPolygonsContainingPoint( m.getSegment(id).getPoint2().getId());
+          for(uint i = 0; i < p.size(); ++i )
+          {
+          	for(uint j = 0; j < p[i].getNormals().size(); ++j )
+            {
+            	normal += p[i].getNormal(j);
+              count++;
+            }
+          }
+          normal /= count;
+        }
+        else if(m.hasPolygon(id))
+        {        	
+          for(uint i = 0; i < m.getPolygon(id).getPoints().size(); ++i)
+          	aimed += m.getPolygon(id).getPoint(i).pos();
+          aimed /= m.getPolygon(id).getPoints().size();
+          
+          normal = m.getPolygon(id).getNormal(0);
+        }
+        
+        if(c.getMode() == Camera::PERSPECTIVE)
+        {
+        	/*on trouve la position finale que la caméra doit
+            avoir pour faire face a la selection*/
+          normal.normalise();
+          Vector3d lookVec(c.getLook(), c.getPos());
+          Point3d newLook = aimed;
+					Point3d newPos = newLook + lookVec.norm() * normal;
+    
+          /*Afin d'èliminer le tanguage, on projete se vecteur
+            dans le plan x-z.*/      
+          //Projection sur le plan z = 0
+          //x et z de la transfo
+          Vector3d x = Vector3d(1.0, 0.0, 0.0);
+          Vector3d z = Vector3d(0.0, 0.0, 1.0);
+				      
+    			Vector3d newLat = Vector3d(newPos, newLook) ^ c.getUp();
+          Vector3d projLatOnX = x * ( x & newLat );
+          Vector3d projLatOnZ = z * ( z & newLat );
+          Vector3d projXZ = projLatOnX + projLatOnZ;
+          
+          Vector3d newUp = projXZ ^ -normal;
+          projXZ.normalise();
+          newUp.normalise();
+          normal.normalise();
+          
+          c.set(newPos, aimed, newUp);
+        }
+        else
+        {
+          Point3d delta = aimed - c.getLook();
+          c.set(c.getPos() + delta, aimed, c.getUp());
+        }
+        
+        setCamera(c, true, 330);
+      }
+    }
+      break;
+    default: break;
+  }
+}
 
 //------------------------------------------------------------------------------
 /*On pourrait penser que ces méthodes devraient être dans le controller parce 
@@ -620,7 +730,7 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
               -mMouseInfo.delta.y(), c);
           mpTranslate->update(deltaGL);
         }
-          break;
+        break;
         default: break;
       }
       break;
@@ -635,6 +745,8 @@ void RealEdit3d::mouseMoveEvent(QMouseEvent* e)
 void RealEdit3d::mousePressEvent(QMouseEvent* e)
 {
   makeCurrent();
+  mController.setCanChangeTool(false);
+  
   mMouseInfo.origin = QPoint(e->x(), e->y());
   mMouseInfo.end = QPoint(e->x(), e->y());
   
@@ -699,7 +811,19 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
   {
     case msCamera:
     case msCameraDrag: setMouseState(msIdle); break;
-    case msIdle: break;
+    case msIdle:
+      switch (mController.getTool()) 
+      {
+      	case Controller::tSelect:
+          delete mpSelect;
+		      mpSelect = 0;
+          break;
+        case Controller::tTranslate:
+          delete mpTranslate;
+          mpTranslate = 0;
+      	default: break;
+      }    	
+    break;
     case msDown:
       setMouseState(msIdle);
       switch (mController.getTool()) 
@@ -749,6 +873,7 @@ void RealEdit3d::mouseReleaseEvent(QMouseEvent* e)
   }
   
   changeCursor();
+  mController.setCanChangeTool(true);
 }
 
 //------------------------------------------------------------------------------

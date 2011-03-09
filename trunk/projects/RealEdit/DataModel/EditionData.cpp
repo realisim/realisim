@@ -38,6 +38,71 @@ EditionData::~EditionData()
 {}
 
 //-----------------------------------------------------------------------------
+/*Retourne tous les points de la sélection i.e: Les points explicitement
+  sélectionnés par l'usager mais aussi les points qui font partis des
+  segments et polygones selectionnés. Par example si l'usager a sélectionné
+  un polygone (aucun point explicitement sélectionné) alors cette méthode
+  retourne tous les points constituant ce polygone.
+  Note: Il est possible de filtrer avec le paramètre iFilter.
+   fAll: indique que les points proviendront des points des segments et
+     des polygones sélectionnés.
+   fPoints: indique que les points proviendront des points sélectionné (pareil
+     comme faire un appel à la méthode getSelectedPoints() )
+   fSegments: indique que les points proviendront des segments
+     sélectionnés.
+   fPolygons: indique que les points proviendront des polygones
+     sélectionnés.
+     
+  Il est possible de combiner ces flags comme ceci:
+   filter f = fPoints | fPolygons. */
+vector<RealEditPoint> EditionData::getAllPointsFromSelection(
+  filter iFilter /*= fAll*/)
+{
+		vector<RealEditPoint> r;
+    /*on fabrique une liste de point unique à partir de la
+      sélection afin d'appliquer la translation sur tous
+      les points.*/
+    set<uint> uniquePoints;
+    
+    if(iFilter & fPoints)
+    {
+    	vector<RealEditPoint>& sp = getSelectedPoints();
+    	for(uint i = 0; i < sp.size(); ++i)
+      	uniquePoints.insert(sp[i].getId());
+    }
+      
+    if(iFilter & fSegments)
+    {
+      vector<RealEditSegment>& ss = getSelectedSegments();
+      for(uint i = 0; i < ss.size(); ++i)
+      {
+        uniquePoints.insert(ss[i].getPoint1().getId());
+        uniquePoints.insert(ss[i].getPoint2().getId());
+      }
+    }
+    
+    if(iFilter & fPolygons)
+    {
+      vector<RealEditPolygon>& sp2 = getSelectedPolygons();
+      for(uint i = 0; i < sp2.size(); ++i)
+      {
+        const RealEditPolygon& p = sp2[i];
+        for(uint j = 0; j < p.getPoints().size(); ++j)
+          uniquePoints.insert(p.getPoint(j).getId());
+      }
+    }            
+    
+    RealEditModel& m = getCurrentModel();
+    set<uint>::iterator it = uniquePoints.begin();
+    for(; it != uniquePoints.end(); ++it)
+    {
+    	assert(m.hasPoint(*it));
+      r.push_back(m.getPoint(*it));
+    }
+    return r;
+}
+
+//-----------------------------------------------------------------------------
 const ObjectNode* EditionData::getCurrentNode () const
 { return mpCurrentNode; }
 
@@ -98,40 +163,30 @@ void EditionData::setCurrentNode (const ObjectNode* ipNode)
 //-----------------------------------------------------------------------------
 void EditionData::select(const set<uint>& iS)
 {
+	const RealEditModel& m = getCurrentModel();
   mSelection = iS;
   mSelectedPoints.clear();
   mSelectedPolygons.clear();
   mSelectedSegments.clear();
   
-  /*a partir de la selection, on crée la liste de tous les points (unique)
-  selectionnés. Les commandes (translate, rotate, scale etc...) s'effectueront
-  sur ces points.*/
-  set<unsigned int> uniquePointIds;
+  /*a partir de la selection, on crée la liste des points, polygones
+   et segments selectionnés*/
   set<unsigned int>::const_iterator it = iS.begin();
   for(; it != iS.end(); ++it)
   {
-    if(getCurrentModel().hasPoint(*it))
-      uniquePointIds.insert(*it);
-    else if(getCurrentModel().hasPolygon(*it))
+    if(m.hasPoint(*it))
+      mSelectedPoints.push_back(m.getPoint(*it));
+    else if(m.hasPolygon(*it))
     {
       const RealEditPolygon& p =
-        getCurrentModel().getPolygon(*it);
+        m.getPolygon(*it);
       mSelectedPolygons.push_back(p);
-      for(unsigned int j = 0; j < p.getPointCount(); ++j )
-        uniquePointIds.insert(p.getPoint(j).getId());
     }
-    else if(getCurrentModel().hasSegment(*it))
+    else if(m.hasSegment(*it))
     {
     	const RealEditSegment& s =
-        getCurrentModel().getSegment(*it);
+        m.getSegment(*it);
       mSelectedSegments.push_back(s);
-      uniquePointIds.insert(s.getPoint1().getId());
-      uniquePointIds.insert(s.getPoint2().getId());
     }
   }
-  
-  it = uniquePointIds.begin();
-  for(; it != uniquePointIds.end(); ++it)
-    mSelectedPoints.push_back(
-      getCurrentModel().getPoint(*it));
 }

@@ -18,20 +18,18 @@ namespace commands
   using namespace std;
   class Translate : public realisim::utils::Command
   {
-   public:
+    public:
+      explicit Translate(Controller&);
+      virtual ~Translate();
+
+      virtual void execute();
+      virtual void update(const Vector3d&);
+      virtual void undo();
      
-     explicit Translate(Controller&);
-     virtual ~Translate();
-     
-     virtual void execute();
-     virtual void update(const Vector3d&);
-     
-  protected:
-    virtual void undo();
-    
-    Controller& mC;
-    Vector3d mDelta;
-    Vector3d mTotalDelta;
+    private: 
+      Controller& mC;
+      Vector3d mDelta;
+      Vector3d mTotalDelta;
   };
 }
 }

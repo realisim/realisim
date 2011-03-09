@@ -18,6 +18,32 @@
 //! \brief Classe gerant les fonctionalites associees a un quaternion
 //!
 //! un quaternion est de la forme q = w + xi + yj + zk
+/*
+  Notes: Lorsqu'on construit un quaternion à partir d'une matrice (constructeur
+    qui prend une matrice) il est impératif que la matrice réponde aux normes 
+    d'un système main droite. Ie:
+    
+          y
+          ^
+          |
+          |
+          |
+          ------>X
+         /
+        /
+       /
+      Z
+    
+    Donc avec la main droite: x vers y donne Z
+                              y vers z donne x
+                              z vers x donne y
+                              
+    http://en.wikipedia.org/wiki/Cartesian_coordinate_system
+    
+    De plus, la méthode getUnitRotationMatrix retourne une matrice qui
+    répond aux normes d'un système main droite.
+                          
+*/
 //!-----------------------------------------------------------------------------
 namespace realisim
 {
@@ -110,7 +136,7 @@ namespace math
   inline Quaternion<T>::Quaternion(const Matrix4<T>& iMat)
   {
     T trace = iMat(0, 0) + iMat(1, 1) + iMat(2, 2);
-    if( trace > 0 ) 
+    if( trace > (T)0 ) 
     {
       T s = sqrt(trace+1.0) * 2;
       w_ = 0.25 * s;

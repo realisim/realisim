@@ -18,22 +18,20 @@ namespace commands
   using namespace std;
   class Select : public realisim::utils::Command
   {
-   public:
-     enum mode{mAdditive, mNormal, mSubtractive};
+    public:
+      enum mode{mAdditive, mNormal, mSubtractive};
+
+      explicit Select(Controller&);
+      virtual ~Select();
+      virtual void execute();
+      virtual void update(const unsigned int, mode);
+      virtual void update(const std::vector<unsigned int>&, mode);
+      virtual void undo();
      
-     explicit Select(Controller&);
-     virtual ~Select();
-     
-     virtual void execute();
-     virtual void update(const unsigned int, mode);
-     virtual void update(const std::vector<unsigned int>&, mode);
-     
-  protected:
-    virtual void undo();
-    
-    Controller& mC;
-    set<unsigned int> mPreviousSelection;
-    vector<pair<unsigned int, mode> > mSelection;
+    private:
+      Controller& mC;
+      set<unsigned int> mPreviousSelection;
+      vector<pair<unsigned int, mode> > mSelection;
   };
 }
 }

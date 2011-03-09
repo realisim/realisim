@@ -24,10 +24,9 @@ namespace commands
      	virtual ~ChangeMode();
      
      	virtual void execute();
-     
-    protected:
       virtual void undo();
       
+    private:
       Controller& mController;
       Controller::mode mPreviousMode;
       Controller::mode mMode;

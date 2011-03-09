@@ -18,18 +18,17 @@ namespace commands
   using namespace std;
   class ChangeNode : public realisim::utils::Command
   {
-   public:
-     explicit ChangeNode(Controller&, unsigned int);
-     virtual ~ChangeNode();
-     
-     virtual void execute();
-     
-  protected:
-    virtual void undo();
+    public:
+      explicit ChangeNode(Controller&, unsigned int);
+      virtual ~ChangeNode();
+
+      virtual void execute();
+      virtual void undo();
     
-    Controller& mController;
-    unsigned int mPreviousNodeId;
-    unsigned int mNodeId;
+    private:
+      Controller& mController;
+      unsigned int mPreviousNodeId;
+      unsigned int mNodeId;
   };
 }
 }
