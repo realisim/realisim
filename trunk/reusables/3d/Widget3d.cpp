@@ -246,7 +246,7 @@ vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
   //draw the scene in picking mode...
   /*On s'assure que le clear color est completement noir parce qu'il
     représentera le id 0 et n'interferera donc pas dans la sélection.*/
-  glClearColor(0, 0, 0, 0);
+  glClearColor(1, 1, 1, 1);
   Widget3d::paintGL();
   drawSceneForPicking();
   
@@ -254,7 +254,7 @@ vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
 		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
   for(int i = 0; i < absHeight; ++i)
     for(int j = 0; j < absWidth; ++j)    
-      if(pixels[i*absWidth*4 + j*4] != 0 || pixels[i*absWidth*4 + j*4 + 1] != 0 || pixels[i*absWidth*4 + j*4 + 2] != 0 || pixels[i*absWidth*4 + j*4 + 3] != 0)
+      if(pixels[i*absWidth*4 + j*4] != 255 || pixels[i*absWidth*4 + j*4 + 1] != 255 || pixels[i*absWidth*4 + j*4 + 2] != 255 || pixels[i*absWidth*4 + j*4 + 3] != 255)
         hits.push_back(colorToId(QColor(pixels[i*absWidth*4 + j*4],pixels[i*absWidth*4 + j*4 + 1],pixels[i*absWidth*4 + j*4 + 2],pixels[i*absWidth*4 + j*4 + 3])));
   
   /*Quand la boite fait plus de 1x1, on fais une selection sur les back facing
@@ -271,7 +271,7 @@ vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
   		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
     for(int i = 0; i < absHeight; ++i)
       for(int j = 0; j < absWidth; ++j)    
-        if(pixels[i*absWidth*4 + j*4] != 0 || pixels[i*absWidth*4 + j*4 + 1] != 0 || pixels[i*absWidth*4 + j*4 + 2] != 0 || pixels[i*absWidth*4 + j*4 + 3] != 0)
+        if(pixels[i*absWidth*4 + j*4] != 255 || pixels[i*absWidth*4 + j*4 + 1] != 255 || pixels[i*absWidth*4 + j*4 + 2] != 255 || pixels[i*absWidth*4 + j*4 + 3] != 255)
           hits.push_back(colorToId(QColor(pixels[i*absWidth*4 + j*4],pixels[i*absWidth*4 + j*4 + 1],pixels[i*absWidth*4 + j*4 + 2],pixels[i*absWidth*4 + j*4 + 3])));    
 
   }
@@ -389,7 +389,6 @@ void Widget3d::showFps()
   //affiche le nombre de frame par seconde
   if(mShowFps)
   {
-    glPushAttrib(GL_ENABLE_BIT);
     glDisable(GL_DEPTH_TEST);
     if(mFpsFrameCount >= kFramesToComputeFps)
     {
@@ -399,7 +398,7 @@ void Widget3d::showFps()
     }
     renderText(5, 15, QString("fps: ") + QString::number(mFps, 'f', 2) );
     ++mFpsFrameCount;
-    glPopAttrib();
+    glEnable(GL_DEPTH_TEST);
   }
 }
 

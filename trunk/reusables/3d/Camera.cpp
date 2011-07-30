@@ -220,27 +220,44 @@ Camera::operator=( const Camera& iCam )
 }
 
 //-----------------------------------------------------------------------------
-//Convertie une position pixel a l'écran en coordonnée GL
-//Les paramètres sont en pixels
-Point3d Camera::pixelToGL( int iX, int iY ) const
+/*Convertie une position pixel a l'écran en coordonnée GL
+  Les paramètres sont en pixels. Le point converti sera en
+  coordonné locale. iPoint doit être en coordonné locale.*/
+Point3d Camera::pixelToGL( int iX, int iY,
+  const Point3d& iPoint /*= Point3d(0.0)*/ ) const
 {
-  assert(0);
-  return(Point3d());
-  //la fonction était incorrecte et n'est pas en utilisation pour l'instant...
-  //il faudrait aussi prendre la transformation en compte.
-  
-//  int width = getWindowInfo().getWidth();
-//  int heigth = getWindowInfo().getHeight();
-//  
-//  Point3d result = getPos() - ( getLat() * (width/2.0) / mPixelPerGLUnit ) + 
-//    ( getUp() * (heigth/2.0) / mPixelPerGLUnit ) +
-//    getLat() * iX / mPixelPerGLUnit +
-//    getUp() * iY / mPixelPerGLUnit;
-//    
-//  /*TODO: Pour la camera perspective, voire la méthode pixelDeltaToGLDelta et
-//    s'en inspirer pour faire celle-ci*/
-//  
-//  return result;
+  double modelView[16];
+  glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+  double projection[16];
+  glGetDoublev(GL_PROJECTION_MATRIX, projection);
+  int viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+
+  double winx, winy, winz, p0x, p0y, p0z;
+
+  /*on transforme le point en coordonné global afin de faire les calculs de
+    projection*/
+  Point3d p = iPoint * getTransformationToGlobal();
+
+  /*A partir du Point3d qui represente le point sur le plan de travail
+    perpendiculaire a la camera, on le projete a l'écran. Ce qui nous
+    intéresse c'est la coordonnée en z normalisé qui nous donne la profondeur
+    de ce point3d dans le zBuffer qui sera utilisé pour trouver le point 
+    en coordonnée GL*/
+  gluProject(p.getX(), p.getY(), p.getZ(),
+    modelView, projection, viewport,
+    &winx, &winy, &winz);
+    
+  /*On projete le point d'écran iX, iY, winz qui nous donnera un point (p0)
+    qui correspond au point d'écran (iX, iY) a la profondeur du plan de
+    travail. */
+  gluUnProject(iX, iY, winz,
+    modelView, projection, viewport,
+    &p0x, &p0y, &p0z);
+    
+  /*on remet le point p0 dans le systeme de coordonnée locale.*/
+  return Point3d(p0x, p0y, p0z) * getTransformationToLocal();
+
 }
 
 //-----------------------------------------------------------------------------
@@ -287,7 +304,7 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
     /*On projete le point d'écran 0.0, 0.0, winz qui nous donnera un point (p0)
       qui correspond au point d'écran (0.0, 0.0) a la profondeur du plan de
       travail*/
-    gluUnProject(0.0, 0.0, winz,
+    gluUnProject(winx, winy, winz,
       modelView, projection, viewport,
       &p0x, &p0y, &p0z);
       
@@ -296,7 +313,7 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
       profondeur du plan de travail. Ainsi, avec ces deux points 3d qui
       représente le delta pixel en coordonnée GL a la profondeur du plan de
       travail*/
-    gluUnProject(iDeltaX, iDeltaY, winz,
+    gluUnProject(winx + iDeltaX, winy + iDeltaY, winz,
       modelView, projection, viewport,
       &p1x, &p1y, &p1z);
     
@@ -313,8 +330,8 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
     Vector3d projGlDeltaOnLat = getLat() * ( getLat() & glDelta );
     //projection de glDelta sur up
     Vector3d projGlDeltaOnUp = getUp() * ( getUp() & glDelta );
-    result = getLat() * iDeltaX/(abs(iDeltaX)) * projGlDeltaOnLat.fastNorm() + 
-      getUp() * iDeltaY/(abs(iDeltaY)) * projGlDeltaOnUp.fastNorm();
+    result = getLat() * iDeltaX/(abs(iDeltaX)) * projGlDeltaOnLat.norm() + 
+      getUp() * iDeltaY/(abs(iDeltaY)) * projGlDeltaOnUp.norm();
   }
 
   

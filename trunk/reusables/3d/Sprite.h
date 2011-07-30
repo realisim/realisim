@@ -95,6 +95,7 @@ public:
   
   Sprite();
   Sprite(const Sprite&);
+  Sprite& operator=(const Sprite&);
   virtual ~Sprite();
   
   virtual void draw(const Camera& c, bool = false) const;
