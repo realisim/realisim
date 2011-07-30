@@ -39,10 +39,27 @@ Sprite::Sprite(const Sprite& s) :
  m2dPositioningOn(s.is2dPositioningOn()),
  mAnimationTimer(s.getAnimationTimer()),
  mAnimationDuration(s.getAnimationDuration()),
- mIsLooping(false),
+ mIsLooping(s.isLooping()),
  mFrameSize(s.getFrameSize()),
  mIsFullScreen(s.isFullScreen())
 {}
+
+Sprite& Sprite::operator=(const Sprite& s)
+{
+  mTexture = s.getTexture();
+  mSubTextureRect =s.getSubTextureRect();
+  mGLTexCoord = s.getGLTexCoord();
+  mState = s.getState();
+  mAnchor = s.getAnchorPoint();
+  m2dPosition = s.get2dPosition();
+  m2dPositioningOn = s.is2dPositioningOn();
+  mAnimationTimer = s.getAnimationTimer();
+  mAnimationDuration = s.getAnimationDuration();
+  mIsLooping = s.isLooping();
+  mFrameSize = s.getFrameSize();
+  mIsFullScreen = s.isFullScreen();
+  return *this;
+}
 
 Sprite::~Sprite()
 {}
@@ -56,18 +73,15 @@ void Sprite::draw(const Camera& c, bool iPicking /*= false*/) const
     return;
     
   glPushMatrix();
-  glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
   
   QRectF texCoord = getGLTexCoord();
   
   if(getState() == sAnimating)
   {
     QSizeF s(getTexture().getSize().getX(), getTexture().getSize().getY());
+    //QSizeF s(getSubTextureRect().width(), getSubTextureRect().height());
     QSizeF fs(getFrameSize().width() / s.width(),
     getFrameSize().height() / s.height()); //normalized frame size
-    
-    int totalNumFrames = fabs(getGLTexCoord().height()) /
-      fs.height();
     
   	int ms = mAnimationTimer.elapsed();
     if(isLooping())
@@ -75,16 +89,30 @@ void Sprite::draw(const Camera& c, bool iPicking /*= false*/) const
     else
     {
       ms = min(ms, mAnimationDuration);
-      ms == mAnimationDuration ? setState(sAnimatingDone) : setState(sAnimating);
+      if (ms == mAnimationDuration)
+      {
+        setState(sAnimatingDone);
+      }
     }
     
+    int maxFrameIndex = fabs(getGLTexCoord().height()) /
+      fs.height() - 1;
     /*puisque le système de coordonnées GL commence en bas a gauche,
       le frame 0 serait en bas, nous voulons qu'il soit en haut, alors
       on soustrait le frame courant du nombre total de frames.*/
-    int currentFrameIndex = totalNumFrames - 
-      ms / (double)mAnimationDuration * totalNumFrames;
-    float currentFramePos = fs.height() * currentFrameIndex;
+    int currentFrameIndex = maxFrameIndex - 
+      ms / (double)mAnimationDuration * maxFrameIndex;
       
+    /*Puisqu'on fonctionne avec le coin supérieur droit comme point de
+      départ (un drôle de choix, mais il semblerait que c'Est comme 
+      ça que j'ai fait) voici l'équation pour obtenir la composante
+      y de la coordonnée de texture.*/
+    float currentFramePos = fs.height() + fs.height() * currentFrameIndex;
+      
+    /*L'utilisation du systeme de coordonné Qt et OpenGl commence à être
+      très confus dans cette classe... La taille en y doit etre négative.
+      Je crois que c'est dû au fait qu'on a pris le coin supérieur
+      gauche (topLeft, voir Sprite::setTexture(const Texture& t, QRect r)).*/
     texCoord = QRectF(
       QPointF(fabs(getGLTexCoord().topLeft().x()), 
         currentFramePos),
@@ -139,18 +167,36 @@ void Sprite::draw(const Camera& c, bool iPicking /*= false*/) const
       m2dPosition.getY();
     glTranslated(m2dPosition.getX(), yPos, m2dPosition.getZ());
 
-    glBindTexture(GL_TEXTURE_2D, getTexture().getTextureId());
-    glBegin(GL_QUADS);
-    glTexCoord2d(texCoord.bottomLeft().x(), texCoord.bottomLeft().y());
-    glVertex2d(0.0, 0.0);
-    glTexCoord2d(texCoord.bottomRight().x(), texCoord.bottomRight().y());
-    glVertex2d(getSubTextureRect().width(), 0.0);
-    glTexCoord2d(texCoord.topRight().x(), texCoord.topRight().y());
-    glVertex2d(getSubTextureRect().width(), getSubTextureRect().height());
-    glTexCoord2d(texCoord.topLeft().x(), texCoord.topLeft().y());
-    glVertex2d(0.0, getSubTextureRect().height());
-    glEnd();
-    glBindTexture(GL_TEXTURE_2D, 0);
+		if(getState() == sStatic)
+    {
+      glBindTexture(GL_TEXTURE_2D, getTexture().getTextureId());
+      glBegin(GL_QUADS);
+      glTexCoord2d(texCoord.bottomLeft().x(), texCoord.bottomLeft().y());
+      glVertex2d(0.0, 0.0);
+      glTexCoord2d(texCoord.bottomRight().x(), texCoord.bottomRight().y());
+      glVertex2d(getSubTextureRect().width(), 0.0);
+      glTexCoord2d(texCoord.topRight().x(), texCoord.topRight().y());
+      glVertex2d(getSubTextureRect().width(), getSubTextureRect().height());
+      glTexCoord2d(texCoord.topLeft().x(), texCoord.topLeft().y());
+      glVertex2d(0.0, getSubTextureRect().height());
+      glEnd();
+      glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    else
+    {
+      glBindTexture(GL_TEXTURE_2D, getTexture().getTextureId());
+      glBegin(GL_QUADS);
+      glTexCoord2d(texCoord.bottomLeft().x(), texCoord.bottomLeft().y());
+      glVertex2d(0.0, 0.0);
+      glTexCoord2d(texCoord.bottomRight().x(), texCoord.bottomRight().y());
+      glVertex2d(getFrameSize().width(), 0.0);
+      glTexCoord2d(texCoord.topRight().x(), texCoord.topRight().y());
+      glVertex2d(getFrameSize().width(), getFrameSize().height());
+      glTexCoord2d(texCoord.topLeft().x(), texCoord.topLeft().y());
+      glVertex2d(0.0, getFrameSize().height());
+      glEnd();
+      glBindTexture(GL_TEXTURE_2D, 0); 
+    }
 
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
@@ -196,7 +242,6 @@ void Sprite::draw(const Camera& c, bool iPicking /*= false*/) const
   }
   else //it is fullscreen
   {
-    glPushAttrib(GL_ENABLE_BIT);
     glDisable(GL_DEPTH_TEST);
 
     glMatrixMode(GL_PROJECTION);
@@ -226,10 +271,9 @@ void Sprite::draw(const Camera& c, bool iPicking /*= false*/) const
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
     
-    glPopAttrib();
+    glEnable(GL_DEPTH_TEST);
   }
 
-  glPopAttrib();
   glPopMatrix();
 }
 

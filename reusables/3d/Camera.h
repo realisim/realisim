@@ -72,7 +72,7 @@ public:
   const double getZoom() const { return mZoomFactor; }
   void move( const Vector3d& );
   Camera& operator=( const Camera& );
-  Point3d pixelToGL( int, int ) const;
+  Point3d pixelToGL( int, int, const Point3d& = Point3d(0.0)) const;
   Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
   void projectionGL( int, int );
   void set( const Point3d&, const Point3d&, const Vector3d& );
