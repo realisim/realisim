@@ -136,6 +136,19 @@ namespace math
   }
   
   //---------------------------------------------------------------------------
+  template<class V>
+  inline Point<V> operator* (const V& iVal, const Point<V>& iPoint)
+  {
+    Point<V> result;
+    
+    result.setX(iVal * iPoint.getX());
+    result.setY(iVal * iPoint.getY());
+    result.setZ(iVal * iPoint.getZ());
+    
+    return result;
+  }
+  
+  //---------------------------------------------------------------------------
   //retourne la matrice de rotation correpondant a la rotation de iAngle
   //radian autour de l'axe iAxis
   template<class T>
