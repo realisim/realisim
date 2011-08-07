@@ -1,12 +1,13 @@
 #PROTOTYPES CMAKELISTS
 
 IF( PROTOTYPES_BUILDOPTION )
+   ADD_SUBDIRECTORY( bezierCurve )
    #ADD_SUBDIRECTORY( command )
    #ADD_SUBDIRECTORY(pong)
    #ADD_SUBDIRECTORY(shader)
    #ADD_SUBDIRECTORY(rayCasting)
    #ADD_SUBDIRECTORY(frameBuffer)
-   ADD_SUBDIRECTORY(genese)
+   #ADD_SUBDIRECTORY(genese)
    #ADD_SUBDIRECTORY(particuleSystem)
    #ADD_SUBDIRECTORY(imageFilter)
    #ADD_SUBDIRECTORY(networkClient)

@@ -15,3 +15,7 @@ Qt Pour mac:
   -Il faut aussi ahouter les plugins de qt (qt-libjpeg, qt-libpng, qt-libsvg)
     - Pour utiliser les plugins de qt (qt-libjpeg, qt-libpng, qt-libsvg) lorsqu'on utilise Qt en statique:
       http://doc.trolltech.com/4.4/plugins-howto.html#static-plugins
+  (voir cmakelist du root à la révision 80 pour un exemple)
+
+les lib devraient être compiler en 64 bits
+Enssuite, l'option cmake OSX_CMAKE_ARCHITECTURES devrait être x86_64 et le CMAKE_OSX_SYSROOT: /Developer/SDKs/MacOSX10.6.sdk
