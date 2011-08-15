@@ -85,7 +85,7 @@ void Viewer::drawBezier(bool iPicking) const
         {
           glBegin(GL_LINES);
             glVertex3dv(cp[i].getPos().getPtr());
-            glVertex3dv(cp[cp[i].isHandleTo()].getPos().getPtr());  
+            glVertex3dv(cp[cp[i].handleTo()].getPos().getPtr());  
           glEnd();
         }
       }
@@ -153,6 +153,9 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
     case Qt::Key_S:
       setState(sSelection);
       mCurrentPoint = -1;
+      break;
+    case Qt::Key_O:
+			mCurves[mCurrentCurve].open();
       break;
     default: break;
   }
@@ -303,6 +306,8 @@ void Viewer::paintGL()
   renderText(5, 15 + 5*h, s);
   s = "'N' pour ajouter une nouvelle courbe";
   renderText(5, 15 + 6*h, s);
+  s = "'O' pour ouvrir la courbe (si elle est fermée)";
+  renderText(5, 15 + 7*h, s);
  
   drawBezier(false);
 }
