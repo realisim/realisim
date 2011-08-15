@@ -21,7 +21,7 @@ namespace math
   La courbe est composée de points de contrôle (ControlPoint).
   Un point de contrôle représente une position spatiale ainsi que 
   l'information indiquant si ce point est directement sur la courbe ou
-  plutôt la tangente à la courbe (ControlePoint::mIsHandleTo).
+  plutôt la tangente à la courbe (ControlePoint::mHandleTo).
 
 	méthode:
 	La méthode addHandlesTo(int iIndex) permet d'ajouter une ou deux 
@@ -32,7 +32,7 @@ namespace math
 	
   membres:
     ControlPoint: Classe réprésante le point de contrôle.
-      mIsHandleTo: L'index du point pour lequel ce point de
+      mHandleTo: L'index du point pour lequel ce point de
         contrôle est un "handle". L'index -1 indique que le point
         de contrôle n'est pas un "handle".
       mPos: La position 3d
@@ -63,42 +63,46 @@ class BezierCurve
     	friend class BezierCurve;
       
     	public:
-      	ControlPoint();
-        ControlPoint(int, const Point3d&);
         ControlPoint(const ControlPoint&);
         ControlPoint& operator=(const ControlPoint&);
         ~ControlPoint();
         
         const Point3d& getPos() const {return mPos;}
-        bool isHandle() const {return mIsHandleTo != -1;}
-        int isHandleTo() const {return mIsHandleTo;}
+        bool isHandle() const {return mHandleTo != -1;}
+        int handleTo() const {return mHandleTo;}
                 
-      private:        
-        void setAsHandleTo(int iIndex) {mIsHandleTo = iIndex;}
+      protected:
+        ControlPoint();
+        ControlPoint(int, const Point3d&);        
+        
+        void setAsHandleTo(int iIndex) {mHandleTo = iIndex;}
         void setPos(const Point3d& iP) {mPos = iP;}
         
-        int mIsHandleTo;
+        int mHandleTo;
         Point3d mPos;
     };
   
-    int add(const Point3d&);
-    int addHandlesTo(int);
-    bool canCloseOn(int);
-    void close();
-    const std::vector<ControlPoint>& getControlPoints() const;
-    const Point3d& getPos(int) const;
-    const std::vector<Point3d>& getRaster() const;
-    bool isClosed() const {return mIsClosed;}
-    void move(int, const Vector3d&);    
-    void remove(int);    
+    virtual int add(const Point3d&);
+    virtual int addHandlesTo(int);
+    virtual bool canCloseOn(int);
+    virtual void close();
+    virtual const std::vector<ControlPoint>& getControlPoints() const;
+    virtual const Point3d& getPos(int) const;
+    virtual const std::vector<Point3d>& getRaster() const;
+		virtual bool hasControlPoints() const {return !mControlPoints.empty();}
+    virtual bool isClosed() const {return mIsClosed;}
+    virtual void move(int, const Vector3d&);
+    virtual void open();
+    virtual void remove(int);    
     
   protected:
-    bool containsAtLeast2Points() const;
-    void cubicRasterization(const std::vector<Point3d>&) const;
-  	bool isRasterValid() const;
-    void quadraticRasterization(const std::vector<Point3d>&) const;
-    void rasterizeSegment(const std::vector<Point3d>& iV) const;
-    void setPos(int, const Point3d&);
+    virtual bool containsAtLeast2Points() const;
+    virtual void cubicRasterization(const std::vector<Point3d>&) const;
+    virtual ControlPoint get(int) const;
+  	virtual bool isRasterValid() const;
+    virtual void quadraticRasterization(const std::vector<Point3d>&) const;
+    virtual void rasterizeSegment(const std::vector<Point3d>& iV) const;
+    virtual void setPos(int, const Point3d&);
   
     std::vector<ControlPoint> mControlPoints;
     mutable std::vector<Point3d> mRaster;
