@@ -69,6 +69,7 @@ protected:
   virtual void drawSelectionBox() const;
   virtual void enableSmoothLines() const;
   virtual bool isSelectionBoxShown() const {return mShowSelectionBox;}
+  virtual void initializeGL();
   virtual mouseState getMouseState() const {return mMouseState;}
   virtual void keyPressEvent(QKeyEvent*);
   virtual void keyReleaseEvent(QKeyEvent*);

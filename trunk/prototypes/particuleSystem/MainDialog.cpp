@@ -170,14 +170,14 @@ MainDialog::MainDialog() : QMainWindow(),
     this, SLOT(gravityHoleSelected(unsigned int)));
   connect(mpViewer, SIGNAL(hidePanel(bool)), 
     this, SLOT(hidePanel(bool)));
-  
-  mpViewer->setCameraMode(Camera::ORTHOGONAL);
+    
   mpViewer->setCameraOrientation(Camera::XY);
   mpViewer->setParticuleSystem(&mParticuleSystem);
   pLyt->addWidget(mpViewer, 6);
   
   //set la camera
   Camera c = mpViewer->getCamera();
+  c.setProjection(20, 1, 10000);
   c.setZoom(30);
 	mpViewer->setCamera(c, false);
   
@@ -217,12 +217,12 @@ void MainDialog::cameraModeChanged(int iId)
 {
 	if(iId == 0) //2d
   {
-    mpViewer->setCameraMode(Camera::ORTHOGONAL);
+    //mpViewer->setCameraMode(Camera::ORTHOGONAL);
     mpViewer->setCameraOrientation(Camera::XY);
   }
   else //3d
   {
-    mpViewer->setCameraMode(Camera::PERSPECTIVE);
+    //mpViewer->setCameraMode(Camera::PERSPECTIVE);
     mpViewer->setCameraOrientation(Camera::FREE);
   }
 }

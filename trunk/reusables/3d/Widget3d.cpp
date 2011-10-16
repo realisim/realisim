@@ -41,7 +41,6 @@ mAnimationDuration(0),
 mFps(0.0),
 mFpsFrameCount(0),
 mFpsTimer(),
-mShowFps(true),
 mMousePressed( false ),
 mMousePosX( 0 ),
 mMousePosY( 0 ),
@@ -173,22 +172,8 @@ Widget3d::paintGL()
   makeCurrent();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
+  getCamera().applyModelViewTransformation();
   
-  //On place la caméra en coordonnée absolue.
-  Point3d absolutePos = getCamera().getPos() * getCamera().getTransformationToGlobal();
-  Point3d absoluteLook = getCamera().getLook() * getCamera().getTransformationToGlobal();
-  Vector3d absoluteUp = getCamera().getUp() * getCamera().getTransformationToGlobal();
-  
-  gluLookAt( absolutePos.getX(),
-             absolutePos.getY(), 
-             absolutePos.getZ(),
-             absoluteLook.getX(),
-             absoluteLook.getY(),
-             absoluteLook.getZ(),
-             absoluteUp.getX(),
-             absoluteUp.getY(),
-             absoluteUp.getZ() );
-    
   //replacer les lumieres
   GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
   glLightfv(GL_LIGHT0, GL_POSITION, position);
@@ -330,7 +315,8 @@ void
 Widget3d::resizeGL(int iWidth, int iHeight)
 {
   QGLWidget::resizeGL(iWidth, iHeight);
-  mCam.projectionGL(iWidth, iHeight);
+  mCam.setWindowSize(iWidth, iHeight);
+  mCam.applyProjectionTransformation();
   update();
 }
 
@@ -339,7 +325,12 @@ void
 Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
   int iDuration /*=1000ms*/ )
 {
-  mOldCam = mCam;  
+	/*On empêche de changer la camera lorsqu'on est en train
+    de faire une animation.*/
+	if(mAnimationTimerId != 0)
+    return;
+    
+  mOldCam = mCam;
   mNewCam = iCam;
   
   if( iAnimate )
@@ -358,16 +349,17 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
   else
   {
     mCam = mNewCam;
-    update();
+    mCam.applyProjectionTransformation();  
+    //update();
   }
 }
 
 //-----------------------------------------------------------------------------
-void Widget3d::setCameraMode( Camera::Mode iMode )
-{
-  mCam.setMode( iMode );
-  update();
-}
+//void Widget3d::setCameraMode( Camera::Mode iMode )
+//{
+//  mCam.setMode( iMode );
+//  update();
+//}
 
 //-----------------------------------------------------------------------------
 void Widget3d::setCameraOrientation( Camera::Orientation iO )
@@ -387,19 +379,16 @@ Widget3d::sizeHint() const
 void Widget3d::showFps()
 {
   //affiche le nombre de frame par seconde
-  if(mShowFps)
+  glDisable(GL_DEPTH_TEST);
+  if(mFpsFrameCount >= kFramesToComputeFps)
   {
-    glDisable(GL_DEPTH_TEST);
-    if(mFpsFrameCount >= kFramesToComputeFps)
-    {
-      mFps = mFpsFrameCount / (double)mFpsTimer.elapsed() * 1000.0;
-      mFpsTimer = QTime::currentTime();
-      mFpsFrameCount = 0;
-    }
-    renderText(5, 15, QString("fps: ") + QString::number(mFps, 'f', 2) );
-    ++mFpsFrameCount;
-    glEnable(GL_DEPTH_TEST);
+    mFps = mFpsFrameCount / (double)mFpsTimer.elapsed() * 1000.0;
+    mFpsTimer = QTime::currentTime();
+    mFpsFrameCount = 0;
   }
+  renderText(5, 15, QString("fps: ") + QString::number(mFps, 'f', 2) );
+  ++mFpsFrameCount;
+  glEnable(GL_DEPTH_TEST);
 }
 
 //-----------------------------------------------------------------------------
@@ -456,12 +445,12 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
       iterationMatrix.getBaseY(),
       iterationMatrix.getBaseX());
 
-    
     if ( animationTime >= mAnimationDuration )
     {
       killTimer( mAnimationTimerId );
       mAnimationTimerId = 0;
     }
+
     update();
   }
   else
@@ -484,6 +473,7 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
     if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
     {
       mCam.setZoom(finalZoom);
+      mCam.applyProjectionTransformation();
     }
   }
   else

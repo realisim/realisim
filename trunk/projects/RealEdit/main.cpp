@@ -31,6 +31,15 @@ int main(int argc, char** argv)
   app.setWindowIcon( QIcon( ":/images/RealEdit_icon.png" ) );
   QTextCodec::setCodecForCStrings (QTextCodec::codecForName("UTF-8"));
 
+  /*On active l'anti aliasing pour les fenêtre GL. Pour 
+    l'instant, il est désactiver parce que ca entre en comflit avec
+    le picking. Il suffit de glDisable(GL_MULTISAMPLE) dans le drawForPicking
+    */
+//  QGLFormat fmt;
+//  fmt.setSampleBuffers(true);
+//  fmt.setSamples(8);
+//  QGLFormat::setDefaultFormat(fmt);
+
   MainWindow m;
   m.show();
   

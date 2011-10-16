@@ -1,6 +1,7 @@
 
 #include "3d/Utilities.h"
 #include "math/Noise.h"
+#include "math/PlatonicSolid.h"
 
 namespace realisim 
 {
@@ -9,13 +10,39 @@ namespace treeD
 {
 namespace utilities 
 {
-
 //-----------------------------------------------------------------------------
 //decode un QColor en id. Voir méthode idToColor
 unsigned int colorToId(const QColor& iC)
 {
   return iC.alpha() + iC.blue() *255 + iC.green() * 255*255 +
     iC.red() *255*255*255; 
+}
+
+//------------------------------------------------------------------------------
+void draw(const PlatonicSolid& iPs)
+{
+  PlatonicSolid::Face f;
+  for(unsigned int i = 0; i < iPs.getFaces().size(); ++i)
+  {
+    f = iPs.getFaces()[i];
+    Vector3d n = Vector3d(iPs.getVertex()[f.index2], iPs.getVertex()[f.index1]) ^
+      Vector3d(iPs.getVertex()[f.index2], iPs.getVertex()[f.index3]);
+    n.normalise();
+    glBegin(GL_TRIANGLES);
+      glNormal3dv(n.getPtr());
+      glVertex3d(iPs.getVertex()[f.index1].getX(),
+        iPs.getVertex()[f.index1].getY(),
+        iPs.getVertex()[f.index1].getZ());
+        
+      glVertex3d(iPs.getVertex()[f.index2].getX(),
+        iPs.getVertex()[f.index2].getY(),
+        iPs.getVertex()[f.index2].getZ());
+        
+      glVertex3d(iPs.getVertex()[f.index3].getX(),
+        iPs.getVertex()[f.index3].getY(),
+        iPs.getVertex()[f.index3].getZ());
+    glEnd();
+  }
 }
 
 //------------------------------------------------------------------------------

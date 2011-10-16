@@ -18,18 +18,23 @@ mTransformation: transformation appliqué au systeme d'axe de la caméra.
   mLat: vecteur latéral normalisé
   mLook:  point visé.
   mUp: vecteur up normalisé.
-  mVisibleGLUnit: Sert a définir le nombre d'unité GL minimale visible  dans le
-    viewPort. Par exemple, si on met 20, le viewport sera une fenêtre sur un
-    rectangle d'ou moins 20 unités GL sur son coté le plus long. C'est en
-    modifiant ce paramètre qu'on peut zoomer ou dezoomer. Plus le chiffre est
-    gros plus on voit de la scene donc moins on est zoomé.
-  mPixelPerGLUnit: le rapport entre les pixel d'écran et les unité GL.
+  mProjectionLeft;
+  mProjectionRight;
+  mProjectionBottom;
+  mProjectionTop;
+  mProjectionNear;
+  mProjectionFar;
   mZoomFactor: Facteur multiplicateur sur mVisibleGLUnit.
+  mProportional:
+  mPixelPerGLUnit: le rapport entre les pixel d'écran et les unité GL.
   mWindowInfo: Information sur la fenetre. Utile afin de calculer la
     matrice de projection.
     -mOrientation: indique quel coté de la fenêtre est le plus long
     -mShortSide: taille en pixel du petit coté
     -mLongSide: taille en pixel du long coté
+  mIsActive: Sert à indiquer si la camera est active ou non. Lorsque 
+    la caméra est active, la projection est calculée et les appels openGl
+    tel que glOrtho ou glFrustum sont faits.
 */
 namespace realisim
 {
@@ -59,6 +64,8 @@ public:
   Camera( const Camera& iCam );
   virtual ~Camera();
   
+  void applyModelViewTransformation() const;
+  void applyProjectionTransformation() const;
   const Vector3d& getLat() const { return mLat; }
   const Point3d& getLook() const { return mLook; }
   Mode getMode() const { return mMode; }
@@ -69,28 +76,49 @@ public:
   const Matrix4d& getTransformationToGlobal() const { return mToGlobal; }
   const Vector3d& getUp() const { return mUp; }
   const WindowInfo& getWindowInfo() const {return mWindowInfo;}
-  const double getZoom() const { return mZoomFactor; }
+  const double getZoom() const { return mProjectionInfo.mZoomFactor; }
   void move( const Vector3d& );
   Camera& operator=( const Camera& );
   Point3d pixelToGL( int, int, const Point3d& = Point3d(0.0)) const;
   Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
-  void projectionGL( int, int );
   void set( const Point3d&, const Point3d&, const Vector3d& );
   void set( const Point3d&, const Point3d&, const Vector3d&, const Vector3d& );
-  void setMode( Mode );
   void setPos(const Point3d&);
+  void setProjection(double, double, double);
+  void setProjection(double, double, double, double, bool = true);
+  void setProjection(double, double, double, double, double, double, Mode, bool = true);
   void setLook(const Point3d&);
   void setOrientation( Orientation );
   void setTransformationToLocal(const Matrix4d&);
   void setTransformationToGlobal(const Matrix4d&);
+  void setWindowSize( int, int );
   void setZoom(double);
 //  QString toString() const;
 void print() const;
   
 protected:
-  void computeLatAndUp();
-  void computeProjection();
-  double getVisibleGLUnit() const;
+	struct ProjectionInfo
+  {
+  	ProjectionInfo();
+    
+    double getHeight() const;
+    double getWidth() const;    
+    
+  	double mProjectionLeft;
+    double mProjectionRight;
+    double mProjectionBottom;
+    double mProjectionTop;
+    double mProjectionNear;
+    double mProjectionFar;
+    double mZoomFactor;
+    bool mProportionalToWindow;
+  };
+  
+  void computeLatAndUp(); 
+  void computeProjection(); 
+  double getVisibleHeight() const;
+  double getVisibleWidth() const;
+  const ProjectionInfo& getProjectionInfo() const {return mProjectionInfo;}
   void setLat( const Vector3d& iLat );  
   void setUp( const Vector3d& iUp );
   
@@ -102,9 +130,8 @@ protected:
   Vector3d mLat;
   Point3d mLook;
   Vector3d mUp;
-  double mVisibleGLUnit;
+  ProjectionInfo mProjectionInfo;
   double mPixelPerGLUnit;
-  double mZoomFactor;
   WindowInfo mWindowInfo;
 };
 
