@@ -401,24 +401,55 @@ namespace math
   template<class U>
   inline bool Point<U>::operator< (const Point<U>& iP) const
   {
-    return getX() < iP.getX() && 
-      getY() < iP.getY() &&
-      getZ() < iP.getZ();
+  	U epsilon = std::numeric_limits<U>::epsilon();
+  	if(getX() < iP.getX() - epsilon) return true;
+    if(getX() > iP.getX() + epsilon) return false;
+    
+    if(getY() < iP.getY() - epsilon) return true;
+    if(getY() > iP.getY() + epsilon) return false;
+    
+    if(getZ() < iP.getZ() - epsilon) return true;
+    return false;
+    
+/*Ceci est le code preexistant au 9 septembre 2011... Ce code
+  semble tout aussi arbitraire que celui que je viens d'insérer
+  à l'exception que le code préexistant ne permettait pas 
+  d'insérer les points dans un container ordonné (map, set etc...)*/    
+//return getX() < iP.getX() && 
+//      getY() < iP.getY() &&
+//      getZ() < iP.getZ();
   }
 
   //----------------------------------------------------------------------------
   template<class U>
   inline bool Point<U>::operator<= (const Point<U>& iP) const
   {
-    return getX() <= iP.getX() && 
-      getY() <= iP.getY() &&
-      getZ() <= iP.getZ();
+    U epsilon = std::numeric_limits<U>::epsilon();
+    if(getX() >= iP.getX() - epsilon && getX() <= iP.getX() + epsilon) return true;
+    if(getX() < iP.getX() - epsilon) return true;
+    if(getX() > iP.getX() + epsilon) return false;
+    
+    if(getY() >= iP.getY() - epsilon && getY() <= iP.getY() + epsilon) return true;
+    if(getY() < iP.getY() - epsilon) return true;
+    if(getY() > iP.getY() + epsilon) return false;
+    
+    if(getZ() >= iP.getZ() - epsilon && getZ() <= iP.getZ() + epsilon) return true;
+    if(getZ() < iP.getZ() - epsilon) return true;
+    return false;
+/*Ceci est le code preexistant au 9 septembre 2011... Ce code
+  semble tout aussi arbitraire que celui que je viens d'insérer
+  à l'exception que le code préexistant ne permettait pas 
+  d'insérer les points dans un container ordonné (map, set etc...)*/    
+//return getX() <= iP.getX() && 
+//  getY() <= iP.getY() &&
+//  getZ() <= iP.getZ();
   }
 
   //----------------------------------------------------------------------------
   template<class U>
   inline bool Point<U>::operator> (const Point<U>& iP) const
   {
+    //Voir operateur < et corriger ici au besoin
     return getX() > iP.getX() && 
       getY() > iP.getY() &&
       getZ() > iP.getZ();
@@ -428,6 +459,7 @@ namespace math
   template<class U>
   inline bool Point<U>::operator>= (const Point<U>& iP) const
   {
+    //Voir operateur <= et corriger ici au besoin
     return getX() >= iP.getX() && 
       getY() >= iP.getY() &&
       getZ() >= iP.getZ();

@@ -31,19 +31,27 @@ ProjectWindow::ProjectWindow(QWidget* ipParent /*=0*/) : QWidget(ipParent),
   pGLyt->setContentsMargins(1, 1, 1, 1);
   pGLyt->setSpacing( 1 );
 	
+  Camera c;
 	RealEdit3d* pV1 = new RealEdit3d( this, 0, mController);
-  pV1->setCameraMode( Camera::ORTHOGONAL );
+  //c = pV1->getCamera();
+  c.setProjection(20, 1, 10000);
+  pV1->setCamera(c, false);
+//  pV1->setCameraMode( Camera::ORTHOGONAL );
   pV1->setCameraOrientation( Camera::XY );
     
   RealEdit3d* pV2 = new RealEdit3d( this, pV1, mController);
-  pV2->setCameraMode( Camera::ORTHOGONAL );
+  pV2->setCamera(c, false);
+//  pV2->setCameraMode( Camera::ORTHOGONAL );
   pV2->setCameraOrientation( Camera::ZY );
   
 	RealEdit3d* pV3 = new RealEdit3d (this, pV1, mController);
-  pV3->setCameraMode( Camera::ORTHOGONAL );
+  pV3->setCamera(c, false);
+//  pV3->setCameraMode( Camera::ORTHOGONAL );
   pV3->setCameraOrientation( Camera::XZ );
 
 	RealEdit3d* pV4 = new RealEdit3d (this, pV1, mController);
+  c.setProjection(60, 1.0, 0.005, 10000);
+  pV4->setCamera(c, false);
   pV4->setCameraOrientation( Camera::FREE );
 
   mViews.push_back(pV4);

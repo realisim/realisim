@@ -49,6 +49,7 @@ namespace math
     inline void get(Vect<T> &vect) const;
     inline void getXYZ(T &x, T &y, T &z) const;
     inline const T* getPtr() const;
+//inline std::String toString() const;
     
     // --------------- fonction utiles -----------------------------------------
     inline void minCoord (const Vect<T>& iVect);
@@ -69,7 +70,7 @@ namespace math
     
     inline Vect<T>  operator-  (const Vect<T> &vect) const;
     inline Vect<T>  operator-  (const T &val) const;
-    inline Vect<T>& operator-  ();
+    inline Vect<T>  operator-  ();
     inline Vect<T>& operator-= (const Vect<T> &vect);
     inline Vect<T>& operator-= (const T &val);
     
@@ -471,13 +472,15 @@ namespace math
   
   //! surcharge opÈrateur -
   template<class T>
-  inline Vect<T>& Vect<T>::operator- ()
-  {    
-    mData[0] = -mData[0];
-    mData[1] = -mData[1];
-    mData[2] = -mData[2];
+  inline Vect<T> Vect<T>::operator- ()
+  { 
+    Vect<T> r;
+       
+    r.mData[0] = -mData[0];
+    r.mData[1] = -mData[1];
+    r.mData[2] = -mData[2];
     
-    return *this;
+    return r;
   }
   
   //! surcharge opÈrateur -= avec un vecteur

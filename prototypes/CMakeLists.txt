@@ -1,9 +1,9 @@
 #PROTOTYPES CMAKELISTS
 
 IF( PROTOTYPES_BUILDOPTION )
-   ADD_SUBDIRECTORY( bezierCurve )
+   #ADD_SUBDIRECTORY( bezierCurve )
    #ADD_SUBDIRECTORY( command )
-   #ADD_SUBDIRECTORY(pong)
+   #ne compile plus a cause de chipmunk ADD_SUBDIRECTORY(pong)
    #ADD_SUBDIRECTORY(shader)
    #ADD_SUBDIRECTORY(rayCasting)
    #ADD_SUBDIRECTORY(frameBuffer)
@@ -13,5 +13,6 @@ IF( PROTOTYPES_BUILDOPTION )
    #ADD_SUBDIRECTORY(networkClient)
    #ADD_SUBDIRECTORY(networkServer)
    #ne compile plusADD_SUBDIRECTORY( SDI )
+   ADD_SUBDIRECTORY( spaceTime )
    #ADD_SUBDIRECTORY( qtableTest )
 ENDIF( PROTOTYPES_BUILDOPTION )

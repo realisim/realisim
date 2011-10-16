@@ -43,7 +43,7 @@ public:
   void popFrameBuffer();
   void popShader();
   void setCamera( const Camera& iCam, bool iAnimate = true, int iDuration = 1000 );
-  void setCameraMode( Camera::Mode iMode );
+//void setCameraMode( Camera::Mode iMode );
   void setCameraOrientation( Camera::Orientation iO );
   
 //signals:
@@ -61,8 +61,8 @@ protected:
   QSize minimumSizeHint() const;
   virtual void paintGL();
   vector<unsigned int> pick(int, int, int = 1,int= 1 );
-  void resizeGL(int iWidth, int iHeight);
-  QSize sizeHint() const;
+  virtual void resizeGL(int iWidth, int iHeight);
+  virtual QSize sizeHint() const;
   virtual void showFps();
   virtual void timerEvent( QTimerEvent* ipE );
 
@@ -77,7 +77,6 @@ private:
   double mFps;
   int mFpsFrameCount;
   QTime mFpsTimer;
-  bool mShowFps;
   
   bool mMousePressed;
   int mMousePosX;

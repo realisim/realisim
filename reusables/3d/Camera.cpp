@@ -15,9 +15,27 @@
 using namespace realisim;
 using namespace realisim::treeD;
 
-static const double kNear = 50.0;
-static const double kFar = 2000.0;
+//-----------------------------------------------------------------------------
+//--- Camera::ProjectionInfo
+//-----------------------------------------------------------------------------
+Camera::ProjectionInfo::ProjectionInfo() : mProjectionLeft(-10.0),
+  mProjectionRight(10.0),
+  mProjectionBottom(0.0),
+  mProjectionTop(0.0),
+  mProjectionNear(0.5),
+  mProjectionFar(2000.0),
+  mZoomFactor( 1.0 ),
+  mProportionalToWindow(true)
+{}
 
+double Camera::ProjectionInfo::getHeight() const
+{ return mProjectionTop - mProjectionBottom; }
+
+double Camera::ProjectionInfo::getWidth() const
+{ return mProjectionRight - mProjectionLeft; }
+
+//-----------------------------------------------------------------------------
+//--- Camera
 //-----------------------------------------------------------------------------
 Camera::Camera( Mode iMode /*= PERSPECTIVE*/ ) : 
 mMode( iMode ),
@@ -28,11 +46,14 @@ mPos(),
 mLat(),
 mLook(),
 mUp(),
-mVisibleGLUnit( 20.0 ),
+mProjectionInfo(),
 mPixelPerGLUnit( 0.0 ),
-mZoomFactor( 1.0 ),
 mWindowInfo()
 {
+  set(Point3d(0.0, 0.0, 0.0),
+  	Point3d(0.0, 0.0, -1.0),
+    Vector3d(0.0, 1.0, 0.0));
+  setProjection(60, 1, 0.5, 1000.0, true);
 }
 
 //-----------------------------------------------------------------------------
@@ -45,11 +66,8 @@ mPos(iCam.getPos()),
 mLat(iCam.getLat()),
 mLook(iCam.getLook()),
 mUp(iCam.getUp()),
-mVisibleGLUnit(iCam.mVisibleGLUnit), /*ici, on ne peut pas utiliser la méthode
-  getVisibleGLUnit parce que celle ci retourne le visibleGLUnit * zoomFactor,
-  ce qui donne le nombre de gl unit visible une fois le zoom appliqué.*/
+mProjectionInfo(iCam.getProjectionInfo()),
 mPixelPerGLUnit(iCam.getPixelPerGLUnit()),
-mZoomFactor(iCam.getZoom()),
 mWindowInfo(iCam.getWindowInfo())
 {
 }
@@ -57,6 +75,85 @@ mWindowInfo(iCam.getWindowInfo())
 //-----------------------------------------------------------------------------
 Camera::~Camera()
 {
+}
+
+//-----------------------------------------------------------------------------
+void Camera::applyModelViewTransformation() const
+{    
+  //On place la caméra en coordonnée absolue.
+  Point3d absolutePos = getPos() * getTransformationToGlobal();
+  Point3d absoluteLook = getLook() * getTransformationToGlobal();
+  Vector3d absoluteUp = getUp() * getTransformationToGlobal();
+  
+  gluLookAt( absolutePos.getX(),
+             absolutePos.getY(), 
+             absolutePos.getZ(),
+             absoluteLook.getX(),
+             absoluteLook.getY(),
+             absoluteLook.getZ(),
+             absoluteUp.getX(),
+             absoluteUp.getY(),
+             absoluteUp.getZ() );
+}
+
+//-----------------------------------------------------------------------------
+void Camera::applyProjectionTransformation() const
+{
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+    
+  if( getWindowInfo().mOrientation == WindowInfo::oHorizontal )
+  {
+    glViewport(0, 0, getWindowInfo().getWidth(), getWindowInfo().getHeight() );
+  }
+  else //vertical
+  {
+    glViewport(0, 0, getWindowInfo().getWidth(), getWindowInfo().getHeight() );
+  }
+
+  double halfProjectionWidth = getVisibleWidth() / 2.0;
+  double halfProjectionHeigh = getVisibleHeight() / 2.0;
+  switch ( getMode() ) 
+  {
+    case ORTHOGONAL:
+      glOrtho(-halfProjectionWidth, halfProjectionWidth,
+              -halfProjectionHeigh, halfProjectionHeigh, 
+              getProjectionInfo().mProjectionNear,
+              getProjectionInfo().mProjectionFar);
+      break;
+      
+    case PERSPECTIVE:
+      glFrustum(-halfProjectionWidth, halfProjectionWidth,
+              -halfProjectionHeigh, halfProjectionHeigh, 
+              getProjectionInfo().mProjectionNear,
+              getProjectionInfo().mProjectionFar);
+      break;
+    default:
+      break;
+  }
+  glMatrixMode(GL_MODELVIEW);
+}
+
+//-----------------------------------------------------------------------------
+void Camera::computeProjection()
+{
+  if(getProjectionInfo().mProportionalToWindow)
+  {
+  	double f = getWindowInfo().getWidth() / getProjectionInfo().getWidth();
+    double h = getWindowInfo().getHeight() / f / 2.0;
+    mProjectionInfo.mProjectionTop = h;
+    mProjectionInfo.mProjectionBottom = -h;
+  }
+    
+  if( getWindowInfo().mOrientation == WindowInfo::oHorizontal )
+  {
+    mPixelPerGLUnit = getWindowInfo().getWidth() /  getVisibleWidth();
+  }
+  else //vertical
+  {
+    mPixelPerGLUnit = getWindowInfo().getHeight() /  getVisibleHeight();
+  }
+
 }
 
 //-----------------------------------------------------------------------------
@@ -74,13 +171,14 @@ Camera::~Camera()
 //  mUp.normalise();
 //}
 
-double Camera::getVisibleGLUnit() const
-{
-  if(getMode() == ORTHOGONAL)
-    return mVisibleGLUnit * getZoom();
-  else //PERSPECTIVE
-    return mVisibleGLUnit;
-}
+//-----------------------------------------------------------------------------
+/*retourne la largeur visible en unité GL*/
+double Camera::getVisibleHeight() const
+{ return mProjectionInfo.getHeight() * getZoom(); }
+
+//-----------------------------------------------------------------------------
+double Camera::getVisibleWidth() const
+{ return mProjectionInfo.getWidth() * getZoom(); }
 
 //-----------------------------------------------------------------------------
 /*déplace la caméra. Le delta est en coordonnée GL et locale à la caméra.*/
@@ -99,6 +197,9 @@ void Camera::move( const Vector3d& iDelta )
       
     case FREE:
     {
+    	double visibleGlUnit = 0.0;
+      getWindowInfo().mOrientation == WindowInfo::oHorizontal ? 
+        visibleGlUnit = getVisibleWidth() : visibleGlUnit = getVisibleHeight();
       //un delta de mVisiblGLUnit represente 360 degrée de rotation...
       //donc 2*Pi Rad
       
@@ -111,7 +212,7 @@ void Camera::move( const Vector3d& iDelta )
       Vector3d projDeltaOnLat = getLat() * ( getLat() & iDelta );
       
       //ROTATION PAR RAPPORT A LA COMPOSANTE Y DE LA TRANSFO DE LA CAMERA
-      double angle1 = projDeltaOnLat.norm() * DEUX_PI / getVisibleGLUnit();
+      double angle1 = projDeltaOnLat.norm() * DEUX_PI / visibleGlUnit;
             
       //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
       //est dans le même sens que ce dernier ou non... Si ce n'est pas le
@@ -169,7 +270,7 @@ void Camera::move( const Vector3d& iDelta )
       //de l'axe latérale
       Vector3d projDeltaOnUp = getUp() * ( getUp() & iDelta );
 
-      double angle2 = projDeltaOnUp.norm() * DEUX_PI / getVisibleGLUnit() * -1;
+      double angle2 = projDeltaOnUp.norm() * DEUX_PI / visibleGlUnit * -1;
             
       //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
       //est dans le même sens que ce dernier ou non... Si ce n'est pas le
@@ -209,11 +310,8 @@ Camera::operator=( const Camera& iCam )
   mLat = iCam.getLat();
   mLook = iCam.getLook();
   mUp = iCam.getUp();
-  mVisibleGLUnit = iCam.mVisibleGLUnit; /*ici, on ne peut pas utiliser la méthode
-  getVisibleGLUnit parce que celle ci retourne le visibleGLUnit * zoomFactor,
-  ce qui donne le nombre de gl unit visible une fois le zoom appliqué.*/
+  mProjectionInfo = iCam.getProjectionInfo();
   mPixelPerGLUnit = iCam.getPixelPerGLUnit();
-  mZoomFactor = iCam.getZoom();
   mWindowInfo = iCam.getWindowInfo();
   
   return *this;
@@ -339,20 +437,6 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
 }
 
 //-----------------------------------------------------------------------------
-void Camera::projectionGL( int iWidth, int iHeight )
-{
-  if(iWidth >= iHeight)
-    mWindowInfo.mOrientation = WindowInfo::oHorizontal;
-  else
-    mWindowInfo.mOrientation = WindowInfo::oVertical;
-  
-  //le coté le plus long montre la valeur mVisibleGLUnit unité GL
-  mWindowInfo.mShortSide = qMin(iWidth, iHeight);
-  mWindowInfo.mLongSide = qMax(iWidth, iHeight);
-  
-  computeProjection();
-}
-//-----------------------------------------------------------------------------
 void Camera::print() const
 {
   using namespace std;
@@ -360,72 +444,6 @@ void Camera::print() const
   cout<<"\nLook: "<<mLook.getX()<<" "<<mLook.getY()<<" "<<mLook.getZ();
   cout<<"\nLat: "<<mLat.getX()<<" "<<mLat.getY()<<" "<<mLat.getZ();
   cout<<"\nUp: "<<mUp.getX()<<" "<<mUp.getY()<<" "<<mUp.getZ();
-}
-//-----------------------------------------------------------------------------
-void Camera::computeProjection()
-{
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  
-  int windowLongSide = getWindowInfo().mLongSide;
-  int windowShortSide = getWindowInfo().mShortSide;
-  float projectionLongSide = getVisibleGLUnit();
-  mPixelPerGLUnit = windowLongSide / projectionLongSide;
-  float projectionShortSide = windowShortSide * projectionLongSide / 
-    windowLongSide; 
-  
-  //puisque le viewport est de -projectionLongSide a projectionLongSide et
-  //que projectionLongSide represente mVisibleUnitGL, on doit diviser en 2 afin de 
-  //conserver les proportions.
-  projectionShortSide /= 2.0;
-  projectionLongSide /= 2.0;
-  
-  if( getWindowInfo().mOrientation == WindowInfo::oHorizontal )
-  {
-    glViewport(0, 0, windowLongSide, windowShortSide );
-    
-    switch ( getMode() ) 
-    {
-      case ORTHOGONAL:
-        glOrtho(-projectionLongSide, projectionLongSide,
-                -projectionShortSide, projectionShortSide, 
-                kNear, kFar);
-        break;
-        
-      case PERSPECTIVE:
-        gluPerspective (27.0,
-          (GLfloat) projectionLongSide / (GLfloat) projectionShortSide,
-          0.5,
-          1000.0);
-        break;
-      default:
-        break;
-    }
-  }
-  else //vertical
-  {
-    glViewport(0, 0, windowShortSide, windowLongSide );
-    
-    switch ( getMode() ) 
-    {
-      case ORTHOGONAL:
-        glOrtho(-projectionShortSide, projectionShortSide,
-                -projectionLongSide, projectionLongSide, 
-                kNear, kFar);
-        break;
-        
-      case PERSPECTIVE:
-        gluPerspective (27.0,
-          (GLfloat) projectionShortSide / (GLfloat) projectionLongSide,
-          0.5,
-          1000.0);
-        break;
-        
-      default:
-        break;
-    }   
-  }
-  glMatrixMode(GL_MODELVIEW);
 }
 
 //-----------------------------------------------------------------------------
@@ -477,15 +495,47 @@ void Camera::setLook(const Point3d& iLook)
 { set(getPos(), iLook, getUp()); }
 
 //-----------------------------------------------------------------------------
-void Camera::setMode( Mode iMode )
+void Camera::setPos( const Point3d& iPos)
+{ set(iPos, getLook(), getUp()); }
+
+//-----------------------------------------------------------------------------
+void Camera::setProjection(double iVisibleGlUnit, double iNear, double iFar)
 {
-  mMode = iMode;
-  computeProjection();
+  setProjection(-iVisibleGlUnit / 2.0, iVisibleGlUnit / 2.0,
+   -1.0, 1.0, iNear, iFar, ORTHOGONAL, true);
 }
 
 //-----------------------------------------------------------------------------
-void Camera::setPos( const Point3d& iPos)
-{ set(iPos, getLook(), getUp()); }
+/*iFov est en degree*/
+void Camera::setProjection(double iFov, double iRatio,
+                           double iNear, double iFar,
+                           bool iProportional /*=true*/)
+{
+	//tan(iFov) = halfHeight / iNear;
+  double halfHeight = iNear * tan(iFov * 0.5 * kDegreeToRadian);
+  //iRatio = halfWidth / halfHeight;
+  double halfWidth = iRatio * halfHeight;
+  setProjection(-halfWidth, halfWidth, -halfHeight, halfHeight,
+    iNear, iFar, PERSPECTIVE, iProportional);
+}
+
+//-----------------------------------------------------------------------------
+void Camera::setProjection(double iLeft, double iRight,
+                           double iBottom, double iTop,
+                           double iNear, double iFar, Mode iMode,
+                           bool iProportional /*=true*/)
+{
+	mProjectionInfo.mProjectionLeft = iLeft;
+  mProjectionInfo.mProjectionRight = iRight;
+  mProjectionInfo.mProjectionBottom = iBottom;
+  mProjectionInfo.mProjectionTop = iTop;
+	mProjectionInfo.mProjectionNear = iNear;
+  mProjectionInfo.mProjectionFar = iFar;  
+  mProjectionInfo.mZoomFactor = 1.0;
+  mMode = iMode;
+	mProjectionInfo.mProportionalToWindow = iProportional;
+  computeProjection();
+}
 
 //-----------------------------------------------------------------------------
 void Camera::setOrientation( Orientation iO )
@@ -538,7 +588,7 @@ void Camera::setTransformationToGlobal(const Matrix4d& iTransfo)
 //-----------------------------------------------------------------------------
 void Camera::setUp( const Vector3d& iUp )
 {
-   mUp = iUp;
+  mUp = iUp;
 
   Vector3d currentLookVect( getPos(), getLook()  );
   
@@ -550,8 +600,23 @@ void Camera::setUp( const Vector3d& iUp )
 }
 
 //-----------------------------------------------------------------------------
+void Camera::setWindowSize( int iWidth, int iHeight )
+{
+  if(iWidth >= iHeight)
+    mWindowInfo.mOrientation = WindowInfo::oHorizontal;
+  else
+    mWindowInfo.mOrientation = WindowInfo::oVertical;
+  
+  //le coté le plus long montre la valeur mVisibleGLUnit unité GL
+  mWindowInfo.mShortSide = qMin(iWidth, iHeight);
+  mWindowInfo.mLongSide = qMax(iWidth, iHeight);
+  
+  computeProjection();
+}
+
+//-----------------------------------------------------------------------------
 void Camera::setZoom(double iZoom)
 {
-  mZoomFactor = iZoom;
+  mProjectionInfo.mZoomFactor = iZoom;
   computeProjection();
 }

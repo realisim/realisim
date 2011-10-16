@@ -163,7 +163,7 @@ void RealEdit3d::drawBoundingBox(const RealEditModel& iM,
   glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
                  GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
     glDisable(GL_LIGHTING);
-    enableSmoothLines();
+    //enableSmoothLines();
     mDisplayData.drawBoundingBox(iM.getBoundingBox().getMin(), 
       iM.getBoundingBox().getMax());
   glPopAttrib();
@@ -334,7 +334,7 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
         glPushAttrib(GL_CURRENT_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
                      GL_COLOR_BUFFER_BIT | GL_HINT_BIT | GL_DEPTH_BUFFER_BIT);
           glDisable(GL_LIGHTING);
-          enableSmoothLines();
+          //enableSmoothLines();
           drawSegments(model);
         glPopAttrib();
       }
@@ -356,7 +356,7 @@ RealEdit3d::drawScene(const realEdit::ObjectNode* ipObjectNode) const
           drawPoints(model);
          
           glDisable(GL_LIGHTING);
-          enableSmoothLines();
+          //enableSmoothLines();
           drawSegments(model);
         glPopAttrib();
       
@@ -478,10 +478,17 @@ void RealEdit3d::drawSelectionBox() const
 //cette fonction
 void RealEdit3d::enableSmoothLines() const
 {
-  glEnable (GL_LINE_SMOOTH);
-  glHint (GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
-  glEnable (GL_BLEND);
-  glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//  glEnable (GL_LINE_SMOOTH);
+//  glHint (GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
+//  glEnable (GL_BLEND);
+//  glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+
+//------------------------------------------------------------------------------
+void RealEdit3d::initializeGL()
+{
+	Widget3d::initializeGL();
 }
 
 //------------------------------------------------------------------------------

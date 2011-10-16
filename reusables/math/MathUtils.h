@@ -163,6 +163,23 @@ namespace math
   }
   
   //---------------------------------------------------------------------------
+  //retourne la matrice de rotation correpondant a la rotation de la matrice m
+  //de iAngle radian autour de l'axe iAxis
+  template<class T>
+  inline Matrix4<T> rotate( const Matrix4<T> &m, const T &angle,
+                              Vect<T> axis, const Point<T> &axisPos )
+  {
+		Matrix4<T> r = m;
+    axis.normalise();
+    Quaternion<T> quat;
+    quat.setRot(angle, axis);
+    r.translate(toVector(axisPos * -1));
+    r = r * quat.getUnitRotationMatrix(); 
+    r.translate(toVector(axisPos));
+    return r;
+  }
+  
+  //---------------------------------------------------------------------------
   template<class T>
   inline Matrix4<T> interpolate(const Matrix4<T>& iM1, const Matrix4<T>& iM2, 
     double iT)

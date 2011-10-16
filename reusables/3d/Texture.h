@@ -79,12 +79,14 @@ namespace treeD
 class Texture
 {
 public:
-  enum type {t2d, t3d, tInvalid};
+  enum type {t2d, t3d, tCubeMap, tInvalid};
   
   Texture();
   Texture(QImage, GLenum = GL_RGBA, GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);  //void*, const math::Vector2i?
   Texture(void*, const math::Vector3i&, GLenum = GL_RGBA,
     GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);
+//  Texture(QImage, QImage, QImage, QImage, QImage, QImage,
+//    GLenum = GL_RGBA, GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);
   Texture(const Texture&);
   virtual ~Texture();
   virtual Texture& operator=(const Texture&);

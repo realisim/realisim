@@ -55,6 +55,7 @@ namespace math
     
     inline void setRotation(const Matrix4<T>& iRot);
     inline void setTranslation( const Point<T>& iTrans );
+    inline void translate(const Vect<T>& iTrans);
 
     // --------------- fonction get --------------------------------------------
     inline Vect<T> getBaseX() const;
@@ -170,6 +171,14 @@ namespace math
   inline void Matrix4<T>::setTranslation(const Point<T>& iTrans)
   {
     mat_[12] = iTrans.getX(); mat_[13] = iTrans.getY(); mat_[14] = iTrans.getZ();
+  }
+  
+  // permet d'ajouter la translation iTrans a la matrice
+  template<class T>
+  inline void Matrix4<T>::translate(const Vect<T>& iTrans)
+  {
+  	Point3d t = getTranslation() + toPoint(iTrans);
+    setTranslation(t);
   }
 
   //! permet d'obtenir la 1er ligne de la sous matrice 3x3 ("coin" sup gauche)

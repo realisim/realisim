@@ -38,23 +38,11 @@ MACRO( GENERATE_EXE iExecutableName )
   IF(APPLE)
     #-fvisibility=hidden sert a enlever les milliers de warnings de Qt depuis la version 4.5 
     ADD_DEFINITIONS(-fvisibility=hidden)
-    #ajout des frameworks nécessaire a la compilation de QT en static
-    FIND_LIBRARY(CARBON_LIBRARY Carbon)
-    FIND_LIBRARY(APLICATIONSERVICES_LIBRARY ApplicationServices)
-    FIND_LIBRARY(APPKIT_LIBRARY AppKit)
-    #FIND_LIBRARY(QJPEG_LIBRARY libqjpeg.a PATHS "${QT_PLUGINS_DIR}/imageformats/")
     SET( PROJECT_LINK_LIBRAIRIES
       ${PROJECT_LINK_LIBRAIRIES}
-      ${CARBON_LIBRARY}
-      ${APLICATIONSERVICES_LIBRARY}
-      ${APPKIT_LIBRARY}
-      )#${QJPEG_LIBRARY})
+      )
 
     ADD_EXECUTABLE( ${iExecutableName} MACOSX_BUNDLE  ${INCLUDES} ${SOURCES} ${RESOURCES} ${MOC_FILES} )
-    #ADD_CUSTOM_COMMAND( TARGET ${iExecutableName} POST_BUILD
-    #  COMMAND mkdir ARGS ${CMAKE_CURRENT_BINARY_DIR}/${iExecutableName}.app/Contents/Resources
-    #  COMMAND cp ARGS ${MACOSX_BUNDLE_ICON_FILE} ${CMAKE_CURRENT_BINARY_DIR}/${iExecutableName}.app/Contents/Resources
-    #  COMMAND cp ARGS *.qm ${CMAKE_CURRENT_BINARY_DIR}/${iExecutableName}.app/Contents/Resources )
   ELSE(APPLE)
     ADD_EXECUTABLE( ${iExecutableName} ${INCLUDES} ${SOURCES} ${RESOURCES} ${MOC_FILES} )
   ENDIF(APPLE)

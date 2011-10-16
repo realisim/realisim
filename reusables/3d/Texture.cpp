@@ -191,6 +191,7 @@ void Texture::set(void* iPtr, const Vector3i& iSize, GLenum iF/*= GL_RGBA*/,
   glTexImage3D(GL_TEXTURE_3D, 0, getFormat(), iSize.getX(), iSize.getY(),
     iSize.getZ(), 0, getFormat(), getDataType(), iPtr);
 
+	//glGenerateMipMapEXT(GL_TEXTURE_3D);
   glBindTexture(GL_TEXTURE_3D, 0);
   glPopClientAttrib();
   glPopAttrib();
