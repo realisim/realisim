@@ -6,4 +6,6 @@
 
 \f0\fs24 \cf0 Camera: enlever setAsActive et mettre un dirty flat a la place de tout \'e7a. Quand on fait un setCamera, on appelera activate qui calculera tout si le flat est sale.\
 \
-Camera: mettre le zoom dans la projection et quand on fait setprojection, on remet le zoom \'e0 1.0}
+Camera: mettre le zoom dans la projection et quand on fait setprojection, on remet le zoom \'e0 1.0\
+\
+- Dessiner d'abord dans le depth buffer et tagger les \'e9l\'e9ments visible (mettre le frame number) Ensuite on utilise le d\'e9pth buffer mais on ne lupdate plus (et surtout afin de ne pas \'e9crire les infos de d\'e9pt 2 fois) et on dessine (::draw) tous les objets qui ont \'e9t\'e9 tagg\'e9 par le frame nimber courant. (Pour le tagging on peu utiliser un BSP-tree, octree ou n'importe)}

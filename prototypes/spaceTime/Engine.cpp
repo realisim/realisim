@@ -1,6 +1,10 @@
 
 #include "Engine.h"
 #include "math/MathUtils.h"
+#include <omp.h>
+#include <QByteArray>
+#include <QDataStream>
+#include <QTime>
 #include <QTimerEvent>
 #include <set>
 
@@ -8,14 +12,14 @@ using namespace SpaceTime;
 
 const int kNameLength = 24;
 int AstronomicalBodySizeRange[AstronomicalBody::tNumberOfType][2] = 
-//{ {0.5, 10000.0}, {0.001, 800.0}, {100.0, 5000.0}, {2000.0, 60000.0},
-//  {100000, 1000000} };
+{ {0.5, 10000.0}, {0.001, 800.0}, {100.0, 5000.0}, {2000.0, 60000.0},
+  {100000, 1000000} };
 
 //{ {0.5, 10000.0}, {0.001, 800.0}, {100.0, 5000.0}, {2000.0, 6000.0},
 //  {1000, 1000} };
 
-{ {1.0, 1.0}, {1.0, 1.0}, {1.0, 1.0}, {1.0, 1.0},
-  {1.0, 1.0} };
+//{ {1.0, 1.0}, {1.0, 1.0}, {1.0, 1.0}, {1.0, 1.0},
+//  {1.0, 1.0} };
 
 int kTimeStep = 15; //en milliseconde
 //-----------------------------------------------------------------------------
@@ -31,7 +35,10 @@ Engine::Engine() :
   mMouse(),
   mIsDebugging(true),
   mState(sPaused),
-  mTimerId(0)
+  mTimerId(0),
+  mCycles(0),
+  mRadiusOfGeneration(100),
+  mErrors()
 {
 	srand( time(NULL) );
   for(int i = 0; i < kNumKeys; ++i)
@@ -42,6 +49,20 @@ Engine::Engine() :
 Engine::~Engine()
 {
   unregisterAllClients();
+  deleteAllAstronomicalBodies();
+}
+//-----------------------------------------------------------------------------
+void Engine::addAstronomicalBody(AstronomicalBody* ipAb, long long iIndex)
+{
+  mAstronomicalBodies.push_back(ipAb);
+  mSortedPositions.insert(make_pair(ipAb->getTransformation().getTranslation(), iIndex));
+}
+
+//-----------------------------------------------------------------------------
+void Engine::addError(const QString& iE)
+{
+	if(!iE.isNull() && !iE.isEmpty())
+    mErrors += "\n" + iE;
 }
 
 //-----------------------------------------------------------------------------
@@ -52,40 +73,120 @@ void Engine::callClients(Client::message iM)
 }
 
 //-----------------------------------------------------------------------------
-void Engine::fromString(const QString& iS)
-{}
+void Engine::deleteAllAstronomicalBodies()
+{
+	for(unsigned int i = 0; i < mAstronomicalBodies.size(); ++i)
+  	delete mAstronomicalBodies[i];
+  mAstronomicalBodies.clear();
+  mSortedPositions.clear();
+}
+
+//-----------------------------------------------------------------------------
+void Engine::fromBinary(const QByteArray& iB)
+{
+	deleteAllAstronomicalBodies();
+
+	QDataStream ds(iB);
+	
+  qint32 readableVersion = 1;
+  qint32 version;
+  ds >> version;
+  if(version != readableVersion)
+  {
+  	addError("Unable to read file version" + QString::number(version));
+    return;
+  }
+  
+  //on entre les corps astronomiques
+  qlonglong numBodies;
+  ds >> numBodies;
+  
+  QString name;
+  double accelX, accelY, accelZ;
+  double mass;
+  double forceX, forceY, forceZ;
+  double speedX, speedY, speedZ;
+  double t00, t01, t02, t03;
+  double t10, t11, t12, t13;
+  double t20, t21, t22, t23;
+  double t30, t31, t32, t33;
+  qint32 type;
+  double radius;
+  for(long long i = 0; i < numBodies; ++i)
+  {
+    ds >> name >>
+    accelX >> accelY >> accelZ >>
+    mass >>
+    forceX >> forceY >> forceZ >>
+    speedX >> speedY >> speedZ >>
+    t00 >> t01 >> t02 >> t03 >>
+    t10 >> t11 >> t12 >> t13 >>
+    t20 >> t21 >> t22 >> t23 >>
+    t30 >> t31 >> t32 >> t33 >>
+    type >> radius;
+   
+    AstronomicalBody* pAb = new AstronomicalBody();
+    pAb->setName(name);
+    pAb->setAcceleration(Vector3d(accelX, accelY, accelZ));
+    pAb->setMass(mass);
+    pAb->setForce(Vector3d(forceX, forceY, forceZ));
+    pAb->setSpeed(Vector3d(speedX, speedY, speedZ));
+    Matrix4d m(t00, t01, t02, t03,
+      t10, t11, t12, t13,
+      t20, t21, t22, t23,
+      t30, t31, t32, t33);
+    pAb->setTransformation(m);
+    pAb->setType( (AstronomicalBody::type)type );
+    pAb->setRadius(radius);
+    addAstronomicalBody(pAb, i);
+  }
+	
+  //on entre les donne de l'engin
+	ds >> mCycles >>
+    mRadiusOfGeneration;
+}
 
 //-----------------------------------------------------------------------------
 void Engine::generateAstronomicalBodies(long long	iNum)
 {
 	//on clear les anciennes données
-  mAstronomicalBodies.clear();
+  mCycles = 0;
+  deleteAllAstronomicalBodies();
   mAstronomicalBodies.reserve(iNum);
-  
+	
   for(long long i = 0; i < iNum; ++i)
   {  	
     int numLetter = max(rand() % kNameLength, 1);
     QString name = generateName(numLetter);
-    const int kUniverseRadius = 100;
-   	Point3d pos(rand() % kUniverseRadius * (rand() % 2 == 0 ? 1 : -1),
-      rand() % kUniverseRadius * (rand() % 2 == 0 ? 1 : -1),
-      rand() % kUniverseRadius * (rand() % 2 == 0 ? 1 : -1));
+   	Point3d pos(rand() % getRadiusOfGeneration() * (rand() % 2 == 0 ? 1 : -1),
+      rand() % getRadiusOfGeneration() * (rand() % 2 == 0 ? 1 : -1),
+      rand() % getRadiusOfGeneration() * (rand() % 2 == 0 ? 1 : -1));
     Matrix4d t;
     t.setTranslation(pos);
+    int maxAccel = 25;
+    Vector3d accel(rand() % maxAccel * (rand() % 2 == 0 ? 1 : -1),
+        rand() % maxAccel * (rand() % 2 == 0 ? 1 : -1),
+        rand() % maxAccel * (rand() % 2 == 0 ? 1 : -1) );
 
-		AstronomicalBody ab;
-    ab.setType( (AstronomicalBody::type)(rand() % AstronomicalBody::tNumberOfType));
-    ab.setName(name);
-    ab.setTransformation(t);
+		AstronomicalBody* pAb = new AstronomicalBody();
+    pAb->setType( (AstronomicalBody::type)(rand() % AstronomicalBody::tNumberOfType));
+    pAb->setName(name);
+    pAb->setTransformation(t);
+//    pAb->setAcceleration(accel);
+    int radius = rand();
+    if(radius > AstronomicalBodySizeRange[pAb->getType()][0])
+    	radius = AstronomicalBodySizeRange[pAb->getType()][0] +
+        radius % AstronomicalBodySizeRange[pAb->getType()][1];
+    pAb->setRadius(1);
+    double volume = 4 * PI * radius * radius * radius / 3;
+    /*la densité du fer 7.87 g/cm 3 donc 7.87 e 12 Kg/km3
+      de laluminum      2.70 g/cm3  donc 2.70 e 12 kg/km3*/
+    //pAb->setMass(volume * 2.70e+5);
+    //pAb->setMass(volume);
+    pAb->setMass(100000000);
+    //pAb->setForce( pAb->getMass() * accel );
     
-		int radius = rand();
-    if(radius > AstronomicalBodySizeRange[ab.getType()][0])
-    	radius = AstronomicalBodySizeRange[ab.getType()][0] +
-        radius % AstronomicalBodySizeRange[ab.getType()][1];
-    ab.setRadius(radius);
-    ab.setMass(ab.getRadius());
-		mAstronomicalBodies.push_back(ab);
-    mSortedPositions.insert(make_pair(pos, i));
+    addAstronomicalBody(pAb, i);
   }
   
   if(isDebugging())
@@ -111,6 +212,46 @@ void Engine::generateAstronomicalBodies(long long	iNum)
 }
 
 //-----------------------------------------------------------------------------
+void Engine::generateTestBodies()
+{
+	//on clear les anciennes données
+  mCycles = 0;
+  deleteAllAstronomicalBodies();
+	
+  Matrix4d t;
+  
+  {
+  AstronomicalBody* pAb = new AstronomicalBody();
+  pAb->setType(AstronomicalBody::tPlanet);
+  pAb->setName(generateName(5));
+  t.setTranslation(Point3d(-10, 0, 20));
+  pAb->setTransformation(t);
+  pAb->setRadius(1);
+  pAb->setMass(10000000000);
+  addAstronomicalBody(pAb, 0);
+  }
+  
+  {
+  AstronomicalBody* pAb = new AstronomicalBody();
+  pAb->setType(AstronomicalBody::tPlanet);
+  pAb->setName(generateName(5));
+  t.setTranslation(Point3d(10, 0, 20));
+  pAb->setTransformation(t);
+  pAb->setRadius(1);
+  pAb->setMass(10000000000);
+  addAstronomicalBody(pAb, 1);
+  }
+}
+
+//-----------------------------------------------------------------------------
+QString Engine::getAndClearLastErrors() const
+{
+	QString r = mErrors;
+  mErrors.clear();
+  return r;
+}
+
+//-----------------------------------------------------------------------------
 QString Engine::generateName(int iNumLetter) const
 {
   static const char alphanum[] =
@@ -128,22 +269,22 @@ QString Engine::generateName(int iNumLetter) const
 }
 
 //-----------------------------------------------------------------------------
-const vector<AstronomicalBody>& Engine::getAstronomicalBodies() const
+const vector<AstronomicalBody*>& Engine::getAstronomicalBodies() const
 { return mAstronomicalBodies; }
 
 //-----------------------------------------------------------------------------
-vector<AstronomicalBody>
+const vector<AstronomicalBody*>
 Engine::getAstronomicalBodies(const Point3d& iPos, double iRadius) const
 {
 	return getAstronomicalBodies(iPos, 0, iRadius);
 }
 
 //-----------------------------------------------------------------------------
-vector<AstronomicalBody>
+const vector<AstronomicalBody*>
 Engine::getAstronomicalBodies(const Point3d& iPos, double iInnerRadius,
                               double iOuterRadius) const
 {
-  vector<AstronomicalBody> r;
+  vector<AstronomicalBody*> r;
   iOuterRadius = max(iOuterRadius, 0.0);
   iInnerRadius = max(iInnerRadius, 0.0);
   
@@ -158,15 +299,109 @@ Engine::getAstronomicalBodies(const Point3d& iPos, double iInnerRadius,
   itOuterLeft = mSortedPositions.lower_bound(outerLeft);
   itOuterRight = mSortedPositions.lower_bound(outerRight);
   
+  /*Todo: Aulieu de faire un fastDist, ce qui ajouter tous les points a
+    l'interieur de la sphere, on devrait faire un methode qui retourne
+    si le point est a l'intérieur du cube. Ainsi, le probleme de visualisation
+    ou les corps disparaissent de la premiere region mais n'apparaisent pas dans
+    la region suivante parce qu'ils sont entre la shere du niveau n et le cube
+    du niveau n. C'est pour cela qu'ils n'apparaisent pas dans le niveau n + 1.
+    Ils sont encore dans le niveau n, mais le test 'fastDist' les écarte.*/
   while(itOuterLeft != itOuterRight)
   {
-  	const Point3d& p = mAstronomicalBodies[itOuterLeft->second].getTransformation().getTranslation();
-    if(p.fastDist(iPos) < iOuterRadius && p.fastDist(iPos) >= iInnerRadius)
+  	const Point3d& p = mAstronomicalBodies[itOuterLeft->second]->getTransformation().getTranslation();
+    double diameter = 2.0 * mAstronomicalBodies[itOuterLeft->second]->getRadius();
+    if(p.fastDist(iPos) < (iOuterRadius + diameter) && p.fastDist(iPos) >= iInnerRadius - diameter)
 	    r.push_back(mAstronomicalBodies[itOuterLeft->second]);
   	itOuterLeft++;
   }
 
   return r;
+}
+//-----------------------------------------------------------------------------
+void Engine::generatingStep(int iMs)
+{
+	QTime timer;
+  timer.start();
+
+	/*On calcule la somme des forces que chaque corps astronomiques
+    appliquent sur les autres.
+    
+    http://en.wikipedia.org/wiki/Gravitational_constant
+    
+    F = G * (m1 * m2) / (r*r)
+    G = 6.674 x 10^-11 N(m/Kg)^2
+    
+    */
+    
+  const AstronomicalBody* ab1;
+  AstronomicalBody* ab2;
+  Point3d pos1, pos2;
+  double G = 6.674e-11;
+	for(unsigned int i = 0; i < mAstronomicalBodies.size(); ++i)
+  {
+  	ab1 = mAstronomicalBodies[i];
+  	for(unsigned int j = 0; j < mAstronomicalBodies.size(); ++j)    
+  	{
+    	if(i == j)
+      	continue;
+      ab2 = mAstronomicalBodies[j];
+      
+      pos1 = ab1->getTransformation().getTranslation();
+      pos2 = ab2->getTransformation().getTranslation();
+      double dist = pos1.fastDist(pos2) * 1000.0; //en met la distance en metre
+      dist *= dist;
+      dist = max(0.1, dist);
+      
+      double F = G * (ab1->getMass() * ab2->getMass()) / dist;
+      Vector3d vf = toVector(pos1 - pos2);
+      vf.normalise();
+      vf *= F;
+      ab2->setForce( ab2->getForce() + vf );
+      
+      std::string name = ab2->getName().toStdString();
+      printf("\nname: %s\n", name.c_str());
+      printf("Force ajoutee: %f\n", vf.norm());
+      printf("froce residuelle: %f\n", ab2->getForce().norm());
+    }
+  }
+
+	for(unsigned int i = 0; i < mAstronomicalBodies.size(); ++i)
+  {
+  	AstronomicalBody& ab = *mAstronomicalBodies[i];
+  	//La vitesse et position en fonction de lacceleration
+    ab.setAcceleration( ab.getForce() / ab.getMass() );
+  	Vector3d a = ab.getAcceleration() * ab.getTransformation();
+	  Vector3d s = ab.getSpeed();
+    Point3d p;
+    Matrix4d m = ab.getTransformation();
+    double t = (iMs / 1000.0); //en sec
+    
+    s += a * t; //en km / s  
+    p = ab.getTransformation().getTranslation();
+    p += toPoint(s * t + 0.5 * a * t * t);
+    
+    /*On applique les limites du monde*/
+		if(p.getX() > 100)
+    	p.setX(-100);
+    if(p.getX() < -100)
+    	p.setX(100);
+    
+    if(p.getY() > 100)
+    	p.setY(-100);
+    if(p.getY() < -100)
+    	p.setY(100);
+      
+    if(p.getZ() > 100)
+    	p.setZ(-100);
+    if(p.getZ() < -100)
+    	p.setZ(100);
+      
+    ab.setSpeed(s);
+    m.setTranslation(p);
+    ab.setTransformation(m);
+  }
+  
+  printf("temps pour un cycle: %d ms\n", timer.elapsed());
 }
 //-----------------------------------------------------------------------------
 void Engine::goToState(state iS)
@@ -180,9 +415,14 @@ void Engine::goToState(state iS)
         case sPlaying:
           mState = sPlaying;
           callClients(Client::mPlaying);
+          killTimer(mTimerId);
         	mTimerId = startTimer(kTimeStep);
         break;
-        case sGenerating: break;
+        case sGenerating:
+          killTimer(mTimerId);
+          mState = sGenerating;
+        	mTimerId = startTimer(kTimeStep);
+        break;
         default: break;
       }
     } 
@@ -200,8 +440,8 @@ void Engine::goToState(state iS)
         break;
         case sGenerating:
           killTimer(mTimerId);
-          mTimerId = 0;
-          mState = sGenerating;
+          mState = sGenerating;        
+        	mTimerId = startTimer(kTimeStep);
         break;
         default: break;
       }
@@ -219,16 +459,18 @@ void Engine::goToState(state iS)
           callClients(Client::mPaused);
         break;
         case sPlaying:
-          mTimerId = startTimer(kTimeStep);
+          killTimer(mTimerId);
           mState = sPlaying;
+          mTimerId = startTimer(kTimeStep);          
           callClients(Client::mPlaying);
         break;
-        default: break;
+        case sGenerating: default: break;
       }      
     } 
     break;
     default: break;
   }
+  callClients(Client::mStateChanged);
 }
 
 //-----------------------------------------------------------------------------
@@ -254,8 +496,8 @@ void Engine::handleUserInput()
     
   mShip.setRoll(roll);
   mShip.setAcceleration(accel);
-  printf("\naccel from User input: %f, %f, %f\n", accel.getX(),
-    accel.getY(), accel.getZ() );
+//printf("\naccel from User input: %f, %f, %f\n", accel.getX(),
+//  accel.getY(), accel.getZ() );
   
   //handle mouse
   /*800 pixel = 2pi radian*/
@@ -316,7 +558,7 @@ void Engine::registerClient(Client* iC)
 }
 
 //-----------------------------------------------------------------------------
-void Engine::step(int iMs)
+void Engine::playingStep(int iMs)
 {
   const int method = 1;
   
@@ -326,7 +568,7 @@ void Engine::step(int iMs)
   Point3d p;
   Matrix4d m = mShip.getTransformation();
   double t = (iMs / 1000.0); //en sec
-  printf("speed avant friction: %f, %f, %f\n", s.getX(), s.getY(), s.getZ() );
+//printf("speed avant friction: %f, %f, %f\n", s.getX(), s.getY(), s.getZ() );
   
   switch (method) 
   {
@@ -341,8 +583,8 @@ void Engine::step(int iMs)
         sInv = sInv * 0.05 * s.fastNorm();
         s += sInv;
       }
-      printf("speed apres friction: %f, %f, %f\n", s.getX(), s.getY(), s.getZ() );
-      printf("speed norm %f\n", s.fastNorm());
+//printf("speed apres friction: %f, %f, %f\n", s.getX(), s.getY(), s.getZ() );
+//printf("speed norm %f\n", s.fastNorm());
 
       s += a * t; //en km / s  
       p = mShip.getTransformation().getTranslation();
@@ -382,9 +624,22 @@ void Engine::step(int iMs)
   m.setTranslation(p);
   mShip.setTransformation(m);
   
-  printf("Speed: %f, %f, %f\n", s.getX(), s.getY(), s.getZ());
-  printf("accel: %f, %f, %f\n", a.getX(), a.getY(), a.getZ() );
-  printf("pos: %f, %f, %f\n", p.getX(), p.getY(), p.getZ() );
+//printf("Speed: %f, %f, %f\n", s.getX(), s.getY(), s.getZ());
+//printf("accel: %f, %f, %f\n", a.getX(), a.getY(), a.getZ() );
+//printf("pos: %f, %f, %f\n", p.getX(), p.getY(), p.getZ() );
+}
+
+//-----------------------------------------------------------------------------
+void Engine::refreshSortedPositions()
+{
+	mSortedPositions.clear();
+  unsigned int i = 0;
+  AstronomicalBody* pAb;
+  for(; i < mAstronomicalBodies.size(); ++i)
+  {
+    pAb = mAstronomicalBodies[i];
+    mSortedPositions.insert(make_pair(pAb->getTransformation().getTranslation(), i));
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -392,15 +647,61 @@ void Engine::timerEvent(QTimerEvent* ipE)
 {
 	if(ipE->timerId() != mTimerId)
     return;
-    
-  handleUserInput();
-  step(kTimeStep);
-	callClients(Client::mFrameReady);
+  
+  switch (getState()) 
+  {
+    case sPlaying:
+   		handleUserInput();
+      playingStep(kTimeStep);
+  	  callClients(Client::mFrameReady);   
+      break;
+    case sGenerating:
+    	handleUserInput();
+      generatingStep(5000);
+      mCycles++;
+      if(getNumberOfCycles() % 5 == 0)
+      {
+        refreshSortedPositions();
+	      callClients(Client::mFrameReady);
+      }
+    break;
+    default: break;
+  }  
 }
 
 //-----------------------------------------------------------------------------
-QString Engine::toString() const
-{ return QString(); }
+QByteArray Engine::toBinary() const
+{
+  QByteArray ba;
+  QDataStream ds(&ba, QIODevice::WriteOnly);
+  
+  qint32 version = 1;
+  ds << version;
+  
+  //on dompe les corps astrnomiques
+  qlonglong numBodies = mAstronomicalBodies.size();
+  ds << numBodies;
+  for(long long i = 0; i < mAstronomicalBodies.size(); ++i)
+  {
+  	const AstronomicalBody* pAb = mAstronomicalBodies[i];
+  	ds << pAb->getName() <<
+      pAb->getAcceleration().getX() << pAb->getAcceleration().getY() << pAb->getAcceleration().getZ() <<
+      pAb->getMass() <<
+      pAb->getForce().getX() << pAb->getForce().getY() << pAb->getForce().getZ() <<
+      pAb->getSpeed().getX() << pAb->getSpeed().getY() << pAb->getSpeed().getZ() <<
+      pAb->getTransformation()(0,0) << pAb->getTransformation()(0,1) << pAb->getTransformation()(0,2) << pAb->getTransformation()(0,3) <<
+      pAb->getTransformation()(1,0) << pAb->getTransformation()(1,1) << pAb->getTransformation()(1,2) << pAb->getTransformation()(1,3) <<
+      pAb->getTransformation()(2,0) << pAb->getTransformation()(2,1) << pAb->getTransformation()(2,2) << pAb->getTransformation()(2,3) <<
+      pAb->getTransformation()(3,0) << pAb->getTransformation()(3,1) << pAb->getTransformation()(3,2) << pAb->getTransformation()(3,3) <<
+      (qint32)pAb->getType() << pAb->getRadius();
+  }
+  
+  //on entre les donne de l'engin
+  //le ship
+  ds << getNumberOfCycles() <<
+    getRadiusOfGeneration();
+  return ba;
+}
 
 //-----------------------------------------------------------------------------
 void Engine::unregisterClient(Client* iC)

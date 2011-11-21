@@ -15,7 +15,7 @@ namespace
 {
   double kFov = 60.0;
   double kNear(0.005);
-  double kFar(25000.0);
+  double kFar(500000);
 }
 //-----------------------------------------------------------------------------
 //--- Viewer
@@ -25,8 +25,7 @@ Viewer::Viewer(QWidget* ipParent /*=0*/, Engine& iEngine) : Widget3d(ipParent),
   mShipCamera(),
   mSphere(0),
   mCube(0),
-  mOuterRadius(25),
-  mInnerRadius(0.0),
+  mAreaToRenderRadii(),
   mCameraFollowsShip(true),
   mIsDebugging(false),
   mIsThirdPersonView(true),
@@ -36,6 +35,12 @@ Viewer::Viewer(QWidget* ipParent /*=0*/, Engine& iEngine) : Widget3d(ipParent),
 {
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
+  
+  /*on pousse des valeurs par defaut pour les rayons des
+    cubeMaps*/
+  mAreaToRenderRadii.push_back(0.0);
+  mAreaToRenderRadii.push_back(50.0);
+  mAreaToRenderRadii.push_back(500000.0);  
 }
 
 Viewer::~Viewer()
@@ -46,9 +51,15 @@ void Viewer::call(Client::message iM)
 {
 	switch (iM)
   {
-    case Client::mFrameReady: centerMouse(); update(); break;
+    case Client::mFrameReady:
+    	if(getEngine().getState() == Engine::sGenerating)
+      	invalidateCubeMapRender();
+      centerMouse();
+      update();
+      break;
     case Client::mPaused: setMouseTracking(false); break;
     case Client::mPlaying: centerMouse(); setMouseTracking(true); break;
+    case Client::mStateChanged: update(); break;
     default: break;
   }
 }
@@ -64,10 +75,10 @@ void Viewer::centerMouse()
 //-----------------------------------------------------------------------------
 void Viewer::draw()
 {
-	const int kOuter2 = 100;
-  const int kOuter3 = 12000;
-	drawBodies(getInnerRadius(), getOuterRadius(), lodHigh);
-	drawDistantBodies(getOuterRadius(), kOuter2);
+	drawBodies(getAreaToRenderInnerRadius(0),
+    getAreaToRenderOuterRadius(0), lodHigh);
+	drawDistantBodies(getAreaToRenderInnerRadius(1),
+    getAreaToRenderOuterRadius(1));
   //drawDistantBodies(kOuter2, kOuter3);
   
   /*On dessine le Ship*/
@@ -144,48 +155,70 @@ void Viewer::drawBodies(double iInnerRadius, double iOuterRadius,
   levelOfDetail iLod)
 {
   Point3d p = getEngine().getShip().getTransformation().getTranslation();
-  const vector<AstronomicalBody>& vab = 
+  const vector<AstronomicalBody*>& vab = 
   	getEngine().getAstronomicalBodies(p, iInnerRadius, iOuterRadius);
+    
+  switch(iLod)
+  {
+  case lodHigh: break;
+  case lodMed: glDisable(GL_LIGHTING); break;
+  case lodLow: glDisable(GL_LIGHTING); break;
+  default:break;
+  } 
     
   for(uint i = 0; i < vab.size(); ++i)
   {  
   glColor3ub(255, 255, 255);
-//  switch (vab[i].getType()) 
-//    {
-//      case Engine::AstronomicalBody::tBlackHole: glColor3ub(5, 5, 5); break;
-//      case Engine::AstronomicalBody::tComet: glColor3ub(234, 139, 30); break;
-//      case Engine::AstronomicalBody::tMoon: glColor3ub(237, 237, 237); break;
-//      case Engine::AstronomicalBody::tPlanet: glColor3ub(111, 178, 230); break;
-//      case Engine::AstronomicalBody::tStar: glColor3ub(250, 255, 99); break;
-//      default: break;
-//    }
-        
+  switch (vab[i]->getType()) 
+    {
+      case AstronomicalBody::tBlackHole: glColor3ub(5, 5, 5); break;
+      case AstronomicalBody::tComet: glColor3ub(234, 139, 30); break;
+      case AstronomicalBody::tMoon: glColor3ub(237, 237, 237); break;
+      case AstronomicalBody::tPlanet: glColor3ub(111, 178, 230); break;
+      case AstronomicalBody::tStar: glColor3ub(250, 255, 99); break;
+      default: break;
+    }
+    
+    //on dessine le vecteur de force
+    if(isDebugging())
+    {
+    	Vector3d f = vab[i]->getForce();
+      f.normalise();
+      glBegin(GL_LINES);
+      glVertex3dv(vab[i]->getTransformation().getTranslation().getPtr());
+      glVertex3d(vab[i]->getTransformation().getTranslation().getX() + 2 * f.getX(),
+        vab[i]->getTransformation().getTranslation().getY() + 2 * f.getY(),
+        vab[i]->getTransformation().getTranslation().getZ() + 2 * f.getZ() );
+      glEnd();
+    }
+    
     switch(iLod)
     {
     case lodHigh:  	
       glPushMatrix();
-      glMultMatrixd(vab[i].getTransformation().getPtr());
-      glScaled(vab[i].getRadius(), vab[i].getRadius(), vab[i].getRadius());
+      glMultMatrixd(vab[i]->getTransformation().getPtr());
+      glScaled(vab[i]->getRadius(), vab[i]->getRadius(), vab[i]->getRadius());
       glCallList(mSphere);
       glPopMatrix();
     break;
     case lodMed:
-      glPointSize(3);
+      glPointSize(1);
       glBegin(GL_POINTS);
-        glVertex3d(vab[i].getTransformation().getTranslation().getX(), vab[i].getTransformation().getTranslation().getY(),
-          vab[i].getTransformation().getTranslation().getZ());
+        glVertex3d(vab[i]->getTransformation().getTranslation().getX(), vab[i]->getTransformation().getTranslation().getY(),
+          vab[i]->getTransformation().getTranslation().getZ());
       glEnd();
     break;
     case lodLow:
       glPointSize(1);
       glBegin(GL_POINTS);
-        glVertex3d(vab[i].getTransformation().getTranslation().getX(), vab[i].getTransformation().getTranslation().getY(),
-          vab[i].getTransformation().getTranslation().getZ());
+        glVertex3d(vab[i]->getTransformation().getTranslation().getX(), vab[i]->getTransformation().getTranslation().getY(),
+          vab[i]->getTransformation().getTranslation().getZ());
       glEnd();
     break;
     default:break;
     } 
   } 
+  glEnable(GL_LIGHTING);
 }
 
 //-----------------------------------------------------------------------------
@@ -201,7 +234,7 @@ void Viewer::drawCubeMapFace(cubeMapSide iSide, const Camera& iC,
     pushFrameBuffer(mCubeMapFbo);
       mCubeMapFbo.drawTo(iSide);  
       glClearColor(0.0, 0.0, 0.0, 0.0);
-      glClear(GL_COLOR_BUFFER_BIT);      
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       drawBodies(iInnerRadius, iOuterRadius, lodMed);
     popFrameBuffer();
   glPopMatrix();
@@ -212,6 +245,8 @@ void Viewer::drawDebuggingBox(const BB3d& iBb)
 {
   Point3d minCorner = iBb.getMin();
 	Point3d maxCorner = iBb.getMax();
+  glDisable(GL_LIGHTING);
+  glColor3ub(255, 255, 255);
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   glBegin(GL_QUADS);
   
@@ -253,6 +288,7 @@ void Viewer::drawDebuggingBox(const BB3d& iBb)
   
   glEnd();
   glPolygonMode(GL_FRONT, GL_FILL);
+  glEnable(GL_LIGHTING);
 }
 
 //-----------------------------------------------------------------------------
@@ -276,7 +312,7 @@ void Viewer::drawDistantBodies(double iInnerRadius, double iOuterRadius)
   }
 
   if(mCubeMapFbo.isValid() &&
-     cameraPos.fastDist(mLastCubeMapRenderPosition) > mThresholdToRenderCubeMap)
+     cameraPos.fastDist(mLastCubeMapRenderPosition) > getThresholdToRenderCubeMap())
   {
     mLastCubeMapRenderPosition = cameraPos;
     //On sauvegarde la camera actuelle
@@ -298,6 +334,8 @@ void Viewer::drawDistantBodies(double iInnerRadius, double iOuterRadius)
   }
   
   //Ondessine le ciel étoilé
+  glColor3ub(255, 255, 255);
+  glDisable(GL_LIGHTING);
   glEnable(GL_TEXTURE_2D);    
   glPolygonMode(GL_BACK, GL_FILL);
   Texture t = mCubeMapFbo.getTexture(cmsNegZ);
@@ -387,6 +425,7 @@ void Viewer::drawDistantBodies(double iInnerRadius, double iOuterRadius)
   glPolygonMode(GL_FRONT, GL_FILL);
   glBindTexture(GL_TEXTURE_2D, 0);
   glDisable(GL_TEXTURE_2D);
+  glEnable(GL_LIGHTING);
 
 //    Sprite s;
 //    s.setTexture(t);
@@ -445,6 +484,33 @@ Camera Viewer::getCubeMapCamera(cubeMapSide iSide, const BB3d& iBb)
 }
 
 //-----------------------------------------------------------------------------
+double Viewer::getAreaToRenderInnerRadius(int iAreaIndex) const
+{
+	double r = 0.0;
+  if(iAreaIndex >= 0 && iAreaIndex < (int)mAreaToRenderRadii.size())
+  {
+  	r = mAreaToRenderRadii[iAreaIndex];
+  }
+  return r;
+}
+
+//-----------------------------------------------------------------------------
+double Viewer::getAreaToRenderOuterRadius(int iAreaIndex) const
+{
+	double r = 0.0;
+  int i = iAreaIndex + 1;
+  if(i >= 0 && iAreaIndex < (int)mAreaToRenderRadii.size())
+  {
+  	r = mAreaToRenderRadii[i];
+  }
+  return r;	
+}
+
+//-----------------------------------------------------------------------------
+double Viewer::getAreaToRenderRadius(int iAreaIndex) const
+{ return getAreaToRenderOuterRadius(iAreaIndex); }
+
+//-----------------------------------------------------------------------------
 void Viewer::initializeDisplayLists()
 {
 	if(glIsList(mSphere))
@@ -494,15 +560,20 @@ void Viewer::initializeGL()
     voir main.cpp*/
   glEnable(GL_MULTISAMPLE);
   initializeDisplayLists();
-  
+    
+  mCubeMapFbo.addColorAttachment(true);
+  mCubeMapFbo.addColorAttachment(true);
+  mCubeMapFbo.addColorAttachment(true);
+  mCubeMapFbo.addColorAttachment(true);
+  mCubeMapFbo.addColorAttachment(true);
+  mCubeMapFbo.addColorAttachment(true);  
+  mCubeMapFbo.addDepthAttachment(true);
   mCubeMapFbo.resize(400, 400);
-  mCubeMapFbo.addColorAttachment(true);
-  mCubeMapFbo.addColorAttachment(true);
-  mCubeMapFbo.addColorAttachment(true);
-  mCubeMapFbo.addColorAttachment(true);
-  mCubeMapFbo.addColorAttachment(true);
-  mCubeMapFbo.addColorAttachment(true);
 }
+
+//-----------------------------------------------------------------------------
+void Viewer::invalidateCubeMapRender()
+{ mLastCubeMapRenderPosition.set(std::numeric_limits<double>::max()); }
 
 //-----------------------------------------------------------------------------
 void Viewer::keyPressEvent(QKeyEvent* ipE)
@@ -512,10 +583,6 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
   {
   	if(isDebugging())
     {
-      case Qt::Key_O: mOuterRadius += 1.0; break;
-      case Qt::Key_P: mOuterRadius -= 1.0; break;
-      case Qt::Key_K: mInnerRadius += 1.0; break;
-      case Qt::Key_L: mInnerRadius -= 1.0; break;
       case Qt::Key_F:
       {
         mCameraFollowsShip = !mCameraFollowsShip;
@@ -607,6 +674,21 @@ void Viewer::paintGL()
 {
   Widget3d::paintGL();
   draw();
+  
+  if(isDebugging())
+  {
+  	QString info("Engine state: ");
+    switch (getEngine().getState()) 
+    {
+      case Engine::sGenerating: info += "Generating. "; break;
+      case Engine::sPlaying: info += "Playing. "; break;
+      case Engine::sPaused: info += "Paused. ";break;
+      default: break;
+    }
+    info += "number of cycles: " + QString::number(getEngine().getNumberOfCycles());
+    glColor3ub(255, 255, 255);
+    renderText(5, 30, info);
+  }  
 }
 
 //-----------------------------------------------------------------------------
@@ -614,7 +696,7 @@ void Viewer::resizeGL(int iW, int iH)
 {
 	//QUand le viewport est redimensionné, on invalide la derniere position
   //de rendu du cube map
-	mLastCubeMapRenderPosition.set(std::numeric_limits<double>::max());
+	invalidateCubeMapRender();
 	Widget3d::resizeGL(iW, iH);
   /*On réassigne la caméra afin d'avoir la bonne caméra lors 
     de l'intialisation des fenetre Qt, étant donné que Widget3d::resizeGL
@@ -622,6 +704,24 @@ void Viewer::resizeGL(int iW, int iH)
     il est important de reprendre la camera afin que la premiere image rendu
     soit correcte.*/
   mShipCamera = getCamera();
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::setAreaToRenderRadius(int iAreaIndex, double iRadius)
+{
+	if(iAreaIndex < 0)
+    return;
+    
+  int index = iAreaIndex + 1;
+  if(index > (int)mAreaToRenderRadii.size())
+  {
+  	double value = mAreaToRenderRadii.back();
+  	for(int i = mAreaToRenderRadii.size(); i < index; ++i)
+    {
+    	mAreaToRenderRadii[i] = value;
+    }
+  }
+  mAreaToRenderRadii[index] = iRadius;
 }
 
 //-----------------------------------------------------------------------------

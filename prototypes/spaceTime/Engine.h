@@ -4,9 +4,11 @@
 #include "math/Matrix4x4.h"
 #include "math/Point.h"
 #include "math/Vect.h"
+class QByteArray;
 #include <QObject>
 #include <QPoint>
 #include <QString>
+#include <QTimer>
 class QTimerEvent;
 #include <vector>
 #include <map>
@@ -24,25 +26,28 @@ using namespace std;
 class SpaceTime::Object
 {
   public: 
-    Object() : mName("n/a"), mAcceleration(0.0), mMass(0.0), mSpeed(0.0),
-      mTransformation() {}
+    Object() : mName("n/a"), mAcceleration(0.0), mMass(0.0), mForce(0.0),
+      mSpeed(0.0), mTransformation() {}
     virtual ~Object() {}
     
     const Vector3d& getAcceleration() const {return mAcceleration;}
     double getMass() const {return mMass;}
+    const Vector3d& getForce() const {return mForce;}
     const QString& getName() const {return mName;}
     const Matrix4d& getTransformation() const {return mTransformation;}
     const Vector3d& getSpeed() const {return mSpeed;}
     void setAcceleration(const Vector3d& iA) {mAcceleration = iA;}
     void setMass(double iM) {mMass = iM;}
+    void setForce(const Vector3d& iF) {mForce = iF;}
     void setName(const QString& iN) {mName = iN;}
     void setTransformation(const Matrix4d& iM) {mTransformation = iM;}
     void setSpeed(const Vector3d& iS) {mSpeed = iS;} 
     
   protected:
     QString mName;
-    Vector3d mAcceleration;
-    double mMass;
+    Vector3d mAcceleration; //km / s
+    double mMass; //kg
+    Vector3d mForce;
     Vector3d mSpeed;
     Matrix4d mTransformation;
 // boundingbox?
@@ -94,7 +99,8 @@ public:
       Client(Engine& iE) : mEngine(iE) {;}
       virtual ~Client() {}
       
-      enum message{mFrameReady, mPaused, mPlaying, mRegistered, mUnregistered};
+      enum message{mFrameReady, mPaused, mPlaying, mRegistered,
+        mStateChanged, mUnregistered};
       virtual void call(message) = 0;
       virtual Engine& getEngine() {return mEngine;}
       virtual const Engine& getEngine() const {return mEngine;}
@@ -106,15 +112,18 @@ public:
   enum state {sGenerating, sPlaying, sPaused};
   enum key{kA, kD, kE, kQ, kS, kW, kNumKeys};
   
-virtual void fromString(const QString&);
+  virtual void fromBinary(const QByteArray&);
   virtual void generateAstronomicalBodies(long long);
-  virtual const vector<AstronomicalBody>& getAstronomicalBodies() const;
-  virtual vector<AstronomicalBody> getAstronomicalBodies(const Point3d&, double) const;
-  virtual vector<AstronomicalBody> getAstronomicalBodies(const Point3d&, double, double) const;
+  virtual void generateTestBodies();
+  virtual QString getAndClearLastErrors() const;
+  virtual const vector<AstronomicalBody*>& getAstronomicalBodies() const;
+  virtual const vector<AstronomicalBody*> getAstronomicalBodies(const Point3d&, double) const;
+  virtual const vector<AstronomicalBody*> getAstronomicalBodies(const Point3d&, double, double) const;
+  virtual long long getNumberOfCycles() const {return mCycles;}
+  virtual long long getRadiusOfGeneration() const {return mRadiusOfGeneration;}
   virtual const Ship& getShip() const {return mShip;}
   virtual state getState() const {return mState;}
   virtual void goToState(state);
-  virtual void handleUserInput();
   virtual bool isDebugging() const {return mIsDebugging;}
   virtual void ignoreMouseMove(QPoint);
   virtual void keyPressed(key);
@@ -122,10 +131,11 @@ virtual void fromString(const QString&);
   virtual void mouseMoved(int, int);
   virtual void registerClient(Client*);
   virtual void setAsDebugging(bool iD) {mIsDebugging = iD;}
-  virtual void step(int);
+  virtual void setRadiusOfGeneration(long long iR) {mRadiusOfGeneration = iR;}
+  virtual QByteArray toBinary() const;
   virtual void unregisterClient(Client*);
   virtual void unregisterAllClients();
-QString toString() const;
+  
   
 protected:
 	struct Mouse
@@ -135,13 +145,20 @@ protected:
     int mDeltaX;
     int mDeltaY;
   };
-    
+  
+  virtual void addAstronomicalBody(AstronomicalBody*, long long);
+  virtual void addError(const QString&);
   virtual void callClients(Client::message);
+  virtual void deleteAllAstronomicalBodies();
   virtual QString generateName(int iNumLetter) const;
+  virtual void generatingStep(int);
+  virtual void handleUserInput();
+  virtual void playingStep(int);
+  virtual void refreshSortedPositions();
   virtual void timerEvent(QTimerEvent*);
   
   vector<Client*> mClients;
-	vector<AstronomicalBody> mAstronomicalBodies;
+	vector<AstronomicalBody*> mAstronomicalBodies;
 //map<QString, long long> mNameToId;
   multimap<Point3d, long long> mSortedPositions;
   Ship mShip;
@@ -150,6 +167,10 @@ protected:
   bool mIsDebugging;
   state mState;
   int mTimerId;
+  QTimer mTimer;
+  long long mCycles;
+  long long mRadiusOfGeneration;
+  mutable QString mErrors;
 };
 
 

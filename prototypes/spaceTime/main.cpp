@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     /*On active l'anti aliasing pour les fenêtre GL*/
     QGLFormat fmt;
     fmt.setSampleBuffers(true);
-    fmt.setSamples(8);
+    fmt.setSamples(4);
     QGLFormat::setDefaultFormat(fmt);
     
     MainWindow m;
