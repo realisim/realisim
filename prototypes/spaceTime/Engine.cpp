@@ -11,17 +11,37 @@
 using namespace SpaceTime;
 
 const int kNameLength = 24;
-int AstronomicalBodySizeRange[AstronomicalBody::tNumberOfType][2] = 
-{ {0.5, 10000.0}, {0.001, 800.0}, {100.0, 5000.0}, {2000.0, 60000.0},
-  {100000, 1000000} };
+int AstronomicalBodyRadiusRange[AstronomicalBody::tNumberOfType][2] = 
+{ {5000, 10000}, {1.0, 10.0}, {10.0, 50.0}, {50.0, 800.0},
+  {800, 2000} };
 
 //{ {0.5, 10000.0}, {0.001, 800.0}, {100.0, 5000.0}, {2000.0, 6000.0},
 //  {1000, 1000} };
 
 //{ {1.0, 1.0}, {1.0, 1.0}, {1.0, 1.0}, {1.0, 1.0},
-//  {1.0, 1.0} };
+//  {100000, 10000000} };
+  
+int AstronomicalBodyDensityRange[AstronomicalBody::tNumberOfType][2] = 
+{ {5000, 10000}, {1.0, 10.0}, {10.0, 50.0}, {50.0, 800.0},
+  {800, 2000} };
 
 int kTimeStep = 15; //en milliseconde
+//-----------------------------------------------------------------------------
+// --- AstronomicalBody
+//-----------------------------------------------------------------------------
+void AstronomicalBody::addToPath(const Point3d& iP)
+{
+  if (getPath().size() >= 200) 
+  {
+    vector<Point3d> t;
+    t.resize(199);
+    for(unsigned int i = 0; i < 200 - 1; ++i)
+    	t[i] = mPath[i + 1];
+    mPath = t;
+  }
+  mPath.push_back(iP);
+}
+
 //-----------------------------------------------------------------------------
 // --- ENGINE
 //-----------------------------------------------------------------------------
@@ -38,7 +58,10 @@ Engine::Engine() :
   mTimerId(0),
   mCycles(0),
   mRadiusOfGeneration(100),
-  mErrors()
+  mSpaceRadius(100000),
+  mErrors(),
+  mCollisions(),
+  mMarkToDelete()
 {
 	srand( time(NULL) );
   for(int i = 0; i < kNumKeys; ++i)
@@ -66,6 +89,54 @@ void Engine::addError(const QString& iE)
 }
 
 //-----------------------------------------------------------------------------
+void Engine::applyForces()
+{
+	/*On calcule la somme des forces que chaque corps astronomiques
+    appliquent sur les autres.
+    
+    http://en.wikipedia.org/wiki/Gravitational_constant
+    
+    F = G * (m1 * m2) / (r*r)
+    G = 6.674 x 10^-11 N(m/Kg)^2
+    
+    */
+  
+  AstronomicalBody* ab1;
+  AstronomicalBody* ab2;
+  Point3d pos1, pos2;
+  double G = 6.674e-11;
+	for(unsigned int i = 0; i < mAstronomicalBodies.size(); ++i)
+  {
+  	ab1 = mAstronomicalBodies[i];
+  	for(unsigned int j = 0; j < mAstronomicalBodies.size(); ++j)    
+  	{
+    	if(i == j)
+      	continue;
+      ab2 = mAstronomicalBodies[j];
+      
+      pos1 = ab1->getTransformation().getTranslation();
+      pos2 = ab2->getTransformation().getTranslation();
+      double dist = pos1.fastDist(pos2);
+      	
+      dist = dist * 1000.0 * dist * 1000.0; // on met la distance en metre
+       	//et au carré
+      dist = max(0.1, dist);
+      
+      double F = G * (ab1->getMass() * ab2->getMass()) / dist;
+      Vector3d vf = toVector(pos1 - pos2);
+      vf.normalise();
+      vf *= F;
+      ab2->setForce( ab2->getForce() + vf );
+      
+      std::string name = ab2->getName().toStdString();
+//      printf("\nname: %s\n", name.c_str());
+//      printf("Force ajoutee: %f\n", vf.norm());
+//      printf("froce residuelle: %f\n", ab2->getForce().norm());
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
 void Engine::callClients(Client::message iM)
 {
 	for(unsigned int i = 0; i < mClients.size(); ++i)
@@ -79,6 +150,86 @@ void Engine::deleteAllAstronomicalBodies()
   	delete mAstronomicalBodies[i];
   mAstronomicalBodies.clear();
   mSortedPositions.clear();
+}
+//-----------------------------------------------------------------------------
+void Engine::deleteMarkedBodies()
+{
+	//on enleve les object delete
+  set<AstronomicalBody*>::iterator abIt = mMarkToDelete.begin();
+  for(; abIt != mMarkToDelete.end(); ++abIt)
+  {
+  	vector<AstronomicalBody*>::iterator it = 
+      find(mAstronomicalBodies.begin(), mAstronomicalBodies.end(), *abIt);
+    if(it != mAstronomicalBodies.end())
+	  	mAstronomicalBodies.erase(it);
+    delete *abIt;    
+  }
+  
+  mMarkToDelete.clear();
+}
+
+//-----------------------------------------------------------------------------
+void Engine::detectCollisions()
+{
+	mCollisions.clear();
+  AstronomicalBody* ab1;
+  AstronomicalBody* ab2;
+  Point3d pos1, pos2;
+	for(unsigned int i = 0; i < mAstronomicalBodies.size(); ++i)
+  {
+  	ab1 = mAstronomicalBodies[i];
+  	for(unsigned int j = 0; j < mAstronomicalBodies.size(); ++j)    
+  	{
+    	if(i == j)
+      	continue;
+      ab2 = mAstronomicalBodies[j];
+      
+      pos1 = ab1->getTransformation().getTranslation();
+      pos2 = ab2->getTransformation().getTranslation();
+      double dist = pos1.dist(pos2);
+      
+      //On ajoute un collision quand la distance entre deux objects
+      // est plus petites que la somme de leurs rayons
+      if(dist < (ab1->getRadius() + ab2->getRadius()) * 0.95)
+      {
+        mCollisions.insert(CollisionPair(i, j));
+      }
+  	}
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Engine::explodeAstronomicalBody(AstronomicalBody* ipA)
+{
+	for(unsigned int i = 0; i < 4; ++i)
+  {
+    AstronomicalBody* pAb = new AstronomicalBody();
+    pAb->setType(ipA->getType());
+    
+    Vector3d dir( rand(), rand(), 0 );
+    dir.normalise();
+    double mass = ipA->getMass() / 4.0;
+		double volume = mass / ipA->getDensity();    
+//  double radius = pow(3 * volume / (4.0 * PI), 1.0/3.0);
+double radius = ipA->getRadius() / 4.0;
+    Point3d pos = ipA->getTransformation().getTranslation() + 
+      dir * normalizedRandom() * ipA->getRadius();
+    Matrix4d transfo;
+    transfo.setTranslation(pos);
+    
+    pAb->setName("crashed-" + generateName(5));
+    pAb->setTransformation( transfo );
+    pAb->setRadius( radius );
+    pAb->setMass(mass);
+    pAb->setSpeed(ipA->getSpeed());
+    addAstronomicalBody(pAb, mAstronomicalBodies.size() - 1);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Engine::fonctionBidon()
+{
+	solveCollisionsOverlap();
 }
 
 //-----------------------------------------------------------------------------
@@ -174,16 +325,16 @@ void Engine::generateAstronomicalBodies(long long	iNum)
     pAb->setTransformation(t);
 //    pAb->setAcceleration(accel);
     int radius = rand();
-    if(radius > AstronomicalBodySizeRange[pAb->getType()][0])
-    	radius = AstronomicalBodySizeRange[pAb->getType()][0] +
-        radius % AstronomicalBodySizeRange[pAb->getType()][1];
+    if(radius > AstronomicalBodyRadiusRange[pAb->getType()][0])
+    	radius = AstronomicalBodyRadiusRange[pAb->getType()][0] +
+        radius % AstronomicalBodyRadiusRange[pAb->getType()][1];
     pAb->setRadius(1);
     double volume = 4 * PI * radius * radius * radius / 3;
     /*la densité du fer 7.87 g/cm 3 donc 7.87 e 12 Kg/km3
       de laluminum      2.70 g/cm3  donc 2.70 e 12 kg/km3*/
-    //pAb->setMass(volume * 2.70e+5);
+    pAb->setMass(volume * 2.70e+5);
     //pAb->setMass(volume);
-    pAb->setMass(100000000);
+    //pAb->setMass(100000000);
     //pAb->setForce( pAb->getMass() * accel );
     
     addAstronomicalBody(pAb, i);
@@ -212,34 +363,124 @@ void Engine::generateAstronomicalBodies(long long	iNum)
 }
 
 //-----------------------------------------------------------------------------
-void Engine::generateTestBodies()
+void Engine::generateTestBodies1()
 {
 	//on clear les anciennes données
   mCycles = 0;
   deleteAllAstronomicalBodies();
 	
   Matrix4d t;
+  int radius;
+  double volume;
   
   {
   AstronomicalBody* pAb = new AstronomicalBody();
-  pAb->setType(AstronomicalBody::tPlanet);
+  pAb->setType(AstronomicalBody::tStar);
+  
+  radius = rand();
+  if(radius > AstronomicalBodyRadiusRange[pAb->getType()][0])
+    radius = AstronomicalBodyRadiusRange[pAb->getType()][0] +
+      radius % AstronomicalBodyRadiusRange[pAb->getType()][1];
+  volume = 4 * PI * radius * radius * radius / 3;
+  
   pAb->setName(generateName(5));
   t.setTranslation(Point3d(-10, 0, 20));
   pAb->setTransformation(t);
   pAb->setRadius(1);
-  pAb->setMass(10000000000);
+  /*la densité du fer 7.87 g/cm 3 donc 7.87 e 12 Kg/km3
+      de laluminum      2.70 g/cm3  donc 2.70 e 12 kg/km3*/
+  pAb->setDensity(2.70e+7);
+  pAb->setMass(volume * pAb->getDensity());
   addAstronomicalBody(pAb, 0);
   }
   
   {
   AstronomicalBody* pAb = new AstronomicalBody();
   pAb->setType(AstronomicalBody::tPlanet);
+  
+  radius = rand();
+  if(radius > AstronomicalBodyRadiusRange[pAb->getType()][0])
+    radius = AstronomicalBodyRadiusRange[pAb->getType()][0] +
+      radius % AstronomicalBodyRadiusRange[pAb->getType()][1];
+  volume = 4 * PI * radius * radius * radius / 3;
+  
   pAb->setName(generateName(5));
-  t.setTranslation(Point3d(10, 0, 20));
+  t.setTranslation(Point3d(10, 10, 20));
   pAb->setTransformation(t);
-  pAb->setRadius(1);
-  pAb->setMass(10000000000);
+  pAb->setRadius(2);
+  //pAb->setMass(9999999999999999/2);
+  pAb->setDensity(2.70e+7);
+  pAb->setMass(volume * pAb->getDensity());
+  pAb->setSpeed(Vector3d(-2, -1.3, 0));
   addAstronomicalBody(pAb, 1);
+  }
+  
+//  {
+//  AstronomicalBody* pAb = new AstronomicalBody();
+//  pAb->setType(AstronomicalBody::tPlanet);
+//  pAb->setName(generateName(5));
+//  t.setTranslation(Point3d(10, 10, 20));
+//  pAb->setTransformation(t);
+//  pAb->setRadius(1);
+//  pAb->setMass(10000);
+//  pAb->setSpeed(Vector3d(0.005, 0.01, 0.0));
+//  addAstronomicalBody(pAb, 2);
+//  }
+}
+
+//-----------------------------------------------------------------------------
+void Engine::generateTestBodies2(long long iNum)
+{
+	//on clear les anciennes données
+  mCycles = 0;
+  deleteAllAstronomicalBodies();
+  mAstronomicalBodies.reserve(iNum);
+	
+  for(long long i = 0; i < iNum; ++i)
+  {  	
+    AstronomicalBody* pAb = new AstronomicalBody();
+    pAb->setType( (AstronomicalBody::type)(rand() % AstronomicalBody::tNumberOfType));
+    
+    int numLetter = max(rand() % kNameLength, 1);
+    QString name = generateName(numLetter);
+   	Point3d pos(rand() % getRadiusOfGeneration() * (rand() % 2 == 0 ? 1 : -1),
+      rand() % getRadiusOfGeneration() * (rand() % 2 == 0 ? 1 : -1),
+      -25000);
+    Matrix4d t;
+    t.setTranslation(pos);
+    //int maxAccel = 25;
+    //Vector3d accel(rand() % maxAccel * (rand() % 2 == 0 ? 1 : -1),
+    //    rand() % maxAccel * (rand() % 2 == 0 ? 1 : -1),
+    //    0 );
+    int maxspeed = 5;
+    Vector3d speed(rand() % maxspeed * (rand() % 2 == 0 ? 1 : -1),
+        rand() % maxspeed * (rand() % 2 == 0 ? 1 : -1),
+        0 );
+    int radius = rand();
+    if(radius > AstronomicalBodyRadiusRange[pAb->getType()][0])
+    	radius = AstronomicalBodyRadiusRange[pAb->getType()][0] +
+        radius % AstronomicalBodyRadiusRange[pAb->getType()][1];
+    double volume = 4 * PI * radius * radius * radius / 3;
+
+    pAb->setName(name);
+    pAb->setTransformation(t);
+//    pAb->setAcceleration(accel);
+		pAb->setSpeed(speed);
+    //pAb->setRadius(radius);
+    pAb->setRadius(1);    
+    /*la densité du fer 7.87 g/cm 3 donc 7.87 e 12 Kg/km3
+      de laluminum      2.70 g/cm3  donc 2.70 e 12 kg/km3*/
+    //pAb->setMass(volume * 2.70e+5);
+    pAb->setMass(volume);
+    //pAb->setMass(100000000);
+    //pAb->setForce( pAb->getMass() * accel );
+    
+    addAstronomicalBody(pAb, i);
+  }
+  
+  if(isDebugging())
+  {
+  	printf("%d corps astronomique(s)\n", mAstronomicalBodies.size());
   }
 }
 
@@ -317,91 +558,23 @@ Engine::getAstronomicalBodies(const Point3d& iPos, double iInnerRadius,
 
   return r;
 }
+
+
 //-----------------------------------------------------------------------------
-void Engine::generatingStep(int iMs)
+void Engine::simulate(int iMs)
 {
 	QTime timer;
   timer.start();
 
-	/*On calcule la somme des forces que chaque corps astronomiques
-    appliquent sur les autres.
-    
-    http://en.wikipedia.org/wiki/Gravitational_constant
-    
-    F = G * (m1 * m2) / (r*r)
-    G = 6.674 x 10^-11 N(m/Kg)^2
-    
-    */
-    
-  const AstronomicalBody* ab1;
-  AstronomicalBody* ab2;
-  Point3d pos1, pos2;
-  double G = 6.674e-11;
-	for(unsigned int i = 0; i < mAstronomicalBodies.size(); ++i)
-  {
-  	ab1 = mAstronomicalBodies[i];
-  	for(unsigned int j = 0; j < mAstronomicalBodies.size(); ++j)    
-  	{
-    	if(i == j)
-      	continue;
-      ab2 = mAstronomicalBodies[j];
-      
-      pos1 = ab1->getTransformation().getTranslation();
-      pos2 = ab2->getTransformation().getTranslation();
-      double dist = pos1.fastDist(pos2) * 1000.0; //en met la distance en metre
-      dist *= dist;
-      dist = max(0.1, dist);
-      
-      double F = G * (ab1->getMass() * ab2->getMass()) / dist;
-      Vector3d vf = toVector(pos1 - pos2);
-      vf.normalise();
-      vf *= F;
-      ab2->setForce( ab2->getForce() + vf );
-      
-      std::string name = ab2->getName().toStdString();
-      printf("\nname: %s\n", name.c_str());
-      printf("Force ajoutee: %f\n", vf.norm());
-      printf("froce residuelle: %f\n", ab2->getForce().norm());
-    }
-  }
-
-	for(unsigned int i = 0; i < mAstronomicalBodies.size(); ++i)
-  {
-  	AstronomicalBody& ab = *mAstronomicalBodies[i];
-  	//La vitesse et position en fonction de lacceleration
-    ab.setAcceleration( ab.getForce() / ab.getMass() );
-  	Vector3d a = ab.getAcceleration() * ab.getTransformation();
-	  Vector3d s = ab.getSpeed();
-    Point3d p;
-    Matrix4d m = ab.getTransformation();
-    double t = (iMs / 1000.0); //en sec
-    
-    s += a * t; //en km / s  
-    p = ab.getTransformation().getTranslation();
-    p += toPoint(s * t + 0.5 * a * t * t);
-    
-    /*On applique les limites du monde*/
-		if(p.getX() > 100)
-    	p.setX(-100);
-    if(p.getX() < -100)
-    	p.setX(100);
-    
-    if(p.getY() > 100)
-    	p.setY(-100);
-    if(p.getY() < -100)
-    	p.setY(100);
-      
-    if(p.getZ() > 100)
-    	p.setZ(-100);
-    if(p.getZ() < -100)
-    	p.setZ(100);
-      
-    ab.setSpeed(s);
-    m.setTranslation(p);
-    ab.setTransformation(m);
-  }
+	applyForces();
+  moveBodies(iMs);
+  detectCollisions();
+  handleCollisions(iMs);
+  deleteMarkedBodies();
+  solveCollisionsOverlap();
   
-  printf("temps pour un cycle: %d ms\n", timer.elapsed());
+  mCycles++;
+  //printf("temps pour un cycle: %d ms\n", timer.elapsed());
 }
 //-----------------------------------------------------------------------------
 void Engine::goToState(state iS)
@@ -418,9 +591,9 @@ void Engine::goToState(state iS)
           killTimer(mTimerId);
         	mTimerId = startTimer(kTimeStep);
         break;
-        case sGenerating:
+        case sSimulating:
           killTimer(mTimerId);
-          mState = sGenerating;
+          mState = sSimulating;
         	mTimerId = startTimer(kTimeStep);
         break;
         default: break;
@@ -438,9 +611,9 @@ void Engine::goToState(state iS)
           mState = sPaused;
           callClients(Client::mPaused);
         break;
-        case sGenerating:
+        case sSimulating:
           killTimer(mTimerId);
-          mState = sGenerating;        
+          mState = sSimulating;        
         	mTimerId = startTimer(kTimeStep);
         break;
         default: break;
@@ -448,7 +621,7 @@ void Engine::goToState(state iS)
     } 
     break;
     
-    case sGenerating:
+    case sSimulating:
     {
       switch (iS) 
       {
@@ -464,13 +637,108 @@ void Engine::goToState(state iS)
           mTimerId = startTimer(kTimeStep);          
           callClients(Client::mPlaying);
         break;
-        case sGenerating: default: break;
+        case sSimulating: default: break;
       }      
     } 
     break;
     default: break;
   }
   callClients(Client::mStateChanged);
+}
+
+//-----------------------------------------------------------------------------
+void Engine::handleCollisions(int iMs)
+{
+	AstronomicalBody* ab1;
+  AstronomicalBody* ab2;
+  set<CollisionPair>::iterator it = mCollisions.begin();
+  for(; it != mCollisions.end(); ++it)
+  {
+  	ab1 = mAstronomicalBodies[it->mIndex1];
+    ab2 = mAstronomicalBodies[it->mIndex2]; 
+     
+    double t = (iMs / 1000.0); //en sec
+    double m1 = ab1->getMass();
+    double m2 = ab2->getMass();
+    Vector3d v1 = ab1->getSpeed();
+    Vector3d v2 = ab2->getSpeed();
+    Point3d pos1 = ab1->getTransformation().getTranslation();
+    Point3d pos2 = ab2->getTransformation().getTranslation();
+    Vector3d collisionNormal(pos1, pos2);
+    collisionNormal.normalise();
+    double v1ProjectedOnNormal = collisionNormal & v1;
+    double v2ProjectedOnNormal = collisionNormal & v2;
+
+		//on traite ab1
+    {
+      if(ab1->getMass() / ab2->getMass() <= 1e-5)
+      {
+        mMarkToDelete.insert(ab1); 
+        merge(ab1, ab2);
+      }
+      else 
+      {
+      	Vector3d tangent = collisionNormal ^ (collisionNormal ^ v1);
+        tangent.normalise();
+        double v1ProjectedOnTangent = tangent & v1;
+        double vScalarNormal = (v1ProjectedOnNormal*(m1 - m2) + 2*m2*v2ProjectedOnNormal) / (m1 + m2);
+        Vector3d v1n = collisionNormal * vScalarNormal;
+        Vector3d vf = v1n + tangent * v1ProjectedOnTangent;
+        
+        Vector3d delta = ab1->getSpeed() - vf;
+        delta = delta / t;
+        double kineticEnergyOfdeceleration = 0.5 * ab1->getMass() *
+          delta.norm() * delta.norm(); 
+        if(kineticEnergyOfdeceleration > 10000 * ab1->getMass())
+        {
+          //on marque l'objet pour etre detruit et on ajoute
+          //4 nouveau qui on le quart de la masse original
+          mMarkToDelete.insert(ab1);   
+          ab1->setSpeed(vf * 0.8);                 
+          explodeAstronomicalBody(ab1);          
+        }
+        else 
+        {
+          ab1->setSpeed(vf);
+        }
+      }
+    }
+    
+    //on traite ab2
+    {
+      if(ab2->getMass() / ab1->getMass() <= 1e-5)
+      {
+        mMarkToDelete.insert(ab2);
+        merge(ab2, ab1);
+      }
+      else
+      {
+      	Vector3d tangent = collisionNormal ^ (collisionNormal ^ v2);
+        tangent.normalise();
+        double v2ProjectedOnTangent = tangent & v2;
+        double vScalarNormal = (v2ProjectedOnNormal*(m2 - m1) + 2*m1*v1ProjectedOnNormal) / (m1 + m2);
+        Vector3d v2n = collisionNormal * vScalarNormal;
+        Vector3d vf = v2n + tangent * v2ProjectedOnTangent;
+
+        Vector3d delta = ab2->getSpeed() - vf;
+        delta = delta / t;
+        double kineticEnergyOfdeceleration = 0.5 * ab2->getMass() *
+          delta.norm() * delta.norm(); 
+        if(kineticEnergyOfdeceleration > 10000 * ab2->getMass())
+        {
+          //on marque l'objet pour etre detruit et on ajoute
+          //4 nouveau qui on le quart de la masse original
+          mMarkToDelete.insert(ab2);   
+          ab2->setSpeed(vf * 0.8);       
+          explodeAstronomicalBody(ab2);          
+        }
+        else 
+        {
+          ab2->setSpeed(vf);
+        }
+      }
+    }
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -481,6 +749,7 @@ void Engine::handleUserInput()
   double a = 10.00; //km / s2 -> acceleration galactique!
   double roll = 0.0; //angle du roll en radian
 	Vector3d accel(0.0);
+  double turbo = 1.0;
 	if(mKeyboard[kW])
 	  accel += Vector3d(0.0, 0.0, -a);
   if(mKeyboard[kA])
@@ -493,9 +762,11 @@ void Engine::handleUserInput()
     roll = 1.0;
   if(mKeyboard[kE])
   	roll = -1.0;
+  if(mKeyboard[kShift])
+  	turbo = 100.0;
     
   mShip.setRoll(roll);
-  mShip.setAcceleration(accel);
+  mShip.setAcceleration(accel * turbo);
 //printf("\naccel from User input: %f, %f, %f\n", accel.getX(),
 //  accel.getY(), accel.getZ() );
   
@@ -513,6 +784,17 @@ void Engine::handleUserInput()
 }
 
 //-----------------------------------------------------------------------------
+/*ipA se fusionne avec ipB*/
+void Engine::merge(AstronomicalBody* ipA, AstronomicalBody* ipB)
+{
+	double m = ipA->getMass() + ipB->getMass();
+  double v = m / ipB->getDensity();
+  //double r = pow(3 * v / (4.0 * PI), 1.0/3.0);
+  ipB->setMass(m);
+	//ipB->setRadius(r);
+}
+
+//-----------------------------------------------------------------------------
 void Engine::mouseMoved(int iX, int iY)
 {
 //printf("mouse moved: %d, %d; delta: %d, %d\n", iX, iY, mMouse.mDeltaX, mMouse.mDeltaY);
@@ -523,6 +805,72 @@ void Engine::mouseMoved(int iX, int iY)
   }
   mMouse.mPos = QPoint(iX, iY);
 }
+
+//-----------------------------------------------------------------------------
+void Engine::moveBodies(int iMs)
+{
+	//On deplace les objects
+	for(unsigned int i = 0; i < mAstronomicalBodies.size(); ++i)
+  {
+  	AstronomicalBody& ab = *mAstronomicalBodies[i];
+  	//La vitesse et position en fonction de lacceleration
+    ab.setAcceleration( ab.getForce() / ab.getMass() );
+  	Vector3d a = ab.getAcceleration() * ab.getTransformation();
+	  Vector3d s = ab.getSpeed();
+    Point3d p;
+    Matrix4d m = ab.getTransformation();
+    double t = (iMs / 1000.0); //en sec
+    
+    s += a * t; //en km / s  
+    p = ab.getTransformation().getTranslation();
+    p += toPoint(s * t + 0.5 * a * t * t);
+    
+    /*On applique les limites du monde*/
+		if(p.getX() > mSpaceRadius)
+    {
+    	p.setX(-mSpaceRadius);
+      ab.resetPath();
+    }
+    if(p.getX() < -mSpaceRadius)
+    {
+    	p.setX(mSpaceRadius);
+      ab.resetPath();
+    }
+    
+    if(p.getY() > mSpaceRadius)
+    {
+    	p.setY(-mSpaceRadius);
+      ab.resetPath();
+    }
+    if(p.getY() < -mSpaceRadius)
+    {
+    	p.setY(mSpaceRadius);
+      ab.resetPath();
+    }
+      
+    if(p.getZ() > mSpaceRadius)
+    {
+    	p.setZ(-mSpaceRadius);
+      ab.resetPath();
+    }
+    if(p.getZ() < -mSpaceRadius)
+    {
+    	p.setZ(mSpaceRadius);
+      ab.resetPath();
+    }
+      
+    ab.setSpeed(s);
+    m.setTranslation(p);
+    ab.setTransformation(m);
+    ab.setForce(Vector3d(0.0));
+    if(isDebugging())
+	    ab.addToPath(p);
+  }
+}
+
+//-----------------------------------------------------------------------------
+double Engine::normalizedRandom() const
+{ return rand() / (double)RAND_MAX; }
 
 //-----------------------------------------------------------------------------
 /*Cette fonction compense le delta de la souris pour un mouvement qu'on
@@ -558,7 +906,7 @@ void Engine::registerClient(Client* iC)
 }
 
 //-----------------------------------------------------------------------------
-void Engine::playingStep(int iMs)
+void Engine::play(int iMs)
 {
   const int method = 1;
   
@@ -630,6 +978,60 @@ void Engine::playingStep(int iMs)
 }
 
 //-----------------------------------------------------------------------------
+void Engine::solveCollisionsOverlap()
+{
+  AstronomicalBody* pAb1;
+  AstronomicalBody* pAb2;
+  Point3d pos1, pos2;
+
+	detectCollisions();  
+  while(!mCollisions.empty())
+  {
+printf("num coll: %d\n", mCollisions.size());    
+    set<CollisionPair>::iterator it = mCollisions.begin();
+    //for(; !mCollisions.empty() && it != mCollisions.end(); ++it)
+    if(!mCollisions.empty())
+    {
+      pAb1 = mAstronomicalBodies[it->mIndex1];
+      pAb2 = mAstronomicalBodies[it->mIndex2]; 
+//printf("collision entre: %d et %d\n", it->mIndex1, it->mIndex2);
+       
+      Point3d pos1 = pAb1->getTransformation().getTranslation();
+      Point3d pos2 = pAb2->getTransformation().getTranslation();
+
+      //on repostionne les objects en collisions pour qu'il n'y ait pas
+      //d'overlap
+      Vector3d d = toVector(pos2 - pos1);
+      double offset = d.norm();
+      if( offset >= -EPSILON && offset <= EPSILON )
+      	d.setXYZ(rand(), rand(), rand());
+      d.normalise();
+//printf("norm: %f\n", offset);
+      offset -= pAb1->getRadius() + pAb2->getRadius();
+      offset = fabs(offset);      
+      Matrix4d m;
+//printf("offset: %f\n", offset);      
+      m.setTranslation(pos1 - 
+        toPoint(d * 0.5 * offset ));
+      pAb1->setTransformation(m);
+      m.setTranslation(pos2 + 
+        toPoint(d * 0.5 * offset ));
+      pAb2->setTransformation(m);
+    }
+    detectCollisions();
+  }
+printf("solveCollisionsOverlap terminé\n");
+}
+
+//-----------------------------------------------------------------------------
+void Engine::step()
+{
+	simulate(kTimeStep);
+  refreshSortedPositions();
+  callClients(Client::mFrameReady);
+}
+
+//-----------------------------------------------------------------------------
 void Engine::refreshSortedPositions()
 {
 	mSortedPositions.clear();
@@ -652,14 +1054,13 @@ void Engine::timerEvent(QTimerEvent* ipE)
   {
     case sPlaying:
    		handleUserInput();
-      playingStep(kTimeStep);
+      play(kTimeStep);
   	  callClients(Client::mFrameReady);   
       break;
-    case sGenerating:
+    case sSimulating:
     	handleUserInput();
-      generatingStep(5000);
-      mCycles++;
-      if(getNumberOfCycles() % 5 == 0)
+      simulate(kTimeStep);
+//      if(getNumberOfCycles() % 5 == 0)
       {
         refreshSortedPositions();
 	      callClients(Client::mFrameReady);

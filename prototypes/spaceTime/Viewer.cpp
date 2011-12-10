@@ -52,7 +52,7 @@ void Viewer::call(Client::message iM)
 	switch (iM)
   {
     case Client::mFrameReady:
-    	if(getEngine().getState() == Engine::sGenerating)
+    	if(getEngine().getState() == Engine::sSimulating)
       	invalidateCubeMapRender();
       centerMouse();
       update();
@@ -154,6 +154,7 @@ void Viewer::drawArrow()
 void Viewer::drawBodies(double iInnerRadius, double iOuterRadius,
   levelOfDetail iLod)
 {
+	unsigned int i, j;
   Point3d p = getEngine().getShip().getTransformation().getTranslation();
   const vector<AstronomicalBody*>& vab = 
   	getEngine().getAstronomicalBodies(p, iInnerRadius, iOuterRadius);
@@ -166,12 +167,12 @@ void Viewer::drawBodies(double iInnerRadius, double iOuterRadius,
   default:break;
   } 
     
-  for(uint i = 0; i < vab.size(); ++i)
+  for(i = 0; i < vab.size(); ++i)
   {  
   glColor3ub(255, 255, 255);
   switch (vab[i]->getType()) 
     {
-      case AstronomicalBody::tBlackHole: glColor3ub(5, 5, 5); break;
+      case AstronomicalBody::tBlackHole: glColor3ub(0, 255, 5); break;
       case AstronomicalBody::tComet: glColor3ub(234, 139, 30); break;
       case AstronomicalBody::tMoon: glColor3ub(237, 237, 237); break;
       case AstronomicalBody::tPlanet: glColor3ub(111, 178, 230); break;
@@ -179,9 +180,9 @@ void Viewer::drawBodies(double iInnerRadius, double iOuterRadius,
       default: break;
     }
     
-    //on dessine le vecteur de force
     if(isDebugging())
     {
+      //on dessine le vecteur de force
     	Vector3d f = vab[i]->getForce();
       f.normalise();
       glBegin(GL_LINES);
@@ -189,6 +190,16 @@ void Viewer::drawBodies(double iInnerRadius, double iOuterRadius,
       glVertex3d(vab[i]->getTransformation().getTranslation().getX() + 2 * f.getX(),
         vab[i]->getTransformation().getTranslation().getY() + 2 * f.getY(),
         vab[i]->getTransformation().getTranslation().getZ() + 2 * f.getZ() );
+      glEnd();
+      
+      //On dessine le path 
+      const vector<Point3d>& path = vab[i]->getPath();
+      glBegin(GL_LINES);
+      for(j = 0; path.size() >= 2 && j < path.size() - 1; ++j)
+      {
+      	glVertex3dv(path[j].getPtr());
+        glVertex3dv(path[j + 1].getPtr());
+      }
       glEnd();
     }
     
@@ -614,6 +625,7 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
     case Qt::Key_D: getEngine().keyPressed(Engine::kD); break;
     case Qt::Key_Q: getEngine().keyPressed(Engine::kQ); break;
     case Qt::Key_E: getEngine().keyPressed(Engine::kE); break;
+    case Qt::Key_Shift: getEngine().keyPressed(Engine::kShift); break;
     
     case Qt::Key_C: 
     {
@@ -647,6 +659,7 @@ void Viewer::keyReleaseEvent(QKeyEvent* ipE)
     case Qt::Key_D: getEngine().keyReleased(Engine::kD); break;
     case Qt::Key_Q: getEngine().keyReleased(Engine::kQ); break;
     case Qt::Key_E: getEngine().keyReleased(Engine::kE); break;
+    case Qt::Key_Shift: getEngine().keyReleased(Engine::kShift); break;
     default: break;
   }
 }
@@ -677,17 +690,19 @@ void Viewer::paintGL()
   
   if(isDebugging())
   {
+    glColor3ub(255, 255, 255);
   	QString info("Engine state: ");
     switch (getEngine().getState()) 
     {
-      case Engine::sGenerating: info += "Generating. "; break;
+      case Engine::sSimulating: info += "Simulating. "; break;
       case Engine::sPlaying: info += "Playing. "; break;
       case Engine::sPaused: info += "Paused. ";break;
       default: break;
     }
     info += "number of cycles: " + QString::number(getEngine().getNumberOfCycles());
-    glColor3ub(255, 255, 255);
     renderText(5, 30, info);
+    info = "number of bodies: " + QString::number(getEngine().getAstronomicalBodies().size());
+    renderText(5, 45, info);
   }  
 }
 

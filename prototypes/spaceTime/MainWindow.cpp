@@ -31,6 +31,7 @@ MainWindow::MainWindow() : QMainWindow(),
   mpDebugFrame(0),
   mpNumberOfAstronomicalBodies(0),
   mpRadiusOfGeneration(0),
+  mpSpaceRadius(0),
   mpAreaToRender0Radius(0),
   mpAreaToRender1Radius(0),
   mpThresholdToRenderCubeMap(0),
@@ -75,6 +76,18 @@ MainWindow::MainWindow() : QMainWindow(),
   mpRadiusOfGeneration->setValidator(pValRadiusOfGen);
   pLine2Lyt->addWidget(pRadiusOfGen);
   pLine2Lyt->addWidget(mpRadiusOfGeneration);
+  
+  //ligne 3 du paneau de debug
+  QHBoxLayout* pLine3Lyt = new QHBoxLayout(mpDebugFrame);
+  QLabel* pSpaceRadius = new QLabel("radius of space:", mpDebugFrame);
+  mpSpaceRadius = new QLineEdit("100000", mpDebugFrame);
+  connect(mpSpaceRadius, SIGNAL(textChanged(const QString&)), 
+    this, SLOT(spaceRadiusChanged(const QString&)));
+  QIntValidator* pValSpaceRadius = new QIntValidator(0,
+    std::numeric_limits<int>::max(), mpSpaceRadius);
+  mpSpaceRadius->setValidator(pValSpaceRadius);
+  pLine3Lyt->addWidget(pSpaceRadius);
+  pLine3Lyt->addWidget(mpSpaceRadius);
   
   //--- Relié au visualiseur
   //ligne 1 du paneau de debug pour relié au visualiseur
@@ -125,6 +138,7 @@ MainWindow::MainWindow() : QMainWindow(),
   
   pMainDebugLyt->addLayout(pLine1Lyt);
   pMainDebugLyt->addLayout(pLine2Lyt);
+  pMainDebugLyt->addLayout(pLine3Lyt);
   pMainDebugLyt->addWidget(new QLabel("----", mpDebugFrame));
   pMainDebugLyt->addLayout(pLineB1Lyt);
   pMainDebugLyt->addLayout(pLineB2Lyt);
@@ -177,7 +191,7 @@ void MainWindow::keyPressEvent(QKeyEvent* ipE)
     break;
     case Qt::Key_G:
     {
-    	mEngine.goToState(Engine::sGenerating);
+    	mEngine.goToState(Engine::sSimulating);
       update();
     }
     break;
@@ -196,15 +210,39 @@ void MainWindow::keyPressEvent(QKeyEvent* ipE)
       mpViewer->invalidateCubeMapRender();
       update();
     }
+    break;
+    case Qt::Key_P:
+    {
+    	mEngine.fonctionBidon();
+      update();
+    }
+    break;
     case Qt::Key_T:
     {
+      long long n = mpNumberOfAstronomicalBodies->text().toLongLong(0);
       long long r = mpRadiusOfGeneration->text().toLongLong(0);
       mEngine.setRadiusOfGeneration(r);
-      mEngine.generateTestBodies();
+      mEngine.generateTestBodies1();
       mpViewer->invalidateCubeMapRender();
       update();
     }
     break;
+    case Qt::Key_Y:
+    {
+      long long n = mpNumberOfAstronomicalBodies->text().toLongLong(0);
+      long long r = mpRadiusOfGeneration->text().toLongLong(0);
+      mEngine.setRadiusOfGeneration(r);
+      mEngine.generateTestBodies2(n);
+      mpViewer->invalidateCubeMapRender();
+      update();
+    }
+    break;
+case Qt::Key_Plus:
+{
+  mEngine.step();
+  update();
+}
+break;
   	default: ipE->setAccepted(false); break;
   }
 }
@@ -241,6 +279,10 @@ void MainWindow::setAsDebugging(bool iD)
 	mEngine.setAsDebugging(iD);
   mpViewer->setAsDebugging(iD);
 }
+
+//-----------------------------------------------------------------------------
+void MainWindow::spaceRadiusChanged(const QString& iT)
+{ mEngine.setSpaceRadius(iT.toLongLong(0)); }
 
 //-----------------------------------------------------------------------------
 void MainWindow::thresholdToRenderCubeMapChanged(const QString& iT)
