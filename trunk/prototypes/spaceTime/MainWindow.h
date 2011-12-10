@@ -23,6 +23,7 @@ protected slots:
   virtual void areaToRender1RadiusChanged(const QString&);
   virtual void load();
   virtual void save();
+  virtual void spaceRadiusChanged(const QString&);
   virtual void thresholdToRenderCubeMapChanged(const QString&);
   
 protected:
@@ -32,6 +33,7 @@ protected:
 	QFrame* mpDebugFrame;
   QLineEdit* mpNumberOfAstronomicalBodies;
   QLineEdit* mpRadiusOfGeneration;
+  QLineEdit* mpSpaceRadius;
   QLineEdit* mpAreaToRender0Radius;
   QLineEdit* mpAreaToRender1Radius;
   QLineEdit* mpThresholdToRenderCubeMap;

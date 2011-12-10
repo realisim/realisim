@@ -5,7 +5,16 @@
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
 \f0\fs24 \cf0 Camera: enlever setAsActive et mettre un dirty flat a la place de tout \'e7a. Quand on fait un setCamera, on appelera activate qui calculera tout si le flat est sale.\
+	
+\b fait
+\b0 \
 \
 Camera: mettre le zoom dans la projection et quand on fait setprojection, on remet le zoom \'e0 1.0\
+	
+\b fait
+\b0 \
 \
-- Dessiner d'abord dans le depth buffer et tagger les \'e9l\'e9ments visible (mettre le frame number) Ensuite on utilise le d\'e9pth buffer mais on ne lupdate plus (et surtout afin de ne pas \'e9crire les infos de d\'e9pt 2 fois) et on dessine (::draw) tous les objets qui ont \'e9t\'e9 tagg\'e9 par le frame nimber courant. (Pour le tagging on peu utiliser un BSP-tree, octree ou n'importe)}
+- Dessiner d'abord dans le depth buffer et tagger les \'e9l\'e9ments visible (mettre le frame number) Ensuite on utilise le d\'e9pth buffer mais on ne lupdate plus (et surtout afin de ne pas \'e9crire les infos de d\'e9pt 2 fois) et on dessine (::draw) tous les objets qui ont \'e9t\'e9 tagg\'e9 par le frame nimber courant. (Pour le tagging on peu utiliser un BSP-tree, octree ou n'importe)\
+\
+- Ne pas oublier la sauvegarde de Density\
+-Utiliser normalizedRandom() pour la g\'e9n\'e9ration des rayons des corso astronomiques}
