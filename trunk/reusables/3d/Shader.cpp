@@ -172,6 +172,24 @@ void Shader::deleteGuts()
 }
 
 //----------------------------------------------------------------------------
+int Shader::getFragmentId(int i) const
+{
+	int r = 0;
+  if(i >= 0 && (uint)i < mpGuts->mFragmentIds.size())
+  	r = mpGuts->mFragmentIds[i];
+  return r;
+}
+
+//----------------------------------------------------------------------------
+int Shader::getVertexId(int i) const
+{
+  int r = 0;
+  if(i >= 0 && (uint)i < mpGuts->mVertexIds.size())
+  	r = mpGuts->mVertexIds[i];
+  return r;
+}
+
+//----------------------------------------------------------------------------
 bool Shader::isValid() const
 { return mpGuts->mIsValid;}
 

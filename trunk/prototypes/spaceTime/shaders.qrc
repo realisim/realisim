@@ -1,0 +1,8 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+  <file>./shaders/directional lighting.vert</file>
+  <file>./shaders/main for celestial bodies.vert</file>
+  <file>./shaders/directional lighting.frag</file>
+  <file>./shaders/main for celestial bodies.frag</file>
+ </qresource>
+</RCC>

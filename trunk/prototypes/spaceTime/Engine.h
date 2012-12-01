@@ -1,6 +1,7 @@
 #ifndef SpaceTime_Engine_Engine_h
 #define SpaceTime_Engine_Engine_h
 
+#include <deque>
 #include "math/Matrix4x4.h"
 #include "math/Point.h"
 #include "math/Vect.h"
@@ -76,23 +77,30 @@ class SpaceTime::Ship : public SpaceTime::Object
 class SpaceTime::AstronomicalBody : public SpaceTime::Object
 {
 public:
-  AstronomicalBody() : Object(), mType(tPlanet), mRadius(0.0), mPath() {}
+  AstronomicalBody() : Object(), mType(tPlanet), mRadius(0.0), mEngaged(),
+  	mPath() {}
   virtual ~AstronomicalBody(){};
   
   enum type{tBlackHole, tComet, tMoon, tPlanet, tStar, tNumberOfType};
 
   void addToPath(const Point3d&);
-  const vector<Point3d>& getPath() const {return mPath;}
+  void engage(const AstronomicalBody*);
+  void disengage(const AstronomicalBody*);
+  void disengageAll();
+  const set<const AstronomicalBody*>& getEngagedBodies() const {return mEngaged;}
+  const deque<Point3d>& getPath() const {return mPath;}
   double getRadius() const {return mRadius;}
   type getType() const {return mType;}
   void resetPath() {mPath.clear();}
+  void setEngagedBodies(const set<const AstronomicalBody*>& iE) {mEngaged = iE;}
   void setRadius(double iR) {mRadius = iR;}
   void setType(type iT) {mType = iT;}
   
 protected:
   type mType;
   double mRadius;
-  vector<Point3d> mPath;
+  set<const AstronomicalBody*> mEngaged;
+  deque<Point3d> mPath;
 };
 
 //-----------------------------------------------------------------------------
@@ -184,9 +192,11 @@ protected:
   virtual void addError(const QString&);
   virtual void applyForces();
   virtual void callClients(Client::message);
+  virtual Vector3d computeAttractionForce(const AstronomicalBody*, const AstronomicalBody*);
   virtual void deleteAllAstronomicalBodies();
   virtual void deleteMarkedBodies();
   virtual void detectCollisions();
+  virtual void engageBodies();
   virtual void explodeAstronomicalBody(AstronomicalBody*);
   virtual QString generateName(int iNumLetter) const;
   virtual void simulate(int);

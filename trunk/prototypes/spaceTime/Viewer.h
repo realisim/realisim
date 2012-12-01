@@ -1,6 +1,7 @@
 #ifndef SpaceTime_Viewer_h
 #define SpaceTime_Viewer_h
 
+#include "3d/Shader.h"
 #include "3d/Widget3d.h"
 #include "Engine.h"
 #include "math/BoundingBox.h"
@@ -66,6 +67,7 @@ protected:
   FrameBufferObject mCubeMapFbo;
   double mThresholdToRenderCubeMap;
   Point3d mLastCubeMapRenderPosition;  
+  Shader mSmoothSphere;
 };
 
 

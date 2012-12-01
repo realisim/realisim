@@ -219,7 +219,6 @@ void MainWindow::keyPressEvent(QKeyEvent* ipE)
     break;
     case Qt::Key_T:
     {
-      long long n = mpNumberOfAstronomicalBodies->text().toLongLong(0);
       long long r = mpRadiusOfGeneration->text().toLongLong(0);
       mEngine.setRadiusOfGeneration(r);
       mEngine.generateTestBodies1();
@@ -259,6 +258,7 @@ void MainWindow::load()
   mEngine.fromBinary(ba);
   mpViewer->invalidateCubeMapRender();
   mpViewer->update();
+  updateUi();
 }
 
 //-----------------------------------------------------------------------------
@@ -291,9 +291,12 @@ void MainWindow::thresholdToRenderCubeMapChanged(const QString& iT)
 //-----------------------------------------------------------------------------
 void MainWindow::updateUi()
 {
+	//pour l'engin
+	mpSpaceRadius->setText( QString::number(mEngine.getSpaceRadius()) );
+  
+  //pour le viewer
 	mpThresholdToRenderCubeMap->setText(
     QString::number(mpViewer->getThresholdToRenderCubeMap()) );
-    
   mpAreaToRender0Radius->setText(
     QString::number(mpViewer->getAreaToRenderRadius(0)) );
   mpAreaToRender1Radius->setText(

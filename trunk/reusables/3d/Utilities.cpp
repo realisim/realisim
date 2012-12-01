@@ -19,29 +19,59 @@ unsigned int colorToId(const QColor& iC)
 }
 
 //------------------------------------------------------------------------------
-void draw(const PlatonicSolid& iPs)
+void draw(const PlatonicSolid& iPs, bool iSmooth /*= false*/)
 {
   PlatonicSolid::Face f;
   for(unsigned int i = 0; i < iPs.getFaces().size(); ++i)
   {
     f = iPs.getFaces()[i];
-    Vector3d n = Vector3d(iPs.getVertex()[f.index2], iPs.getVertex()[f.index1]) ^
-      Vector3d(iPs.getVertex()[f.index2], iPs.getVertex()[f.index3]);
-    n.normalise();
-    glBegin(GL_TRIANGLES);
-      glNormal3dv(n.getPtr());
-      glVertex3d(iPs.getVertex()[f.index1].getX(),
-        iPs.getVertex()[f.index1].getY(),
-        iPs.getVertex()[f.index1].getZ());
+    
+    if(!iSmooth)
+    {
+      Vector3d n = Vector3d(iPs.getVertex()[f.index2], iPs.getVertex()[f.index1]) ^
+        Vector3d(iPs.getVertex()[f.index2], iPs.getVertex()[f.index3]);
+      n.normalise();
+      glBegin(GL_TRIANGLES);
+        glNormal3dv(n.getPtr());
+        glVertex3d(iPs.getVertex()[f.index1].getX(),
+          iPs.getVertex()[f.index1].getY(),
+          iPs.getVertex()[f.index1].getZ());
+          
+        glVertex3d(iPs.getVertex()[f.index2].getX(),
+          iPs.getVertex()[f.index2].getY(),
+          iPs.getVertex()[f.index2].getZ());
+          
+        glVertex3d(iPs.getVertex()[f.index3].getX(),
+          iPs.getVertex()[f.index3].getY(),
+          iPs.getVertex()[f.index3].getZ());
+      glEnd();
+    }
+    else
+    {
+      Vector3d n1(Point3d(0.0), iPs.getVertex()[f.index1]);
+      Vector3d n2(Point3d(0.0), iPs.getVertex()[f.index2]);
+      Vector3d n3(Point3d(0.0), iPs.getVertex()[f.index3]);
+      n1.normalise();
+      n2.normalise();
+      n3.normalise();
+			glBegin(GL_TRIANGLES);
+        glNormal3dv(n1.getPtr());
+        glVertex3d(iPs.getVertex()[f.index1].getX(),
+          iPs.getVertex()[f.index1].getY(),
+          iPs.getVertex()[f.index1].getZ());
         
-      glVertex3d(iPs.getVertex()[f.index2].getX(),
-        iPs.getVertex()[f.index2].getY(),
-        iPs.getVertex()[f.index2].getZ());
-        
-      glVertex3d(iPs.getVertex()[f.index3].getX(),
-        iPs.getVertex()[f.index3].getY(),
-        iPs.getVertex()[f.index3].getZ());
-    glEnd();
+        glNormal3dv(n2.getPtr());  
+        glVertex3d(iPs.getVertex()[f.index2].getX(),
+          iPs.getVertex()[f.index2].getY(),
+          iPs.getVertex()[f.index2].getZ());
+          
+        glNormal3dv(n3.getPtr());
+        glVertex3d(iPs.getVertex()[f.index3].getX(),
+          iPs.getVertex()[f.index3].getY(),
+          iPs.getVertex()[f.index3].getZ());
+      glEnd();
+    }
+
   }
 }
 
