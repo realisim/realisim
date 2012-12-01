@@ -1,6 +1,7 @@
 
 #include "FrameBufferObject.h"
 #include "OpenGLInfo.h"
+#include <QDebug>
 
 using namespace realisim;
   using namespace treeD;
@@ -399,6 +400,6 @@ void FrameBufferObject::validate()
     s += "Unsupported by FBO implementation."; break;
   default: s += "Unknow error."; break;
   }
-  qDebug(s.toAscii());
+  qDebug() << s;
 }
 

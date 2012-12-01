@@ -95,8 +95,8 @@ public:
   
 protected:
   void validate();
-	int getFragmentId(int i) const {return mpGuts->mFragmentIds[i];}
-	int getVertexId(int i) const {return mpGuts->mVertexIds[i];}
+	int getFragmentId(int i) const;
+	int getVertexId(int i) const;
   void printProgramInfoLog(GLuint);
   void printShaderInfoLog(GLuint);
 

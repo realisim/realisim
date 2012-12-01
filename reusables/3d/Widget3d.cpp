@@ -190,7 +190,11 @@ Widget3d::paintGL()
 
 //-----------------------------------------------------------------------------
 /*voir http://www.lighthouse3d.com/opengl/picking/index.php?color1
-  pour plus d'info*/
+  pour plus d'info
+  Note: Cette méthode reçoit iX et iY dans le système de coordonnées
+    de Qt (ix, iY par rapport au coin supérieur gauche. En ce moment,
+    si le viewport openGL à une taille différente de la taille du
+    widget, ça ne fonctionne pas, il faut fixed le code ici...*/
 vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
   int iHeight /*= 1*/ )
 {

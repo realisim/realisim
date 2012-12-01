@@ -2,6 +2,7 @@
 #include "3d/Utilities.h"
 #include "math/MathUtils.h"
 #include "math/PlatonicSolid.h"
+#include <QFile>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include "Viewer.h"
@@ -31,7 +32,8 @@ Viewer::Viewer(QWidget* ipParent /*=0*/, Engine& iEngine) : Widget3d(ipParent),
   mIsThirdPersonView(true),
   mCubeMapFbo(),
   mThresholdToRenderCubeMap(5.0),
-  mLastCubeMapRenderPosition(std::numeric_limits<double>::max())
+  mLastCubeMapRenderPosition(std::numeric_limits<double>::max()),
+  mSmoothSphere()
 {
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
@@ -40,7 +42,7 @@ Viewer::Viewer(QWidget* ipParent /*=0*/, Engine& iEngine) : Widget3d(ipParent),
     cubeMaps*/
   mAreaToRenderRadii.push_back(0.0);
   mAreaToRenderRadii.push_back(50.0);
-  mAreaToRenderRadii.push_back(500000.0);  
+  mAreaToRenderRadii.push_back(500000.0);
 }
 
 Viewer::~Viewer()
@@ -193,7 +195,7 @@ void Viewer::drawBodies(double iInnerRadius, double iOuterRadius,
       glEnd();
       
       //On dessine le path 
-      const vector<Point3d>& path = vab[i]->getPath();
+      const deque<Point3d>& path = vab[i]->getPath();
       glBegin(GL_LINES);
       for(j = 0; path.size() >= 2 && j < path.size() - 1; ++j)
       {
@@ -201,23 +203,43 @@ void Viewer::drawBodies(double iInnerRadius, double iOuterRadius,
         glVertex3dv(path[j + 1].getPtr());
       }
       glEnd();
+      
+//      //on dessine les liens des corps engagés
+//      set<const AstronomicalBody*>::iterator engagedIt = 
+//      	vab[i]->getEngagedBodies().begin();
+//      for(; engagedIt != vab[i]->getEngagedBodies().end(); ++engagedIt)
+//      {
+//      	glBegin(GL_LINES);
+//        	glVertex3dv((*engagedIt)->getTransformation().getTranslation().getPtr());
+//          glVertex3dv(vab[i]->getTransformation().getTranslation().getPtr());
+//        glEnd();
+//      }
     }
     
     switch(iLod)
     {
-    case lodHigh:  	
+    case lodHigh:
+    	pushShader(mSmoothSphere);
+      
       glPushMatrix();
       glMultMatrixd(vab[i]->getTransformation().getPtr());
       glScaled(vab[i]->getRadius(), vab[i]->getRadius(), vab[i]->getRadius());
       glCallList(mSphere);
       glPopMatrix();
+      
+      popShader();
     break;
     case lodMed:
-      glPointSize(1);
-      glBegin(GL_POINTS);
-        glVertex3d(vab[i]->getTransformation().getTranslation().getX(), vab[i]->getTransformation().getTranslation().getY(),
-          vab[i]->getTransformation().getTranslation().getZ());
-      glEnd();
+     // glPointSize(1);
+//      glBegin(GL_POINTS);
+//        glVertex3d(vab[i]->getTransformation().getTranslation().getX(), vab[i]->getTransformation().getTranslation().getY(),
+//          vab[i]->getTransformation().getTranslation().getZ());
+//      glEnd();
+      glPushMatrix();
+      glMultMatrixd(vab[i]->getTransformation().getPtr());
+      glScaled(vab[i]->getRadius(), vab[i]->getRadius(), vab[i]->getRadius());
+      glCallList(mSphere);
+      glPopMatrix();
     break;
     case lodLow:
       glPointSize(1);
@@ -538,7 +560,7 @@ void Viewer::initializeDisplayLists()
   
 	mSphere = glGenLists(1);	
   glNewList(mSphere, GL_COMPILE);
-	utilities::draw(PlatonicSolid(PlatonicSolid::tIsocahedron, 1));
+	utilities::draw(PlatonicSolid(PlatonicSolid::tIsocahedron, 2), true);
   glEndList();
   
   mCube = glGenLists(1);	
@@ -572,6 +594,7 @@ void Viewer::initializeGL()
   glEnable(GL_MULTISAMPLE);
   initializeDisplayLists();
     
+  //initialisation du cube map
   mCubeMapFbo.addColorAttachment(true);
   mCubeMapFbo.addColorAttachment(true);
   mCubeMapFbo.addColorAttachment(true);
@@ -580,6 +603,37 @@ void Viewer::initializeGL()
   mCubeMapFbo.addColorAttachment(true);  
   mCubeMapFbo.addDepthAttachment(true);
   mCubeMapFbo.resize(400, 400);
+  
+  //init des shaders
+  QString vertString;
+  QString fragString;
+  
+  QFile vert(":/shaders/main for celestial bodies.vert");
+  vert.open(QIODevice::ReadOnly);
+  vertString = vert.readAll();
+  vert.close();
+
+  QFile frag(":/shaders/main for celestial bodies.frag");
+  frag.open(QIODevice::ReadOnly);
+  fragString = frag.readAll();
+  frag.close();
+  
+  mSmoothSphere.addVertexShaderSource(vertString);
+  mSmoothSphere.addFragmentShaderSource(fragString);
+  
+  vert.setFileName(":/shaders/directional lighting.vert");
+  vert.open(QIODevice::ReadOnly);
+  vertString = vert.readAll();
+  vert.close();
+  
+  frag.setFileName(":/shaders/directional lighting.frag");
+  frag.open(QIODevice::ReadOnly);
+  fragString = frag.readAll();
+  frag.close();
+  
+  mSmoothSphere.addVertexShaderSource(vertString);
+  mSmoothSphere.addFragmentShaderSource(fragString);
+  mSmoothSphere.link();
 }
 
 //-----------------------------------------------------------------------------
