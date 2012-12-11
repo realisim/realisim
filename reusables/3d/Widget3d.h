@@ -37,14 +37,14 @@ public:
             Qt::WindowFlags iFlags = 0 );
   virtual ~Widget3d() = 0;
 
-  const Camera& getCamera() const { return mCam; }
-  void pushFrameBuffer(const FrameBufferObject& = FrameBufferObject());
-  void pushShader(const Shader& = Shader());
-  void popFrameBuffer();
-  void popShader();
-  void setCamera( const Camera& iCam, bool iAnimate = true, int iDuration = 1000 );
+  virtual const Camera& getCamera() const { return mCam; }
+  virtual void pushFrameBuffer(const FrameBufferObject& = FrameBufferObject());
+  virtual void pushShader(const Shader& = Shader());
+  virtual void popFrameBuffer();
+  virtual void popShader();
+  virtual void setCamera( const Camera& iCam, bool iAnimate = true, int iDuration = 1000 );
 //void setCameraMode( Camera::Mode iMode );
-  void setCameraOrientation( Camera::Orientation iO );
+  virtual void setCameraOrientation( Camera::Orientation iO );
   
 //signals:
 //    void clicked();

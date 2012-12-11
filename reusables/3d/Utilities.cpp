@@ -28,7 +28,7 @@ void draw(const PlatonicSolid& iPs, bool iSmooth /*= false*/)
     
     if(!iSmooth)
     {
-      Vector3d n = Vector3d(iPs.getVertex()[f.index2], iPs.getVertex()[f.index1]) ^
+      Vector3d n = Vector3d(iPs.getVertex()[f.index1], iPs.getVertex()[f.index2]) ^
         Vector3d(iPs.getVertex()[f.index2], iPs.getVertex()[f.index3]);
       n.normalise();
       glBegin(GL_TRIANGLES);
@@ -73,6 +73,31 @@ void draw(const PlatonicSolid& iPs, bool iSmooth /*= false*/)
     }
 
   }
+}
+
+//------------------------------------------------------------------------------
+/*Dessine un cercle sur le plan défini par la normal iN centré sur iP de 
+  rayon iR*/
+void drawCircle( Vector3d iN, const Point3d& iP, double iR )
+{
+	//on trouve l'angle entre iN et Z (parce qu'on dessine en sur le plan z)
+  double rot = acos( iN.normalise() & Vector3d( 0.0, 0.0, 1.0 ) );
+  //on trouve le vecteur perpendiculaire a la rotation
+  Vector3d r = iN ^ Vector3d( 0.0, 0.0, 1.0 );
+  r.normalise();
+
+  double a;
+  glPushMatrix();
+  glTranslated( iP.getX(), iP.getY(), iP.getZ() );
+  glRotated( rot * 180 / PI, r.getX(), r.getY(), r.getZ() );
+	glBegin( GL_LINE_LOOP );
+  	for( int i = 0; i < 360; i += 2 )
+    {
+    	a = i * 3.1415629 / 180.0;
+    	glVertex3d( cos( a ) * iR, sin( a ) * iR, 0.0 );	
+    }
+  glEnd();
+  glPopMatrix();
 }
 
 //------------------------------------------------------------------------------
