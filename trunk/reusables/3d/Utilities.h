@@ -6,7 +6,9 @@
 #include "3d/Texture.h"
 #include <cassert>
 #include <QByteArray>
+#include "math/Point.h"
 #include "math/Vect.h"
+
 namespace realisim {namespace math {class PlatonicSolid;} }
 
 /*
@@ -20,6 +22,7 @@ namespace utilities
 {
   unsigned int colorToId(const QColor&);
   void draw(const math::PlatonicSolid&, bool = false);
+  void drawCircle( math::Vector3d, const math::Point3d&, double );
 //Texture get1dNoiseTexture();  
   Texture get2dNoiseTexture(int, int);//const Vector2i&);
   Texture get3dNoiseTexture(const math::Vector3i&);

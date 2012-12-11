@@ -175,7 +175,7 @@ Widget3d::paintGL()
   getCamera().applyModelViewTransformation();
   
   //replacer les lumieres
-  GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
+  GLfloat position[]  = {50.0, 30.0, 5.0, 1.0};
   glLightfv(GL_LIGHT0, GL_POSITION, position);
 
 #ifdef NDEBUG
