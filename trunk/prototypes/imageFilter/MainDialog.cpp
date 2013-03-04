@@ -509,7 +509,7 @@ MainDialog::MainDialog() : QMainWindow(),
   
   //ajout du visualiseur
   mpViewer = new Viewer(pMainFrame);
-  mpViewer->setCameraMode(Camera::ORTHOGONAL);
+  //mpViewer->setCameraMode(Camera::ORTHOGONAL);
   mpViewer->setCameraOrientation(Camera::XY);
   //mpViewer->setCameraOrientation(Camera::FREE);
   pLyt->addWidget(mpViewer, 1);

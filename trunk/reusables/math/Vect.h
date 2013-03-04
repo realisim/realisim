@@ -59,7 +59,6 @@ namespace math
     inline T fastNorm() const;
     
     // --------------- Overload: operateurs unitaires --------------------------
-    inline bool operator== (const Vect<T> &vect) const;
     inline Vect<T>&  operator=  (const Vect<T> &vect);
     inline Vect<T>&  operator=  (const T &val);
     
@@ -80,6 +79,8 @@ namespace math
     
     inline Vect<T>  operator/  (const T &val) const;
     inline Vect<T>& operator/= (const T &val);  
+    inline bool operator== ( const Vect<T>& ) const;
+    inline bool operator!= ( const Vect<T>& ) const;
   
     // -------------- Overload: produit vectoriel ------------------------------
     inline Vect<T>  operator^  (const Vect<T> &vect) const;
@@ -358,28 +359,21 @@ namespace math
   
     return( max + (11.0/32.0)*med + (1.0/4.0)*min );
   }
-  
-  //! surcharge opÈrateur ==
+  //----------------------------------------------------------------------------
+  //strictement egale, pour une comparaison un peu plus permissive, voir
+  //mathUtil equal( const Vect<T> &, const Vect<T> &, double )
   template<class T>
-  inline bool Vect<T>::operator== (const Vect<T> &vect) const
+  inline bool Vect<T>::operator== (const Vect<T>& iV) const
   {
-    T dx = getX() - vect.getX();
-    T dy = getY() - vect.getY();
-    T dz = getZ() - vect.getZ();
-  
-    if(dx<(T)0.0)
-      dx = -dx;
-    if(dy<(T)0.0)
-      dy = -dy;
-    if(dz<(T)0.0)
-      dz = -dz;
-  
-    if (dx<EPSILON && dy<EPSILON && dz<EPSILON)
-      return true;
-    else
-      return false;
+  	return getX() == iV.getX() &&
+    	getY() == iV.getY() &&
+      getZ() == iV.getZ();
   }
-  
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline bool Vect<T>::operator!= ( const Vect<T>& iV ) const
+  { return !( *this == iV ); }
+  //----------------------------------------------------------------------------
   //! surcharge opÈrateur = Vect
   template<class T>
   inline Vect<T>& Vect<T>::operator= (const Vect<T> &vect)
@@ -559,6 +553,7 @@ namespace math
     return vect;
   }
   
+  //----------------------------------------------------------------------------
   //! surcharge operateur /= avec T
   template<class T>
   inline Vect<T>& Vect<T>::operator/= (const T &val)
@@ -573,7 +568,7 @@ namespace math
 		*this *= vTmp;
     return *this;
   }
-  
+  //----------------------------------------------------------------------------
   //! Overload: produit vectoriel
   template<class T>
   inline Vect<T> Vect<T>::operator^ (const Vect<T> &vect) const

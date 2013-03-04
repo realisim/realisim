@@ -62,14 +62,14 @@ namespace math
     inline void print() const;
 
     // --------------- Overload: operateurs ------------------------------------
-    inline bool  operator== (const Point &point) const;
-    inline Point&        operator=  (const Point &point);
+    inline bool operator== (const Point &point) const;
+    inline Point& operator=  (const Point &point);
 
   // FAIT DU SENS???
-    inline Point<U>      operator-  (const Point &point) const;
-    inline Point<U>      operator+  (const Point &point) const;
-    inline Point<U>&     operator-= (const Point &point);
-    inline Point<U>&     operator+= (const Point &point);
+    inline Point<U> operator-  (const Point &point) const;
+    inline Point<U> operator+  (const Point &point) const;
+    inline Point<U>& operator-= (const Point &point);
+    inline Point<U>& operator+= (const Point &point);
     inline Point<U> operator*  (const U &val) const;
     inline Point<U>& operator*= (const U &val);
     inline Point<U>  operator/  (const U &val) const;
@@ -363,26 +363,15 @@ namespace math
     memcpy((void*)mData, (const void*)point.mData, 3*sizeof(U));
     return *this;
   }
-
-  //! surcharge operateur ==
+	//----------------------------------------------------------------------------
+  //strictement egale, pour une comparaison un peu plus permissive, voir
+  //mathUtil equal( const Vect<T> &, const Vect<T> &, double )
   template<class U>
   inline bool Point<U>::operator== (const Point &point) const
   {
-    U dx = mData[0] - point.mData[0];
-    U dy = mData[1] - point.mData[1];
-    U dz = mData[2] - point.mData[2];
-
-    if(dx<(U)0.0)
-      dx = -dx;
-    if(dy<(U)0.0)
-      dy = -dy;
-    if(dz<(U)0.0)
-      dz = -dz;
-
-    if (dx<EPSILON && dy<EPSILON && dz<EPSILON)
-      return true;
-    else
-      return false;
+    return getX() == point.getX() &&
+    	getY() == point.getY() &&
+      getZ() == point.getZ();
   }
 
   template<class U>

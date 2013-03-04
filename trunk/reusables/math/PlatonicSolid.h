@@ -51,9 +51,10 @@
       }
     
     */
- #include <map>
- #include "Point.h"
- #include <vector>
+#include <map>
+#include "Point.h"
+#include "Polygon.h"
+#include <vector>
 
 namespace realisim
 {
@@ -65,35 +66,37 @@ namespace math
   {
   public:
     enum type{tCube, tIsocahedron, tTetrahedron};
-    struct Face
-    {
-      Face() : index1(0), index2(0), index3(0){;}
-      Face(int a, int b, int c) : index1(a), index2(b), index3(c){;}
-      Face(const Face& f) : index1(f.index1), index2(f.index2), index3(f.index3){;}
-      int index1; int index2; int index3;
-    };
-        
-    PlatonicSolid(type, int = 0);
+
+    PlatonicSolid( type );
     PlatonicSolid(const PlatonicSolid&);
     PlatonicSolid& operator=(const PlatonicSolid&);
     virtual ~PlatonicSolid();
-    
-    virtual const vector<Face>& getFaces() const {return mFaces;}
+  
+    virtual int getNumberOfPolygons() const { return mPolygons.size(); }
+    virtual int getNumberOfVertices() const { return mVertex.size(); } 
+    virtual const Polygon& getPolygon( int ) const;
+    virtual const vector<Polygon>& getPolygons() const { return mPolygons; } 
     virtual const type getType() const {return mType;}
-    virtual const vector<Point3d>& getVertex() const {return mVertex;}
+    virtual const Point3d& getVertex( int ) const;
+    virtual const vector<int>& getVertexIndicesForPolygon( int ) const;
+    virtual const vector<Point3d>& getVertices() const {return mVertex;}
     
   protected:
+  	virtual void addPolygon( int, int, int );
+    virtual void addPolygon( int, int, int, int );
     virtual void makeCube();
-    virtual void makeIsocahedron(int);
+    virtual void makeIsocahedron();
+    //virtual void makeIsocahedron(int);
     virtual void makeTetrahedron();
-    virtual void subdivide(int);
+    //virtual void subdivide(int);
     
     type mType;
+    vector<Polygon> mPolygons;
     vector<Point3d> mVertex;
-    vector<Face> mFaces;
+    vector< vector< int > > mVertexIndices;
     
-    typedef map<pair<int, int>, int> SubdivisionMap;
-    SubdivisionMap mSubdivisionMap;
+//    typedef map<pair<int, int>, int> SubdivisionMap;
+//    SubdivisionMap mSubdivisionMap;
   };
 }
 }

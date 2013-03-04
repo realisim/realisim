@@ -1,0 +1,291 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Le Mur</title>
+
+<!-- DEBUT MUR -------------------------------------------------------------->
+<script id="murScript" type="text/javascript">
+  //pour canvas2d
+  var murCanvas;
+  var murCanvasContext;
+  var debug = false;
+  var murViewPort = [];
+  var murTranslation = [0, 0];
+  var murTranslationStack = [];
+  var murDonnees = [];
+  
+  //pour la souris
+  var murMouseStateEnum = { idle : 0, pressed : 1, draggingWhitinBounds : 2,
+    dragging : 3 };
+  var murMouseState = murMouseStateEnum.idle;
+  var murMousePos = []; //x,y
+  var murMouseDelta = []; //x,y
+  var murMouseDeltaAccum = []; //x,y
+  
+  //-----------------------------------------------------------------------------
+  /**
+  * Provides requestAnimationFrame in a cross browser way.
+  */
+  window.requestAnimFrame = (function() {
+  return window.requestAnimationFrame ||
+         window.webkitRequestAnimationFrame ||
+         window.mozRequestAnimationFrame ||
+         window.oRequestAnimationFrame ||
+         window.msRequestAnimationFrame ||
+         function(/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
+           window.setTimeout(callback, 1000/60);
+         };
+  })();
+	//-----------------------------------------------------------------------------
+  function pushMurTranslation()
+  { 
+  	murTranslationStack.push([ murTranslation[0], murTranslation[1] ]);
+  }
+  //-----------------------------------------------------------------------------
+  function popMurTranslation()
+  { 
+  	murTranslation = murTranslationStack.pop();
+    murCanvasContext.setTransform(1, 0,
+    	0, 1,
+      murTranslation[0], murTranslation[1] );
+  }
+  //-----------------------------------------------------------------------------
+  function applyTranslation(x, y)
+  {
+  	murCanvasContext.setTransform(1, 0,
+    	0, 1,
+      murTranslation[0] + x, murTranslation[1] + y );
+  }
+  //-----------------------------------------------------------------------------
+  /* x et y représente la position gl où le rectangle sera positionné.
+     w et h reprente la largeur et la hauteur.
+     a représente le point d'ancrage ie:
+     
+         0------1-------2
+         |              |
+         3      4       5
+         |              |
+         6------7-------8  */
+  function drawRectangle(x, y, w, h, a)
+  {
+    //pushMurTranslation();
+    var offset = [0.0, 0.0];
+    
+    switch(a)
+    {
+    case 0: offset = [-0.5, 0.5]; break;
+    case 1: offset = [0.0, 0.5]; break;
+    case 2: offset = [0.5, 0.5]; break;
+    case 3: offset = [-0.5, 0.0]; break;
+    case 4: offset = [0.0, 0.0]; break;
+    case 5: offset = [0.5, 0.0]; break;
+    case 6: offset = [-0.5, -0.5];break;
+    case 7: offset = [0.0, -0.5]; break;
+    case 8: offset = [0.5, -0.5]; break;
+    default: break;
+    }
+    
+    murCanvasContext.strokeRect(x, y, 4, 4);
+   	//applyTranslation( x + offset[0], y + offset[1] ); 
+    //murCanvasContext.strokeRect(-0.5, -0.5, 1.0, 1.0);
+    //popMurTranslation();
+  }
+  //-----------------------------------------------------------------------------
+  function drawScene()
+  {
+    window.requestAnimFrame(drawScene, murCanvas);
+    
+    var viewportPos = screenToCanvas([0, 0]);
+    murViewPort = [viewportPos[0], viewportPos[1],
+      murCanvas.width, murCanvas.height ];
+    murCanvasContext.clearRect( murViewPort[0], murViewPort[1],
+      murViewPort[2],  murViewPort[3]);
+    
+    murCanvasContext.setTransform(1,0,
+    	0,1,
+    	murTranslation[0], murTranslation[1]);
+//    pushMurTranslation();
+//    applyTranslation(murTranslation[0], murTranslation[1]);
+    murCanvasContext.fillText("Bouette", 100, 100);
+    for(i = 0; i < murDonnees.length / 2; ++i)
+    {
+      drawRectangle(murDonnees[i * 2], murDonnees[(i * 2) + 1],
+        4, 4, 4);
+    }
+//    popMurTranslation();
+  }
+  //-----------------------------------------------------------------------------
+  function handleMouseDown(event)
+  {
+    murMouseState = murMouseStateEnum.pressed;
+    murMousePos = [event.offsetX, event.offsetY];    
+  }
+  //-----------------------------------------------------------------------------
+  function handleMouseUp(event)
+  {  
+  	//on envoit le click si on est pas en dragging  
+    if(murMouseState != murMouseStateEnum.dragging)
+    {
+    	pos = screenToCanvas(murMousePos);
+      xmlhttp = new XMLHttpRequest();
+      xmlhttp.open("GET",
+        "mur-ajoute.php?x="+pos[0]+"&y="+pos[1], true);
+      xmlhttp.send();
+    }
+    
+    murMouseState = murMouseStateEnum.idle;
+    murMousePos = [event.offsetX, event.offsetY];
+    murMouseDelta = [0, 0];
+    murMouseDeltaAccum = [0, 0];
+  }
+  //-----------------------------------------------------------------------------
+  function handleMouseMove(event)
+  {
+		if( murMouseState == murMouseStateEnum.idle )
+    	return;
+      
+    if( murMouseState == murMouseStateEnum.pressed)
+    	murMouseState = murMouseStateEnum.draggingWhitinBounds;
+      
+    murMouseDelta = [event.offsetX - murMousePos[0], 
+      event.offsetY - murMousePos[1] ];
+    murMouseDeltaAccum = [ murMouseDeltaAccum[0] + murMouseDelta[0], 
+      murMouseDeltaAccum[1] + murMouseDelta[1] ];
+    murMousePos = [event.offsetX, event.offsetY];
+    
+		if(murMouseState == murMouseStateEnum.draggingWhitinBounds && 
+      ( Math.abs(murMouseDeltaAccum[0]) >= 3 || Math.abs(murMouseDeltaAccum[1]) >= 3) )
+      murMouseState = murMouseStateEnum.dragging;
+    
+    if(murMouseState == murMouseStateEnum.dragging)
+    {      
+    	murTranslation[0] += murMouseDelta[0];
+      murTranslation[1] += murMouseDelta[1];
+    }
+  }
+  //-----------------------------------------------------------------------------
+  //prend un vec2 et retourne un vec2
+  function screenToCanvas(screenPos)
+  {
+  	/*On transforme la coordonnée écran pour quelle soit en coordonnée
+      monde.*/
+    var p = [];
+    p[0] = screenPos[0] - murTranslation[0];
+    p[1] = screenPos[1] - murTranslation[1];
+    return p;
+  }
+</script>
+<!-- FIN MUR SCRIPT ---------------------------------------------------------------->
+
+<!-- DEBUT CONTENUR DU MUR ----------------------------------------------------->
+<script type = "text/javascript">
+
+	function handleKeyDown(event)
+  {
+  	document.getElementById("inputText").focus();
+    if(event.keyCode == 13 ) //la touche retour
+    {
+    	var s = document.getElementById("inputText").value;
+      
+      if(s == "debug")
+      {
+    		debug = !debug;
+  	    var d;
+	      debug ? d = "block" : d = "none";
+      	document.getElementById("murDonneesTd").style.display = d;
+    	} 
+
+    	//on efface le contenu du champs
+    	document.getElementById("inputText").value = "";
+    }
+  }
+    
+	function initializePage()
+  {
+    //initialisation du canvas 2d
+    murCanvas = document.getElementById("canvas2d");
+    murCanvasContext = murCanvas.getContext('2d');
+    murCanvasContext.fillStyle = "#333333"; 	// This determines the text colour, it can take a hex value or rgba value (e.g. rgba(255,0,0,0.5))
+		murCanvasContext.textAlign = "center";	// This determines the alignment of text, e.g. left, center, right
+		murCanvasContext.textBaseline = "middle";	// This determines the baseline of the text, e.g. top, middle, bottom
+		murCanvasContext.font = "22px helvetica";	// This determines the size of the text and the font family used    
+    
+    murViewPort = [0, 0, murCanvas.width, murCanvas.height];
+    murCanvasContext.setTransform(1, 0, 0, 1, 0, 0);    
+    
+    //ajout des events handler du canvas
+    murCanvas.addEventListener("mousedown", handleMouseDown, false);
+    murCanvas.addEventListener("mouseup", handleMouseUp, false);
+    murCanvas.addEventListener("mousemove", handleMouseMove, false);
+    
+    //ajout des event handler du document
+    document.onkeydown = handleKeyDown;
+    
+    drawScene();
+    
+    setTimeout('quand_maj ()', 250);
+  }
+  function maj()
+  {
+    xmlhttp = new XMLHttpRequest();
+    
+    xmlhttp.onreadystatechange=function()
+    {
+    	var r;
+      if (xmlhttp.readyState==4 && xmlhttp.status==200)
+      {
+        murDonnees = [];
+      	r = xmlhttp.responseText;
+        document.getElementById("dataView").innerHTML=r;
+        //document.getElementById("dataView").innerHTML = window.responseXML;
+        
+        /*les données ont la forme suivante:
+        <!DOCTYPE HTML>
+        <html>
+        <head>
+        </head>
+
+
+        <body>
+
+          ,52,49,12,48,blablabla,
+        </body>
+        </html>"
+        On élimine donc le token 0 et le dernier token qui sont les
+        entetes HTML.
+        */
+        var tokens = r.split(",");
+        var j = 0;
+        for(var i = 1; i < tokens.length-1; ++i, ++j)
+        {
+          murDonnees[j] = parseFloat(tokens[i]);
+        }
+      }
+    }
+    xmlhttp.open("GET",
+      "mur-maj.php?t="+ Math.random(), true);
+    xmlhttp.send();
+  }
+  function quand_maj ()
+  {
+    maj () ;
+    setTimeout ("quand_maj ()", 1000) ;
+  }
+</script>
+<!-- FIN CONTENUR DU MUR ------------------------------------------------------>
+</head>
+
+<body onLoad = "initializePage()">
+<table>
+  <tr>  	
+  	<td valign="TOP"><canvas id="canvas2d" style="border:solid 1px #000000;" width="400" height="400">html canvas pas supporté!</canvas></td>
+  </tr>
+  <tr>
+  	<td><input type="text" id="inputText" value="" /><td/>
+  </tr>
+  <tr>
+  	<td valign="TOP" id="murDonneesTd" style="DISPLAY: none"><div id="dataView">Les donnees vont ici...</div></td>
+  </tr>
+</table>
+</body>
+</html>

@@ -10,6 +10,4 @@ ADD_COMPONENT("../../reusables/3d" )
 ADD_COMPONENT("../../reusables/math" )
 ADD_COMPONENT("./images" )
 
-ADD_OPENCL()
-
 GENERATE_EXE( ${PROJECT_NAME} )

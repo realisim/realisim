@@ -1,0 +1,311 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Le Mur</title>
+<script type="text/javascript" src="gl-matrix-0.9.5.js"></script>
+<script type="text/javascript" src="webgl-utils.js"></script>
+
+<!-- DEBUT DES SHADERS -->
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec4 vColor;
+
+    void main(void) {
+        gl_FragColor = vColor;
+    }
+</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec4 aVertexColor;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    varying vec4 vColor;
+
+    void main(void) {
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vColor = aVertexColor;
+    }
+</script>
+<!-- FIN DES SHADERS -->
+
+<!-- DEBUT WEB GL -------------------------------------------------------------->
+<script id="webGl" type="text/javascript">
+  var gl;
+  var canvas;
+  var mvMatrix = mat4.create();
+  var pMatrix = mat4.create();
+  var mvMatrixStack = [];
+  var webGlDonnees = [];
+  
+  var rectangleVertexPositionBuffer;
+  var rectangleVertexColorBuffer;
+  
+  function setMatrixUniforms()
+  {
+    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+  }
+  function pushMvMatrix() { mvMatrixStack.push(mat4.create(mvMatrix)); }
+  function popMvMatrix() { mvMatrix = mvMatrixStack.pop(); }
+  function initGL(canvas)
+  {
+    try
+    {
+    	gl = WebGLUtils.setupWebGL(canvas);
+    } 
+    catch (e) {}
+    if (!gl) {
+      alert("Could not initialise WebGL, sorry...");
+    }
+  }
+  //-----------------------------------------------------------------------------
+  function getShader(gl, id)
+  {
+    var shaderScript = document.getElementById(id);
+    var shader;
+    var str = "";
+    
+    if (!shaderScript)
+    {
+      return null;
+    }
+    
+    var k = shaderScript.firstChild;
+    while (k)
+    {
+      if (k.nodeType == 3)
+      {
+          str += k.textContent;
+      }
+      k = k.nextSibling;
+    }
+
+    if (shaderScript.type == "x-shader/x-fragment")
+      shader = gl.createShader(gl.FRAGMENT_SHADER);
+    else if (shaderScript.type == "x-shader/x-vertex")
+      shader = gl.createShader(gl.VERTEX_SHADER);
+    else 
+      return null;
+
+    gl.shaderSource(shader, str);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) 
+    {
+      alert(gl.getShaderInfoLog(shader));
+      return null;
+    }
+
+    return shader;
+  }
+  //-----------------------------------------------------------------------------
+  function initShaders()
+  {
+    var fragmentShader = getShader(gl, "shader-fs");
+    var vertexShader = getShader(gl, "shader-vs");
+
+    shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        alert("Could not initialise shaders");
+    }
+
+    gl.useProgram(shaderProgram);
+
+    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+    shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+
+    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+  }
+  //-----------------------------------------------------------------------------
+  function initBuffers()
+  {
+	  rectangleVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleVertexPositionBuffer);
+    var vertices = [
+			0.5,  0.5,  0.0,
+      -0.5,  0.5,  0.0,
+       0.5, -0.5,  0.0,
+      -0.5, -0.5,  0.0 ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    rectangleVertexPositionBuffer.itemSize = 3;
+    rectangleVertexPositionBuffer.numItems = 4;
+    
+    rectangleVertexColorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleVertexColorBuffer);
+    colors = [];
+    for (var i=0; i < 4; i++)
+    {
+    	colors = colors.concat([0.2, 0.2, 0.2, 1.0]);
+    }
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+    rectangleVertexColorBuffer.itemSize = 4;
+    rectangleVertexColorBuffer.numItems = 4;
+  }
+  //-----------------------------------------------------------------------------
+  function drawRectangle(x, y)
+  {
+    pushMvMatrix();    
+        
+    mat4.translate( mvMatrix, [x, y, 0] );
+    mat4.scale( mvMatrix, [4, 4, 0] );
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleVertexPositionBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, rectangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleVertexColorBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, rectangleVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+    setMatrixUniforms();
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, rectangleVertexPositionBuffer.numItems);
+    
+    popMvMatrix();
+  }
+  //-----------------------------------------------------------------------------
+  function drawScene()
+  {
+    window.requestAnimFrame(drawScene, canvas);
+    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    
+    //mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+    /*on inverse bottom et top pour que le system de coordonnées ait l'air
+      d'avoir son origine dans le coin supérieur gauche (comme le canvas
+      html)*/
+    mat4.ortho(0, gl.viewportWidth, 
+      gl.viewportHeight, 0,
+      1, 100.0, pMatrix);
+
+		mat4.identity(mvMatrix);
+    mat4.translate(mvMatrix, [0.0, 0.0, -10.0]);
+
+    for(i = 0; i < webGlDonnees.length / 2; ++i)
+    {
+      drawRectangle(webGlDonnees[i * 2], webGlDonnees[(i * 2) + 1]);
+    }
+
+  }
+  //-----------------------------------------------------------------------------
+  /*Envoit une requete pour ajouter un point 2d. Le point est en coordonnées 
+    relative au canvas webGL.*/
+  function handleMouseClick(event)
+  {
+    var totalOffsetX = 0;
+    var totalOffsetY = 0;
+    var canvasX = 0;
+    var canvasY = 0;
+    var currentElement = this;
+
+    do{
+        totalOffsetX += currentElement.offsetLeft;
+        totalOffsetY += currentElement.offsetTop;
+    }
+    while(currentElement = currentElement.offsetParent)
+
+    canvasX = event.pageX - totalOffsetX;
+    canvasY = event.pageY - totalOffsetY;
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET",
+      "mur-ajoute.php?x="+canvasX+"&y="+canvasY, true);
+    xmlhttp.send();
+  }
+  //-----------------------------------------------------------------------------
+  var initializeWebGL = function()
+  {
+    canvas = document.getElementById("webGL-canvas");
+    canvas.addEventListener("click", handleMouseClick, false);
+    
+    initGL(canvas);
+    initShaders();
+    initBuffers();
+    
+    gl.viewportWidth = canvas.width;
+    gl.viewportHeight = canvas.height;
+        
+    gl.enable(gl.DEPTH_TEST);
+    gl.clearColor(0.95, 0.95, 0.95, 1.0);
+
+    drawScene();
+  }
+</script>
+<!-- FIN WEB GL ---------------------------------------------------------------->
+
+<!-- DEBUT CONTENUR DU MUR ----------------------------------------------------->
+<script type = "text/javascript">
+
+	function initializePage()
+  {
+    initializeWebGL();
+    setTimeout('quand_maj ()', 250);
+  }
+  function maj()
+  {
+    xmlhttp = new XMLHttpRequest();
+    
+    xmlhttp.onreadystatechange=function()
+    {
+    	var r;
+      if (xmlhttp.readyState==4 && xmlhttp.status==200)
+      {
+        webGlDonnees = [];
+      	r = xmlhttp.responseText;
+        document.getElementById("dataView").innerHTML=r;
+        //document.getElementById("dataView").innerHTML = window.responseXML;
+        
+        /*les données ont la forme suivante:
+        <!DOCTYPE HTML>
+        <html>
+        <head>
+        </head>
+
+
+        <body>
+
+          ,52,49,12,48,blablabla,
+        </body>
+        </html>"
+        On élimine donc le token 0 et le dernier token qui sont les
+        entetes HTML.
+        */
+        var tokens = r.split(",");
+        var j = 0;
+        for(var i = 1; i < tokens.length-1; ++i, ++j)
+        {
+          webGlDonnees[j] = tokens[i];
+        }
+      }
+    }
+    xmlhttp.open("GET",
+      "mur-maj.php?t="+ Math.random(), true);
+    xmlhttp.send();
+  }
+  function quand_maj ()
+  {
+    maj () ;
+    setTimeout ("quand_maj ()", 250) ;
+  }
+</script>
+<!-- FIN CONTENUR DU MUR ------------------------------------------------------>
+</head>
+
+<body onLoad = "initializePage()">
+<table>
+	<tr>  	
+  	<td valign="TOP"><canvas id="webGL-canvas" style="border: none;" width="400" height="400"></canvas></td>
+  </tr>
+  <tr>
+  	<td valign="TOP" style="word-wrap: break-word;"><div id="dataView">Les donnees vont ici...</div></td>
+  </tr>
+</table>
+</body>
+</html>

@@ -46,12 +46,20 @@ mMousePosX( 0 ),
 mMousePosY( 0 ),
 mFrameBuffers(),
 mShaders()
-{}
+{ setFocusPolicy( Qt::StrongFocus ); }
 
 //-----------------------------------------------------------------------------
 Widget3d::~Widget3d()
 {}
-  
+
+//-----------------------------------------------------------------------------
+void Widget3d::beginFrame()  
+{
+	makeCurrent();
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glLoadIdentity();
+  getCamera().applyModelViewTransformation();
+}
 //-----------------------------------------------------------------------------
 void Widget3d::initializeGL()
 {
@@ -105,7 +113,9 @@ void Widget3d::keyPressEvent(QKeyEvent* ipE)
 	//ipE->ignore();
   QGLWidget::keyPressEvent(ipE);
 }
-
+//-----------------------------------------------------------------------------
+void Widget3d::keyReleaseEvent( QKeyEvent* ipE )
+{ QGLWidget::keyReleaseEvent(ipE); }
 //-----------------------------------------------------------------------------
 QSize Widget3d::minimumSizeHint() const
 {
@@ -169,11 +179,7 @@ void Widget3d::mouseReleaseEvent(QMouseEvent *e)
 void
 Widget3d::paintGL()
 {
-  makeCurrent();
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glLoadIdentity();
-  getCamera().applyModelViewTransformation();
-  
+  beginFrame();
   //replacer les lumieres
   GLfloat position[]  = {50.0, 30.0, 5.0, 1.0};
   glLightfv(GL_LIGHT0, GL_POSITION, position);
@@ -209,11 +215,11 @@ vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
   //on definit les 4 coins de la fenetre de selection
   //x1 = iX; y1 = iY; x2 = x1 + iWidth; y2 = y1 + iHeight;
   //on trouve le coin inférieur gauche de la boite de selection
-  x1 = min(iX, iX + iWidth);
-  y1 = max(iY, iY + iHeight);
+  x1 = min(iX - iWidth / 2.0, iX + iWidth / 2.0 );
+  y1 = max(iY - iHeight / 2.0, iY + iHeight / 2.0 );
   //le coin superieur droit
-  x2 = max(iX, iX + iWidth);
-  y2 = min(iY, iY + iHeight);
+  x2 = max(iX - iWidth / 2.0, iX + iWidth / 2.0);
+  y2 = min(iY - iHeight / 2.0, iY + iHeight / 2.0 );
 
   //on cap le coin inferieur gauche sur le viewport
   x1 = max(x1, viewport[0]);
@@ -233,10 +239,10 @@ vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
 
   glPushAttrib(GL_COLOR_BUFFER_BIT | GL_POLYGON_BIT);
   //draw the scene in picking mode...
-  /*On s'assure que le clear color est completement noir parce qu'il
-    représentera le id 0 et n'interferera donc pas dans la sélection.*/
+  /*On s'assure que le clear color est completement blanc parce qu'il
+    représentera le id 2^32 et n'interferera donc pas dans la sélection.*/
   glClearColor(1, 1, 1, 1);
-  Widget3d::paintGL();
+  beginFrame();
   drawSceneForPicking();
   
   glReadPixels(x1, viewport[3] - y1, absWidth, absHeight,
@@ -249,21 +255,21 @@ vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
   /*Quand la boite fait plus de 1x1, on fais une selection sur les back facing
     polygones aussi, ainsi permettant une selection qui passe au travers
     de la surface.*/
-  if(absWidth > 1 || absHeight > 1 )
-  {
-  	glEnable(GL_CULL_FACE);
-  	glCullFace(GL_FRONT);
-    Widget3d::paintGL();
-    drawSceneForPicking();
-    
-    glReadPixels(x1, viewport[3] - y1, absWidth, absHeight,
-  		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
-    for(int i = 0; i < absHeight; ++i)
-      for(int j = 0; j < absWidth; ++j)    
-        if(pixels[i*absWidth*4 + j*4] != 255 || pixels[i*absWidth*4 + j*4 + 1] != 255 || pixels[i*absWidth*4 + j*4 + 2] != 255 || pixels[i*absWidth*4 + j*4 + 3] != 255)
-          hits.push_back(colorToId(QColor(pixels[i*absWidth*4 + j*4],pixels[i*absWidth*4 + j*4 + 1],pixels[i*absWidth*4 + j*4 + 2],pixels[i*absWidth*4 + j*4 + 3])));    
-
-  }
+//  if(absWidth > 1 || absHeight > 1 )
+//  {
+//  	glEnable(GL_CULL_FACE);
+//  	glCullFace(GL_FRONT);
+//    beginFrame();
+//    drawSceneForPicking();
+//    
+//    glReadPixels(x1, viewport[3] - y1, absWidth, absHeight,
+//  		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
+//    for(int i = 0; i < absHeight; ++i)
+//      for(int j = 0; j < absWidth; ++j)    
+//        if(pixels[i*absWidth*4 + j*4] != 255 || pixels[i*absWidth*4 + j*4 + 1] != 255 || pixels[i*absWidth*4 + j*4 + 2] != 255 || pixels[i*absWidth*4 + j*4 + 3] != 255)
+//          hits.push_back(colorToId(QColor(pixels[i*absWidth*4 + j*4],pixels[i*absWidth*4 + j*4 + 1],pixels[i*absWidth*4 + j*4 + 2],pixels[i*absWidth*4 + j*4 + 3])));    
+//
+//  }
   glPopAttrib();
       
   //on s'assure que les hits sont unique

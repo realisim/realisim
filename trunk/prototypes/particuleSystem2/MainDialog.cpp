@@ -264,8 +264,7 @@ void MainDialog::numberOfParticulesChanged( const QString& iText )
 //-----------------------------------------------------------------------------
 void MainDialog::radiusChanged( int iV )
 {
-	double r = max( 1.0, iV / 10.0 );
-	getSelectedSource().setRadius( r );
+	getSelectedSource().setRadius( iV );
   updateUi();
 }
 //-----------------------------------------------------------------------------

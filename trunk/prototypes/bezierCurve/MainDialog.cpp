@@ -227,9 +227,7 @@ void Viewer::mousePressEvent(QMouseEvent* ipE)
         
         if(getState() == sCreation)
         {
-          //laxe y de Qt est inversé par rapport à openGL
-          int y =  c.getWindowInfo().getHeight() - ipE->y();
-          Point3d p = c.pixelToGL(ipE->x(), y, c.getLook());
+          Point3d p = c.pixelToGL(ipE->x(), ipE->y(), c.getLook());
           if(mHover != -1)
           	if(mCurves[mCurrentCurve].canCloseOn(mHover))
             {
