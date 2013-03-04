@@ -1,0 +1,441 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Le Mur</title>
+<script type="text/javascript" src="gl-matrix-0.9.5.js"></script>
+<script type="text/javascript" src="webgl-utils.js"></script>
+
+<!-- DEBUT DES SHADERS -->
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec4 vColor;
+
+    void main(void) {
+        gl_FragColor = vColor;
+    }
+</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec4 aVertexColor;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    varying vec4 vColor;
+
+    void main(void) {
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vColor = aVertexColor;
+    }
+</script>
+<!-- FIN DES SHADERS -->
+
+<!-- DEBUT WEB GL -------------------------------------------------------------->
+<script id="webGl" type="text/javascript">
+	//pour gl
+  var gl;
+  var glCanvas;
+  var mvMatrix = mat4.create();
+  var pMatrix = mat4.create();
+  var mvMatrixStack = [];
+  var webGlDonnees = [];
+  var debug = false;
+  var glOffscreenCanvas;
+  var glOffscreenContext;
+  
+  //pour la souris
+  var glMouseStateEnum = { idle : 0, pressed : 1, draggingWhitinBounds : 2,
+    dragging : 3 };
+  var glMouseState = glMouseStateEnum.idle;
+  var glMousePos = []; //x,y
+  var glMouseDelta = []; //x,y
+  var glMouseDeltaAccum = []; //x,y
+  
+  //pour les primitives gl
+  var rectangleVertexPositionBuffer;
+  var rectangleVertexColorBuffer;
+  
+  function setMatrixUniforms()
+  {
+    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+  }
+  function pushMvMatrix() { mvMatrixStack.push(mat4.create(mvMatrix)); }
+  function popMvMatrix() { mvMatrix = mvMatrixStack.pop(); }
+  function initGL(canvas)
+  {
+    try
+    {
+    	gl = WebGLUtils.setupWebGL(canvas);
+    } 
+    catch (e) {}
+    if (!gl) {
+      alert("Could not initialise WebGL, sorry...");
+    }
+  }
+  //-----------------------------------------------------------------------------
+  function getShader(gl, id)
+  {
+    var shaderScript = document.getElementById(id);
+    var shader;
+    var str = "";
+    
+    if (!shaderScript)
+    {
+      return null;
+    }
+    
+    var k = shaderScript.firstChild;
+    while (k)
+    {
+      if (k.nodeType == 3)
+      {
+          str += k.textContent;
+      }
+      k = k.nextSibling;
+    }
+
+    if (shaderScript.type == "x-shader/x-fragment")
+      shader = gl.createShader(gl.FRAGMENT_SHADER);
+    else if (shaderScript.type == "x-shader/x-vertex")
+      shader = gl.createShader(gl.VERTEX_SHADER);
+    else 
+      return null;
+
+    gl.shaderSource(shader, str);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) 
+    {
+      alert(gl.getShaderInfoLog(shader));
+      return null;
+    }
+
+    return shader;
+  }
+  //-----------------------------------------------------------------------------
+  function initShaders()
+  {
+    var fragmentShader = getShader(gl, "shader-fs");
+    var vertexShader = getShader(gl, "shader-vs");
+
+    shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        alert("Could not initialise shaders");
+    }
+
+    gl.useProgram(shaderProgram);
+
+    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+    shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+
+    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+  }
+  //-----------------------------------------------------------------------------
+  function initBuffers()
+  {
+	  rectangleVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleVertexPositionBuffer);
+    var vertices = [
+			0.5,  0.5,  0.0,
+      -0.5,  0.5,  0.0,
+       0.5, -0.5,  0.0,
+      -0.5, -0.5,  0.0 ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    rectangleVertexPositionBuffer.itemSize = 3;
+    rectangleVertexPositionBuffer.numItems = 4;
+    
+    rectangleVertexColorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleVertexColorBuffer);
+    colors = [];
+    for (var i=0; i < 4; i++)
+    {
+    	colors = colors.concat([0.2, 0.2, 0.2, 1.0]);
+    }
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+    rectangleVertexColorBuffer.itemSize = 4;
+    rectangleVertexColorBuffer.numItems = 4;
+  }
+  //-----------------------------------------------------------------------------
+  /* x et y représente la position gl où le rectangle sera positionné.
+     w et h reprente la largeur et la hauteur.
+     a représente le point d'ancrage ie:
+     
+         0------1-------2
+         |              |
+         3      4       5
+         |              |
+         6------7-------8  */
+  function drawRectangle(x, y, w, h, a)
+  {
+    pushMvMatrix();
+    var offset = [0.0, 0.0, 0.0];
+    
+    switch(a)
+    {
+    case 0: offset = [-0.5, 0.5, 0.0]; break;
+    case 1: offset = [0.0, 0.5, 0.0]; break;
+    case 2: offset = [0.5, 0.5, 0.0]; break;
+    case 3: offset = [-0.5, 0.0, 0.0]; break;
+    case 4: offset = [0.0, 0.0, 0.0]; break;
+    case 5: offset = [0.5, 0.0, 0.0]; break;
+    case 6: offset = [-0.5, -0.5, 0.0];break;
+    case 7: offset = [0.0, -0.5, 0.0]; break;
+    case 8: offset = [0.5, -0.5, 0.0]; break;
+    default: break;
+    }
+    
+    mat4.translate( mvMatrix, [x, y, 0] );
+    mat4.translate( mvMatrix, offset );
+    mat4.scale( mvMatrix, [w, h, 0] );
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleVertexPositionBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, rectangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleVertexColorBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, rectangleVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+    setMatrixUniforms();
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, rectangleVertexPositionBuffer.numItems);
+    
+    popMvMatrix();
+  }
+  //-----------------------------------------------------------------------------
+  function drawScene()
+  {
+    window.requestAnimFrame(drawScene, glCanvas);
+    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    
+    //mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+    /*on inverse bottom et top pour que le system de coordonnées ait l'air
+      d'avoir son origine dans le coin supérieur gauche (comme le canvas
+      html)*/
+    mat4.ortho(0, gl.viewportWidth, 
+      gl.viewportHeight, 0,
+      1, 100.0, pMatrix);
+    
+		pushMvMatrix();
+    for(i = 0; i < webGlDonnees.length / 2; ++i)
+    {
+      drawRectangle(webGlDonnees[i * 2], webGlDonnees[(i * 2) + 1],
+        4, 4, 4);
+    }
+    popMvMatrix();
+  }
+  //-----------------------------------------------------------------------------
+  /*Envoit une requete pour ajouter un point 2d. Le point est en coordonnées 
+    relative au canvas webGL.*/
+  function handleMouseDown(event)
+  {
+    glMouseState = glMouseStateEnum.pressed;
+    glMousePos = [event.offsetX, event.offsetY];    
+  }
+  //-----------------------------------------------------------------------------
+  function handleMouseUp(event)
+  {  
+  	//on envoit le click si on est pas en dragging  
+    if(glMouseState != glMouseStateEnum.dragging)
+    {
+    	pos = screenToGl(glMousePos);
+      xmlhttp = new XMLHttpRequest();
+      xmlhttp.open("GET",
+        "mur-ajoute.php?x="+pos[0]+"&y="+pos[1], true);
+      xmlhttp.send();
+    }
+    
+    glMouseState = glMouseStateEnum.idle;
+    glMousePos = [event.offsetX, event.offsetY];
+    glMouseDelta = [0, 0];
+    glMouseDeltaAccum = [0, 0];
+  }
+  //-----------------------------------------------------------------------------
+  function handleMouseMove(event)
+  {
+		if( glMouseState == glMouseStateEnum.idle )
+    	return;
+      
+    if( glMouseState == glMouseStateEnum.pressed)
+    	glMouseState = glMouseStateEnum.draggingWhitinBounds;
+      
+    glMouseDelta = [event.offsetX - glMousePos[0], 
+      event.offsetY - glMousePos[1] ];
+    glMouseDeltaAccum = [ glMouseDeltaAccum[0] + glMouseDelta[0], 
+      glMouseDeltaAccum[1] + glMouseDelta[1] ];
+    glMousePos = [event.offsetX, event.offsetY];
+    
+		if(glMouseState == glMouseStateEnum.draggingWhitinBounds && 
+      ( Math.abs(glMouseDeltaAccum[0]) >= 3 || Math.abs(glMouseDeltaAccum[1]) >= 3) )
+      glMouseState = glMouseStateEnum.dragging;
+    
+    if(glMouseState == glMouseStateEnum.dragging)
+    {      
+      mat4.translate(mvMatrix, [glMouseDelta[0], glMouseDelta[1], 0] );
+    }
+  }
+  //-----------------------------------------------------------------------------
+  var initializeWebGL = function()
+  {
+    glCanvas = document.getElementById("webGL-canvas");
+    //ajout des event handler
+    glCanvas.addEventListener("mousedown", handleMouseDown, false);
+    glCanvas.addEventListener("mouseup", handleMouseUp, false);
+    glCanvas.addEventListener("mousemove", handleMouseMove, false);    
+    
+    glOffscreenCanvas = document.getElementById("webGlOffscreenCanvas");
+    glOffscreenContext = glOffscreenCanvas.getContext('2d');
+    glOffscreenContext.fillStyle = "#333333"; 	// This determines the text colour, it can take a hex value or rgba value (e.g. rgba(255,0,0,0.5))
+		glOffscreenContext.textAlign = "center";	// This determines the alignment of text, e.g. left, center, right
+		glOffscreenContext.textBaseline = "middle";	// This determines the baseline of the text, e.g. top, middle, bottom
+		glOffscreenContext.font = "22px helvetica";	// This determines the size of the text and the font family used
+    glOffscreenContext.fillText("Bouette", 100, 100);
+    
+    
+    initGL(glCanvas);
+    initShaders();
+    initBuffers();
+    
+    gl.viewportWidth = glCanvas.width;
+    gl.viewportHeight = glCanvas.height;
+        
+    gl.enable(gl.DEPTH_TEST);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    
+    //initialisation de la camera (matrice modelview)
+    mat4.identity(mvMatrix);
+    mat4.translate(mvMatrix, [0.0, 0.0, -10.0]);
+
+    drawScene();
+  }
+  //-----------------------------------------------------------------------------
+  //prend un vec2 et retourne un vec3
+  function screenToGl(screenPos)
+  {
+  	/*On transforme la coordonnée pour quelle soit dans le systeme d'axe
+      openGl. avec le 0,0 dans le coin inferieur gauche.*/
+  	screenPos = [ screenPos[0], glCanvas.height - screenPos[1] ];
+  	viewport = gl.getParameter(gl.VIEWPORT);
+  	var p = vec3.create();
+    vec3.unproject( [screenPos[0], screenPos[1], 0.0],
+    	mvMatrix, pMatrix, viewport, p );
+    return p;
+  }
+</script>
+<!-- FIN WEB GL ---------------------------------------------------------------->
+
+<!-- DEBUT CONTENUR DU MUR ----------------------------------------------------->
+<script type = "text/javascript">
+
+	function handleKeyDown(event)
+  {
+  	document.getElementById("inputText").focus();
+    if(event.keyCode == 13 ) //la touche retour
+    {
+    	var s = document.getElementById("inputText").value;
+      
+      if(s == "debug")
+      {
+    		debug = !debug;
+  	    var d;
+	      debug ? d = "block" : d = "none";
+      	document.getElementById("webGlDonneesTd").style.display = d;
+      	document.getElementById("webGlOffscreenCanvasTd").style.display = d;            
+    	} 
+      else
+      { 
+        glOffscreenContext.clearRect( 0, 0,
+          glOffscreenCanvas.width, glOffscreenCanvas.height );
+        /*on met a jour le canvas caché qui sert a faire
+          la texture openGL*/
+        glOffscreenContext.fillText(s, 100, 100);
+      }
+    	//on efface le contenu du champs
+    	document.getElementById("inputText").value = "";
+    }
+  }
+    
+	function initializePage()
+  {
+    initializeWebGL();
+    
+    //ajout des event handler
+    document.onkeydown = handleKeyDown;
+    
+    setTimeout('quand_maj ()', 250);
+  }
+  function maj()
+  {
+    xmlhttp = new XMLHttpRequest();
+    
+    xmlhttp.onreadystatechange=function()
+    {
+    	var r;
+      if (xmlhttp.readyState==4 && xmlhttp.status==200)
+      {
+        webGlDonnees = [];
+      	r = xmlhttp.responseText;
+        document.getElementById("dataView").innerHTML=r;
+        //document.getElementById("dataView").innerHTML = window.responseXML;
+        
+        /*les données ont la forme suivante:
+        <!DOCTYPE HTML>
+        <html>
+        <head>
+        </head>
+
+
+        <body>
+
+          ,52,49,12,48,blablabla,
+        </body>
+        </html>"
+        On élimine donc le token 0 et le dernier token qui sont les
+        entetes HTML.
+        */
+        var tokens = r.split(",");
+        var j = 0;
+        for(var i = 1; i < tokens.length-1; ++i, ++j)
+        {
+          webGlDonnees[j] = tokens[i];
+        }
+      }
+    }
+    xmlhttp.open("GET",
+      "mur-maj.php?t="+ Math.random(), true);
+    xmlhttp.send();
+  }
+  function quand_maj ()
+  {
+    maj () ;
+    setTimeout ("quand_maj ()", 250) ;
+  }
+</script>
+<!-- FIN CONTENUR DU MUR ------------------------------------------------------>
+</head>
+
+<body onLoad = "initializePage()">
+<table>
+	<tr>  	
+  	<td valign="TOP"><canvas id="webGL-canvas" style="border:solid 1px #000000;" width="400" height="400"></canvas></td>
+  </tr>
+  <tr>
+  	<td><input type="text" id="inputText" value="" /><td/>
+  </tr>
+  <tr>
+  	<td valign="TOP" id="webGlOffscreenCanvasTd" style="DISPLAY: none"><canvas id="webGlOffscreenCanvas">texte bidon</canvas></td>
+  </tr>
+  <tr>
+  	<td valign="TOP" id="webGlDonneesTd" style="DISPLAY: none"><div id="dataView">Les donnees vont ici...</div></td>
+  </tr>
+</table>
+</body>
+</html>

@@ -28,14 +28,14 @@ Controller::Controller(ProjectWindow& iProjectWindow) :
   pBouetteNode->rotate( PI/2.0,
     Vector3d( 0.0, 0.0, 1.0 ) );
   mEditionData.setCurrentNode( pBouetteNode );
-  createPlatonicSolid(PlatonicSolid::tCube, 2);
+  createPlatonicSolid(PlatonicSolid::tCube);
   
   ObjectNode* pNode = pBouetteNode->addNode( "bâche" );
   pNode->rotate( PI/4.0,
     Vector3d( 0.0, 0.0, 1.0 ) );
   pNode->translate( Vector3d( -800.0, 0.0, 0.0 ) );
   mEditionData.setCurrentNode( pNode );
-  createPlatonicSolid(PlatonicSolid::tIsocahedron, 3);
+  createPlatonicSolid(PlatonicSolid::tIsocahedron);
 }
 
 Controller::~Controller()
@@ -46,27 +46,31 @@ void Controller::addCommand(utils::Command* ipC)
 { mCommandStack.add(ipC); }
 
 //------------------------------------------------------------------------------
-void Controller::createPlatonicSolid(PlatonicSolid::type iType, 
-  int iLevel /*= 0*/)
+void Controller::createPlatonicSolid(PlatonicSolid::type iType)
 {
-  PlatonicSolid ps(iType, iLevel);
+  PlatonicSolid ps(iType);
   RealEditModel m = getEditionData().getCurrentModel();
   
   vector<RealEditPoint> vPoints;
   vector<RealEditPoint> vFace;
-  for (uint i = 0; i < ps.getVertex().size(); ++i) 
+  for (uint i = 0; i < ps.getNumberOfVertices(); ++i) 
   {    
-    RealEditPoint p(ps.getVertex()[i]);
+    RealEditPoint p(ps.getVertex( i ));
     m.addPoint (p);
     vPoints.push_back(p);
   }
   
-  for (uint i = 0; i < ps.getFaces().size(); ++i)
+  for (uint i = 0; i < ps.getNumberOfPolygons(); ++i)
   {
     vFace.clear();
-    vFace.push_back(vPoints[ps.getFaces()[i].index1]);
-    vFace.push_back(vPoints[ps.getFaces()[i].index2]);
-    vFace.push_back(vPoints[ps.getFaces()[i].index3]);
+    const Polygon& p = ps.getPolygon( i );
+    for( int j = 0; j < p.getNumberOfVertices(); ++j )
+    {
+    	vFace.push_back( vPoints[ ps.getVertexIndicesForPolygon(i)[j] ] );
+    }
+//    vFace.push_back(vPoints[ps.getFaces()[i].index1]);
+//    vFace.push_back(vPoints[ps.getFaces()[i].index2]);
+//    vFace.push_back(vPoints[ps.getFaces()[i].index3]);
     m.addPolygon(vFace);
   }
 }

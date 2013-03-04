@@ -78,7 +78,7 @@ public:
   virtual void setTool(tool);
 
 protected:
-  virtual void createPlatonicSolid(PlatonicSolid::type, int = 0);
+  virtual void createPlatonicSolid(PlatonicSolid::type);
   virtual realisim::utils::CommandStack& getCommandStack() {return mCommandStack;}
   
 private:

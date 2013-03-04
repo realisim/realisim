@@ -243,8 +243,11 @@ RealEditPolygon::Guts::~Guts()
 //------------------------------------------------------------------------------
 void RealEditPolygon::Guts::computeNormals()
 {
-  assert (mPoints. size () == 3);
-  math::Polygon poly (mPoints[0].pos(), mPoints[1].pos(), mPoints[2].pos());
+  vector< Point3d > v;
+  v.push_back( mPoints[0].pos() );
+  v.push_back( mPoints[1].pos() );
+  v.push_back( mPoints[2].pos() );
+ 	math::Polygon poly( v ); 
   
   mNormals.clear();
   mNormals. push_back (poly.getNormal ());

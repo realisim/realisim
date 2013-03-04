@@ -16,22 +16,55 @@ namespace realisim
 {
 namespace math
 {
-
+	//---------------------------------------------------------------------------
+  template< class T >
+  Vect<T> absolute( const Vect<T>& iP )
+  { return Vect<T>( abs( iP.getX() ), abs( iP.getY() ), abs( iP.getZ() ) ); }
+  //---------------------------------------------------------------------------
+	template<class T>
+	bool equal( T a, T b, T iEpsilon = std::numeric_limits<T>::epsilon() )
+  {
+    T d = a - b;
+    if(d<(T)0.0) d = -d;
+    return ( d <= iEpsilon );
+  }
+	//---------------------------------------------------------------------------
+	template<class T>
+	bool equal( const Vect<T>& iV0, const Vect<T>& iV1, T iEpsilon = 
+  	std::numeric_limits<T>::epsilon() )
+  {
+    T dx = iV0.getX() - iV1.getX();
+    T dy = iV0.getY() - iV1.getY();
+    T dz = iV0.getZ() - iV1.getZ();
+    if(dx<(T)0.0) dx = -dx;
+    if(dy<(T)0.0) dy = -dy;
+    if(dz<(T)0.0) dz = -dz;
+    return (dx <= iEpsilon && dy <= iEpsilon && dz <= iEpsilon);
+  }
+	//---------------------------------------------------------------------------
+  template<class T>
+	bool equal( const Point<T>& iP0, const Point<T>& iP1, T iEpsilon = 
+  	std::numeric_limits<T>::epsilon() )
+  {
+    T dx = iP0.getX() - iP1.getX();
+    T dy = iP0.getY() - iP1.getY();
+    T dz = iP0.getZ() - iP1.getZ();
+    if(dx<(T)0.0) dx = -dx;
+    if(dy<(T)0.0) dy = -dy;
+    if(dz<(T)0.0) dz = -dz;
+    return (dx <= iEpsilon && dy <= iEpsilon && dz <= iEpsilon);
+  }
   //---------------------------------------------------------------------------
   //convertie un vecteur en point
   template<class T>
   inline Point<T> toPoint (const Vect<T>& iV)
-  {
-    return Point<T>(iV.getX(), iV.getY(), iV.getZ());
-  }
+  { return Point<T>(iV.getX(), iV.getY(), iV.getZ()); }
   
   //---------------------------------------------------------------------------
   //convertie un point en vecteur
   template<class T>
   inline Vect<T> toVector (const Point<T>& iP)
-  {
-    return Vect<T>(iP.getX(), iP.getY(), iP.getZ());
-  }
+  { return Vect<T>(iP.getX(), iP.getY(), iP.getZ()); }
 
   //---------------------------------------------------------------------------
   template<class V>
@@ -149,6 +182,28 @@ namespace math
   }
   
   //---------------------------------------------------------------------------
+  template<class T>
+  Vect<T> getPerpendicularVector( const Vect<T>& iV )
+  {
+  	/*afin d'obtenir un vecteur perpendiculaire, le produit scalaire doit donner
+    0. donc
+    	1- (ax, by, cz) * (dx, ey, fz) = 0 
+      2- ( a*d + b*e + c*z ) = 0 
+      si d = b et que e = -a et que z = 0,
+      3- a*b + b*(-a) + 0 = 0
+      Bref, en permuttant deux valeurs et en inversant une des deux et remplacant
+      la troisieme par 0, on obtient toujours un vecteur perpendiculaire.*/
+    Vect<T> r(1.0, 0.0, 0.0);
+    if( !equal( iV.getX(), 0.0 ) )
+    	r = Vect<T>( iV.getY(), -iV.getX(), (T)0.0 );
+    else if( !equal( iV.getY(), 0.0 ) ) 
+    	r = Vect<T>( -iV.getY(), iV.getX(), (T)0.0 );
+    else if( !equal( iV.getZ(), 0.0 ) )
+			r = Vect<T>( (T)0.0, iV.getZ(), -iV.getY() );
+  	return r;
+  }
+  
+  //---------------------------------------------------------------------------
   //retourne la matrice de rotation correpondant a la rotation de iAngle
   //radian autour de l'axe iAxis
   template<class T>
@@ -243,6 +298,32 @@ namespace math
     rotatedPoint += axisPos;
     
     return rotatedPoint;
+  }
+  
+  //----------------------------------------------------------------------------
+  template< class T >
+  bool isCoplanar( const std::vector< Point<T>* >& iP, double iEpsilon = 
+  	std::numeric_limits<double>::epsilon() )
+  {
+  	Vector3d n0, n1;
+    int iMinus1, i0, i1;
+    bool r = true;
+    if( iP.size() > 3 )
+    {
+    	n0 = Vector3d( *iP[0], *iP[1] ) ^ Vector3d( *iP[1], *iP[2] );
+      n0.normalise();
+//printf("n0; %.16f, %.16f, %.16f\n", n0.getX(), n0.getY(), n0.getZ() );
+      for( int i = 2; i < (int)iP.size(); ++i )
+      {
+      	iMinus1 = i -1; i0 = i; i1 = (i + 1) % iP.size();
+        n1 = Vector3d( *iP[iMinus1], *iP[i0] ) ^ Vector3d( *iP[i0], *iP[i1] );
+        n1.normalise();
+//printf("n1; %.16f, %.16f, %.16f\n", n1.getX(), n1.getY(), n1.getZ() );
+        if( !math::equal( absolute(n0), absolute(n1), iEpsilon ) )
+        { r = false; break; }
+      }
+    }
+    return r;
   }
   
   //----------------------------------------------------------------------------

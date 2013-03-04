@@ -50,9 +50,11 @@ public:
 //    void clicked();
 
 protected:
+	virtual void beginFrame();
 	virtual void drawSceneForPicking() const {};  
   virtual void initializeGL();
   virtual void keyPressEvent(QKeyEvent*);
+  virtual void keyReleaseEvent(QKeyEvent*);
   virtual void mouseDoubleClickEvent( QMouseEvent* e );
   virtual void mouseMoveEvent( QMouseEvent* e );
   virtual void mousePressEvent( QMouseEvent* e );

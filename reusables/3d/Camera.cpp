@@ -217,8 +217,8 @@ void Camera::move( const Vector3d& iDelta )
       //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
       //est dans le même sens que ce dernier ou non... Si ce n'est pas le
       //cas, on change la direction de l'angle.
-      if( ( projDeltaOnLat + (getLat() * projDeltaOnLat.norm())) ==
-            Vector3d(0.0) )
+      if( math::equal( projDeltaOnLat + getLat() * projDeltaOnLat.norm(),
+            Vector3d(0.0) ) )
       {
         angle1 *= -1;
       }
@@ -275,8 +275,8 @@ void Camera::move( const Vector3d& iDelta )
       //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
       //est dans le même sens que ce dernier ou non... Si ce n'est pas le
       //cas, on change la direction de l'angle.
-      if( ( projDeltaOnUp + ( getUp() * projDeltaOnUp.norm() ) ) ==
-         Vector3d(0.0) )
+      if( math::equal( projDeltaOnUp + getUp() * projDeltaOnUp.norm(),
+         Vector3d(0.0) ) )
       {
         angle2 *= -1;
       }
@@ -320,10 +320,16 @@ Camera::operator=( const Camera& iCam )
 //-----------------------------------------------------------------------------
 /*Convertie une position pixel a l'écran en coordonnée GL
   Les paramètres sont en pixels. Le point converti sera en
-  coordonné locale. iPoint doit être en coordonné locale.*/
+  coordonné locale. iPoint doit être en coordonné locale de la camera. Ce point
+  représente la position d'un plan, parallele à la camera. Le Point3d
+  retourné par cette fonction est donc l'intersection de la projection du point
+  iX, iY avec ce plan. La projection de caméra est tenue en compte. */
 Point3d Camera::pixelToGL( int iX, int iY,
   const Point3d& iPoint /*= Point3d(0.0)*/ ) const
 {
+	//l'axe de Qt est inversé par rapport a openGL
+	iY = getWindowInfo().getHeight() - iY;
+  
   double modelView[16];
   glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
   double projection[16];
@@ -352,10 +358,10 @@ Point3d Camera::pixelToGL( int iX, int iY,
   gluUnProject(iX, iY, winz,
     modelView, projection, viewport,
     &p0x, &p0y, &p0z);
-    
-  /*on remet le point p0 dans le systeme de coordonnée locale.*/
-  return Point3d(p0x, p0y, p0z) * getTransformationToLocal();
 
+  return Point3d(p0x, p0y, p0z);
+  /*on remet le point p0 dans le systeme de coordonnée locale.*/
+  //return Point3d(p0x, p0y, p0z) * getTransformationToLocal();
 }
 
 //-----------------------------------------------------------------------------
