@@ -3,6 +3,7 @@
 #ifndef Realisim_Prototypes_Network_Widget_hh
 #define Realisim_Prototypes_Network_Widget_hh
 
+#include <QTextEdit>
 #include <QWidget>
 #include <QtGui>
 #include "network/ServerBase.h"
@@ -20,19 +21,21 @@ public:
   virtual ~Widget();
   
 protected slots:
-  void error();
-  void newPeerConnected();
-  void startServer();
-  void stopServer();
+	virtual void gotPacket( int );
+	virtual void peerConnected( int );
+  virtual void peerDisconnected( int );
+  virtual void startServer();
+  virtual void stopServer();
+  virtual void updateUi();
   
 protected:
+  
   QLineEdit* mpPort;
   QPushButton* mpStartServer;
   QPushButton* mpStopServer;
   QTreeWidget* mpConnectedPeers;
-      
-  //générale
-  QListWidget* mpLog;
+  QTextEdit* mpLog;
+  QLabel* mpNumberOfPeers;
 
   reusables::network::ServerBase mServer;
   

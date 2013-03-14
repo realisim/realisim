@@ -23,6 +23,7 @@ int startMainApp()
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
+    QTextCodec::setCodecForCStrings (QTextCodec::codecForName("UTF-8"));
     QMainWindow mw;
     realisim::prototypes::Widget w(&mw);
     mw.setCentralWidget(&w);

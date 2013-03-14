@@ -4,10 +4,11 @@
 #define REALISIM_REUSABLE_NETWORK_CLIENTBASE_HH
 
 #include <cassert>
+#include "network/utils.h"
 #include <QHostAddress>
 #include <QObject>
 #include <QStringList>
-class QTcpSocket;
+#include <QTcpSocket>
 #include <vector>
 
 /*
@@ -29,35 +30,47 @@ public:
 
   virtual void connectToTcpServer(QString, quint16);
   virtual void disconnectFromTcpServer();
-  virtual QString getLastError() const {return mErrors[mErrors.size() - 1];}
-  virtual QStringList getLastErrors(bool = true);
-virtual QStringList getPeersList() const {return mPeersList;}
+  virtual QString getAndClearLastErrors() const;
+  virtual int getMaximumPayloadSize() const;
   virtual const quint16 getTcpHostPort() const {return mTcpHostPort;}
   virtual const QString getTcpHostAddress() const {return mTcpHostAddress.toString();}
-
+virtual double getUploadStatus() const;
+virtual bool hasActiveUpload() const;
+  virtual bool hasError() const;
+  virtual bool isConnected() const;
+  virtual void setMaximumPayloadSize( int );
   virtual void setTcpHostAddress(const QString iA) {mTcpHostAddress = iA;}
   virtual void setTcpHostPort(const quint16 iP) {mTcpHostPort = iP;}
+  virtual void send( const QByteArray& );
   
 void writeTest();
 
 signals:
-  void error();
-  void peersListChanged();
+	void gotError();
+void sentPacket();
+  void socketConnected();
+  void socketDisconnected();
+void uploadStarted();
+void uploadEnded();
 
 protected slots:
-  virtual void readTcpSocket();
-  virtual void tcpSocketError(QAbstractSocket::SocketError);
+	virtual void handleSocketConnected();
+	virtual void handleSocketDisconnected();
+  virtual void handleSocketError(QAbstractSocket::SocketError);
+  virtual void handleSocketReadyRead();
+  virtual void handleSocketBytesWritten( qint64 );
 
 protected:
-  QStringList mErrors;
-  quint16 mTcpHostPort;
-  QHostAddress mTcpHostAddress;
-  QTcpSocket* mpTcpSocket;
-  QStringList mPeersList;
-  
-private:
   ClientBase(const ClientBase&){assert(0);}
   void operator=(const ClientBase&){assert(0);}
+	virtual void addError( const QString& ) const;
+
+  mutable QString mErrors;
+  quint16 mTcpHostPort;
+  QHostAddress mTcpHostAddress;
+  QTcpSocket* mpTcpSocket; //jamais null
+  int mMaximumPayloadSize;
+  Transfer mUpload;
 };
 
 }//network

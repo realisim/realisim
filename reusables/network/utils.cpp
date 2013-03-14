@@ -1,29 +1,19 @@
 /* Created by Pierre-Olivier Beaudoin on 10-02-13. */
 
 #include "network/utils.h"
+#include <QDataStream>
+#include <QHostAddress>
+#include <QNetworkInterface>
+#include <QTcpSocket>
 
 using namespace std;
 
-namespace realisim
+namespace realisim 
 {
-namespace reusables
+namespace reusables 
 {
 namespace network
 {
-
-//------------------------------------------------------------------------------
-QStringList getLocalIpAddresses()
-{
-  QStringList result;
-  QList<QHostAddress> l = QNetworkInterface::allAddresses();
-  QList<QHostAddress>::iterator it = l.begin();
-  for(; it != l.end(); ++it)
-  {
-    result.push_back((*it).toString());
-  }
-    
-  return result;
-}
 
 //------------------------------------------------------------------------------
 QString asString(QAbstractSocket::SocketError iError)
@@ -58,7 +48,6 @@ QString asString(QAbstractSocket::SocketError iError)
     {r = "The SSL/TLS handshake failed, so the connection was closed (only used in QSslSocket)"; break;}
     case QAbstractSocket::UnfinishedSocketOperationError :
     {r = "Used by QAbstractSocketEngine only, The last operation attempted has not finished yet (still in progress in the background)."; break;}
-//  Only in QT 4.5 and higher
     case QAbstractSocket::ProxyConnectionRefusedError :
     {r = "Could not contact the proxy server because the connection to that server was denied"; break;}
     case QAbstractSocket::ProxyConnectionClosedError :
@@ -74,12 +63,109 @@ QString asString(QAbstractSocket::SocketError iError)
 
     default: r = "Unknown unidentified out of no where error occured..."; break;
   }
-  
   return r;
 }
+
+//------------------------------------------------------------------------------
+QStringList getLocalIpAddresses()
+{
+  QStringList result;
+  QList<QHostAddress> l = QNetworkInterface::allAddresses();
+  QList<QHostAddress>::iterator it = l.begin();
+  for(; it != l.end(); ++it)
+  {
+    result.push_back((*it).toString());
+  }
+    
+  return result;
+}
+
+//------------------------------------------------------------------------------
+QByteArray makePacket( const QByteArray& iPayload )
+{
+	QByteArray packet;
+  QDataStream out(&packet, QIODevice::WriteOnly);
+  out.setVersion(QDataStream::Qt_4_7);
+  out << (quint32)0;
+  out << iPayload;
+  out.device()->seek(0);
+  out << (quint32)(packet.size() - sizeof(quint32));
+	return packet;
+}
+
+//------------------------------------------------------------------------------
+QByteArray makeUploadHeader( const QByteArray& iUpload )
+{
+	QByteArray r;
+  QDataStream out(&r, QIODevice::WriteOnly);
+  out.setVersion(QDataStream::Qt_4_7);
+  out << (quint32)0xABAB0506; //magic header
+  out << (quint16)1; //version
+  out << (quint32)iUpload.size();
+  return r;
+}
+
+//------------------------------------------------------------------------------
+void printAsHex( const QByteArray& iA )
+{
+  for( int i = 0; i < iA.size(); ++i )
+    printf("%02X", (uchar)iA.at( i ) );
+  printf("\n");
+}
+
+//------------------------------------------------------------------------------
+QByteArray readPacket( QTcpSocket* iS )
+{
+	QByteArray r;
+  if( iS->bytesAvailable() > (int) sizeof( quint32 ) )
+  {
+  	bool read = false;
+    quint32 packetSize;
+    QDataStream in(iS);
+    in.setVersion(QDataStream::Qt_4_7);
+    in >> packetSize;
+    while( !read )
+    {
+    	if( iS->bytesAvailable() < packetSize )
+      	iS->waitForReadyRead( 1000 );
+      else
+      { in >> r; read = true; printf( "read packet size: %d\n", packetSize ); }
+    }
+  }
+  return r;
+}
+
+//------------------------------------------------------------------------------
+Transfer readUploadHeader( const QByteArray& iA )
+{
+	Transfer r;
+  QDataStream in( iA );
+  in.setVersion(QDataStream::Qt_4_7);
+  quint32 magicNumber;
+  in >> magicNumber;
+  if( magicNumber == 0xABAB0506 )
+  {
+  	in >> r.mVersion;
+    in >> r.mTotalSize;
+    r.mIsValid = true;
+  }
+  return r;
+}
+
+//------------------------------------------------------------------------------
+//--- Transfer
+//------------------------------------------------------------------------------
+Transfer::Transfer() :
+	mIsValid( false ),
+	mVersion( 1 ),
+  mTotalSize( 0 ),
+  mPayload()
+{}
+
+Transfer::~Transfer()
+{}
+
 
 } //network
 } //reusables
 } //realisim
- 
-

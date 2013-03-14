@@ -20,17 +20,23 @@ public:
   virtual ~Widget();
   
 protected slots:
-  void connectToServer();
-  void disconnectFromServer();
-  void error();
-  void peersListChanged();
+  virtual void connectToServer();
+  virtual void disconnectFromServer();
+  virtual void gotError();
+  virtual void sendChat();
+  virtual void sendFile();
+  virtual void updateUi();
+  virtual void writeTest();
   
 protected:
   QLineEdit* mpAddress;
   QLineEdit* mpPort;
   QPushButton* mpConnect;
   QPushButton* mpDisconnect;
-  QListWidget* mpLog;
+  QLineEdit* mpChat;
+  QTextEdit* mpLog;
+  QProgressBar* mpProgressUpload;
+  QProgressBar* mpProgressDownload;
 
   reusables::network::ClientBase mClient;
   

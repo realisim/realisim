@@ -14,116 +14,254 @@ ServerBase::ServerBase(QObject* ipParent /*=0*/) : QObject(ipParent),
 mErrors(),
 mPort(12345),
 mpTcpServer(new QTcpServer(ipParent)),
-mPeers()
+mSockets()
 {
-  connect(mpTcpServer, SIGNAL(newConnection()),
-   this, SLOT(handleNewConnection()));
+  connect(mpTcpServer, SIGNAL( newConnection() ),
+   this, SLOT( handleNewConnection() ) );
 }
 
 ServerBase::~ServerBase()
 {
-  for(uint i = 0; i < mPeers.size(); ++i)
+  if(mpTcpServer->isListening())
+  	mpTcpServer->close();
+
+  for(int i = 0; i < getNumberOfSockets() ; ++i)
   {
-    mPeers[i]->abort();
-    delete mPeers[i];
+    getSocket(i)->abort();
+    delete getSocket(i);
   }
-  mPeers.clear();
+  mSockets.clear();
   
   stopServer();
   delete mpTcpServer;
 }
-
-
 //------------------------------------------------------------------------------
-QStringList ServerBase::getPeersIps() const
+void ServerBase::addError( QString iE ) const
 {
-  QStringList r;
-  for(uint i = 0; i < mPeers.size(); ++i)
-    r.push_back(mPeers[i]->peerAddress().toString());
-  return r;
+	if( !mErrors.isEmpty() ) mErrors += " ";
+	mErrors += iE;
+}
+//------------------------------------------------------------------------------
+void ServerBase::broadcast( const QByteArray& iA )
+{
+  for(int i = 0; i < getNumberOfSockets(); ++i)
+  { send( i, iA ); }
 }
 
 //------------------------------------------------------------------------------
-QStringList ServerBase::getLastErrors(bool iClear /*= true*/)
+int ServerBase::findSocketFromSender( QObject* ipObject )
 {
-  QStringList r = mErrors;
-  if(iClear)
-    mErrors.clear();
+	int r = -1;
+  QTcpSocket* s =	dynamic_cast<QTcpSocket*>( ipObject );
+  vector<QTcpSocket*>::iterator it = find( mSockets.begin(), mSockets.end(), s );
+  if( it != mSockets.end() )
+  	r = distance( mSockets.begin(), it );
   return r;
 }
-
 //------------------------------------------------------------------------------
-QString ServerBase::getAddress() const
+QString ServerBase::getAndClearLastErrors() const
+{
+  QString r = mErrors;
+  mErrors = QString();
+  return r;
+}
+//------------------------------------------------------------------------------
+QByteArray ServerBase::getDownload( int iIndex ) const
+{
+	QByteArray r;
+	if( hasDownload( iIndex ) )
+  {
+  	r = mDownloads[ iIndex ].mPayload;
+    if( isDownloadCompleted( iIndex ) )
+	  	mDownloads.erase( iIndex );
+  }
+  return r;
+}
+//------------------------------------------------------------------------------
+double ServerBase::getDownloadStatus( int iIndex ) const
+{
+	double r = 0.0;
+  if( hasDownload( iIndex ) )
+  	r = mDownloads[ iIndex ].mPayload.size() /
+    	(double)mDownloads[ iIndex ].mTotalSize;
+printf( "getDownloadStatus: %f\n", r );
+  return r;
+}
+//------------------------------------------------------------------------------
+QString ServerBase::getLocalAddress() const
 { return mpTcpServer->serverAddress().toString(); }
-
+//------------------------------------------------------------------------------
+int ServerBase::getNumberOfSockets() const
+{ return mSockets.size(); }
+  
+//------------------------------------------------------------------------------
+QTcpSocket* ServerBase::getSocket( int i )
+{
+  return const_cast< QTcpSocket* >(
+  	const_cast< const ServerBase* >(this)->getSocket( i ) );
+}
+//------------------------------------------------------------------------------
+const QTcpSocket* ServerBase::getSocket( int i ) const
+{ return mSockets[ i ]; }
+//------------------------------------------------------------------------------
+QString ServerBase::getSocketPeerAddress( int i ) const
+{ return getSocket( i )->peerAddress().toString(); }
+//------------------------------------------------------------------------------
+qint16 ServerBase::getSocketPeerPort( int i ) const
+{ return getSocket( i )->peerPort(); }
+//------------------------------------------------------------------------------
+QAbstractSocket::SocketState ServerBase::getSocketState( int i )
+{ return mSockets[i]->state(); }
 //------------------------------------------------------------------------------
 void ServerBase::handleNewConnection()
 {
   if(mpTcpServer->hasPendingConnections())
   {
     QTcpSocket* s = mpTcpServer->nextPendingConnection();
-    connect(s, SIGNAL(error(QAbstractSocket::SocketError)),
-      this, SLOT(tcpSocketError(QAbstractSocket::SocketError)));
-    connect(s, SIGNAL(readyRead()), this, SLOT(readTcpSocket()));
-    mPeers.push_back(s);
-    emit newPeerConnected();
-    
-    //on envoit a tous les peers la liste des clients
-    QByteArray a;
-		a.append(getPeersIps().join(","));
-    send(network::pPeersListChanged, a);
+    connect(s, SIGNAL( error( QAbstractSocket::SocketError) ),
+      this, SLOT( handleSocketError(QAbstractSocket::SocketError) ) );
+    connect(s, SIGNAL( stateChanged ( QAbstractSocket::SocketState ) ),
+      this, SLOT( handleSocketStateChanged(QAbstractSocket::SocketState) ) );
+    connect(s, SIGNAL( disconnected() ),
+      this, SLOT( handleSocketDisconnected() ) );
+    connect( s, SIGNAL( readyRead() ), this,
+    	SLOT( handleSocketReadyRead() ) );
+    mSockets.push_back(s);
+    emit socketConnected( getNumberOfSockets() - 1 );
   }
+}
+//------------------------------------------------------------------------------
+void ServerBase::handleSocketDisconnected()
+{
+	/*Quand le serveur n'est pas en train d'écouter, on ne
+    veut pas nettoyer la liste de socket parce qu'il est sans aucun doute
+    en train de fermer. voir ::stop() et le destructeur.*/
+	if( mpTcpServer->isListening() )
+  {
+    int i = findSocketFromSender( sender() );
+    if( i != -1 )
+    {
+      getSocket( i )->deleteLater();
+      mSockets.erase( mSockets.begin() + i );
+      emit socketDisconnected( i );
+    }
+    else
+      addError( "handleSocketDisconnected is called for unknown peer..." );
+  }
+}
+//------------------------------------------------------------------------------
+void ServerBase::handleSocketError(QAbstractSocket::SocketError iError)
+{
+  int socketId = findSocketFromSender( sender() );
+  addError( "Error on socket " +  QString::number( socketId ) + ": " +
+  	network::asString(iError) );
+  emit error();
 }
 
 //------------------------------------------------------------------------------
-void ServerBase::readTcpSocket()
+void ServerBase::handleSocketReadyRead()
+{
+	int iIndex = findSocketFromSender( sender() );
+  if( iIndex != -1 )
+  {
+  	QTcpSocket* s = getSocket( iIndex );
+    if( !hasDownload( iIndex ) )
+    {
+    	QByteArray h = readPacket( s );
+      Transfer t = readUploadHeader( h );
+      if( t.mIsValid )
+      {
+      	mDownloads[ iIndex ] = t;
+      	emit downloadStarted( iIndex );
+      }    	
+    }
+    
+    while( s->bytesAvailable() )
+    {
+    	printf( "bytesAvailable avant readPacket: %d\n", s->bytesAvailable() );
+      if( !isDownloadCompleted( iIndex ) )
+      {
+      	mDownloads[ iIndex ].mPayload += readPacket( s );
+        gotPacket( iIndex );
+      }
+      else s->readAll(); //on jete dans le bitBucket!
+      
+      printf( "bytesAvailable apres readPacket: %d\n", s->bytesAvailable() );
+    }
+    
+    if( isDownloadCompleted( iIndex ) )
+    	emit downloadEnded( iIndex );
+  }
+  else 
+  { addError( "handleSocketReadyRead is called for unknown peer..." ); }
+}
+
+//------------------------------------------------------------------------------
+void ServerBase::handleSocketStateChanged(QAbstractSocket::SocketState iState)
+{
+	int i = findSocketFromSender( sender() );
+  if( i != -1 )
+  { socketStateChanged( i, iState ); }
+  else 
+  { addError( "handleSocketStateChanged is called for unknown peer..." ); }
+}
+
+//------------------------------------------------------------------------------
+bool ServerBase::hasDownload( int i ) const
+{ return mDownloads.find( i ) != mDownloads.end(); }
+
+//------------------------------------------------------------------------------
+bool ServerBase::hasError() const
+{	return !mErrors.isEmpty(); }
+
+//------------------------------------------------------------------------------
+bool ServerBase::isDownloadCompleted( int iIndex ) const
+{	return hasDownload( iIndex ) && getDownloadStatus( iIndex ) >= 1.0 ; }
+
+//------------------------------------------------------------------------------
+void ServerBase::readTcpSocket( int iSocket )
 {}
 
-
-#include <QFile>
 //------------------------------------------------------------------------------
-void ServerBase::send(Protocol iP, const QByteArray& iA)
+void ServerBase::send( int iSocket, const QByteArray& iA )
 {
-  //Todo: faire un check sur la taille du message, il faudra
-  //peut être le splitter en morceau...
-  
-  QByteArray block;
-  QDataStream out(&block, QIODevice::WriteOnly);
-  out.setVersion(QDataStream::Qt_4_0);
-  //reserve a 16 bit integer that will contain the total 
-  //size of the data block we are sending
-  out << (quint16)0;
-  //TODO out << (quint32)0xEE02FF04 //magic number header to determine format
-  out << (qint32)network::kProtocolVersion;
-  out << (quint32)iP;
-  out << iA.data();
-  out.device()->seek(0);
-  out << (quint16)(block.size() - sizeof(quint16));
+	if( getSocket( iSocket )->isValid() )
+  	getSocket( iSocket )->write( iA ); 
+}
 
-  //on envoit a tous les peers
-  for(uint i = 0; i < mPeers.size(); ++i)
+//------------------------------------------------------------------------------
+void ServerBase::socketStateChanged( int iSocket,
+	QAbstractSocket::SocketState iState )
+{
+	switch ( iState ) 
   {
-    if(mPeers[i]->isValid())
-      mPeers[i]->write(block);
-  }   
+    case QAbstractSocket::UnconnectedState:break;
+    case QAbstractSocket::HostLookupState: break;
+    case QAbstractSocket::ConnectingState: break;
+    case QAbstractSocket::ConnectedState: break;
+    case QAbstractSocket::BoundState: break;
+    case QAbstractSocket::ListeningState: break;
+    case QAbstractSocket::ClosingState: break;
+    default: break;
+  }	
 }
 
 //------------------------------------------------------------------------------
 bool ServerBase::startServer()
 {
 	//early out. si le server écoute déja sur le port demandé
-  if(mpTcpServer->isListening() && getPort() == mpTcpServer->serverPort())
+  if(mpTcpServer->isListening() && getLocalPort() == mpTcpServer->serverPort())
     return true;
 
   bool r = true;
-  if(mpTcpServer->isListening() && getPort() != mpTcpServer->serverPort())
+  if(mpTcpServer->isListening() && getLocalPort() != mpTcpServer->serverPort())
     mpTcpServer->close();
   
   //Le server écoute pour toutes les adresses sur le port demandé
-  if(!mpTcpServer->listen(QHostAddress::Any, getPort()))
+  if(!mpTcpServer->listen(QHostAddress::Any, getLocalPort()))
   {
     r = false;
-    mErrors.push_back(mpTcpServer->errorString());
+    addError( mpTcpServer->errorString() );
     mpTcpServer->close();
   }
   
@@ -133,7 +271,7 @@ bool ServerBase::startServer()
 //------------------------------------------------------------------------------
 bool ServerBase::startServer(quint16 iPort)
 {
-  setPort(iPort);
+  setLocalPort(iPort);
   return startServer();
 }
 
@@ -141,32 +279,13 @@ bool ServerBase::startServer(quint16 iPort)
 void ServerBase::stopServer()
 {
   if(mpTcpServer->isListening())
-    mpTcpServer->close();
+  	mpTcpServer->close();
     
-  //close all connectedPeers
-  for(uint i = 0; i < mPeers.size(); ++i)
+  //close all connectedSockets
+  for(int i = 0; i < getNumberOfSockets(); ++i)
   {
-    mPeers[i]->disconnectFromHost();
-    delete mPeers[i];
+    getSocket(i)->disconnectFromHost();
+    delete getSocket(i);
   }
-  mPeers.clear();
-}
-
-//------------------------------------------------------------------------------
-void ServerBase::tcpSocketError(QAbstractSocket::SocketError iError)
-{
-
-  int socketId = -1;
-  QTcpSocket* s = dynamic_cast<QTcpSocket*>(sender());
-  if(s)
-  {
-    vector<QTcpSocket*>::iterator it = 
-      find(mPeers.begin(), mPeers.end(), s);
-    if(it != mPeers.end())
-      socketId = std::distance(mPeers.begin(), it);
-  }
-  
-  
-  mErrors.push_back(network::asString(iError));
-  emit error();
+  mSockets.clear();
 }
