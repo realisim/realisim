@@ -4,10 +4,12 @@
 #define REALISIM_REUSABLE_NETWORK_UTILS_HH
 
 #include <QAbstractSocket>
-#include <qhostaddress.h>
 #include <qlist.h>
-#include <QNetworkInterface> 
 #include <QStringList>
+class QByteArray;
+class QString;
+class QTcpSocket;
+
 
 /*
 */
@@ -20,12 +22,24 @@ namespace network
   QStringList getLocalIpAddresses();
   QString asString(QAbstractSocket::SocketError);
   
-  const int kProtocolVersion = 1;
-  enum Protocol
+  class Transfer
   {
-    pPeersListChanged = 0,
-    pProtocolEnd
+  	public:
+    	Transfer();
+      virtual ~Transfer();
+      
+      bool mIsValid;
+			quint16 mVersion;
+			quint32 mTotalSize;
+      QByteArray mPayload;
   };
+	
+  QByteArray makePacket( const QByteArray& );
+  QByteArray makeUploadHeader( const QByteArray& );
+void printAsHex( const QByteArray& );
+  QByteArray readPacket( QTcpSocket* );
+  Transfer readUploadHeader( const QByteArray& );
+  
 }//network
 }//reusable
 }//realisim

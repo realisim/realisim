@@ -1,6 +1,7 @@
 /*Created by Pierre-Olivier Beaudoin on 10-02-26.*/
 
 #include "ClientBase.h"
+#include <cmath>
 #include "network/utils.h"
 #include <QHostInfo>
 #include <QTcpSocket>
@@ -15,23 +16,33 @@ ClientBase::ClientBase(QObject* ipParent /*=0*/) : QObject(ipParent),
   mTcpHostPort(0),
   mTcpHostAddress("127.0.0.1"), //localhost
   mpTcpSocket(new QTcpSocket(ipParent)),
-  mPeersList()
+  mMaximumPayloadSize( 64 * 1024 )
 {
-  connect(mpTcpSocket, SIGNAL(readyRead()),
-    this, SLOT(readTcpSocket()));
+  connect(mpTcpSocket, SIGNAL( connected() ),
+    this, SLOT( handleSocketConnected() ) );
+  connect(mpTcpSocket, SIGNAL( disconnected() ),
+    this, SLOT( handleSocketDisconnected() ) );
   connect(mpTcpSocket, SIGNAL(error(QAbstractSocket::SocketError)),
-    this, SLOT(tcpSocketError(QAbstractSocket::SocketError)));
+    this, SLOT( handleSocketError(QAbstractSocket::SocketError) ) );
+  connect(mpTcpSocket, SIGNAL(readyRead()),
+    this, SLOT( handleSocketReadyRead() ) );
+  connect(mpTcpSocket, SIGNAL( bytesWritten( qint64 ) ),
+    this, SLOT( handleSocketBytesWritten( qint64 ) ) );
 }
 
 ClientBase::~ClientBase()
 {
   //delete client tcp socket
-  if(mpTcpSocket)
-  {
-    mpTcpSocket->abort();
-    delete mpTcpSocket;
-  }
+  mpTcpSocket->abort();
+  delete mpTcpSocket;
   mpTcpSocket = 0;
+}
+
+//------------------------------------------------------------------------------
+void ClientBase::addError( const QString& iE ) const
+{
+	if( !mErrors.isEmpty() ) mErrors += " ";
+	mErrors += iE;
 }
 
 //------------------------------------------------------------------------------
@@ -57,88 +68,109 @@ void ClientBase::connectToTcpServer(QString iAddress, quint16 iPort)
 //------------------------------------------------------------------------------
 void ClientBase::disconnectFromTcpServer()
 {
-  if(mpTcpSocket)
+  if( mpTcpSocket->isValid() )
     mpTcpSocket->disconnectFromHost();
 }
 
 //------------------------------------------------------------------------------
-QStringList ClientBase::getLastErrors(bool iClearErrors /*= true*/)
+QString ClientBase::getAndClearLastErrors() const
 {
-  QStringList r = mErrors;
-  if(iClearErrors)
-    mErrors.clear();
+  QString r = mErrors;
+  mErrors = QString();
   return r;
 }
 
 //------------------------------------------------------------------------------
-void ClientBase::readTcpSocket()
+int ClientBase::getMaximumPayloadSize() const
+{ return mMaximumPayloadSize; }
+
+//------------------------------------------------------------------------------
+double ClientBase::getUploadStatus() const
 {
-  QDataStream in(mpTcpSocket);
-  in.setVersion(QDataStream::Qt_4_0);
-  //on va chercher la taille du message
-  quint16 blockSize = 0;
-  if (blockSize == 0)
-  {
-     if (mpTcpSocket->bytesAvailable() < (int)sizeof(quint16))
-         return;
-
-     in >> blockSize;
-  }
-
-  if (mpTcpSocket->bytesAvailable() < blockSize)
-    return;
-
-	//le numéro de version du Protocol
-  qint32 protocolVersion = -1;
-  in >> protocolVersion;
-  if(protocolVersion != network::kProtocolVersion)
-  {
-    mErrors.push_back("Protocol version do not match. Message is skipped");
-    emit error();
-    return;
-  }
-  
-  quint32 protocol;
-  in >> protocol;
-  char* pRawData;
-  in >> pRawData;
-  QByteArray a = QByteArray::fromRawData(pRawData, sizeof(pRawData));
-  switch((Protocol)protocol)
-  {
-    case pPeersListChanged:
-      {
-        QString s(a.constData()); 
-        mPeersList = s.split(",");
-        emit peersListChanged();
-      }
-      break;
-    default:
-      //pass to client override's for their own protocol
-      //readTcpSocket(a);
-      break;
-  }  
-  delete[] pRawData;
+	double r = 0.0;
+  if( hasActiveUpload() )
+  { r = 1.0 - ( mUpload.mPayload.size() / (double)mUpload.mTotalSize ); }
+  return r;
 }
 
 //------------------------------------------------------------------------------
-void ClientBase::tcpSocketError(QAbstractSocket::SocketError iError)
+void ClientBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
 {
-	mErrors.push_back(network::asString(iError));
-  emit error();
+printf( "handleSocketBytesWritten\n" );
+	if( mUpload.mPayload.size() > 0 && 
+  	mpTcpSocket->bytesToWrite() <= 4 * getMaximumPayloadSize() )
+  {
+  	QByteArray a = mUpload.mPayload.left( getMaximumPayloadSize() );
+    mUpload.mPayload.remove( 0,  getMaximumPayloadSize() );
+    int _a = mpTcpSocket->write( makePacket( a ) );
+printf("byte written: %d\n", _a );
+    emit sentPacket();
+  }
+  
+  if( mUpload.mIsValid && !hasActiveUpload() )
+  {
+  	mUpload = Transfer();
+printf( "uploadEnded:\n" );
+  	emit uploadEnded();
+  }
 }
+
+//------------------------------------------------------------------------------
+void ClientBase::handleSocketConnected()
+{ emit socketConnected(); }
+
+//------------------------------------------------------------------------------
+void ClientBase::handleSocketDisconnected()
+{ emit socketDisconnected(); }
+
+//------------------------------------------------------------------------------
+void ClientBase::handleSocketError(QAbstractSocket::SocketError iError)
+{ 
+  addError( "Error on socket: " +	network::asString(iError) );
+	emit gotError();
+}
+
+//------------------------------------------------------------------------------
+void ClientBase::handleSocketReadyRead()
+{
+}
+
+//------------------------------------------------------------------------------
+bool ClientBase::hasActiveUpload() const
+{ return !mUpload.mPayload.isEmpty(); }
+
+//------------------------------------------------------------------------------
+bool ClientBase::hasError() const
+{ return !mErrors.isEmpty(); }
+
+//------------------------------------------------------------------------------
+bool ClientBase::isConnected() const
+{ return mpTcpSocket->state() == QAbstractSocket::ConnectedState; }
+
+//-----------------------------------------------------------------------------
+void ClientBase::send( const QByteArray& iA )
+{
+	if( mpTcpSocket->isValid() )
+  {
+  	mUpload.mIsValid = true;
+    mUpload.mTotalSize = iA.size();
+  	mUpload.mPayload = iA;
+    QByteArray header = makeUploadHeader( mUpload.mPayload );
+    mpTcpSocket->write( makePacket( header ) );
+    emit uploadStarted();
+  }
+}
+
+//------------------------------------------------------------------------------
+void ClientBase::setMaximumPayloadSize( int iSize )
+{ mMaximumPayloadSize = iSize; }
 
 //-----------------------------------------------------------------------------
 void ClientBase::writeTest()
 {
-//  if(mpTcpSocket && mpTcpSocket->isValid())
-//  {
-//    QByteArray block;
-//    QDataStream out(&block, QIODevice::WriteOnly);
-//    out.setVersion(QDataStream::Qt_4_0);
-//    out << (quint16)0;
-//    out << QString("test string.");
-//    out.device()->seek(0);
-//    out << (quint16)(block.size() - sizeof(quint16));
-//    mpTcpSocket->write(block);
-//  }
+  if( mpTcpSocket->isValid() )
+  {
+  	QByteArray a = makePacket( QString("ウィキペディアへようこそééaaê").toUtf8() );
+    mpTcpSocket->write( a );
+  }
 }

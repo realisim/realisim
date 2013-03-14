@@ -19,8 +19,14 @@ Widget::Widget(QWidget* ipParent /*=0*/) : QWidget(ipParent),
   mClient()
 {
   initUi();
-  connect(&mClient, SIGNAL(error()), this, SLOT(error()));
-  connect(&mClient, SIGNAL(peersListChanged()), this, SLOT(peersListChanged()));
+  connect(&mClient, SIGNAL( socketConnected() ), this, SLOT( updateUi() ) );
+  connect(&mClient, SIGNAL( socketDisconnected() ), this, SLOT( updateUi() ) );
+  connect(&mClient, SIGNAL( sentPacket() ), this, SLOT( updateUi() ) );
+  connect(&mClient, SIGNAL( uploadStarted() ), this, SLOT( updateUi() ) );
+  connect(&mClient, SIGNAL( uploadEnded() ), this, SLOT( updateUi() ) );
+  connect(&mClient, SIGNAL( gotError() ), this, SLOT( gotError() ) );
+  mClient.setMaximumPayloadSize( 64 * 1024 );
+  updateUi();
 }
 
 Widget::~Widget()
@@ -31,26 +37,24 @@ void Widget::connectToServer()
 {
   mClient.connectToTcpServer(mpAddress->text(),
      mpPort->text().toInt());
+  updateUi();
 }
 
 //------------------------------------------------------------------------------
 void Widget::disconnectFromServer()
 {
   mClient.disconnectFromTcpServer();
-  //mpConnect->setEnabled(true);
-  //mpDisconnect->setDisabled(true);
+  updateUi();
 }
 
 //------------------------------------------------------------------------------
-void Widget::error()
-{
-	new QListWidgetItem(mClient.getLastError(), mpLog);  
-}
+void Widget::gotError()
+{ updateUi(); }
 
 //------------------------------------------------------------------------------
 void Widget::initUi()
 {
-	QGridLayout* pMainLyt = new QGridLayout(this);
+	QVBoxLayout* pMainLyt = new QVBoxLayout(this);
   pMainLyt->setMargin(5);
   pMainLyt->setSpacing(5);
   
@@ -68,34 +72,101 @@ void Widget::initUi()
   {
     mpConnect = new QPushButton("Connect",this);
     mpDisconnect = new QPushButton("Diconnect",this);
+    QPushButton* pWriteTest = new QPushButton( "write test", this );
     //mpDisconnect->setDisabled(true);
     pClientButtonsLyt->addStretch(1);
     pClientButtonsLyt->addWidget(mpConnect);
     pClientButtonsLyt->addWidget(mpDisconnect);
+    pClientButtonsLyt->addWidget(pWriteTest);
     
     connect(mpConnect, SIGNAL(clicked()), this, SLOT(connectToServer()));
     connect(mpDisconnect, SIGNAL(clicked()), this, SLOT(disconnectFromServer()));
+    connect(pWriteTest, SIGNAL(clicked()), this, SLOT( writeTest() ) );
+  }
+  
+  QHBoxLayout* pChatLyt = new QHBoxLayout();
+  {
+  	mpChat = new QLineEdit( this );
+  	QPushButton* pSend = new QPushButton( "send", this );
+    connect( pSend, SIGNAL( clicked() ), this, SLOT( sendChat() ) );
+    
+    QPushButton* pSendFile = new QPushButton( "send file...", this );
+    connect( pSendFile, SIGNAL( clicked() ), this, SLOT( sendFile() ) );
+    
+    pChatLyt->addWidget( mpChat, 5 );
+    pChatLyt->addWidget( pSend, 1 );
+    pChatLyt->addWidget( pSendFile, 1 );
+  }
+  QHBoxLayout* pProgressLyt = new QHBoxLayout();
+  {
+  	QVBoxLayout* pVlyt = new QVBoxLayout();
+    mpProgressUpload = new QProgressBar( this );
+    mpProgressDownload = new QProgressBar( this );
+    
+    pVlyt->addWidget( mpProgressUpload );
+    pVlyt->addWidget( mpProgressDownload );
+    
+    pProgressLyt->addStretch( 1 );
+    pProgressLyt->addLayout( pVlyt );
   }
   
   //---générale
   QLabel* pLog = new QLabel("Log:", this);
-  mpLog = new QListWidget(this);
+  mpLog = new QTextEdit(this);
   
-  //---assemblage dans le layout
-  int row = 0;
-    
-  pMainLyt->addLayout(pHostServerInfo, row++, 0);
-  pMainLyt->addLayout(pClientButtonsLyt, row++, 0);
+  //---assemblage dans le layout    
+  pMainLyt->addLayout( pHostServerInfo );
+  pMainLyt->addLayout( pClientButtonsLyt );
+  pMainLyt->addLayout( pChatLyt );
+  pMainLyt->addLayout( pProgressLyt );
+  pMainLyt->addWidget( pLog );
+  pMainLyt->addWidget( mpLog );
   
-  pMainLyt->addWidget(pLog, row++, 0);
-  pMainLyt->addWidget(mpLog, row++, 0);
-  
-  pMainLyt->setRowStretch(4, 1);
+  pMainLyt->addStretch(1);
 }
 
 //------------------------------------------------------------------------------
-void Widget::peersListChanged()
-{
-	for(int i = 0; i < mClient.getPeersList().size(); ++i)
- 		new QListWidgetItem(mClient.getPeersList()[i], mpLog); 
+void Widget::sendChat()
+{ 
+	mClient.send( mpChat->text().toUtf8() );
+  mpChat->clear();
+  updateUi();
 }
+
+//------------------------------------------------------------------------------
+void Widget::sendFile()
+{ 
+ QString fileName = QFileDialog::getOpenFileName(this, "choose File",
+		"/home" );
+  if( !fileName.isEmpty() )
+  {
+  	QFile f( fileName );
+    if( f.open( QIODevice::ReadOnly ) )
+    {
+    	mClient.send( f.readAll() );
+	    updateUi();
+    }
+  }
+	
+}
+
+//------------------------------------------------------------------------------
+void Widget::updateUi()
+{
+	mpConnect->setEnabled( !mClient.isConnected() );
+  mpDisconnect->setEnabled( mClient.isConnected() );
+  
+  //progressBar
+printf( "u status: %f\n", mClient.getUploadStatus() );
+	mpProgressUpload->setValue( mClient.getUploadStatus() * 100 );
+
+  
+	if( mClient.hasError() )
+  {
+		mpLog->setText( mClient.getAndClearLastErrors() + "\n" + mpLog->toPlainText() );
+  }
+}
+
+//------------------------------------------------------------------------------
+void Widget::writeTest()
+{ mClient.writeTest(); }
