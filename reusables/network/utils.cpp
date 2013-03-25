@@ -94,14 +94,14 @@ QByteArray makePacket( const QByteArray& iPayload )
 }
 
 //------------------------------------------------------------------------------
-QByteArray makeUploadHeader( const QByteArray& iUpload )
+QByteArray makeUploadHeader( const Transfer& iT )
 {
 	QByteArray r;
   QDataStream out(&r, QIODevice::WriteOnly);
   out.setVersion(QDataStream::Qt_4_7);
   out << (quint32)0xABAB0506; //magic header
-  out << (quint16)1; //version
-  out << (quint32)iUpload.size();
+  out << (quint16)iT.mVersion; //version
+  out << (quint32)iT.mPayload.size();
   return r;
 }
 
@@ -114,6 +114,8 @@ void printAsHex( const QByteArray& iA )
 }
 
 //------------------------------------------------------------------------------
+/* Quand readPacket retourne un QByteArray vide, c'est qu'il y a eu un probleme
+   de communication et waitForReadyRead( 1000 ) a fait un timeOut...*/
 QByteArray readPacket( QTcpSocket* iS )
 {
 	QByteArray r;
@@ -126,10 +128,10 @@ QByteArray readPacket( QTcpSocket* iS )
     in >> packetSize;
     while( !read )
     {
-    	if( iS->bytesAvailable() < packetSize )
-      	iS->waitForReadyRead( 1000 );
+    	if( iS->bytesAvailable() < packetSize && !iS->waitForReadyRead( 1000 ) )
+      	read = true;
       else
-      { in >> r; read = true; printf( "read packet size: %d\n", packetSize ); }
+      { in >> r; read = true; }
     }
   }
   return r;
@@ -164,7 +166,13 @@ Transfer::Transfer() :
 
 Transfer::~Transfer()
 {}
-
+//------------------------------------------------------------------------------
+void Transfer::setPayload( const QByteArray& iA )
+{
+	mIsValid = true;
+  mTotalSize = iA.size();
+  mPayload = iA;
+}
 
 } //network
 } //reusables

@@ -19,18 +19,26 @@ Widget::Widget(QWidget* ipParent /*=0*/) : QWidget(ipParent),
   mClient()
 {
   initUi();
-  connect(&mClient, SIGNAL( socketConnected() ), this, SLOT( updateUi() ) );
-  connect(&mClient, SIGNAL( socketDisconnected() ), this, SLOT( updateUi() ) );
+  connect(&mClient, SIGNAL( socketConnected() ), this, SLOT( socketConnected() ) );
+  connect(&mClient, SIGNAL( socketDisconnected() ), this, SLOT( socketDisconnected() ) );
   connect(&mClient, SIGNAL( sentPacket() ), this, SLOT( updateUi() ) );
   connect(&mClient, SIGNAL( uploadStarted() ), this, SLOT( updateUi() ) );
   connect(&mClient, SIGNAL( uploadEnded() ), this, SLOT( updateUi() ) );
+  connect(&mClient, SIGNAL( downloadStarted() ), this, SLOT( downloadStarted() ) );
+  connect(&mClient, SIGNAL( downloadEnded() ), this, SLOT( downloadEnded() ) );
   connect(&mClient, SIGNAL( gotError() ), this, SLOT( gotError() ) );
-  mClient.setMaximumPayloadSize( 64 * 1024 );
+  mClient.setMaximumUploadPayloadSize( 64 * 1024 );
+  
+  connect( mpPeerListView, SIGNAL( itemDoubleClicked ( QTreeWidgetItem*, int ) ),
+  	this, SLOT( peerItemDoubleClicked( QTreeWidgetItem*, int ) ) );
   updateUi();
 }
 
 Widget::~Widget()
-{}
+{
+	mClient.disconnect(); 
+	mPeers.clear();
+}
 
 //------------------------------------------------------------------------------
 void Widget::connectToServer()
@@ -43,10 +51,91 @@ void Widget::connectToServer()
 //------------------------------------------------------------------------------
 void Widget::disconnectFromServer()
 {
-  mClient.disconnectFromTcpServer();
+  mClient.disconnect();
   updateUi();
 }
 
+//------------------------------------------------------------------------------
+void Widget::downloadEnded()
+{
+	if( mClient.hasDownload() )
+  {
+  	QByteArray d = mClient.getDownload();
+    chatProtocol cp = readProtocol( d );
+    switch (cp)
+    {
+      case cpPeerList: 
+      {
+      	mPeers = readPeerListPacket( d );
+      	/*on enleve le peer local de la list*/
+        int i = findPeer( mPeer );
+        if( i != -1 )
+        	mPeers.erase( mPeers.begin() + i );
+      }
+      break;
+      case cpText:
+      	{
+        	chatPeer from = prototypes::from( d );
+          QString m = readTextPacket( d );
+          chatWindow* w = getChatWindow( from );
+          if( w )
+          {
+          	w->show(); w->raise();
+            w->gotChat( m );
+          }
+        }
+      case cpFile:
+      	{
+        	chatPeer from = prototypes::from( d );
+          QString f;
+          QByteArray ba = readFilePacket( d, f );
+          chatWindow* w = getChatWindow( from );
+          if( w )
+          {
+          	w->show(); w->raise();
+            w->gotFile( f, ba );
+          }
+        }
+      break;
+      case cpRequestToSendFile: break;
+      default: break;
+    }
+  }
+  updateUi();
+}
+
+//------------------------------------------------------------------------------
+void Widget::downloadStarted()
+{
+}
+//------------------------------------------------------------------------------
+int Widget::findPeer( const chatPeer& iPeer ) const
+{
+	int r = -1;
+  for( int i = 0; i < (int)mPeers.size(); ++i )
+  	if( mPeers.at(i) == iPeer ) { r = i; break; }
+  return r;
+}
+//------------------------------------------------------------------------------
+chatWindow* Widget::getChatWindow( const chatPeer& iPeer )
+{
+  chatWindow* w = 0;
+  int i = findPeer( iPeer );
+  if( i != -1 )
+  {
+    map< int, chatWindow* >::const_iterator it = mPeerToChatWindow.find( i );
+    if( it != mPeerToChatWindow.end() )
+    {
+      w = it->second;
+    }
+    else
+    {
+      w = new chatWindow( mClient, mPeer, mPeers[i] );
+      mPeerToChatWindow[i] = w;
+    }
+  }
+	return w;
+}
 //------------------------------------------------------------------------------
 void Widget::gotError()
 { updateUi(); }
@@ -72,31 +161,131 @@ void Widget::initUi()
   {
     mpConnect = new QPushButton("Connect",this);
     mpDisconnect = new QPushButton("Diconnect",this);
-    QPushButton* pWriteTest = new QPushButton( "write test", this );
     //mpDisconnect->setDisabled(true);
     pClientButtonsLyt->addStretch(1);
     pClientButtonsLyt->addWidget(mpConnect);
     pClientButtonsLyt->addWidget(mpDisconnect);
-    pClientButtonsLyt->addWidget(pWriteTest);
     
     connect(mpConnect, SIGNAL(clicked()), this, SLOT(connectToServer()));
     connect(mpDisconnect, SIGNAL(clicked()), this, SLOT(disconnectFromServer()));
-    connect(pWriteTest, SIGNAL(clicked()), this, SLOT( writeTest() ) );
   }
   
-  QHBoxLayout* pChatLyt = new QHBoxLayout();
+  QVBoxLayout* pPeerViewLyt = new QVBoxLayout();
   {
-  	mpChat = new QLineEdit( this );
-  	QPushButton* pSend = new QPushButton( "send", this );
-    connect( pSend, SIGNAL( clicked() ), this, SLOT( sendChat() ) );
-    
-    QPushButton* pSendFile = new QPushButton( "send file...", this );
-    connect( pSendFile, SIGNAL( clicked() ), this, SLOT( sendFile() ) );
-    
-    pChatLyt->addWidget( mpChat, 5 );
-    pChatLyt->addWidget( pSend, 1 );
-    pChatLyt->addWidget( pSendFile, 1 );
+  	mpPeerListView = new QTreeWidget( this );
+    pPeerViewLyt->addWidget( mpPeerListView );
   }
+    
+  //---générale
+  QVBoxLayout* pLogLyt = new QVBoxLayout();
+  {
+  	QLabel* pLog = new QLabel("Log:", this);
+    mpLog = new QTextEdit(this);
+    
+    pLogLyt->addWidget( pLog );
+    pLogLyt->addWidget( mpLog );
+  }
+  
+  
+  //---assemblage dans le layout    
+  pMainLyt->addLayout( pHostServerInfo );
+  pMainLyt->addLayout( pClientButtonsLyt );
+  pMainLyt->addLayout( pPeerViewLyt, 6 );
+  pMainLyt->addLayout( pLogLyt, 1 );
+  pMainLyt->addStretch(1);
+}
+
+//------------------------------------------------------------------------------
+void Widget::peerItemDoubleClicked( QTreeWidgetItem* iItem, int iCol )
+{
+	int i = mpPeerListView->indexOfTopLevelItem( iItem );
+  const chatPeer& peer = mPeers[i];
+  chatWindow* w = getChatWindow( peer );
+  w->show();
+  w->raise();
+}
+
+//------------------------------------------------------------------------------
+void Widget::socketConnected()
+{
+	srand( time(0) );
+  int a = rand();
+  QString name;
+  name.sprintf( "%08X", a );
+  mPeer.setName( name );
+  mPeer.setAddress( mClient.getLocalAddress() );
+  mClient.send( makePeerNamePacket( mPeer.getName() ) );
+  updateUi();
+}
+
+//------------------------------------------------------------------------------
+void Widget::socketDisconnected()
+{
+	mPeers.clear();
+	updateUi();
+}
+
+//------------------------------------------------------------------------------
+void Widget::updateUi()
+{
+	mpConnect->setEnabled( !mClient.isConnected() );
+  mpDisconnect->setEnabled( mClient.isConnected() );
+  
+  //la liste des peers
+  mpPeerListView->clear();
+  for( uint i = 0; i < mPeers.size(); ++i )
+  {  
+    QTreeWidgetItem* item = new QTreeWidgetItem();
+    item->setText( 0, mPeers[i].getName() );
+    //item->setText( 1, mPeers[i].getAddress() );
+    mpPeerListView->addTopLevelItem( item );
+  }
+  
+	if( mClient.hasError() )
+  {
+		mpLog->setText( mClient.getAndClearLastErrors() + "\n" + mpLog->toPlainText() );
+  }
+}
+
+//------------------------------------------------------------------------------
+//--- chatWindow
+//------------------------------------------------------------------------------
+chatWindow::chatWindow( ClientBase& iClient,
+	const chatPeer& iPeer,
+	const chatPeer& iChatPeer ) :
+  QWidget( 0 ),
+  mClient( iClient ),
+  mPeer( iPeer ),
+  mChatPeer( iChatPeer )
+{
+	connect( &mClient, SIGNAL( gotPacket() ),
+  	this, SLOT( gotPacket() ) );
+
+  QVBoxLayout* pMainLyt = new QVBoxLayout( this );
+  pMainLyt->setSpacing( 5 );
+  pMainLyt->setMargin( 5 );
+
+  QVBoxLayout* pChatLyt = new QVBoxLayout();
+  {
+  	mpChatLogView = new QTextEdit( this );
+    mpChatLogView->setReadOnly( true ); 
+    QHBoxLayout* pChatLineLyt = new QHBoxLayout();
+    {
+      mpChat = new QLineEdit( this );
+      QPushButton* pSend = new QPushButton( "send", this );
+      connect( pSend, SIGNAL( clicked() ), this, SLOT( sendChat() ) );
+      
+      QPushButton* pSendFile = new QPushButton( "send file...", this );
+      connect( pSendFile, SIGNAL( clicked() ), this, SLOT( sendFile() ) );
+      
+      pChatLineLyt->addWidget( mpChat, 5 );
+      pChatLineLyt->addWidget( pSend, 1 );
+      pChatLineLyt->addWidget( pSendFile, 1 );
+    }
+    pChatLyt->addWidget( mpChatLogView, 5 );
+    pChatLyt->addLayout( pChatLineLyt, 1);
+  }
+  
   QHBoxLayout* pProgressLyt = new QHBoxLayout();
   {
   	QVBoxLayout* pVlyt = new QVBoxLayout();
@@ -109,64 +298,70 @@ void Widget::initUi()
     pProgressLyt->addStretch( 1 );
     pProgressLyt->addLayout( pVlyt );
   }
-  
-  //---générale
-  QLabel* pLog = new QLabel("Log:", this);
-  mpLog = new QTextEdit(this);
-  
-  //---assemblage dans le layout    
-  pMainLyt->addLayout( pHostServerInfo );
-  pMainLyt->addLayout( pClientButtonsLyt );
-  pMainLyt->addLayout( pChatLyt );
-  pMainLyt->addLayout( pProgressLyt );
-  pMainLyt->addWidget( pLog );
-  pMainLyt->addWidget( mpLog );
-  
-  pMainLyt->addStretch(1);
+
+	pMainLyt->addLayout( pChatLyt, 5 );
+  pMainLyt->addLayout( pProgressLyt, 1 );
+}
+
+chatWindow::~chatWindow()
+{}
+
+//------------------------------------------------------------------------------
+void chatWindow::gotChat( const QString& iChat )
+{
+	mChatLog.push_back( mChatPeer.getName() + " (" + QDateTime::currentDateTime().
+  	toString( "dd-MMM-yy hh:mm" ) + "): " + iChat );
+  updateUi();
 }
 
 //------------------------------------------------------------------------------
-void Widget::sendChat()
+void chatWindow::gotFile( const QString& iFilename, const QByteArray& iBa )
+{
+	QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"),
+                            iFilename );
+  if( !fileName.isEmpty() )
+  {
+  	QFile f( fileName );
+    if( f.open( QIODevice::WriteOnly ) )
+    	f.write( iBa );
+  
+  	mChatLog.push_back( mChatPeer.getName() + " (" + QDateTime::currentDateTime().
+  	toString( "dd-MMM-yy hh:mm" ) + "): " + fileName );
+  }
+  updateUi();
+}
+
+//------------------------------------------------------------------------------
+void chatWindow::sendChat()
 { 
-	mClient.send( mpChat->text().toUtf8() );
+	mClient.send( makeTextPacket( mpChat->text(), mPeer, mChatPeer ) );
+  mChatLog.push_back( mPeer.getName() + " (" + QDateTime::currentDateTime().
+  	toString( "dd-MMM-yy hh:mm" ) + "): " + mpChat->text() );
   mpChat->clear();
   updateUi();
 }
 
 //------------------------------------------------------------------------------
-void Widget::sendFile()
+void chatWindow::sendFile()
 { 
- QString fileName = QFileDialog::getOpenFileName(this, "choose File",
+ 	QString fileName = QFileDialog::getOpenFileName( this, "choose File",
 		"/home" );
   if( !fileName.isEmpty() )
   {
   	QFile f( fileName );
     if( f.open( QIODevice::ReadOnly ) )
     {
-    	mClient.send( f.readAll() );
+    	mClient.send( makeFilePacket( f, mPeer, mChatPeer ) );
 	    updateUi();
     }
   }
-	
 }
-
 //------------------------------------------------------------------------------
-void Widget::updateUi()
+void chatWindow::updateUi()
 {
-	mpConnect->setEnabled( !mClient.isConnected() );
-  mpDisconnect->setEnabled( mClient.isConnected() );
-  
-  //progressBar
-printf( "u status: %f\n", mClient.getUploadStatus() );
-	mpProgressUpload->setValue( mClient.getUploadStatus() * 100 );
-
-  
-	if( mClient.hasError() )
-  {
-		mpLog->setText( mClient.getAndClearLastErrors() + "\n" + mpLog->toPlainText() );
-  }
+	QString m;
+  for( int i = 0; i < mChatLog.size(); ++i )
+  	m += mChatLog[i] + "\n";
+	mpChatLogView->setText( m );
 }
 
-//------------------------------------------------------------------------------
-void Widget::writeTest()
-{ mClient.writeTest(); }

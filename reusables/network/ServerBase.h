@@ -6,7 +6,6 @@
 #include <cassert>
 #include <QAbstractSocket>
 #include <QObject>
-#include <QStringList>
 class QTcpServer;
 class QTcpSocket;
 #include "network/utils.h"
@@ -27,19 +26,27 @@ public:
   virtual ~ServerBase();
   
   virtual void broadcast( const QByteArray& );
+  virtual void broadcast( const QByteArray&, int );
   virtual QString getAndClearLastErrors() const;
-  virtual QString getLocalAddress() const;
-  virtual quint16 getLocalPort() const {return mPort;}
 virtual QByteArray getDownload( int ) const;
 virtual double getDownloadStatus( int ) const;
+  virtual QString getLocalAddress() const;
+  virtual quint16 getLocalPort() const {return mPort;}
+virtual int getMaximumUploadPayloadSize() const;
   virtual int getNumberOfSockets() const;
+virtual QTcpSocket* getSocket( int );
+virtual const QTcpSocket* getSocket( int ) const;
   virtual QString getSocketPeerAddress( int ) const;
   virtual qint16 getSocketPeerPort( int ) const;
   virtual QAbstractSocket::SocketState getSocketState( int );
+virtual double getUploadStatus( int ) const;
+virtual bool hasActiveUpload( int ) const;
 virtual bool hasDownload( int ) const;
   virtual bool hasError() const;
 virtual bool isDownloadCompleted( int ) const;
+//virtual bool isUploadCompleted( int ) const;
   virtual void setLocalPort(const quint16 iP) {mPort = iP;}
+virtual void setMaximumUploadPayloadSize( int );
   virtual void send( int, const QByteArray& );
   virtual bool startServer();
   virtual bool startServer(quint16);
@@ -47,14 +54,19 @@ virtual bool isDownloadCompleted( int ) const;
   
 signals:
 void error();
-	void gotPacket( int );
-  void socketConnected( int );
-  void socketDisconnected( int );
 void downloadStarted( int );
 void downloadEnded( int );
+	void gotPacket( int );
+void sentPacket( int );
+  void socketConnected( int );
+  void socketDisconnected( int );
+void uploadEnded( int );
+void uploadStarted( int );
+
 
 protected slots:
   virtual void handleNewConnection();
+  virtual void handleSocketBytesWritten( qint64 );
   virtual void handleSocketReadyRead();
   virtual void handleSocketDisconnected();
   virtual void handleSocketError(QAbstractSocket::SocketError);
@@ -66,16 +78,15 @@ protected:
   
   virtual void addError( QString ) const;
   virtual int findSocketFromSender( QObject* );
-  virtual QTcpSocket* getSocket( int );
-  virtual const QTcpSocket* getSocket( int ) const;
-	virtual void readTcpSocket( int );
   virtual void socketStateChanged( int, QAbstractSocket::SocketState );
 
   mutable QString mErrors;
   quint16 mPort;
   QTcpServer* mpTcpServer;
-  std::vector<QTcpSocket*> mSockets;
+  std::vector< QTcpSocket* > mSockets;
   mutable std::map< int, Transfer > mDownloads;
+  mutable std::map< int, Transfer > mUploads;
+  int mMaximumUploadPayloadSize;
 
 };
 

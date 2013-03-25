@@ -18,7 +18,6 @@ SET(BINDIR ${CMAKE_SOURCE_DIR}/distribution/bin)
 #Set a global group for all cxx files ( usualy moc'ed files )
 
 FIND_PACKAGE(Qt4)
-SET(QT_USE_QTOPENGL 1)
 INCLUDE(${QT_USE_FILE})
 
 MACRO( GENERATE_EXE iExecutableName )
