@@ -7,7 +7,6 @@
 #include "network/utils.h"
 #include <QHostAddress>
 #include <QObject>
-#include <QStringList>
 #include <QTcpSocket>
 #include <vector>
 
@@ -29,29 +28,37 @@ public:
   virtual ~ClientBase();
 
   virtual void connectToTcpServer(QString, quint16);
-  virtual void disconnectFromTcpServer();
+  virtual void disconnect();
   virtual QString getAndClearLastErrors() const;
-  virtual int getMaximumPayloadSize() const;
-  virtual const quint16 getTcpHostPort() const {return mTcpHostPort;}
-  virtual const QString getTcpHostAddress() const {return mTcpHostAddress.toString();}
+virtual QByteArray getDownload() const;
+virtual double getDownloadStatus() const;
+  virtual int getMaximumUploadPayloadSize() const;
+  virtual QString getLocalAddress() const { return mpTcpSocket->localAddress().toString() ; }
+  virtual quint16 getLocalPort() const { return mpTcpSocket->localPort(); }
+  virtual QString getHostAddress() const { return mTcpHostAddress.toString(); }
+  virtual quint16 getHostPort() const { return mTcpHostPort; }
 virtual double getUploadStatus() const;
 virtual bool hasActiveUpload() const;
+virtual bool hasDownload() const;
   virtual bool hasError() const;
   virtual bool isConnected() const;
-  virtual void setMaximumPayloadSize( int );
+virtual bool isDownloadCompleted() const;
+//virtual bool isUploadCompleted( int ) const;
+  virtual void setMaximumUploadPayloadSize( int );
   virtual void setTcpHostAddress(const QString iA) {mTcpHostAddress = iA;}
   virtual void setTcpHostPort(const quint16 iP) {mTcpHostPort = iP;}
   virtual void send( const QByteArray& );
-  
-void writeTest();
 
 signals:
+void downloadStarted();
+void downloadEnded();
 	void gotError();
+void gotPacket();
 void sentPacket();
   void socketConnected();
   void socketDisconnected();
-void uploadStarted();
 void uploadEnded();
+void uploadStarted();
 
 protected slots:
 	virtual void handleSocketConnected();
@@ -69,8 +76,9 @@ protected:
   quint16 mTcpHostPort;
   QHostAddress mTcpHostAddress;
   QTcpSocket* mpTcpSocket; //jamais null
-  int mMaximumPayloadSize;
+  int mMaximumUploadPayloadSize;
   Transfer mUpload;
+  mutable Transfer mDownload;
 };
 
 }//network

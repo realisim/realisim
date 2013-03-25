@@ -8,5 +8,6 @@ SET( SOURCES ${SOURCES} "./CMakeLists.txt" )
 
 ADD_COMPONENT( "." "app" )
 ADD_COMPONENT("../../../reusables/network" )
+ADD_COMPONENT("../" "protocol" )
 
 GENERATE_EXE( ${PROJECT_NAME} )

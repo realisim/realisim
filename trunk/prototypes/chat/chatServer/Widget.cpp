@@ -30,11 +30,52 @@ Widget::Widget(QWidget* ipParent /*=0*/) : QWidget(ipParent),
     connect(&mServer, SIGNAL( downloadStarted( int ) ),
     this, SLOT( updateUi() ) );
   connect(&mServer, SIGNAL( downloadEnded( int ) ),
-    this, SLOT( updateUi() ) );
+    this, SLOT( downloadEnded( int ) ) );
 }
 
 Widget::~Widget()
 {}
+
+//------------------------------------------------------------------------------
+void Widget::downloadEnded( int i )
+{
+	if( mServer.hasDownload( i ) )
+  {
+  	QByteArray d = mServer.getDownload( i );
+		chatProtocol cp = readProtocol( d );
+    switch (cp) 
+    {
+    	case cpPeerName:
+      	{   
+          QString n = readPeerNamePacket( d );
+          mChatPeers[ i ].setName( n );
+          mServer.broadcast( makePeerListPacket( mChatPeers ), i );
+        }
+      break;
+      case cpText:
+      case cpFile:
+      {
+       	chatPeer to = prototypes::to( d );
+        int i = findPeer( to );
+        if( i != -1 )
+          mServer.send( i, d );
+      }
+      default: break;
+    }
+  }
+  updateUi();
+}
+//------------------------------------------------------------------------------
+int Widget::findPeer( const chatPeer& iPeer ) const
+{
+	int r = -1;
+  for( int i = 0; i < (int)mChatPeers.size(); ++i )
+  {
+  	if( mChatPeers.at(i) == iPeer )
+    { r = i; break; }
+  }
+  return r;
+}
 
 //------------------------------------------------------------------------------
 void Widget::gotPacket( int i )
@@ -80,7 +121,6 @@ void Widget::initUi()
     pLyt1->addStretch( 1 );
   }
   
-  
   mpConnectedPeers = new QTreeWidget(this);
   mpConnectedPeers->setColumnCount(4);
   QTreeWidgetItem* item = new QTreeWidgetItem();
@@ -108,11 +148,18 @@ void Widget::initUi()
 
 //------------------------------------------------------------------------------
 void Widget::peerConnected( int i )
-{ updateUi(); }
+{	
+	map< int, chatPeer >::const_iterator it;
+  mServer.send( i, makePeerListPacket( mChatPeers ) );
+
+  mChatPeers.push_back( chatPeer( QString(), mServer.getSocketPeerAddress( i ) ) );
+	updateUi();
+}
 //------------------------------------------------------------------------------
 void Widget::peerDisconnected( int i )
 { 
-	mpConnectedPeers->takeTopLevelItem( i );
+  mChatPeers.erase( mChatPeers.begin() + i );
+  mServer.broadcast( makePeerListPacket( mChatPeers ) );
 	updateUi();
 }
 
@@ -140,25 +187,14 @@ void Widget::updateUi()
 {
 	mpNumberOfPeers->setText( QString::number( mServer.getNumberOfSockets() ) );
 
-	/*on ajoute les peer manquant a la liste*/
-  if( mServer.getNumberOfSockets() == 0 )
-  	mpConnectedPeers->clear();
-  else if( mServer.getNumberOfSockets() > mpConnectedPeers->topLevelItemCount() )
-  {
-  	for( int i = mpConnectedPeers->topLevelItemCount(); 
-    	i < mServer.getNumberOfSockets(); ++i )
-    {
-      QTreeWidgetItem* item = new QTreeWidgetItem();
-      mpConnectedPeers->insertTopLevelItem(i, item);
-    }
-    
-  }
+  mpConnectedPeers->clear();  
   //on ajuste le texte pour chaque peer
 	for(int i = 0; i < mServer.getNumberOfSockets(); ++i)
   {
-    QTreeWidgetItem* item = mpConnectedPeers->topLevelItem( i );
+    QTreeWidgetItem* item = new QTreeWidgetItem();
     item->setText( 0, QString::number(i) );
-    item->setText( 1, mServer.getSocketPeerAddress( i ) );
+    item->setText( 1, mChatPeers[ i ].getName() + " " +
+    	mServer.getSocketPeerAddress( i ));
     QString s;
     switch ( mServer.getSocketState( i ) )
     {
@@ -175,7 +211,14 @@ void Widget::updateUi()
     if( mServer.isDownloadCompleted( i ) )
     {
       item->setText( 3, "completed" );
-    	QByteArray b = mServer.getDownload( i );
+//    	QByteArray b = mServer.getDownload( i );
+//      
+//      chatProtocol cp = findProtocol( b );
+//      if( cp == cpText )
+//      {
+//      	item->setText( 3, readTextPacket( b ) );	
+//      }
+      
     }
     else if( mServer.hasDownload(i) )
     {
@@ -183,6 +226,8 @@ void Widget::updateUi()
       QString s = QString::number( (int)(a * 100) ) + "%";
     	item->setText( 3, s );
     }
+    
+    mpConnectedPeers->insertTopLevelItem( i, item );
   }
 
 	if( mServer.hasError() )

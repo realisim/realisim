@@ -28,6 +28,8 @@ namespace network
     	Transfer();
       virtual ~Transfer();
       
+      void setPayload( const QByteArray& );
+      
       bool mIsValid;
 			quint16 mVersion;
 			quint32 mTotalSize;
@@ -35,7 +37,7 @@ namespace network
   };
 	
   QByteArray makePacket( const QByteArray& );
-  QByteArray makeUploadHeader( const QByteArray& );
+  QByteArray makeUploadHeader( const Transfer& );
 void printAsHex( const QByteArray& );
   QByteArray readPacket( QTcpSocket* );
   Transfer readUploadHeader( const QByteArray& );

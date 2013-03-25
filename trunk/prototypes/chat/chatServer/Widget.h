@@ -3,9 +3,11 @@
 #ifndef Realisim_Prototypes_Network_Widget_hh
 #define Realisim_Prototypes_Network_Widget_hh
 
+#include "protocol.h"
 #include <QTextEdit>
 #include <QWidget>
 #include <QtGui>
+#include <vector>
 #include "network/ServerBase.h"
 
 namespace realisim 
@@ -21,7 +23,8 @@ public:
   virtual ~Widget();
   
 protected slots:
-	virtual void gotPacket( int );
+	virtual void downloadEnded( int );
+virtual void gotPacket( int );
 	virtual void peerConnected( int );
   virtual void peerDisconnected( int );
   virtual void startServer();
@@ -29,7 +32,7 @@ protected slots:
   virtual void updateUi();
   
 protected:
-  
+	int findPeer( const chatPeer& ) const;
   QLineEdit* mpPort;
   QPushButton* mpStartServer;
   QPushButton* mpStopServer;
@@ -38,6 +41,7 @@ protected:
   QLabel* mpNumberOfPeers;
 
   reusables::network::ServerBase mServer;
+  std::vector< chatPeer > mChatPeers;
   
 private:
   void initUi();

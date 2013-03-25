@@ -14,7 +14,8 @@ ServerBase::ServerBase(QObject* ipParent /*=0*/) : QObject(ipParent),
 mErrors(),
 mPort(12345),
 mpTcpServer(new QTcpServer(ipParent)),
-mSockets()
+mSockets(),
+mMaximumUploadPayloadSize( 64 * 1024 )
 {
   connect(mpTcpServer, SIGNAL( newConnection() ),
    this, SLOT( handleNewConnection() ) );
@@ -47,7 +48,13 @@ void ServerBase::broadcast( const QByteArray& iA )
   for(int i = 0; i < getNumberOfSockets(); ++i)
   { send( i, iA ); }
 }
-
+//------------------------------------------------------------------------------
+/*On envoit a tout les sockets sauf le socket iIndex*/
+void ServerBase::broadcast( const QByteArray& iA, int iIndex )
+{
+  for(int i = 0; i < getNumberOfSockets(); ++i)
+  { if( i != iIndex ) send( i, iA ); }
+}
 //------------------------------------------------------------------------------
 int ServerBase::findSocketFromSender( QObject* ipObject )
 {
@@ -84,12 +91,17 @@ double ServerBase::getDownloadStatus( int iIndex ) const
   if( hasDownload( iIndex ) )
   	r = mDownloads[ iIndex ].mPayload.size() /
     	(double)mDownloads[ iIndex ].mTotalSize;
-printf( "getDownloadStatus: %f\n", r );
+//printf( "getDownloadStatus: %f\n", r );
   return r;
 }
 //------------------------------------------------------------------------------
 QString ServerBase::getLocalAddress() const
 { return mpTcpServer->serverAddress().toString(); }
+
+//------------------------------------------------------------------------------
+int ServerBase::getMaximumUploadPayloadSize() const
+{ return mMaximumUploadPayloadSize; }
+
 //------------------------------------------------------------------------------
 int ServerBase::getNumberOfSockets() const
 { return mSockets.size(); }
@@ -113,6 +125,15 @@ qint16 ServerBase::getSocketPeerPort( int i ) const
 QAbstractSocket::SocketState ServerBase::getSocketState( int i )
 { return mSockets[i]->state(); }
 //------------------------------------------------------------------------------
+double ServerBase::getUploadStatus( int iIndex ) const
+{
+	double r = 0.0;
+  if( hasActiveUpload( iIndex ) )
+  { r = 1.0 - ( mUploads[iIndex].mPayload.size() / 
+  	(double)mUploads[iIndex].mTotalSize ); }
+  return r;
+}
+//------------------------------------------------------------------------------
 void ServerBase::handleNewConnection()
 {
   if(mpTcpServer->hasPendingConnections())
@@ -126,8 +147,38 @@ void ServerBase::handleNewConnection()
       this, SLOT( handleSocketDisconnected() ) );
     connect( s, SIGNAL( readyRead() ), this,
     	SLOT( handleSocketReadyRead() ) );
+    connect( s, SIGNAL( bytesWritten( qint64 ) ),
+      this, SLOT( handleSocketBytesWritten( qint64 ) ) );
     mSockets.push_back(s);
     emit socketConnected( getNumberOfSockets() - 1 );
+  }
+}
+//------------------------------------------------------------------------------
+void ServerBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
+{
+	int i = findSocketFromSender( sender() );
+  if( i != -1 )
+  {
+  	QTcpSocket* s = getSocket( i );
+  //printf( "handleSocketBytesWritten\n" );
+    if( mUploads[i].mPayload.size() > 0 && 
+      s->bytesToWrite() <= 4 * getMaximumUploadPayloadSize() )
+    {
+      /*Au lieu de .left() et .remove, un compteur de position et la fonction
+      .mid() serait plus approprié.*/
+      QByteArray a = mUploads[i].mPayload.left( getMaximumUploadPayloadSize() );
+      mUploads[i].mPayload.remove( 0, getMaximumUploadPayloadSize() );
+      int _a = s->write( makePacket( a ) );
+  //printf("byte written: %d\n", _a );
+      emit sentPacket( i );
+    }
+    
+    if( mUploads[i].mIsValid && !hasActiveUpload( i ) )
+    {
+      mUploads[i] = Transfer();
+  //printf( "uploadEnded:\n" );
+      emit uploadEnded( i );
+    }
   }
 }
 //------------------------------------------------------------------------------
@@ -178,15 +229,25 @@ void ServerBase::handleSocketReadyRead()
     
     while( s->bytesAvailable() )
     {
-    	printf( "bytesAvailable avant readPacket: %d\n", s->bytesAvailable() );
+    	//printf( "bytesAvailable avant readPacket: %d\n", s->bytesAvailable() );
       if( !isDownloadCompleted( iIndex ) )
       {
-      	mDownloads[ iIndex ].mPayload += readPacket( s );
-        gotPacket( iIndex );
+      	QByteArray p = readPacket( s );
+        if( !p.isEmpty() )
+        {
+        	mDownloads[ iIndex ].mPayload += p;
+          gotPacket( iIndex );
+        }
+        else
+        {
+        	mDownloads.erase( iIndex );
+        	addError( "A problem occured while reading packet... and the whole"
+           " download was dropped..." );
+        }
       }
       else s->readAll(); //on jete dans le bitBucket!
       
-      printf( "bytesAvailable apres readPacket: %d\n", s->bytesAvailable() );
+      //printf( "bytesAvailable apres readPacket: %d\n", s->bytesAvailable() );
     }
     
     if( isDownloadCompleted( iIndex ) )
@@ -207,6 +268,10 @@ void ServerBase::handleSocketStateChanged(QAbstractSocket::SocketState iState)
 }
 
 //------------------------------------------------------------------------------
+bool ServerBase::hasActiveUpload( int iIndex ) const
+{ return !mUploads[iIndex].mPayload.isEmpty(); }
+
+//------------------------------------------------------------------------------
 bool ServerBase::hasDownload( int i ) const
 { return mDownloads.find( i ) != mDownloads.end(); }
 
@@ -219,15 +284,21 @@ bool ServerBase::isDownloadCompleted( int iIndex ) const
 {	return hasDownload( iIndex ) && getDownloadStatus( iIndex ) >= 1.0 ; }
 
 //------------------------------------------------------------------------------
-void ServerBase::readTcpSocket( int iSocket )
-{}
+void ServerBase::send( int iIndex, const QByteArray& iA )
+{
+	QTcpSocket* s = getSocket( iIndex );
+	if( s && s->isValid() )
+  {
+  	mUploads[iIndex].setPayload( iA );
+    QByteArray header = makeUploadHeader( mUploads[iIndex] );
+    s->write( makePacket( header ) );
+    emit uploadStarted( iIndex );
+  }
+}
 
 //------------------------------------------------------------------------------
-void ServerBase::send( int iSocket, const QByteArray& iA )
-{
-	if( getSocket( iSocket )->isValid() )
-  	getSocket( iSocket )->write( iA ); 
-}
+void ServerBase::setMaximumUploadPayloadSize( int iSize )
+{ mMaximumUploadPayloadSize = iSize; }
 
 //------------------------------------------------------------------------------
 void ServerBase::socketStateChanged( int iSocket,
