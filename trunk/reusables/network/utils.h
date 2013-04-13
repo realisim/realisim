@@ -28,18 +28,22 @@ namespace network
     	Transfer();
       virtual ~Transfer();
       
-      void setPayload( const QByteArray& );
+      int getId() const { return mId; }
+      bool isValid() const { return mIsValid; }
+      void setPayload( const QByteArray&, int );
       
       bool mIsValid;
 			quint16 mVersion;
+      qint32 mId;
 			quint32 mTotalSize;
       QByteArray mPayload;
+      quint32 mCursor;
   };
 	
-  QByteArray makePacket( const QByteArray& );
+  QByteArray makePacket( const QByteArray&, int );
   QByteArray makeUploadHeader( const Transfer& );
 void printAsHex( const QByteArray& );
-  QByteArray readPacket( QTcpSocket* );
+  QByteArray readPacket( QTcpSocket*, int* );
   Transfer readUploadHeader( const QByteArray& );
   
 }//network

@@ -23,13 +23,13 @@ public:
   
   void gotChat( const QString& );
   void gotFile( const QString&, const QByteArray& );
+  virtual void updateUi();
   
 protected slots:
   virtual void sendChat();
   virtual void sendFile();
   
 protected:
-	virtual void updateUi();
   
   QTextEdit* mpChatLogView;
   QLineEdit* mpChat;
@@ -52,10 +52,12 @@ public:
 protected slots:
   virtual void connectToServer();
   virtual void disconnectFromServer();
-  virtual void downloadEnded();
-  virtual void downloadStarted();
+  virtual void downloadEnded( int );
+  virtual void downloadStarted( int );
   virtual void gotError();
+  virtual void gotPacket(int);
   virtual void peerItemDoubleClicked( QTreeWidgetItem*, int );
+  virtual void sentPacket(int);
   virtual void socketConnected();
   virtual void socketDisconnected();
   virtual void updateUi();

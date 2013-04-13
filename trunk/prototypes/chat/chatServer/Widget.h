@@ -23,16 +23,17 @@ public:
   virtual ~Widget();
   
 protected slots:
-	virtual void downloadEnded( int );
-virtual void gotPacket( int );
+	virtual void downloadEnded( int, int );
 	virtual void peerConnected( int );
   virtual void peerDisconnected( int );
+  virtual void peerItemClicked( QTreeWidgetItem*, int );
   virtual void startServer();
   virtual void stopServer();
   virtual void updateUi();
   
 protected:
 	int findPeer( const chatPeer& ) const;
+  virtual void printTransferInfo( const QByteArray& ) const;
   QLineEdit* mpPort;
   QPushButton* mpStartServer;
   QPushButton* mpStopServer;

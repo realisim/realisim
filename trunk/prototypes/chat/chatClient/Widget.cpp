@@ -21,13 +21,15 @@ Widget::Widget(QWidget* ipParent /*=0*/) : QWidget(ipParent),
   initUi();
   connect(&mClient, SIGNAL( socketConnected() ), this, SLOT( socketConnected() ) );
   connect(&mClient, SIGNAL( socketDisconnected() ), this, SLOT( socketDisconnected() ) );
-  connect(&mClient, SIGNAL( sentPacket() ), this, SLOT( updateUi() ) );
-  connect(&mClient, SIGNAL( uploadStarted() ), this, SLOT( updateUi() ) );
-  connect(&mClient, SIGNAL( uploadEnded() ), this, SLOT( updateUi() ) );
-  connect(&mClient, SIGNAL( downloadStarted() ), this, SLOT( downloadStarted() ) );
-  connect(&mClient, SIGNAL( downloadEnded() ), this, SLOT( downloadEnded() ) );
+  connect(&mClient, SIGNAL( sentPacket( int ) ), this, SLOT( sentPacket( int ) ) );
+  connect(&mClient, SIGNAL( gotPacket( int ) ), this, SLOT( gotPacket( int ) ) );
+  connect(&mClient, SIGNAL( uploadStarted( int ) ), this, SLOT( updateUi() ) );
+  connect(&mClient, SIGNAL( uploadEnded( int ) ), this, SLOT( updateUi() ) );
+  connect(&mClient, SIGNAL( downloadStarted( int ) ), this, SLOT( downloadStarted( int ) ) );
+  connect(&mClient, SIGNAL( downloadEnded( int ) ), this, SLOT( downloadEnded( int ) ) );
   connect(&mClient, SIGNAL( gotError() ), this, SLOT( gotError() ) );
-  mClient.setMaximumUploadPayloadSize( 64 * 1024 );
+//mClient.setMaximumUploadPayloadSize( 64 * 1024 );
+mClient.setMaximumUploadPayloadSize( 1024 );
   
   connect( mpPeerListView, SIGNAL( itemDoubleClicked ( QTreeWidgetItem*, int ) ),
   	this, SLOT( peerItemDoubleClicked( QTreeWidgetItem*, int ) ) );
@@ -56,23 +58,24 @@ void Widget::disconnectFromServer()
 }
 
 //------------------------------------------------------------------------------
-void Widget::downloadEnded()
+void Widget::downloadEnded( int iId )
 {
-	if( mClient.hasDownload() )
+printf("download %d ended\n", iId);
+	if( mClient.hasDownloads() )
   {
-  	QByteArray d = mClient.getDownload();
+  	QByteArray d = mClient.getDownload( iId );
     chatProtocol cp = readProtocol( d );
     switch (cp)
     {
       case cpPeerList: 
-      {
-      	mPeers = readPeerListPacket( d );
-      	/*on enleve le peer local de la list*/
-        int i = findPeer( mPeer );
-        if( i != -1 )
-        	mPeers.erase( mPeers.begin() + i );
-      }
-      break;
+        {
+          mPeers = readPeerListPacket( d );
+          /*on enleve le peer local de la list*/
+          int i = findPeer( mPeer );
+          if( i != -1 )
+            mPeers.erase( mPeers.begin() + i );
+        }
+        break;
       case cpText:
       	{
         	chatPeer from = prototypes::from( d );
@@ -84,6 +87,7 @@ void Widget::downloadEnded()
             w->gotChat( m );
           }
         }
+        break;
       case cpFile:
       	{
         	chatPeer from = prototypes::from( d );
@@ -96,7 +100,7 @@ void Widget::downloadEnded()
             w->gotFile( f, ba );
           }
         }
-      break;
+        break;
       case cpRequestToSendFile: break;
       default: break;
     }
@@ -105,8 +109,9 @@ void Widget::downloadEnded()
 }
 
 //------------------------------------------------------------------------------
-void Widget::downloadStarted()
+void Widget::downloadStarted( int iId )
 {
+	printf("download %d started\n", iId);
 }
 //------------------------------------------------------------------------------
 int Widget::findPeer( const chatPeer& iPeer ) const
@@ -139,6 +144,17 @@ chatWindow* Widget::getChatWindow( const chatPeer& iPeer )
 //------------------------------------------------------------------------------
 void Widget::gotError()
 { updateUi(); }
+
+//------------------------------------------------------------------------------
+void Widget::gotPacket( int iId )
+{
+	if( mClient.getDownloadStatus( iId ) < 1.0 )
+  {
+  	chatPeer cp = prototypes::from( mClient.getDownload( iId ) );
+    chatWindow* w = getChatWindow( cp );
+    if( w ) w->updateUi();
+  }
+}
 
 //------------------------------------------------------------------------------
 void Widget::initUi()
@@ -206,6 +222,18 @@ void Widget::peerItemDoubleClicked( QTreeWidgetItem* iItem, int iCol )
 }
 
 //------------------------------------------------------------------------------
+void Widget::sentPacket( int iId )
+{
+	if( mClient.getUploadStatus( iId ) < 1.0 )
+  {
+  	chatPeer cp = prototypes::to( mClient.getUpload( iId ) );
+    chatWindow* w = getChatWindow( cp );
+    if( w ) w->updateUi();
+  }
+
+}
+
+//------------------------------------------------------------------------------
 void Widget::socketConnected()
 {
 	srand( time(0) );
@@ -245,6 +273,11 @@ void Widget::updateUi()
   {
 		mpLog->setText( mClient.getAndClearLastErrors() + "\n" + mpLog->toPlainText() );
   }
+  
+  if( mClient.hasUploads() )
+  {
+  	
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -258,9 +291,6 @@ chatWindow::chatWindow( ClientBase& iClient,
   mPeer( iPeer ),
   mChatPeer( iChatPeer )
 {
-	connect( &mClient, SIGNAL( gotPacket() ),
-  	this, SLOT( gotPacket() ) );
-
   QVBoxLayout* pMainLyt = new QVBoxLayout( this );
   pMainLyt->setSpacing( 5 );
   pMainLyt->setMargin( 5 );
@@ -291,6 +321,8 @@ chatWindow::chatWindow( ClientBase& iClient,
   	QVBoxLayout* pVlyt = new QVBoxLayout();
     mpProgressUpload = new QProgressBar( this );
     mpProgressDownload = new QProgressBar( this );
+    mpProgressUpload->setRange( 1, 100 );
+    mpProgressDownload->setRange( 1, 100 );
     
     pVlyt->addWidget( mpProgressUpload );
     pVlyt->addWidget( mpProgressDownload );
@@ -328,6 +360,9 @@ void chatWindow::gotFile( const QString& iFilename, const QByteArray& iBa )
   	mChatLog.push_back( mChatPeer.getName() + " (" + QDateTime::currentDateTime().
   	toString( "dd-MMM-yy hh:mm" ) + "): " + fileName );
   }
+  
+	mpProgressDownload->reset();
+
   updateUi();
 }
 
@@ -363,5 +398,43 @@ void chatWindow::updateUi()
   for( int i = 0; i < mChatLog.size(); ++i )
   	m += mChatLog[i] + "\n";
 	mpChatLogView->setText( m );
+  
+  double totalDownload = 0.0;
+  int downloadCount = 0;
+  for ( int i = 0; i < mClient.getNumberOfDownloads(); ++i)
+  {
+  	int id = mClient.getDownloadId( i );
+  	double progress = 
+    	mClient.getDownloadStatus( id );
+    if( progress < 1.0 )
+    {
+    	if( prototypes::from( mClient.getDownload( id ) ) == mChatPeer )
+      {
+      	totalDownload += progress;
+        downloadCount++;
+      }
+    }
+  }
+  totalDownload /= (double)downloadCount;
+  mpProgressDownload->setValue( totalDownload * 100 );
+  
+  double totalUpload = 0.0;
+  int uploadCount = 0;
+  for ( int i = 0; i < mClient.getNumberOfUploads(); ++i)
+  {
+  	int id = mClient.getUploadId( i );
+  	double progress = 
+    	mClient.getUploadStatus( id );
+    
+    if( prototypes::to( mClient.getUpload( id ) ) == mChatPeer )
+    {
+    	totalUpload += progress;
+      uploadCount++;    	
+    }
+  }
+  totalUpload /= (double)uploadCount;
+  if( totalUpload < 1.0 )
+  { mpProgressUpload->setValue( totalUpload * 100 ); }
+  else mpProgressUpload->reset();
 }
 
