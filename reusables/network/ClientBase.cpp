@@ -11,6 +11,8 @@ using namespace reusables;
 using namespace network;
 using namespace std;
 
+int ClientBase::mUploadId = 0;
+
 ClientBase::ClientBase(QObject* ipParent /*=0*/) : QObject(ipParent),
   mErrors(),
   mTcpHostPort(0),
@@ -73,6 +75,31 @@ void ClientBase::disconnect()
 }
 
 //------------------------------------------------------------------------------
+int ClientBase::findDownload( int iId ) const
+{
+	int r = -1;
+	for( size_t i = 0; i < mDownloads.size(); ++i )
+  {
+  	if( mDownloads[i].getId() == iId )
+    { r = i; break; }
+  }
+  return r;
+}
+
+
+//------------------------------------------------------------------------------
+int ClientBase::findUpload( int iId ) const
+{
+	int r = -1;
+	for( size_t i = 0; i < mUploads.size(); ++i )
+  {
+  	if( mUploads[i].getId() == iId )
+    { r = i; break; }
+  }
+  return r;
+}
+
+//------------------------------------------------------------------------------
 QString ClientBase::getAndClearLastErrors() const
 {
   QString r = mErrors;
@@ -81,26 +108,31 @@ QString ClientBase::getAndClearLastErrors() const
 }
 
 //------------------------------------------------------------------------------
-QByteArray ClientBase::getDownload() const
+QByteArray ClientBase::getDownload( int iId ) const
 {
 	QByteArray r;
-	if( hasDownload() )
+  int i = findDownload( iId );
+	if( i != -1 )
   {
-  	r = mDownload.mPayload;
-    if( isDownloadCompleted() )
-	  	mDownload = Transfer();
+  	r = mDownloads[i].mPayload;
+    if( getDownloadStatus( iId ) >= 1.0 )
+	  	mDownloads.erase( mDownloads.begin() + i );
   }
   return r;
 }
 
 //------------------------------------------------------------------------------
-double ClientBase::getDownloadStatus() const
+int ClientBase::getDownloadId( int iIndex ) const
+{ return mDownloads[iIndex].getId(); }
+
+//------------------------------------------------------------------------------
+double ClientBase::getDownloadStatus( int iId ) const
 {
 	double r = 0.0;
-  if( hasDownload() )
-  	r = mDownload.mPayload.size() /
-    	(double)mDownload.mTotalSize;
-//printf( "getDownloadStatus: %f\n", r );
+  int i = findDownload( iId );
+  if( i != -1 )
+  	r = mDownloads[i].mPayload.size() /
+    	(double)mDownloads[i].mTotalSize;
   return r;
 }
 
@@ -109,35 +141,62 @@ int ClientBase::getMaximumUploadPayloadSize() const
 { return mMaximumUploadPayloadSize; }
 
 //------------------------------------------------------------------------------
-double ClientBase::getUploadStatus() const
+int ClientBase::getNumberOfDownloads() const
+{ return mDownloads.size(); }
+
+//------------------------------------------------------------------------------
+int ClientBase::getNumberOfUploads() const
+{ return mUploads.size(); }
+
+//------------------------------------------------------------------------------
+QByteArray ClientBase::getUpload( int iId ) const
+{
+  QByteArray r;
+  int i = findUpload( iId );
+	if( i != -1 )
+  { r = mUploads[i].mPayload; }
+  return r;
+}
+
+//------------------------------------------------------------------------------
+int ClientBase::getUploadId( int iIndex ) const
+{ return mUploads[ iIndex ].getId(); }
+
+//------------------------------------------------------------------------------
+double ClientBase::getUploadStatus( int iId ) const
 {
 	double r = 0.0;
-  if( hasActiveUpload() )
-  { r = 1.0 - ( mUpload.mPayload.size() / (double)mUpload.mTotalSize ); }
+  int i = findUpload( iId );
+  if( i != -1 )
+  { r = mUploads[i].mCursor / (double)mUploads[i].mTotalSize; }
   return r;
 }
 
 //------------------------------------------------------------------------------
 void ClientBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
 {
-//printf( "handleSocketBytesWritten\n" );
-	if( mUpload.mPayload.size() > 0 && 
-  	mpTcpSocket->bytesToWrite() <= 4 * getMaximumUploadPayloadSize() )
+	if( hasUploads() )
   {
-  	/*Au lieu de .left() et .remove, un compteur de position et la fonction
-      .mid() serait plus approprié.*/
-  	QByteArray a = mUpload.mPayload.left( getMaximumUploadPayloadSize() );
-    mUpload.mPayload.remove( 0,  getMaximumUploadPayloadSize() );
-    int _a = mpTcpSocket->write( makePacket( a ) );
-//printf("byte written: %d\n", _a );
-    emit sentPacket();
-  }
-  
-  if( mUpload.mIsValid && !hasActiveUpload() )
-  {
-  	mUpload = Transfer();
-//printf( "uploadEnded:\n" );
-  	emit uploadEnded();
+    Transfer& t = mUploads[ mUploadIndex ];
+    if( t.mPayload.size() > 0 && mpTcpSocket->bytesToWrite() <= 4 * 
+      getMaximumUploadPayloadSize() )
+    {
+      /*Au lieu de .left() et .remove, un compteur de position et la fonction
+        .mid() serait plus approprié.*/
+      QByteArray ba = t.mPayload.mid( t.mCursor, getMaximumUploadPayloadSize() );
+      t.mCursor += getMaximumUploadPayloadSize();
+      mpTcpSocket->write( makePacket( ba, t.getId() ) );
+      emit sentPacket( t.getId() );
+    }
+    
+    if( getUploadStatus( t.getId() ) >= 1.0 )
+    {      
+      mUploads.erase( mUploads.begin() + mUploadIndex );
+      emit uploadEnded( t.getId() );
+    }
+    
+    if( getNumberOfUploads() > 0 )
+      mUploadIndex = (mUploadIndex + 1) % getNumberOfUploads();
   }
 }
 
@@ -159,59 +218,52 @@ void ClientBase::handleSocketError(QAbstractSocket::SocketError iError)
 //------------------------------------------------------------------------------
 void ClientBase::handleSocketReadyRead()
 {
-	if( !hasDownload() )
-  {
-    QByteArray h = readPacket( mpTcpSocket );
-    Transfer t = readUploadHeader( h );
-    if( t.mIsValid )
-    {
-      mDownload = t;
-      emit downloadStarted();
-    }    	
-  }
-    
+	int downloadId;
   while( mpTcpSocket->bytesAvailable() )
   {
-    //printf( "bytesAvailable avant readPacket: %d\n", mpTcpSocket->bytesAvailable() );
-    if( !isDownloadCompleted() )
+  	QByteArray p = readPacket( mpTcpSocket, &downloadId );
+    int downloadIndex = findDownload( downloadId );
+    if( downloadIndex == -1 )
     {
-      QByteArray p = readPacket( mpTcpSocket );
+      Transfer t = readUploadHeader( p );
+      if( t.mIsValid )
+      {
+        mDownloads.push_back( t );
+        emit downloadStarted( downloadId );
+      }    	
+    }
+    else
+    {      
       if( !p.isEmpty() )
       {
-        mDownload.mPayload += p;
-        emit gotPacket();
+        mDownloads[ downloadIndex ].mPayload += p;
+        emit gotPacket( downloadId );
       }
       else
       {
-        mDownload = Transfer();
+      	mpTcpSocket->readAll(); //on jete dans le bitBucket!
+        mDownloads.erase( mDownloads.begin() + downloadIndex );
         addError( "A problem occured while reading packet... and the whole"
          " download was dropped..." );
       }
     }
-    else mpTcpSocket->readAll(); //on jete dans le bitBucket!
     
-    //printf( "bytesAvailable apres readPacket: %d\n", mpTcpSocket->bytesAvailable() );
+    if( getDownloadStatus( downloadId ) >= 1.0 )
+      emit downloadEnded( downloadId );
   }
-  
-  if( isDownloadCompleted() )
-    emit downloadEnded();
 }
 
 //------------------------------------------------------------------------------
-bool ClientBase::hasActiveUpload() const
-{ return !mUpload.mPayload.isEmpty(); }
-
-//------------------------------------------------------------------------------
-bool ClientBase::hasDownload() const
-{ return mDownload.mIsValid; }
+bool ClientBase::hasDownloads() const
+{ return !mDownloads.empty(); }
 
 //------------------------------------------------------------------------------
 bool ClientBase::hasError() const
 { return !mErrors.isEmpty(); }
 
 //------------------------------------------------------------------------------
-bool ClientBase::isDownloadCompleted() const
-{	return hasDownload() && getDownloadStatus() >= 1.0 ; }
+bool ClientBase::hasUploads() const
+{ return !mUploads.empty(); }
 
 //------------------------------------------------------------------------------
 bool ClientBase::isConnected() const
@@ -222,10 +274,13 @@ void ClientBase::send( const QByteArray& iA )
 {
 	if( mpTcpSocket->isValid() )
   {
-  	mUpload.setPayload( iA );
-    QByteArray header = makeUploadHeader( mUpload );
-    mpTcpSocket->write( makePacket( header ) );
-    emit uploadStarted();
+  	Transfer t;
+    t.setPayload( iA, mUploadId++ );
+    mUploads.push_back( t );
+    mUploadIndex = mUploads.size() - 1;
+    QByteArray header = makeUploadHeader( t );
+    mpTcpSocket->write( makePacket( header, t.getId() ) );
+    emit uploadStarted( t.getId() );
   }
 }
 

@@ -10,6 +10,8 @@ using namespace reusables;
 using namespace network;
 using namespace std;
 
+int ServerBase::mUploadId = 0;
+
 ServerBase::ServerBase(QObject* ipParent /*=0*/) : QObject(ipParent),
 mErrors(),
 mPort(12345),
@@ -66,6 +68,30 @@ int ServerBase::findSocketFromSender( QObject* ipObject )
   return r;
 }
 //------------------------------------------------------------------------------
+int ServerBase::findDownload( int iSocketIndex, int iId ) const
+{
+	int r = -1;
+	const vector< Transfer >& vt = mDownloads[ iSocketIndex ];
+  for( size_t i = 0; i < vt.size(); ++i )
+  {
+  	if( vt[i].getId() == iId )
+    { r = i; break; }
+  }
+  return r;
+}
+//------------------------------------------------------------------------------
+int ServerBase::findUpload( int iSocketIndex, int iUploadId ) const
+{
+	int r = -1;
+	const vector< Transfer >& vt = mUploads[ iSocketIndex ];
+  for( size_t i = 0; i < vt.size(); ++i )
+  {
+  	if( vt[i].getId() == iUploadId )
+    { r = i; break; }
+  }
+  return r;
+}
+//------------------------------------------------------------------------------
 QString ServerBase::getAndClearLastErrors() const
 {
   QString r = mErrors;
@@ -73,25 +99,34 @@ QString ServerBase::getAndClearLastErrors() const
   return r;
 }
 //------------------------------------------------------------------------------
-QByteArray ServerBase::getDownload( int iIndex ) const
+QByteArray ServerBase::getDownload( int iSocketIndex, int iId ) const
 {
 	QByteArray r;
-	if( hasDownload( iIndex ) )
+  int i = findDownload( iSocketIndex, iId );
+
+	if( i != -1 )
   {
-  	r = mDownloads[ iIndex ].mPayload;
-    if( isDownloadCompleted( iIndex ) )
-	  	mDownloads.erase( iIndex );
+  	vector< Transfer >& vt = mDownloads[ iSocketIndex ];
+  	r = vt[i].mPayload;
+    if( getDownloadStatus( iSocketIndex, iId ) >= 1.0 )
+    { vt.erase( vt.begin() + i ); }
   }
+
   return r;
 }
+
 //------------------------------------------------------------------------------
-double ServerBase::getDownloadStatus( int iIndex ) const
+int ServerBase::getDownloadId( int iSocketIndex, int iIndex ) const
+{ return mDownloads[ iSocketIndex ][ iIndex ].getId(); }
+
+//------------------------------------------------------------------------------
+double ServerBase::getDownloadStatus( int iSocketIndex, int iId ) const
 {
 	double r = 0.0;
-  if( hasDownload( iIndex ) )
-  	r = mDownloads[ iIndex ].mPayload.size() /
-    	(double)mDownloads[ iIndex ].mTotalSize;
-//printf( "getDownloadStatus: %f\n", r );
+  int i = findDownload( iSocketIndex, iId );
+  if( i != -1 )
+  	r = mDownloads[ iSocketIndex ][i].mPayload.size() /
+    	(double)mDownloads[ iSocketIndex ][i].mTotalSize;
   return r;
 }
 //------------------------------------------------------------------------------
@@ -103,9 +138,17 @@ int ServerBase::getMaximumUploadPayloadSize() const
 { return mMaximumUploadPayloadSize; }
 
 //------------------------------------------------------------------------------
+int ServerBase::getNumberOfDownloads( int iSocketIndex ) const
+{ return mDownloads[ iSocketIndex ].size(); }
+
+//------------------------------------------------------------------------------
 int ServerBase::getNumberOfSockets() const
 { return mSockets.size(); }
-  
+
+//------------------------------------------------------------------------------
+int ServerBase::getNumberOfUploads( int iSocketIndex ) const
+{ return mUploads[ iSocketIndex ].size(); }
+
 //------------------------------------------------------------------------------
 QTcpSocket* ServerBase::getSocket( int i )
 {
@@ -124,13 +167,32 @@ qint16 ServerBase::getSocketPeerPort( int i ) const
 //------------------------------------------------------------------------------
 QAbstractSocket::SocketState ServerBase::getSocketState( int i )
 { return mSockets[i]->state(); }
+
 //------------------------------------------------------------------------------
-double ServerBase::getUploadStatus( int iIndex ) const
+QByteArray ServerBase::getUpload( int iSocketIndex, int iId ) const
+{
+	QByteArray r;
+  int i = findUpload( iSocketIndex, iId );
+  
+	if( i != -1 )
+  {
+  	vector< Transfer >& vt = mUploads[ iSocketIndex ];
+  	r = vt[i].mPayload;
+  }
+  return r;
+}
+
+//------------------------------------------------------------------------------
+int ServerBase::getUploadId( int iSocketIndex, int iIndex ) const
+{ return mUploads[ iSocketIndex ][ iIndex ].getId(); }
+
+//------------------------------------------------------------------------------
+double ServerBase::getUploadStatus( int iIndex, int iId ) const
 {
 	double r = 0.0;
-  if( hasActiveUpload( iIndex ) )
-  { r = 1.0 - ( mUploads[iIndex].mPayload.size() / 
-  	(double)mUploads[iIndex].mTotalSize ); }
+  int i = findUpload( iIndex, iId );
+  if( i != -1 )
+  { r = mUploads[iIndex][i].mCursor / (double)mUploads[iIndex][i].mTotalSize ; }
   return r;
 }
 //------------------------------------------------------------------------------
@@ -160,24 +222,28 @@ void ServerBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
   if( i != -1 )
   {
   	QTcpSocket* s = getSocket( i );
-  //printf( "handleSocketBytesWritten\n" );
-    if( mUploads[i].mPayload.size() > 0 && 
-      s->bytesToWrite() <= 4 * getMaximumUploadPayloadSize() )
+    if( hasUploads( i ) )
     {
-      /*Au lieu de .left() et .remove, un compteur de position et la fonction
-      .mid() serait plus approprié.*/
-      QByteArray a = mUploads[i].mPayload.left( getMaximumUploadPayloadSize() );
-      mUploads[i].mPayload.remove( 0, getMaximumUploadPayloadSize() );
-      int _a = s->write( makePacket( a ) );
-  //printf("byte written: %d\n", _a );
-      emit sentPacket( i );
-    }
-    
-    if( mUploads[i].mIsValid && !hasActiveUpload( i ) )
-    {
-      mUploads[i] = Transfer();
-  //printf( "uploadEnded:\n" );
-      emit uploadEnded( i );
+      vector< Transfer >& vt = mUploads[ i ];
+      vector< Transfer >::iterator it = vt.begin();
+        
+      Transfer& t = *it;
+      if( t.mPayload.size() > 0 && s->bytesToWrite() <= 4 * 
+        getMaximumUploadPayloadSize() )
+      {
+        /*Au lieu de .left() et .remove, un compteur de position et la fonction
+          .mid() serait plus approprié.*/
+        QByteArray ba = t.mPayload.mid( t.mCursor, getMaximumUploadPayloadSize() );
+        t.mCursor += getMaximumUploadPayloadSize();
+        s->write( makePacket( ba, t.getId() ) );
+        emit sentPacket( i, t.getId() );
+      }
+      
+      if( getUploadStatus( i, t.getId() ) >= 1.0 )
+      {
+      	vt.erase( it );
+        emit uploadEnded( i, t.getId() );        
+      }
     }
   }
 }
@@ -192,6 +258,8 @@ void ServerBase::handleSocketDisconnected()
     int i = findSocketFromSender( sender() );
     if( i != -1 )
     {
+    	mDownloads.erase( i ); //efface tout les downloads
+      mUploads.erase( i ); //efface tout les uploads
       getSocket( i )->deleteLater();
       mSockets.erase( mSockets.begin() + i );
       emit socketDisconnected( i );
@@ -212,46 +280,44 @@ void ServerBase::handleSocketError(QAbstractSocket::SocketError iError)
 //------------------------------------------------------------------------------
 void ServerBase::handleSocketReadyRead()
 {
-	int iIndex = findSocketFromSender( sender() );
-  if( iIndex != -1 )
+	int socketIndex = findSocketFromSender( sender() );
+  if( socketIndex != -1 )
   {
-  	QTcpSocket* s = getSocket( iIndex );
-    if( !hasDownload( iIndex ) )
-    {
-    	QByteArray h = readPacket( s );
-      Transfer t = readUploadHeader( h );
-      if( t.mIsValid )
-      {
-      	mDownloads[ iIndex ] = t;
-      	emit downloadStarted( iIndex );
-      }    	
-    }
-    
+  	QTcpSocket* s = getSocket( socketIndex );
     while( s->bytesAvailable() )
     {
-    	//printf( "bytesAvailable avant readPacket: %d\n", s->bytesAvailable() );
-      if( !isDownloadCompleted( iIndex ) )
+    	int downloadId;
+    	vector< Transfer >& vt = mDownloads[ socketIndex ];
+    	QByteArray p = readPacket( s, &downloadId );
+      int downloadIndex = findDownload( socketIndex, downloadId );
+      if( downloadIndex == -1 )
       {
-      	QByteArray p = readPacket( s );
+        Transfer t = readUploadHeader( p );
+        if( t.mIsValid )
+        {
+          vt.push_back( t );
+          emit downloadStarted( socketIndex, downloadId );
+        }  
+      }
+      else
+      {
         if( !p.isEmpty() )
         {
-        	mDownloads[ iIndex ].mPayload += p;
-          gotPacket( iIndex );
+        	vt[downloadIndex].mPayload += p;
+          emit gotPacket( socketIndex, downloadId );
         }
         else
         {
-        	mDownloads.erase( iIndex );
+        	s->readAll(); //on jete dans le bitBucket!
+        	vt.erase( vt.begin() + downloadIndex );
         	addError( "A problem occured while reading packet... and the whole"
            " download was dropped..." );
         }
       }
-      else s->readAll(); //on jete dans le bitBucket!
       
-      //printf( "bytesAvailable apres readPacket: %d\n", s->bytesAvailable() );
+      if( getDownloadStatus( socketIndex, downloadId ) >= 1.0 )
+	    	emit downloadEnded( socketIndex, downloadId );
     }
-    
-    if( isDownloadCompleted( iIndex ) )
-    	emit downloadEnded( iIndex );
   }
   else 
   { addError( "handleSocketReadyRead is called for unknown peer..." ); }
@@ -268,31 +334,37 @@ void ServerBase::handleSocketStateChanged(QAbstractSocket::SocketState iState)
 }
 
 //------------------------------------------------------------------------------
-bool ServerBase::hasActiveUpload( int iIndex ) const
-{ return !mUploads[iIndex].mPayload.isEmpty(); }
-
-//------------------------------------------------------------------------------
-bool ServerBase::hasDownload( int i ) const
-{ return mDownloads.find( i ) != mDownloads.end(); }
+bool ServerBase::hasDownloads( int iSocketIndex ) const
+{
+	map< int, vector< Transfer > >::const_iterator it =
+  	mDownloads.find( iSocketIndex );
+	return it != mDownloads.end() && !it->second.empty();
+}
 
 //------------------------------------------------------------------------------
 bool ServerBase::hasError() const
 {	return !mErrors.isEmpty(); }
 
 //------------------------------------------------------------------------------
-bool ServerBase::isDownloadCompleted( int iIndex ) const
-{	return hasDownload( iIndex ) && getDownloadStatus( iIndex ) >= 1.0 ; }
+bool ServerBase::hasUploads( int iSocketIndex ) const
+{
+	map< int, vector< Transfer > >::const_iterator it =
+  	mUploads.find( iSocketIndex );
+	return it != mUploads.end() && !it->second.empty();
+}
 
 //------------------------------------------------------------------------------
-void ServerBase::send( int iIndex, const QByteArray& iA )
+void ServerBase::send( int iSocketIndex, const QByteArray& iA )
 {
-	QTcpSocket* s = getSocket( iIndex );
+	QTcpSocket* s = getSocket( iSocketIndex );
 	if( s && s->isValid() )
   {
-  	mUploads[iIndex].setPayload( iA );
-    QByteArray header = makeUploadHeader( mUploads[iIndex] );
-    s->write( makePacket( header ) );
-    emit uploadStarted( iIndex );
+  	Transfer t;
+    t.setPayload( iA, mUploadId++ );
+  	mUploads[iSocketIndex].push_back( t );
+    QByteArray header = makeUploadHeader( t );
+    s->write( makePacket( header, t.getId() ) );
+    emit uploadStarted( iSocketIndex, t.getId() );
   }
 }
 

@@ -25,23 +25,28 @@ Widget::Widget(QWidget* ipParent /*=0*/) : QWidget(ipParent),
     this, SLOT( peerConnected( int ) ) );
   connect(&mServer, SIGNAL( socketDisconnected( int ) ),
     this, SLOT( peerDisconnected( int ) ) );
-  connect(&mServer, SIGNAL( gotPacket( int ) ),
-    this, SLOT( gotPacket( int ) ) );
-    connect(&mServer, SIGNAL( downloadStarted( int ) ),
+  connect(&mServer, SIGNAL( gotPacket( int, int ) ),
     this, SLOT( updateUi() ) );
-  connect(&mServer, SIGNAL( downloadEnded( int ) ),
-    this, SLOT( downloadEnded( int ) ) );
+  connect(&mServer, SIGNAL( sentPacket( int, int ) ),
+    this, SLOT( updateUi() ) );
+  connect(&mServer, SIGNAL( downloadStarted( int, int ) ),
+    this, SLOT( updateUi() ) );
+  connect(&mServer, SIGNAL( downloadEnded( int, int ) ),
+    this, SLOT( downloadEnded( int, int ) ) );
+  connect(&mServer, SIGNAL( uploadEnded( int, int ) ),
+    this, SLOT( updateUi() ) );
 }
 
 Widget::~Widget()
 {}
 
 //------------------------------------------------------------------------------
-void Widget::downloadEnded( int i )
+void Widget::downloadEnded( int i, int iId )
 {
-	if( mServer.hasDownload( i ) )
+	if( mServer.hasDownloads( i ) )
   {
-  	QByteArray d = mServer.getDownload( i );
+printf( "-----download %d sur socket %d terminé\n", iId, i );
+  	QByteArray d = mServer.getDownload( i, iId );
 		chatProtocol cp = readProtocol( d );
     switch (cp) 
     {
@@ -76,10 +81,6 @@ int Widget::findPeer( const chatPeer& iPeer ) const
   }
   return r;
 }
-
-//------------------------------------------------------------------------------
-void Widget::gotPacket( int i )
-{ updateUi(); }
   
 //------------------------------------------------------------------------------
 void Widget::initUi()
@@ -129,6 +130,8 @@ void Widget::initUi()
   item->setText(2, "state");
   item->setText(3, "transmission");
   mpConnectedPeers->setHeaderItem(item);
+  connect( mpConnectedPeers, SIGNAL( itemClicked ( QTreeWidgetItem*, int ) ),
+  	this, SLOT( peerItemClicked( QTreeWidgetItem*, int ) ) );
   
   //---générale
   QLabel* pLog = new QLabel("Log:", this);
@@ -164,6 +167,56 @@ void Widget::peerDisconnected( int i )
 }
 
 //------------------------------------------------------------------------------
+void Widget::peerItemClicked( QTreeWidgetItem* ipItem, int iCol )
+{
+	int iSocketIndex = mpConnectedPeers->indexOfTopLevelItem( ipItem );
+
+	printf( "nombre de download %d sur socket %d\n", mServer.getNumberOfDownloads( iSocketIndex ), iSocketIndex );
+  for( int i = 0; i < mServer.getNumberOfDownloads( iSocketIndex ); ++i )
+  {
+    QByteArray ba = mServer.getDownload( iSocketIndex, 
+      mServer.getDownloadId( iSocketIndex, i ) );
+    printTransferInfo( ba );
+  }
+  printf( "nombre de upload %d sur socket %d\n", mServer.getNumberOfUploads( iSocketIndex ), iSocketIndex );
+  for( int i = 0; i < mServer.getNumberOfUploads( iSocketIndex ); ++i )
+  {
+    QByteArray ba = mServer.getUpload( iSocketIndex, 
+      mServer.getUploadId( iSocketIndex, i ) );
+    printTransferInfo( ba );
+  }
+}
+
+//------------------------------------------------------------------------------
+void Widget::printTransferInfo( const QByteArray& iBa ) const
+{
+	chatProtocol p = readProtocol( iBa );
+  
+  QString m;
+  switch ( p ) 
+  {
+    case cpPeerList: m = "peer list"; break;
+    case cpText: 
+      m = "text ";
+      m += readTextPacket( iBa );
+      break;
+    case cpRequestToSendFile: m = "request to send file"; break;
+    case cpAcceptFile: m = "accept file"; break;
+    case cpFile:
+    {
+      QString fileName;
+      m = "file ";
+      readFilePacket( iBa, fileName );
+      m += fileName;
+    }
+      break;
+    case cpPeerName: m = "peer name"; break;
+    default: break;
+  }
+printf( "%s\n", m.toStdString().c_str() );
+}
+
+//------------------------------------------------------------------------------
 void Widget::startServer()
 {
   if(mServer.startServer(mpPort->text().toInt()))
@@ -187,11 +240,15 @@ void Widget::updateUi()
 {
 	mpNumberOfPeers->setText( QString::number( mServer.getNumberOfSockets() ) );
 
-  mpConnectedPeers->clear();  
   //on ajuste le texte pour chaque peer
 	for(int i = 0; i < mServer.getNumberOfSockets(); ++i)
   {
-    QTreeWidgetItem* item = new QTreeWidgetItem();
+    QTreeWidgetItem* item = mpConnectedPeers->topLevelItem( i );
+    if( !item )
+    { 
+    	item = new QTreeWidgetItem();
+      mpConnectedPeers->insertTopLevelItem( i, item );
+    }
     item->setText( 0, QString::number(i) );
     item->setText( 1, mChatPeers[ i ].getName() + " " +
     	mServer.getSocketPeerAddress( i ));
@@ -208,26 +265,25 @@ void Widget::updateUi()
       default: break;
     }	
     item->setText( 2, s );
-    if( mServer.isDownloadCompleted( i ) )
-    {
-      item->setText( 3, "completed" );
-//    	QByteArray b = mServer.getDownload( i );
-//      
-//      chatProtocol cp = findProtocol( b );
-//      if( cp == cpText )
-//      {
-//      	item->setText( 3, readTextPacket( b ) );	
-//      }
-      
-    }
-    else if( mServer.hasDownload(i) )
-    {
-    	double a = mServer.getDownloadStatus( i );
-      QString s = QString::number( (int)(a * 100) ) + "%";
-    	item->setText( 3, s );
-    }
     
-    mpConnectedPeers->insertTopLevelItem( i, item );
+    QString udStatus;
+    if( mServer.hasDownloads( i ) )
+    {
+    	for( int j = 0; j < mServer.getNumberOfDownloads( i ); ++j )
+      {
+      	double a = mServer.getDownloadStatus( i, mServer.getDownloadId( i, j ) );
+				udStatus += "D" + QString::number( (int)(a * 100) ) + "% ";
+      }
+    }
+    if( mServer.hasUploads( i ) )
+		{    
+      for( int j = 0; j < mServer.getNumberOfUploads( i ); ++j )
+      {
+      	double a = mServer.getUploadStatus( i, mServer.getUploadId( i, j ) );
+				udStatus += "U" + QString::number( (int)(a * 100) ) + "% ";
+      }    	
+    }
+    item->setText( 3, udStatus );
   }
 
 	if( mServer.hasError() )

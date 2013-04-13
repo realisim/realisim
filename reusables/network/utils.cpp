@@ -15,6 +15,8 @@ namespace reusables
 namespace network
 {
 
+const unsigned int kMagicNumber = 0xABAB0506;
+
 //------------------------------------------------------------------------------
 QString asString(QAbstractSocket::SocketError iError)
 {
@@ -81,12 +83,13 @@ QStringList getLocalIpAddresses()
 }
 
 //------------------------------------------------------------------------------
-QByteArray makePacket( const QByteArray& iPayload )
+QByteArray makePacket( const QByteArray& iPayload, int iId )
 {
 	QByteArray packet;
   QDataStream out(&packet, QIODevice::WriteOnly);
   out.setVersion(QDataStream::Qt_4_7);
   out << (quint32)0;
+  out << (qint32)iId;
   out << iPayload;
   out.device()->seek(0);
   out << (quint32)(packet.size() - sizeof(quint32));
@@ -99,9 +102,11 @@ QByteArray makeUploadHeader( const Transfer& iT )
 	QByteArray r;
   QDataStream out(&r, QIODevice::WriteOnly);
   out.setVersion(QDataStream::Qt_4_7);
-  out << (quint32)0xABAB0506; //magic header
+  out << (quint32)kMagicNumber; //magic header
   out << (quint16)iT.mVersion; //version
+  out << (qint32)iT.mId; // id de lupload
   out << (quint32)iT.mPayload.size();
+  out << (quint32)iT.mCursor;
   return r;
 }
 
@@ -116,9 +121,10 @@ void printAsHex( const QByteArray& iA )
 //------------------------------------------------------------------------------
 /* Quand readPacket retourne un QByteArray vide, c'est qu'il y a eu un probleme
    de communication et waitForReadyRead( 1000 ) a fait un timeOut...*/
-QByteArray readPacket( QTcpSocket* iS )
+QByteArray readPacket( QTcpSocket* iS, int* iId )
 {
 	QByteArray r;
+  qint32 id;
   if( iS->bytesAvailable() > (int) sizeof( quint32 ) )
   {
   	bool read = false;
@@ -131,9 +137,14 @@ QByteArray readPacket( QTcpSocket* iS )
     	if( iS->bytesAvailable() < packetSize && !iS->waitForReadyRead( 1000 ) )
       	read = true;
       else
-      { in >> r; read = true; }
+      { 
+      	in >> id;
+        in >> r;
+        read = true;
+      }
     }
   }
+  if( iId ) *iId = id;
   return r;
 }
 
@@ -145,10 +156,12 @@ Transfer readUploadHeader( const QByteArray& iA )
   in.setVersion(QDataStream::Qt_4_7);
   quint32 magicNumber;
   in >> magicNumber;
-  if( magicNumber == 0xABAB0506 )
+  if( magicNumber == kMagicNumber )
   {
   	in >> r.mVersion;
+    in >> r.mId;
     in >> r.mTotalSize;
+    in >> r.mCursor;
     r.mIsValid = true;
   }
   return r;
@@ -161,17 +174,20 @@ Transfer::Transfer() :
 	mIsValid( false ),
 	mVersion( 1 ),
   mTotalSize( 0 ),
-  mPayload()
+  mPayload(),
+  mCursor(0)
 {}
 
 Transfer::~Transfer()
 {}
 //------------------------------------------------------------------------------
-void Transfer::setPayload( const QByteArray& iA )
+void Transfer::setPayload( const QByteArray& iA, int iId )
 {
 	mIsValid = true;
+  mId = iId;
   mTotalSize = iA.size();
   mPayload = iA;
+  mCursor = 0;
 }
 
 } //network

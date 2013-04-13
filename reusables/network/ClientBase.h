@@ -30,35 +30,38 @@ public:
   virtual void connectToTcpServer(QString, quint16);
   virtual void disconnect();
   virtual QString getAndClearLastErrors() const;
-virtual QByteArray getDownload() const;
-virtual double getDownloadStatus() const;
+	virtual QByteArray getDownload( int ) const;
+	virtual int getDownloadId( int ) const;
+	virtual double getDownloadStatus( int ) const;
   virtual int getMaximumUploadPayloadSize() const;
+	virtual int getNumberOfDownloads() const;
+	virtual int getNumberOfUploads() const;
   virtual QString getLocalAddress() const { return mpTcpSocket->localAddress().toString() ; }
   virtual quint16 getLocalPort() const { return mpTcpSocket->localPort(); }
   virtual QString getHostAddress() const { return mTcpHostAddress.toString(); }
   virtual quint16 getHostPort() const { return mTcpHostPort; }
-virtual double getUploadStatus() const;
-virtual bool hasActiveUpload() const;
-virtual bool hasDownload() const;
+	virtual QByteArray getUpload(int) const;  
+	virtual int getUploadId( int ) const;
+	virtual double getUploadStatus( int ) const;
+	virtual bool hasDownloads() const;
+	virtual bool hasUploads() const;
   virtual bool hasError() const;
   virtual bool isConnected() const;
-virtual bool isDownloadCompleted() const;
-//virtual bool isUploadCompleted( int ) const;
   virtual void setMaximumUploadPayloadSize( int );
   virtual void setTcpHostAddress(const QString iA) {mTcpHostAddress = iA;}
   virtual void setTcpHostPort(const quint16 iP) {mTcpHostPort = iP;}
   virtual void send( const QByteArray& );
 
 signals:
-void downloadStarted();
-void downloadEnded();
+	void downloadStarted( int );
+	void downloadEnded( int );
 	void gotError();
-void gotPacket();
-void sentPacket();
+	void gotPacket( int );
+	void sentPacket( int );
   void socketConnected();
   void socketDisconnected();
-void uploadEnded();
-void uploadStarted();
+	void uploadEnded( int );
+	void uploadStarted( int );
 
 protected slots:
 	virtual void handleSocketConnected();
@@ -71,14 +74,18 @@ protected:
   ClientBase(const ClientBase&){assert(0);}
   void operator=(const ClientBase&){assert(0);}
 	virtual void addError( const QString& ) const;
+  virtual int findDownload( int ) const;
+  virtual int findUpload( int ) const;
 
   mutable QString mErrors;
   quint16 mTcpHostPort;
   QHostAddress mTcpHostAddress;
   QTcpSocket* mpTcpSocket; //jamais null
   int mMaximumUploadPayloadSize;
-  Transfer mUpload;
-  mutable Transfer mDownload;
+  std::vector< Transfer > mUploads;
+  mutable std::vector< Transfer > mDownloads;
+  static int mUploadId;
+  int mUploadIndex;
 };
 
 }//network
