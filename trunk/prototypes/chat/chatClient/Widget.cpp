@@ -28,8 +28,8 @@ Widget::Widget(QWidget* ipParent /*=0*/) : QWidget(ipParent),
   connect(&mClient, SIGNAL( downloadStarted( int ) ), this, SLOT( downloadStarted( int ) ) );
   connect(&mClient, SIGNAL( downloadEnded( int ) ), this, SLOT( downloadEnded( int ) ) );
   connect(&mClient, SIGNAL( gotError() ), this, SLOT( gotError() ) );
-//mClient.setMaximumUploadPayloadSize( 64 * 1024 );
-mClient.setMaximumUploadPayloadSize( 1024 );
+  
+  mClient.setMaximumUploadPayloadSize( 64 * 1024 );
   
   connect( mpPeerListView, SIGNAL( itemDoubleClicked ( QTreeWidgetItem*, int ) ),
   	this, SLOT( peerItemDoubleClicked( QTreeWidgetItem*, int ) ) );
@@ -363,7 +363,7 @@ void chatWindow::gotFile( const QString& iFilename, const QByteArray& iBa )
   else 
   {
     mChatLog.push_back( mChatPeer.getName() + " (" + QDateTime::currentDateTime().
-    	toString( "dd-MMM-yy hh:mm" ) + "): discarded " + fileName );
+    	toString( "dd-MMM-yy hh:mm" ) + "): discarded " + iFilename );
   }
 
 	mpProgressDownload->reset();
