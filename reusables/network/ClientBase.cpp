@@ -196,7 +196,7 @@ void ClientBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
     }
     
     if( getNumberOfUploads() > 0 )
-      mUploadIndex = (mUploadIndex + 1) % getNumberOfUploads();
+      { mUploadIndex = (mUploadIndex + 1) % getNumberOfUploads(); }
   }
 }
 

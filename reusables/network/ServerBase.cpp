@@ -17,7 +17,8 @@ mErrors(),
 mPort(12345),
 mpTcpServer(new QTcpServer(ipParent)),
 mSockets(),
-mMaximumUploadPayloadSize( 64 * 1024 )
+mMaximumUploadPayloadSize( 64 * 1024 ),
+mUploadIndices()
 {
   connect(mpTcpServer, SIGNAL( newConnection() ),
    this, SLOT( handleNewConnection() ) );
@@ -34,6 +35,7 @@ ServerBase::~ServerBase()
     delete getSocket(i);
   }
   mSockets.clear();
+  mUploadIndices.clear();
   
   stopServer();
   delete mpTcpServer;
@@ -212,6 +214,7 @@ void ServerBase::handleNewConnection()
     connect( s, SIGNAL( bytesWritten( qint64 ) ),
       this, SLOT( handleSocketBytesWritten( qint64 ) ) );
     mSockets.push_back(s);
+    mUploadIndices.push_back( 0 );
     emit socketConnected( getNumberOfSockets() - 1 );
   }
 }
@@ -225,14 +228,10 @@ void ServerBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
     if( hasUploads( i ) )
     {
       vector< Transfer >& vt = mUploads[ i ];
-      vector< Transfer >::iterator it = vt.begin();
-        
-      Transfer& t = *it;
+      Transfer& t = vt[ mUploadIndices[i] ];
       if( t.mPayload.size() > 0 && s->bytesToWrite() <= 4 * 
         getMaximumUploadPayloadSize() )
       {
-        /*Au lieu de .left() et .remove, un compteur de position et la fonction
-          .mid() serait plus approprié.*/
         QByteArray ba = t.mPayload.mid( t.mCursor, getMaximumUploadPayloadSize() );
         t.mCursor += getMaximumUploadPayloadSize();
         s->write( makePacket( ba, t.getId() ) );
@@ -241,9 +240,12 @@ void ServerBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
       
       if( getUploadStatus( i, t.getId() ) >= 1.0 )
       {
-      	vt.erase( it );
+      	vt.erase( vt.begin() + mUploadIndices[i] );
         emit uploadEnded( i, t.getId() );        
       }
+      
+      if( getNumberOfUploads( i ) > 0 )
+        { mUploadIndices[i] = (mUploadIndices[i] + 1) % getNumberOfUploads( i ); }
     }
   }
 }
@@ -262,6 +264,7 @@ void ServerBase::handleSocketDisconnected()
       mUploads.erase( i ); //efface tout les uploads
       getSocket( i )->deleteLater();
       mSockets.erase( mSockets.begin() + i );
+      mUploadIndices.erase( mUploadIndices.begin() + i );
       emit socketDisconnected( i );
     }
     else
@@ -431,4 +434,5 @@ void ServerBase::stopServer()
     delete getSocket(i);
   }
   mSockets.clear();
+  mUploadIndices.clear();
 }
