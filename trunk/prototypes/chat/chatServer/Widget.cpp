@@ -35,6 +35,9 @@ Widget::Widget(QWidget* ipParent /*=0*/) : QWidget(ipParent),
     this, SLOT( downloadEnded( int, int ) ) );
   connect(&mServer, SIGNAL( uploadEnded( int, int ) ),
     this, SLOT( updateUi() ) );
+    
+  mServer.setMaximumUploadPayloadSize( 64 * 1024 );
+  //mServer.setMaximumUploadPayloadSize( 1024 );
 }
 
 Widget::~Widget()

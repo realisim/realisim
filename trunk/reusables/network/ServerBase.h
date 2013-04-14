@@ -93,6 +93,7 @@ protected:
   mutable std::map< int, std::vector< Transfer > > mUploads;
   int mMaximumUploadPayloadSize;
   static int mUploadId;
+  std::vector< int > mUploadIndices;
 
 };
 
