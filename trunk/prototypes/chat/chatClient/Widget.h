@@ -4,7 +4,7 @@
 #define Realisim_Prototypes_Network_Widget_hh
 
 #include "protocol.h"
-#include "network/ClientBase.h"
+#include "network/Client.h"
 #include <QWidget>
 #include <QtGui>
 #include <vector>
@@ -18,7 +18,7 @@ class chatWindow : public QWidget
 {
 	Q_OBJECT
 public:
-	chatWindow( reusables::network::ClientBase&, const chatPeer&, const chatPeer& );
+	chatWindow( reusables::network::Client&, const chatPeer&, const chatPeer& );
   virtual ~chatWindow();
   
   void gotChat( const QString& );
@@ -37,7 +37,7 @@ protected:
   QProgressBar* mpProgressDownload;
 
   QStringList mChatLog;
-  reusables::network::ClientBase& mClient;
+  reusables::network::Client& mClient;
   const chatPeer& mPeer;
   const chatPeer& mChatPeer;
 };
@@ -74,7 +74,7 @@ protected:
   QTreeWidget* mpPeerListView;
   QTextEdit* mpLog;
 
-	reusables::network::ClientBase mClient;
+	reusables::network::Client mClient;
   std::vector< chatPeer > mPeers;
   std::map< int, chatWindow* > mPeerToChatWindow;
   chatPeer mPeer;
