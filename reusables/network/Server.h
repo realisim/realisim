@@ -1,7 +1,7 @@
 /*Created by Pierre-Olivier Beaudoin on 10-02-26.*/
 
-#ifndef realisim_reusables_network_ServerBase_h
-#define realisim_reusables_network_ServerBase_h
+#ifndef realisim_reusables_network_Server_h
+#define realisim_reusables_network_Server_h
 
 #include <cassert>
 #include <QAbstractSocket>
@@ -18,12 +18,12 @@ namespace reusables
 namespace network
 {
 
-class ServerBase : public QObject
+class Server : public QObject
 {
   Q_OBJECT;
 public:
-  ServerBase(QObject* = 0);
-  virtual ~ServerBase();
+  Server(QObject* = 0);
+  virtual ~Server();
   
   virtual void broadcast( const QByteArray& );
   virtual void broadcast( const QByteArray&, int );
@@ -76,8 +76,8 @@ protected slots:
   virtual void handleSocketStateChanged( QAbstractSocket::SocketState );
   
 protected:
-  ServerBase(const ServerBase&) {assert(0);}
-  void operator=(const ServerBase&) {assert(0);}
+  Server(const Server&) {assert(0);}
+  void operator=(const Server&) {assert(0);}
   
   virtual void addError( QString ) const;
   virtual int findSocketFromSender( QObject* );

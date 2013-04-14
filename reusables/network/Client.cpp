@@ -1,6 +1,6 @@
 /*Created by Pierre-Olivier Beaudoin on 10-02-26.*/
 
-#include "ClientBase.h"
+#include "Client.h"
 #include <cmath>
 #include "network/utils.h"
 #include <QHostInfo>
@@ -11,9 +11,9 @@ using namespace reusables;
 using namespace network;
 using namespace std;
 
-int ClientBase::mUploadId = 0;
+int Client::mUploadId = 0;
 
-ClientBase::ClientBase(QObject* ipParent /*=0*/) : QObject(ipParent),
+Client::Client(QObject* ipParent /*=0*/) : QObject(ipParent),
   mErrors(),
   mTcpHostPort(0),
   mTcpHostAddress("127.0.0.1"), //localhost
@@ -32,7 +32,7 @@ ClientBase::ClientBase(QObject* ipParent /*=0*/) : QObject(ipParent),
     this, SLOT( handleSocketBytesWritten( qint64 ) ) );
 }
 
-ClientBase::~ClientBase()
+Client::~Client()
 {
   //delete client tcp socket
   mpTcpSocket->abort();
@@ -41,7 +41,7 @@ ClientBase::~ClientBase()
 }
 
 //------------------------------------------------------------------------------
-void ClientBase::addError( const QString& iE ) const
+void Client::addError( const QString& iE ) const
 {
 	if( !mErrors.isEmpty() ) mErrors += " ";
 	mErrors += iE;
@@ -52,7 +52,7 @@ void ClientBase::addError( const QString& iE ) const
   111.222.333.444 sur le port iPort.
   TODO: il faudrait ajouter la possibilité de se connecter a des URL
   www.google.com ou localhost (voir QHostInfo).*/
-void ClientBase::connectToTcpServer(QString iAddress, quint16 iPort)
+void Client::connectToTcpServer(QString iAddress, quint16 iPort)
 {
   //On prend pas de chance, on deconnecte le socket
   mpTcpSocket->abort();
@@ -68,14 +68,14 @@ void ClientBase::connectToTcpServer(QString iAddress, quint16 iPort)
 }
 
 //------------------------------------------------------------------------------
-void ClientBase::disconnect()
+void Client::disconnect()
 {
   if( mpTcpSocket->isValid() )
     mpTcpSocket->disconnectFromHost();
 }
 
 //------------------------------------------------------------------------------
-int ClientBase::findDownload( int iId ) const
+int Client::findDownload( int iId ) const
 {
 	int r = -1;
 	for( size_t i = 0; i < mDownloads.size(); ++i )
@@ -88,7 +88,7 @@ int ClientBase::findDownload( int iId ) const
 
 
 //------------------------------------------------------------------------------
-int ClientBase::findUpload( int iId ) const
+int Client::findUpload( int iId ) const
 {
 	int r = -1;
 	for( size_t i = 0; i < mUploads.size(); ++i )
@@ -100,7 +100,7 @@ int ClientBase::findUpload( int iId ) const
 }
 
 //------------------------------------------------------------------------------
-QString ClientBase::getAndClearLastErrors() const
+QString Client::getAndClearLastErrors() const
 {
   QString r = mErrors;
   mErrors = QString();
@@ -108,7 +108,7 @@ QString ClientBase::getAndClearLastErrors() const
 }
 
 //------------------------------------------------------------------------------
-QByteArray ClientBase::getDownload( int iId ) const
+QByteArray Client::getDownload( int iId ) const
 {
 	QByteArray r;
   int i = findDownload( iId );
@@ -122,11 +122,11 @@ QByteArray ClientBase::getDownload( int iId ) const
 }
 
 //------------------------------------------------------------------------------
-int ClientBase::getDownloadId( int iIndex ) const
+int Client::getDownloadId( int iIndex ) const
 { return mDownloads[iIndex].getId(); }
 
 //------------------------------------------------------------------------------
-double ClientBase::getDownloadStatus( int iId ) const
+double Client::getDownloadStatus( int iId ) const
 {
 	double r = 0.0;
   int i = findDownload( iId );
@@ -137,19 +137,19 @@ double ClientBase::getDownloadStatus( int iId ) const
 }
 
 //------------------------------------------------------------------------------
-int ClientBase::getMaximumUploadPayloadSize() const
+int Client::getMaximumUploadPayloadSize() const
 { return mMaximumUploadPayloadSize; }
 
 //------------------------------------------------------------------------------
-int ClientBase::getNumberOfDownloads() const
+int Client::getNumberOfDownloads() const
 { return mDownloads.size(); }
 
 //------------------------------------------------------------------------------
-int ClientBase::getNumberOfUploads() const
+int Client::getNumberOfUploads() const
 { return mUploads.size(); }
 
 //------------------------------------------------------------------------------
-QByteArray ClientBase::getUpload( int iId ) const
+QByteArray Client::getUpload( int iId ) const
 {
   QByteArray r;
   int i = findUpload( iId );
@@ -159,11 +159,11 @@ QByteArray ClientBase::getUpload( int iId ) const
 }
 
 //------------------------------------------------------------------------------
-int ClientBase::getUploadId( int iIndex ) const
+int Client::getUploadId( int iIndex ) const
 { return mUploads[ iIndex ].getId(); }
 
 //------------------------------------------------------------------------------
-double ClientBase::getUploadStatus( int iId ) const
+double Client::getUploadStatus( int iId ) const
 {
 	double r = 0.0;
   int i = findUpload( iId );
@@ -173,7 +173,7 @@ double ClientBase::getUploadStatus( int iId ) const
 }
 
 //------------------------------------------------------------------------------
-void ClientBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
+void Client::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
 {
 	if( hasUploads() )
   {
@@ -201,22 +201,22 @@ void ClientBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
 }
 
 //------------------------------------------------------------------------------
-void ClientBase::handleSocketConnected()
+void Client::handleSocketConnected()
 { emit socketConnected(); }
 
 //------------------------------------------------------------------------------
-void ClientBase::handleSocketDisconnected()
+void Client::handleSocketDisconnected()
 { emit socketDisconnected(); }
 
 //------------------------------------------------------------------------------
-void ClientBase::handleSocketError(QAbstractSocket::SocketError iError)
+void Client::handleSocketError(QAbstractSocket::SocketError iError)
 { 
   addError( "Error on socket: " +	network::asString(iError) );
 	emit gotError();
 }
 
 //------------------------------------------------------------------------------
-void ClientBase::handleSocketReadyRead()
+void Client::handleSocketReadyRead()
 {
 	int downloadId;
   while( mpTcpSocket->bytesAvailable() )
@@ -254,23 +254,23 @@ void ClientBase::handleSocketReadyRead()
 }
 
 //------------------------------------------------------------------------------
-bool ClientBase::hasDownloads() const
+bool Client::hasDownloads() const
 { return !mDownloads.empty(); }
 
 //------------------------------------------------------------------------------
-bool ClientBase::hasError() const
+bool Client::hasError() const
 { return !mErrors.isEmpty(); }
 
 //------------------------------------------------------------------------------
-bool ClientBase::hasUploads() const
+bool Client::hasUploads() const
 { return !mUploads.empty(); }
 
 //------------------------------------------------------------------------------
-bool ClientBase::isConnected() const
+bool Client::isConnected() const
 { return mpTcpSocket->state() == QAbstractSocket::ConnectedState; }
 
 //-----------------------------------------------------------------------------
-void ClientBase::send( const QByteArray& iA )
+void Client::send( const QByteArray& iA )
 {
 	if( mpTcpSocket->isValid() )
   {
@@ -285,5 +285,5 @@ void ClientBase::send( const QByteArray& iA )
 }
 
 //------------------------------------------------------------------------------
-void ClientBase::setMaximumUploadPayloadSize( int iSize )
+void Client::setMaximumUploadPayloadSize( int iSize )
 { mMaximumUploadPayloadSize = iSize; }

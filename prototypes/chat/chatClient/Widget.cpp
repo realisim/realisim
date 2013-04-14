@@ -283,7 +283,7 @@ void Widget::updateUi()
 //------------------------------------------------------------------------------
 //--- chatWindow
 //------------------------------------------------------------------------------
-chatWindow::chatWindow( ClientBase& iClient,
+chatWindow::chatWindow( Client& iClient,
 	const chatPeer& iPeer,
 	const chatPeer& iChatPeer ) :
   QWidget( 0 ),
@@ -358,9 +358,14 @@ void chatWindow::gotFile( const QString& iFilename, const QByteArray& iBa )
     	f.write( iBa );
   
   	mChatLog.push_back( mChatPeer.getName() + " (" + QDateTime::currentDateTime().
-  	toString( "dd-MMM-yy hh:mm" ) + "): " + fileName );
+  	toString( "dd-MMM-yy hh:mm" ) + "): saved " + fileName );
   }
-  
+  else 
+  {
+    mChatLog.push_back( mChatPeer.getName() + " (" + QDateTime::currentDateTime().
+    	toString( "dd-MMM-yy hh:mm" ) + "): discarded " + fileName );
+  }
+
 	mpProgressDownload->reset();
 
   updateUi();

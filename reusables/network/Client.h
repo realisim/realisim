@@ -1,7 +1,7 @@
 /*Created by Pierre-Olivier Beaudoin on 10-02-26.*/
  
-#ifndef REALISIM_REUSABLE_NETWORK_CLIENTBASE_HH
-#define REALISIM_REUSABLE_NETWORK_CLIENTBASE_HH
+#ifndef REALISIM_REUSABLE_NETWORK_Client_HH
+#define REALISIM_REUSABLE_NETWORK_Client_HH
 
 #include <cassert>
 #include "network/utils.h"
@@ -20,12 +20,12 @@ namespace reusables
 namespace network
 {
 
-class ClientBase : public QObject
+class Client : public QObject
 {
 	Q_OBJECT
 public:
-  ClientBase(QObject* = 0);
-  virtual ~ClientBase();
+  Client(QObject* = 0);
+  virtual ~Client();
 
   virtual void connectToTcpServer(QString, quint16);
   virtual void disconnect();
@@ -71,8 +71,8 @@ protected slots:
   virtual void handleSocketBytesWritten( qint64 );
 
 protected:
-  ClientBase(const ClientBase&){assert(0);}
-  void operator=(const ClientBase&){assert(0);}
+  Client(const Client&){assert(0);}
+  void operator=(const Client&){assert(0);}
 	virtual void addError( const QString& ) const;
   virtual int findDownload( int ) const;
   virtual int findUpload( int ) const;

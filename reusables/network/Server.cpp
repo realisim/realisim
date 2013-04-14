@@ -1,7 +1,7 @@
 /*Created by Pierre-Olivier Beaudoin on 10-02-26.*/
 
 #include <algorithm>
-#include "ServerBase.h"
+#include "Server.h"
 #include <QTcpServer>
 #include <QTcpSocket>
 
@@ -10,9 +10,9 @@ using namespace reusables;
 using namespace network;
 using namespace std;
 
-int ServerBase::mUploadId = 0;
+int Server::mUploadId = 0;
 
-ServerBase::ServerBase(QObject* ipParent /*=0*/) : QObject(ipParent),
+Server::Server(QObject* ipParent /*=0*/) : QObject(ipParent),
 mErrors(),
 mPort(12345),
 mpTcpServer(new QTcpServer(ipParent)),
@@ -24,7 +24,7 @@ mUploadIndices()
    this, SLOT( handleNewConnection() ) );
 }
 
-ServerBase::~ServerBase()
+Server::~Server()
 {
   if(mpTcpServer->isListening())
   	mpTcpServer->close();
@@ -41,26 +41,26 @@ ServerBase::~ServerBase()
   delete mpTcpServer;
 }
 //------------------------------------------------------------------------------
-void ServerBase::addError( QString iE ) const
+void Server::addError( QString iE ) const
 {
 	if( !mErrors.isEmpty() ) mErrors += " ";
 	mErrors += iE;
 }
 //------------------------------------------------------------------------------
-void ServerBase::broadcast( const QByteArray& iA )
+void Server::broadcast( const QByteArray& iA )
 {
   for(int i = 0; i < getNumberOfSockets(); ++i)
   { send( i, iA ); }
 }
 //------------------------------------------------------------------------------
 /*On envoit a tout les sockets sauf le socket iIndex*/
-void ServerBase::broadcast( const QByteArray& iA, int iIndex )
+void Server::broadcast( const QByteArray& iA, int iIndex )
 {
   for(int i = 0; i < getNumberOfSockets(); ++i)
   { if( i != iIndex ) send( i, iA ); }
 }
 //------------------------------------------------------------------------------
-int ServerBase::findSocketFromSender( QObject* ipObject )
+int Server::findSocketFromSender( QObject* ipObject )
 {
 	int r = -1;
   QTcpSocket* s =	dynamic_cast<QTcpSocket*>( ipObject );
@@ -70,7 +70,7 @@ int ServerBase::findSocketFromSender( QObject* ipObject )
   return r;
 }
 //------------------------------------------------------------------------------
-int ServerBase::findDownload( int iSocketIndex, int iId ) const
+int Server::findDownload( int iSocketIndex, int iId ) const
 {
 	int r = -1;
 	const vector< Transfer >& vt = mDownloads[ iSocketIndex ];
@@ -82,7 +82,7 @@ int ServerBase::findDownload( int iSocketIndex, int iId ) const
   return r;
 }
 //------------------------------------------------------------------------------
-int ServerBase::findUpload( int iSocketIndex, int iUploadId ) const
+int Server::findUpload( int iSocketIndex, int iUploadId ) const
 {
 	int r = -1;
 	const vector< Transfer >& vt = mUploads[ iSocketIndex ];
@@ -94,14 +94,14 @@ int ServerBase::findUpload( int iSocketIndex, int iUploadId ) const
   return r;
 }
 //------------------------------------------------------------------------------
-QString ServerBase::getAndClearLastErrors() const
+QString Server::getAndClearLastErrors() const
 {
   QString r = mErrors;
   mErrors = QString();
   return r;
 }
 //------------------------------------------------------------------------------
-QByteArray ServerBase::getDownload( int iSocketIndex, int iId ) const
+QByteArray Server::getDownload( int iSocketIndex, int iId ) const
 {
 	QByteArray r;
   int i = findDownload( iSocketIndex, iId );
@@ -118,11 +118,11 @@ QByteArray ServerBase::getDownload( int iSocketIndex, int iId ) const
 }
 
 //------------------------------------------------------------------------------
-int ServerBase::getDownloadId( int iSocketIndex, int iIndex ) const
+int Server::getDownloadId( int iSocketIndex, int iIndex ) const
 { return mDownloads[ iSocketIndex ][ iIndex ].getId(); }
 
 //------------------------------------------------------------------------------
-double ServerBase::getDownloadStatus( int iSocketIndex, int iId ) const
+double Server::getDownloadStatus( int iSocketIndex, int iId ) const
 {
 	double r = 0.0;
   int i = findDownload( iSocketIndex, iId );
@@ -132,46 +132,46 @@ double ServerBase::getDownloadStatus( int iSocketIndex, int iId ) const
   return r;
 }
 //------------------------------------------------------------------------------
-QString ServerBase::getLocalAddress() const
+QString Server::getLocalAddress() const
 { return mpTcpServer->serverAddress().toString(); }
 
 //------------------------------------------------------------------------------
-int ServerBase::getMaximumUploadPayloadSize() const
+int Server::getMaximumUploadPayloadSize() const
 { return mMaximumUploadPayloadSize; }
 
 //------------------------------------------------------------------------------
-int ServerBase::getNumberOfDownloads( int iSocketIndex ) const
+int Server::getNumberOfDownloads( int iSocketIndex ) const
 { return mDownloads[ iSocketIndex ].size(); }
 
 //------------------------------------------------------------------------------
-int ServerBase::getNumberOfSockets() const
+int Server::getNumberOfSockets() const
 { return mSockets.size(); }
 
 //------------------------------------------------------------------------------
-int ServerBase::getNumberOfUploads( int iSocketIndex ) const
+int Server::getNumberOfUploads( int iSocketIndex ) const
 { return mUploads[ iSocketIndex ].size(); }
 
 //------------------------------------------------------------------------------
-QTcpSocket* ServerBase::getSocket( int i )
+QTcpSocket* Server::getSocket( int i )
 {
   return const_cast< QTcpSocket* >(
-  	const_cast< const ServerBase* >(this)->getSocket( i ) );
+  	const_cast< const Server* >(this)->getSocket( i ) );
 }
 //------------------------------------------------------------------------------
-const QTcpSocket* ServerBase::getSocket( int i ) const
+const QTcpSocket* Server::getSocket( int i ) const
 { return mSockets[ i ]; }
 //------------------------------------------------------------------------------
-QString ServerBase::getSocketPeerAddress( int i ) const
+QString Server::getSocketPeerAddress( int i ) const
 { return getSocket( i )->peerAddress().toString(); }
 //------------------------------------------------------------------------------
-qint16 ServerBase::getSocketPeerPort( int i ) const
+qint16 Server::getSocketPeerPort( int i ) const
 { return getSocket( i )->peerPort(); }
 //------------------------------------------------------------------------------
-QAbstractSocket::SocketState ServerBase::getSocketState( int i )
+QAbstractSocket::SocketState Server::getSocketState( int i )
 { return mSockets[i]->state(); }
 
 //------------------------------------------------------------------------------
-QByteArray ServerBase::getUpload( int iSocketIndex, int iId ) const
+QByteArray Server::getUpload( int iSocketIndex, int iId ) const
 {
 	QByteArray r;
   int i = findUpload( iSocketIndex, iId );
@@ -185,11 +185,11 @@ QByteArray ServerBase::getUpload( int iSocketIndex, int iId ) const
 }
 
 //------------------------------------------------------------------------------
-int ServerBase::getUploadId( int iSocketIndex, int iIndex ) const
+int Server::getUploadId( int iSocketIndex, int iIndex ) const
 { return mUploads[ iSocketIndex ][ iIndex ].getId(); }
 
 //------------------------------------------------------------------------------
-double ServerBase::getUploadStatus( int iIndex, int iId ) const
+double Server::getUploadStatus( int iIndex, int iId ) const
 {
 	double r = 0.0;
   int i = findUpload( iIndex, iId );
@@ -198,7 +198,7 @@ double ServerBase::getUploadStatus( int iIndex, int iId ) const
   return r;
 }
 //------------------------------------------------------------------------------
-void ServerBase::handleNewConnection()
+void Server::handleNewConnection()
 {
   if(mpTcpServer->hasPendingConnections())
   {
@@ -219,7 +219,7 @@ void ServerBase::handleNewConnection()
   }
 }
 //------------------------------------------------------------------------------
-void ServerBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
+void Server::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
 {
 	int i = findSocketFromSender( sender() );
   if( i != -1 )
@@ -250,7 +250,7 @@ void ServerBase::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
   }
 }
 //------------------------------------------------------------------------------
-void ServerBase::handleSocketDisconnected()
+void Server::handleSocketDisconnected()
 {
 	/*Quand le serveur n'est pas en train d'écouter, on ne
     veut pas nettoyer la liste de socket parce qu'il est sans aucun doute
@@ -272,7 +272,7 @@ void ServerBase::handleSocketDisconnected()
   }
 }
 //------------------------------------------------------------------------------
-void ServerBase::handleSocketError(QAbstractSocket::SocketError iError)
+void Server::handleSocketError(QAbstractSocket::SocketError iError)
 {
   int socketId = findSocketFromSender( sender() );
   addError( "Error on socket " +  QString::number( socketId ) + ": " +
@@ -281,7 +281,7 @@ void ServerBase::handleSocketError(QAbstractSocket::SocketError iError)
 }
 
 //------------------------------------------------------------------------------
-void ServerBase::handleSocketReadyRead()
+void Server::handleSocketReadyRead()
 {
 	int socketIndex = findSocketFromSender( sender() );
   if( socketIndex != -1 )
@@ -327,7 +327,7 @@ void ServerBase::handleSocketReadyRead()
 }
 
 //------------------------------------------------------------------------------
-void ServerBase::handleSocketStateChanged(QAbstractSocket::SocketState iState)
+void Server::handleSocketStateChanged(QAbstractSocket::SocketState iState)
 {
 	int i = findSocketFromSender( sender() );
   if( i != -1 )
@@ -337,7 +337,7 @@ void ServerBase::handleSocketStateChanged(QAbstractSocket::SocketState iState)
 }
 
 //------------------------------------------------------------------------------
-bool ServerBase::hasDownloads( int iSocketIndex ) const
+bool Server::hasDownloads( int iSocketIndex ) const
 {
 	map< int, vector< Transfer > >::const_iterator it =
   	mDownloads.find( iSocketIndex );
@@ -345,11 +345,11 @@ bool ServerBase::hasDownloads( int iSocketIndex ) const
 }
 
 //------------------------------------------------------------------------------
-bool ServerBase::hasError() const
+bool Server::hasError() const
 {	return !mErrors.isEmpty(); }
 
 //------------------------------------------------------------------------------
-bool ServerBase::hasUploads( int iSocketIndex ) const
+bool Server::hasUploads( int iSocketIndex ) const
 {
 	map< int, vector< Transfer > >::const_iterator it =
   	mUploads.find( iSocketIndex );
@@ -357,7 +357,7 @@ bool ServerBase::hasUploads( int iSocketIndex ) const
 }
 
 //------------------------------------------------------------------------------
-void ServerBase::send( int iSocketIndex, const QByteArray& iA )
+void Server::send( int iSocketIndex, const QByteArray& iA )
 {
 	QTcpSocket* s = getSocket( iSocketIndex );
 	if( s && s->isValid() )
@@ -372,11 +372,11 @@ void ServerBase::send( int iSocketIndex, const QByteArray& iA )
 }
 
 //------------------------------------------------------------------------------
-void ServerBase::setMaximumUploadPayloadSize( int iSize )
+void Server::setMaximumUploadPayloadSize( int iSize )
 { mMaximumUploadPayloadSize = iSize; }
 
 //------------------------------------------------------------------------------
-void ServerBase::socketStateChanged( int iSocket,
+void Server::socketStateChanged( int iSocket,
 	QAbstractSocket::SocketState iState )
 {
 	switch ( iState ) 
@@ -393,7 +393,7 @@ void ServerBase::socketStateChanged( int iSocket,
 }
 
 //------------------------------------------------------------------------------
-bool ServerBase::startServer()
+bool Server::startServer()
 {
 	//early out. si le server écoute déja sur le port demandé
   if(mpTcpServer->isListening() && getLocalPort() == mpTcpServer->serverPort())
@@ -415,14 +415,14 @@ bool ServerBase::startServer()
 }
 
 //------------------------------------------------------------------------------
-bool ServerBase::startServer(quint16 iPort)
+bool Server::startServer(quint16 iPort)
 {
   setLocalPort(iPort);
   return startServer();
 }
 
 //------------------------------------------------------------------------------
-void ServerBase::stopServer()
+void Server::stopServer()
 {
   if(mpTcpServer->isListening())
   	mpTcpServer->close();

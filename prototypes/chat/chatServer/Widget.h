@@ -8,7 +8,7 @@
 #include <QWidget>
 #include <QtGui>
 #include <vector>
-#include "network/ServerBase.h"
+#include "network/Server.h"
 
 namespace realisim 
 {
@@ -41,7 +41,7 @@ protected:
   QTextEdit* mpLog;
   QLabel* mpNumberOfPeers;
 
-  reusables::network::ServerBase mServer;
+  reusables::network::Server mServer;
   std::vector< chatPeer > mChatPeers;
   
 private:
