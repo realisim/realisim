@@ -121,27 +121,27 @@ void printAsHex( const QByteArray& iA )
 //------------------------------------------------------------------------------
 /* Quand readPacket retourne un QByteArray vide, c'est qu'il y a eu un probleme
    de communication et waitForReadyRead( 1000 ) a fait un timeOut...*/
-QByteArray readPacket( QTcpSocket* iS, int* iId )
+QByteArray readPacket( QByteArray& iBa, int* iId )
 {
 	QByteArray r;
   qint32 id;
-  if( iS->bytesAvailable() > (int) sizeof( quint32 ) )
+  if( iBa.size() > (int) sizeof( quint32 ) )
   {
   	bool read = false;
     quint32 packetSize;
-    QDataStream in(iS);
+    QDataStream in( &iBa, QIODevice::ReadOnly | QIODevice::WriteOnly );
     in.setVersion(QDataStream::Qt_4_7);
     in >> packetSize;
-    while( !read )
-    {
-    	if( iS->bytesAvailable() < packetSize && !iS->waitForReadyRead( 1000 ) )
-      	read = true;
-      else
-      { 
-      	in >> id;
-        in >> r;
-        read = true;
-      }
+    if( (int)iBa.size() >= packetSize + sizeof( id ) )
+    { 
+      in >> id;
+      in >> r;
+      read = true;
+			//couper iBa de la bonne taille. voir 
+      //http://doc.qt.digia.com/4.7/datastreamformat.html
+      iBa.remove( 0, sizeof( packetSize ) +
+      	sizeof( id ) + 
+        sizeof( quint32 ) + r.size() );
     }
   }
   if( iId ) *iId = id;

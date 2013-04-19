@@ -43,7 +43,7 @@ namespace network
   QByteArray makePacket( const QByteArray&, int );
   QByteArray makeUploadHeader( const Transfer& );
 void printAsHex( const QByteArray& );
-  QByteArray readPacket( QTcpSocket*, int* );
+  QByteArray readPacket( QByteArray&, int* );
   Transfer readUploadHeader( const QByteArray& );
   
 }//network
