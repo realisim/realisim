@@ -18,7 +18,8 @@ Client::Client(QObject* ipParent /*=0*/) : QObject(ipParent),
   mTcpHostPort(0),
   mTcpHostAddress("127.0.0.1"), //localhost
   mpTcpSocket(new QTcpSocket(ipParent)),
-  mMaximumUploadPayloadSize( 64 * 1024 )
+  mMaximumUploadPayloadSize( 64 * 1024 ),
+  mReadBuffer()
 {
   connect(mpTcpSocket, SIGNAL( connected() ),
     this, SLOT( handleSocketConnected() ) );
@@ -173,6 +174,37 @@ double Client::getUploadStatus( int iId ) const
 }
 
 //------------------------------------------------------------------------------
+void Client::handleReadBuffer()
+{
+	int downloadId;
+  
+  QByteArray p = readPacket( mReadBuffer, &downloadId );
+  while( !p.isEmpty() )
+  {
+    int downloadIndex = findDownload( downloadId );
+    if( downloadIndex == -1 )
+    {
+      Transfer t = readUploadHeader( p );
+      if( t.mIsValid )
+      {
+        mDownloads.push_back( t );
+        emit downloadStarted( downloadId );
+      }
+    }
+    else
+    {
+      mDownloads[ downloadIndex ].mPayload += p;
+      emit gotPacket( downloadId );
+    }
+    
+    if( getDownloadStatus( downloadId ) >= 1.0 )
+      emit downloadEnded( downloadId );
+      
+    p = readPacket( mReadBuffer, &downloadId );
+  }
+}
+
+//------------------------------------------------------------------------------
 void Client::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
 {
 	if( hasUploads() )
@@ -183,9 +215,9 @@ void Client::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
     {
       /*Au lieu de .left() et .remove, un compteur de position et la fonction
         .mid() serait plus approprié.*/
-      QByteArray ba = t.mPayload.mid( t.mCursor, getMaximumUploadPayloadSize() );
-      t.mCursor += getMaximumUploadPayloadSize();
+      QByteArray ba = t.mPayload.mid( t.mCursor, getMaximumUploadPayloadSize() );      
       mpTcpSocket->write( makePacket( ba, t.getId() ) );
+      t.mCursor += getMaximumUploadPayloadSize();
       emit sentPacket( t.getId() );
     }
     
@@ -218,39 +250,8 @@ void Client::handleSocketError(QAbstractSocket::SocketError iError)
 //------------------------------------------------------------------------------
 void Client::handleSocketReadyRead()
 {
-	int downloadId;
-  while( mpTcpSocket->bytesAvailable() )
-  {
-  	QByteArray p = readPacket( mpTcpSocket, &downloadId );
-    int downloadIndex = findDownload( downloadId );
-    if( downloadIndex == -1 )
-    {
-      Transfer t = readUploadHeader( p );
-      if( t.mIsValid )
-      {
-        mDownloads.push_back( t );
-        emit downloadStarted( downloadId );
-      }    	
-    }
-    else
-    {      
-      if( !p.isEmpty() )
-      {
-        mDownloads[ downloadIndex ].mPayload += p;
-        emit gotPacket( downloadId );
-      }
-      else
-      {
-      	mpTcpSocket->readAll(); //on jete dans le bitBucket!
-        mDownloads.erase( mDownloads.begin() + downloadIndex );
-        addError( "A problem occured while reading packet... and the whole"
-         " download was dropped..." );
-      }
-    }
-    
-    if( getDownloadStatus( downloadId ) >= 1.0 )
-      emit downloadEnded( downloadId );
-  }
+	mReadBuffer += mpTcpSocket->readAll();
+	handleReadBuffer();
 }
 
 //------------------------------------------------------------------------------

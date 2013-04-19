@@ -17,6 +17,7 @@ mErrors(),
 mPort(12345),
 mpTcpServer(new QTcpServer(ipParent)),
 mSockets(),
+mReadBuffers(),
 mMaximumUploadPayloadSize( 64 * 1024 ),
 mUploadIndices()
 {
@@ -35,6 +36,7 @@ Server::~Server()
     delete getSocket(i);
   }
   mSockets.clear();
+  mReadBuffers.clear();
   mUploadIndices.clear();
   
   stopServer();
@@ -214,8 +216,39 @@ void Server::handleNewConnection()
     connect( s, SIGNAL( bytesWritten( qint64 ) ),
       this, SLOT( handleSocketBytesWritten( qint64 ) ) );
     mSockets.push_back(s);
+    mReadBuffers.push_back( QByteArray() );
     mUploadIndices.push_back( 0 );
     emit socketConnected( getNumberOfSockets() - 1 );
+  }
+}
+//------------------------------------------------------------------------------
+void Server::handleReadBuffer( int iSocketIndex )
+{
+  int downloadId;
+  QByteArray p = readPacket( mReadBuffers[ iSocketIndex ], &downloadId ) ;
+  while( !p.isEmpty() )
+  {
+    vector< Transfer >& vt = mDownloads[ iSocketIndex ];
+    int downloadIndex = findDownload( iSocketIndex, downloadId );
+    if( downloadIndex == -1 )
+    {
+      Transfer t = readUploadHeader( p );
+      if( t.mIsValid )
+      {
+        vt.push_back( t );
+        emit downloadStarted( iSocketIndex, downloadId );
+      }  
+    }
+    else
+    {
+      vt[downloadIndex].mPayload += p;
+      emit gotPacket( iSocketIndex, downloadId );
+    }
+    
+    if( getDownloadStatus( iSocketIndex, downloadId ) >= 1.0 )
+      emit downloadEnded( iSocketIndex, downloadId );
+      
+    p = readPacket(mReadBuffers[ iSocketIndex ], &downloadId);
   }
 }
 //------------------------------------------------------------------------------
@@ -264,6 +297,7 @@ void Server::handleSocketDisconnected()
       mUploads.erase( i ); //efface tout les uploads
       getSocket( i )->deleteLater();
       mSockets.erase( mSockets.begin() + i );
+      mReadBuffers.erase( mReadBuffers.begin() + i );
       mUploadIndices.erase( mUploadIndices.begin() + i );
       emit socketDisconnected( i );
     }
@@ -283,46 +317,13 @@ void Server::handleSocketError(QAbstractSocket::SocketError iError)
 //------------------------------------------------------------------------------
 void Server::handleSocketReadyRead()
 {
-	int socketIndex = findSocketFromSender( sender() );
-  if( socketIndex != -1 )
-  {
-  	QTcpSocket* s = getSocket( socketIndex );
-    while( s->bytesAvailable() )
-    {
-    	int downloadId;
-    	vector< Transfer >& vt = mDownloads[ socketIndex ];
-    	QByteArray p = readPacket( s, &downloadId );
-      int downloadIndex = findDownload( socketIndex, downloadId );
-      if( downloadIndex == -1 )
-      {
-        Transfer t = readUploadHeader( p );
-        if( t.mIsValid )
-        {
-          vt.push_back( t );
-          emit downloadStarted( socketIndex, downloadId );
-        }  
-      }
-      else
-      {
-        if( !p.isEmpty() )
-        {
-        	vt[downloadIndex].mPayload += p;
-          emit gotPacket( socketIndex, downloadId );
-        }
-        else
-        {
-        	s->readAll(); //on jete dans le bitBucket!
-        	vt.erase( vt.begin() + downloadIndex );
-        	addError( "A problem occured while reading packet... and the whole"
-           " download was dropped..." );
-        }
-      }
-      
-      if( getDownloadStatus( socketIndex, downloadId ) >= 1.0 )
-	    	emit downloadEnded( socketIndex, downloadId );
-    }
+  int i = findSocketFromSender( sender() );
+  if( i != -1 )
+  { 
+  	mReadBuffers[ i ] += getSocket(i)->readAll();
+    handleReadBuffer( i );
   }
-  else 
+	else 
   { addError( "handleSocketReadyRead is called for unknown peer..." ); }
 }
 
@@ -434,5 +435,6 @@ void Server::stopServer()
     delete getSocket(i);
   }
   mSockets.clear();
+  mReadBuffers.clear();
   mUploadIndices.clear();
 }

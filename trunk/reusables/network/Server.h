@@ -83,12 +83,14 @@ protected:
   virtual int findSocketFromSender( QObject* );
   virtual int findDownload( int, int ) const;
   virtual int findUpload( int, int ) const;
+  virtual void handleReadBuffer( int );
   virtual void socketStateChanged( int, QAbstractSocket::SocketState );
 
   mutable QString mErrors;
   quint16 mPort;
   QTcpServer* mpTcpServer;
   std::vector< QTcpSocket* > mSockets;
+  std::vector< QByteArray > mReadBuffers;
   mutable std::map< int, std::vector< Transfer > > mDownloads;
   mutable std::map< int, std::vector< Transfer > > mUploads;
   int mMaximumUploadPayloadSize;

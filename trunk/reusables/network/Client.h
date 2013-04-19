@@ -76,12 +76,14 @@ protected:
 	virtual void addError( const QString& ) const;
   virtual int findDownload( int ) const;
   virtual int findUpload( int ) const;
+  virtual void handleReadBuffer();
 
   mutable QString mErrors;
   quint16 mTcpHostPort;
   QHostAddress mTcpHostAddress;
   QTcpSocket* mpTcpSocket; //jamais null
   int mMaximumUploadPayloadSize;
+  QByteArray mReadBuffer;
   std::vector< Transfer > mUploads;
   mutable std::vector< Transfer > mDownloads;
   static int mUploadId;
