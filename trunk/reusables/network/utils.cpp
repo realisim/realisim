@@ -132,7 +132,7 @@ QByteArray readPacket( QByteArray& iBa, int* iId )
     QDataStream in( &iBa, QIODevice::ReadOnly | QIODevice::WriteOnly );
     in.setVersion(QDataStream::Qt_4_7);
     in >> packetSize;
-    if( (int)iBa.size() >= packetSize + sizeof( id ) )
+    if( (unsigned int)iBa.size() >= packetSize + sizeof( id ) )
     { 
       in >> id;
       in >> r;
