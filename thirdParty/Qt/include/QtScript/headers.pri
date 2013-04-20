@@ -1,2 +1,0 @@
-SYNCQT.HEADER_FILES = qscriptengine.h qscriptextensionplugin.h qscriptextensioninterface.h qscriptcontext.h qscriptable.h qscriptvalue.h qscriptvalueiterator.h ../../include/QtScript/QtScript 
-SYNCQT.HEADER_CLASSES = ../../include/QtScript/QScriptEngine ../../include/QtScript/QScriptExtensionPlugin ../../include/QtScript/QScriptExtensionInterface ../../include/QtScript/QScriptContext ../../include/QtScript/QScriptable ../../include/QtScript/QScriptValueList ../../include/QtScript/QScriptValue ../../include/QtScript/QScriptValueIterator 

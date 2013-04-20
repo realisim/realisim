@@ -1,8 +1,0 @@
-#include <QtCore/QtCore>
-#include "qscriptengine.h"
-#include "qscriptextensionplugin.h"
-#include "qscriptextensioninterface.h"
-#include "qscriptcontext.h"
-#include "qscriptable.h"
-#include "qscriptvalue.h"
-#include "qscriptvalueiterator.h"
