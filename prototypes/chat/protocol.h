@@ -5,8 +5,11 @@
 #include <map>
 class QByteArray;
 class QFile;
-#include <QString>;
+#include <QString>
 #include <vector>
+#ifdef _WIN32
+  #include <time.h>
+#endif
 
 namespace realisim 
 { 

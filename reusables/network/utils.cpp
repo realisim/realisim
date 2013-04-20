@@ -124,7 +124,7 @@ void printAsHex( const QByteArray& iA )
 QByteArray readPacket( QByteArray& iBa, int* iId )
 {
 	QByteArray r;
-  qint32 id;
+  qint32 id = -1;
   if( iBa.size() > (int) sizeof( quint32 ) )
   {
   	bool read = false;
