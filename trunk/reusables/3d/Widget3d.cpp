@@ -297,7 +297,6 @@ void Widget3d::pushShader(const Shader& iS /*=Shader()*/)
   if(iS.isValid())
     programId = iS.getProgramId();
   glUseProgram(programId);
-  
 }
 
 //-----------------------------------------------------------------------------
@@ -498,7 +497,7 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
       
     if( Vector3d(p, c.getLook()).norm() >= 1.0 )
     {
-      c.setPos(p);
+      c.set( p, c.getLook(), c.getUp() );
       setCamera(c, false);
 //      printf("\n\nLook: %3.2f, %3.2f, %3.2f", c.getLook().getX(), c.getLook().getY(), c.getLook().getZ());
 //      printf("\nPos: %3.2f, %3.2f, %3.2f", p.getX(), p.getY(), p.getZ());

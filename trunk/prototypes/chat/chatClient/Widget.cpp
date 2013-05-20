@@ -166,7 +166,7 @@ void Widget::initUi()
   //---client side
   QHBoxLayout* pHostServerInfo = new QHBoxLayout(this);
   {
-    mpAddress = new QLineEdit("127.0.0.1",this);
+    mpAddress = new QLineEdit("realisim.dyndns.org",this);
     mpPort = new QLineEdit("12345",this);
     
     pHostServerInfo->addWidget(mpAddress);

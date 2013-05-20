@@ -14,10 +14,10 @@
 class QKeyEvent;
 class QLineEdit;
 class QTimerEvent;
-#include "3d/Shader.h"
+#include "3d/Text.h"
 #include "3d/Texture.h"
 #include "3d/Widget3d.h"
-#include "math/PlatonicSolid.h"
+#include <QtGui>
 
 
 class Viewer : public realisim::treeD::Widget3d
@@ -26,19 +26,18 @@ public:
   Viewer(QWidget*);
   ~Viewer();
 
+	void changeTextureMinificationInterpolation();
+  void changeTextureMagnificationInterpolation();
+  GLenum getTexMinInterpolation() const { return mTex.getMinificationFilter(); }
+  GLenum getTexMagInterpolation() const { return mTex.getMagnificationFilter(); }
+  virtual void generateMipmap();
+  
 private:
   virtual void initializeGL();
-  //void drawPlatonicSolid(const realisim::math::PlatonicSolid&);
   virtual void paintGL();
-  virtual void timerEvent(QTimerEvent*);
   
-  realisim::math::PlatonicSolid mPs;
-  realisim::treeD::Shader mShader;
-  realisim::treeD::Shader mShader2;
-  realisim::treeD::Shader mNoiseShader;
-  realisim::treeD::Shader mSunShader;
-  realisim::treeD::Shader mRayCastShader;
-  realisim::treeD::Texture m3dNoiseTexture;
+  realisim::treeD::Texture mTex;
+  realisim::treeD::Text mText;
 };
 
 
@@ -50,10 +49,16 @@ public:
 	~MainDialog(){};
   
 public slots:
-
-                
+	void generateMipmap();
+	void minInterpolationClicked();
+  void magInterpolationClicked();
+            
 protected:
+	virtual void updateUi();
+  
   Viewer* mpViewer;
+  QPushButton* mpMinInterpolation;
+  QPushButton* mpMagInterpolation;
 };
 
 #endif

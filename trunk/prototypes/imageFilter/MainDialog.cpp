@@ -167,8 +167,11 @@ void Viewer::initializeGL()
   if(f.open(QIODevice::ReadOnly))
   {
     QByteArray a = f.readAll();
-    mCtTexture.set(a.data(), Vector3i(73, 512, 512), GL_LUMINANCE,
-      GL_UNSIGNED_SHORT, GL_LINEAR);
+    vector<int> s; s.resize(3);
+    s[0] = 73; s[1] = 512; s[2] = 512;
+    mCtTexture.set(a.data(), s, GL_LUMINANCE,
+      GL_UNSIGNED_SHORT );
+    mCtTexture.setMinificationFilter( GL_LINEAR );
     f.close();
   }
   
@@ -179,8 +182,11 @@ void Viewer::initializeGL()
   if(f.open(QIODevice::ReadOnly))
   {
     QByteArray a = f.readAll();
-    mUltraSoundTexture.set(a.data(), Vector3i(277, 219, 247), GL_LUMINANCE,
-      GL_UNSIGNED_BYTE, GL_LINEAR);
+    	vector<int> s; s.resize(3);
+    s[0] = 277; s[1] = 219; s[2] = 247;
+    mUltraSoundTexture.set(a.data(), s, GL_LUMINANCE,
+      GL_UNSIGNED_BYTE );
+    mUltraSoundTexture.setMinificationFilter( GL_LINEAR );
     f.close();
   }
   
@@ -509,8 +515,10 @@ MainDialog::MainDialog() : QMainWindow(),
   
   //ajout du visualiseur
   mpViewer = new Viewer(pMainFrame);
-  //mpViewer->setCameraMode(Camera::ORTHOGONAL);
   mpViewer->setCameraOrientation(Camera::XY);
+  Camera c = mpViewer->getCamera();
+  c.setProjection( 200, 0.5, 2000 );
+  mpViewer->setCamera( c, false );
   //mpViewer->setCameraOrientation(Camera::FREE);
   pLyt->addWidget(mpViewer, 1);
   
@@ -577,13 +585,6 @@ MainDialog::MainDialog() : QMainWindow(),
   pWindowingLyt->addWidget(pWindowingMin);
   pWindowingLyt->addWidget(pWindowingMax);
   pLyt->addWidget(pWindowingBox);
-  
-  //déplace la camera
-  Camera c = mpViewer->getCamera();
-  Matrix4d m;
-  m.setTranslation(Point3d(0.5, 0.5, 0.5));
-  c.setTransformationToGlobal(m);
-  mpViewer->setCamera(c, false);
 }
 
 //-----------------------------------------------------------------------------

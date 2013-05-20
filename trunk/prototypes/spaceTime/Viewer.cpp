@@ -560,12 +560,12 @@ void Viewer::initializeDisplayLists()
   
 	mSphere = glGenLists(1);	
   glNewList(mSphere, GL_COMPILE);
-	utilities::draw(PlatonicSolid(PlatonicSolid::tIsocahedron, 2), true);
+	utilities::draw(PlatonicSolid(PlatonicSolid::tIsocahedron) );
   glEndList();
   
   mCube = glGenLists(1);	
   glNewList(mCube, GL_COMPILE);
-	utilities::draw(PlatonicSolid(PlatonicSolid::tCube, 1));
+	utilities::draw(PlatonicSolid(PlatonicSolid::tCube));
   glEndList();
 }
 

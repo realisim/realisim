@@ -57,7 +57,7 @@ namespace
 }
 
 Viewer::Viewer(QWidget* ipParent /*=0*/) : Widget3d(ipParent),
- mPs(PlatonicSolid::tIsocahedron, 3),
+ mPs(PlatonicSolid::tIsocahedron),
  mFbo(),
  mBlurShader(),
  mOnlyOneTextureShader(),
@@ -77,42 +77,42 @@ Viewer::~Viewer()
 {}
 
 //-----------------------------------------------------------------------------
-void Viewer::drawPlatonicSolid(const PlatonicSolid& iPs)
-{
-  PlatonicSolid::Face f;
-  for(unsigned int i = 0; i < iPs.getFaces().size(); ++i)
-  {
-    f = iPs.getFaces()[i];
-//    Vector3d n = Vector3d(iPs.getVertex()[f.index1], iPs.getVertex()[f.index2]) ^
-//      Vector3d(iPs.getVertex()[f.index1], iPs.getVertex()[f.index3]);
-//    n.normalise();
-    Vector3d n1(Point3d(0.0), iPs.getVertex()[f.index1]);
-    n1.normalise();
-
-    Vector3d n2(Point3d(0.0), iPs.getVertex()[f.index2]);
-    n2.normalise();
-
-    Vector3d n3(Point3d(0.0), iPs.getVertex()[f.index3]);
-    n3.normalise();
-  	glBegin(GL_TRIANGLES);
-      //glNormal3d(n.getX(), n.getY(), n.getZ());
-      glNormal3d(n1.getX(), n1.getY(), n1.getZ());
-      glVertex3d(iPs.getVertex()[f.index1].getX(),
-        iPs.getVertex()[f.index1].getY(),
-        iPs.getVertex()[f.index1].getZ());
-      
-      glNormal3d(n2.getX(), n2.getY(), n2.getZ());  
-      glVertex3d(iPs.getVertex()[f.index2].getX(),
-        iPs.getVertex()[f.index2].getY(),
-        iPs.getVertex()[f.index2].getZ());
-        
-			glNormal3d(n3.getX(), n3.getY(), n3.getZ());
-      glVertex3d(iPs.getVertex()[f.index3].getX(),
-        iPs.getVertex()[f.index3].getY(),
-        iPs.getVertex()[f.index3].getZ());
-    glEnd();
-  }
-}
+//void Viewer::drawPlatonicSolid(const PlatonicSolid& iPs)
+//{
+//  PlatonicSolid::Face f;
+//  for(unsigned int i = 0; i < iPs.getFaces().size(); ++i)
+//  {
+//    f = iPs.getFaces()[i];
+////    Vector3d n = Vector3d(iPs.getVertex()[f.index1], iPs.getVertex()[f.index2]) ^
+////      Vector3d(iPs.getVertex()[f.index1], iPs.getVertex()[f.index3]);
+////    n.normalise();
+//    Vector3d n1(Point3d(0.0), iPs.getVertex()[f.index1]);
+//    n1.normalise();
+//
+//    Vector3d n2(Point3d(0.0), iPs.getVertex()[f.index2]);
+//    n2.normalise();
+//
+//    Vector3d n3(Point3d(0.0), iPs.getVertex()[f.index3]);
+//    n3.normalise();
+//  	glBegin(GL_TRIANGLES);
+//      //glNormal3d(n.getX(), n.getY(), n.getZ());
+//      glNormal3d(n1.getX(), n1.getY(), n1.getZ());
+//      glVertex3d(iPs.getVertex()[f.index1].getX(),
+//        iPs.getVertex()[f.index1].getY(),
+//        iPs.getVertex()[f.index1].getZ());
+//      
+//      glNormal3d(n2.getX(), n2.getY(), n2.getZ());  
+//      glVertex3d(iPs.getVertex()[f.index2].getX(),
+//        iPs.getVertex()[f.index2].getY(),
+//        iPs.getVertex()[f.index2].getZ());
+//        
+//			glNormal3d(n3.getX(), n3.getY(), n3.getZ());
+//      glVertex3d(iPs.getVertex()[f.index3].getX(),
+//        iPs.getVertex()[f.index3].getY(),
+//        iPs.getVertex()[f.index3].getZ());
+//    glEnd();
+//  }
+//}
 
 //------------------------------------------------------------------------------
 void Viewer::drawScene()
@@ -558,7 +558,7 @@ MainDialog::MainDialog() : QMainWindow(),
   setCentralWidget(mpViewer);
   
   Camera c = mpViewer->getCamera();
-  c.setPos(Point3d(10.0, 10.0, 10.0));
+  //c.setPos(Point3d(10.0, 10.0, 10.0));
   Matrix4d m;
   m.setTranslation(Point3d(0.5, 0.5, 0.5));
   c.setTransformationToGlobal(m);

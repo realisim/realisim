@@ -18,12 +18,12 @@ mTransformation: transformation appliqué au systeme d'axe de la caméra.
   mLat: vecteur latéral normalisé
   mLook:  point visé.
   mUp: vecteur up normalisé.
-  mProjectionLeft;
-  mProjectionRight;
-  mProjectionBottom;
-  mProjectionTop;
-  mProjectionNear;
-  mProjectionFar;
+  mLeft;
+  mRight;
+  mBottom;
+  mTop;
+  mNear;
+  mFar;
   mZoomFactor: Facteur multiplicateur sur mVisibleGLUnit.
   mProportional:
   mPixelPerGLUnit: le rapport entre les pixel d'écran et les unité GL.
@@ -83,11 +83,9 @@ public:
   Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
   void set( const Point3d&, const Point3d&, const Vector3d& );
   void set( const Point3d&, const Point3d&, const Vector3d&, const Vector3d& );
-  void setPos(const Point3d&);
   void setProjection(double, double, double);
   void setProjection(double, double, double, double, bool = true);
   void setProjection(double, double, double, double, double, double, Mode, bool = true);
-  void setLook(const Point3d&);
   void setOrientation( Orientation );
   void setTransformationToLocal(const Matrix4d&);
   void setTransformationToGlobal(const Matrix4d&);
@@ -104,12 +102,12 @@ protected:
     double getHeight() const;
     double getWidth() const;    
     
-  	double mProjectionLeft;
-    double mProjectionRight;
-    double mProjectionBottom;
-    double mProjectionTop;
-    double mProjectionNear;
-    double mProjectionFar;
+  	double mLeft;
+    double mRight;
+    double mBottom;
+    double mTop;
+    double mNear;
+    double mFar;
     double mZoomFactor;
     bool mProportionalToWindow;
   };

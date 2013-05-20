@@ -10,12 +10,14 @@
 #include "Matrix4x4.h"
 #include "Point.h"
 #include "Vect.h"
+#include <vector>
 #include "Quaternion.h"
 
 namespace realisim
 {
 namespace math
 {
+	using namespace std;
 	//---------------------------------------------------------------------------
   template< class T >
   Vect<T> absolute( const Vect<T>& iP )
@@ -356,6 +358,82 @@ namespace math
     }
     return 1 - result; 
   }
+  
+  //----------------------------------------------------------------------------
+  /* applique l'équation d'une distribution normale.
+  voir 
+  https://en.wikipedia.org/wiki/Normal_distribution#Standard_normal_distribution
+  */
+  template< typename T >
+  T normalDistribution( double x, double s, double u = 0.0 )
+  {
+    double e = 2.718281828459045235360287471352662497757247093;
+    double sigmaSquare = s*s;
+    T r = ( 1.0 / sqrt( 2.0 * 3.1415629f * sigmaSquare) ) * 
+      pow(e, -( (x * x - u * u) / (2.0 * sigmaSquare) ) );
+    return r;
+  }
+
+  //----------------------------------------------------------------------------
+  template< typename T >
+  vector<T> gaussianKernel1D( int iKernelSize, double s )
+  {
+    vector<T> r; r.resize( iKernelSize );
+    int i, j = 0;
+    for(i = -iKernelSize / 2; i <= iKernelSize / 2; ++i)
+    {
+      r[j] = normalDistribution<T>( i, s);
+      ++j;
+    }
+    return r;
+  }
+  //----------------------------------------------------------------------------
+  /*retourne un filtre gaussien 2d avec l'arrangement mémoire suivant (pour
+    un kernel size de 3):
+    a00, a01, a02,
+    a10, a11, a12,
+    a20, a21, a22
+    */
+  template< typename T >
+  vector< T > gaussianKernel2D( int iKernelSize, double s )
+  {
+  	iKernelSize = iKernelSize % 2 == 0 ? iKernelSize - 1 : iKernelSize;
+    vector< T > r; r.resize( iKernelSize * iKernelSize );
+        
+    int i = 0, j = 0, ki, kj;
+    for( j = 0, kj = -iKernelSize / 2; kj <= iKernelSize / 2; kj++, j++ )
+    {
+      for( i = 0, ki = -iKernelSize / 2; ki <= iKernelSize / 2; ki++, i++ )
+      {
+        r[ j * iKernelSize + i ] = normalDistribution<T>( ki, s ) * normalDistribution<T>( kj, s );
+        printf("%f ", r[ j * iKernelSize + i ]);
+      }
+    printf("\n");
+    }
+    return r;
+  }
+  //----------------------------------------------------------------------------
+  /*retourne un filtre moyen 2d voir gaussianKernel2D
+    */
+  template< typename T >
+  vector< T > meanKernel2D( int iKernelSize )
+  {
+    vector< T > r; r.resize( iKernelSize * iKernelSize );
+        
+    int i, j;
+    for( j = 0; j < iKernelSize; j++ )
+    {
+      for( i = 0; i < iKernelSize ; i++ )
+      {
+        r[ j * iKernelSize + i ] = 1.0 / (iKernelSize * iKernelSize);
+        printf("%f ", r[ j * iKernelSize + i ]);
+      }
+    printf("\n");
+    }
+    return r;
+  }
+
+
     
 } //math
 } // fin du namespace realisim

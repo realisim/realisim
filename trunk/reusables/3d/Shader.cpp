@@ -12,6 +12,7 @@ Shader::Guts::Guts() : mRefCount(1),
   mVertexIds(),
   mFragmentSources(),
   mVertexSources(),
+  mPreviousShaders(),
   mIsValid(false)
 {}
 
@@ -105,6 +106,15 @@ void Shader::addVertexShaderSource(QString iSource)
 }
 
 //----------------------------------------------------------------------------
+void Shader::begin()
+{
+  GLint p = 0;
+  glGetIntegerv(GL_CURRENT_PROGRAM, &p);
+  mpGuts->mPreviousShaders.push_back( p );
+  if( isValid() ) glUseProgram( getProgramId() );
+}
+
+//----------------------------------------------------------------------------
 /*Cette méthode sert a copier le shader et d'y allouer de nouvelle ressources
   opengl (fragment shader, vertex shader et program). On ne peut pas utilisé
   le partage implicite sur cette classe et créer une nouvelle instance de Shader
@@ -123,6 +133,18 @@ Shader Shader::copy()
   s.link();
   
   return s;
+}
+
+//----------------------------------------------------------------------------
+void Shader::end()
+{
+	GLuint p = 0;
+  if( mpGuts->mPreviousShaders.size() > 0 )
+  {
+  	p = mpGuts->mPreviousShaders.back();
+    mpGuts->mPreviousShaders.pop_back();
+  }
+  glUseProgram( p );
 }
 
 //----------------------------------------------------------------------------
@@ -280,6 +302,22 @@ bool Shader::setUniform(const char* iName, int iSize, const float* iData)
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform1fv(loc, iSize, iData);
+  return loc >= 0 ? true : false;
+}
+
+//----------------------------------------------------------------------------
+/*Permet de passer un tableau de double au shader*/
+bool Shader::setUniform(const char* iName, int iSize, const double* iData)
+{
+  if(!isValid())
+    return false;
+  
+  float d[iSize];
+  for(int i = 0; i < iSize; ++i)
+  { d[i] = (float)iData[i]; }
+  
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniform1fv(loc, iSize, d);
   return loc >= 0 ? true : false;
 }
 
