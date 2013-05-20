@@ -17,6 +17,7 @@ FrameBufferObject::Guts::Guts(int iW/*= 0*/, int iH /*= 0*/) : mFrameBufferId(0)
   mTextures(),
   mDepthTexture(),
   mMaxColorAttachment(0),
+  mPreviousFrameBuffers(),
   mRefCount(1)
 {}
 
@@ -41,6 +42,8 @@ FrameBufferObject& FrameBufferObject::operator=(const FrameBufferObject& iT)
 }
 
 //----------------------------------------------------------------------------
+// vide le fbo de tous ces colorAttachment, depthAttachment et
+// stencilAttachement.
 void FrameBufferObject::clear()
 {
   /*On efface tous les render buffer, mais pas les textures puisqu'elles
@@ -71,6 +74,7 @@ void FrameBufferObject::clear()
 FrameBufferObject FrameBufferObject::copy()
 {
 	FrameBufferObject fbo;
+  fbo.resize( getWidth(), getHeight() );
   for(int i = 0; i < getNumColorAttachment(); ++i)
     fbo.addColorAttachment(mpGuts->mColorAttachments[i].second);
     
@@ -80,6 +84,7 @@ FrameBufferObject FrameBufferObject::copy()
   if(isStencilAttachmentUsed())
     fbo.addStencilAttachment();
     
+  fbo.mpGuts->mPreviousFrameBuffers = mpGuts->mPreviousFrameBuffers;
   return fbo;
 }
 
@@ -134,7 +139,10 @@ void FrameBufferObject::addColorAttachment(bool iUseTexture)
 	}
 	else
 	{
-		Texture t(QImage(getWidth(), getHeight(), QImage::Format_ARGB32));
+		Texture t;
+    vector<int> s(2,0); s[0] = getWidth(); s[1] = getHeight();
+    t.set( 0, s, GL_RGBA, GL_UNSIGNED_BYTE );
+    t.setWrapMode( GL_CLAMP );
     mpGuts->mTextures[index] = t;
     mpGuts->mColorAttachments.push_back( make_pair(t.getTextureId(), true));
 	  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getTextureId(), 0);
@@ -172,8 +180,11 @@ void FrameBufferObject::addDepthAttachment(bool iUseTexture)
   }
   else 
   {
-    mpGuts->mDepthTexture = Texture(QImage(getWidth(), getHeight(), QImage::Format_ARGB32),
-      GL_DEPTH_COMPONENT, GL_FLOAT, GL_LINEAR);
+  	Texture t;
+    vector<int> s(2, 0); s[0] = getWidth(); s[1] = getHeight();
+    t.set( 0, s, GL_DEPTH_COMPONENT, GL_FLOAT );
+    t.setFilter( GL_LINEAR, GL_LINEAR );
+    mpGuts->mDepthTexture = t;
     glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
       GL_TEXTURE_2D, getDepthTexture().getTextureId(), 0);
   }
@@ -210,6 +221,15 @@ void FrameBufferObject::addStencilAttachment()
 }
 
 //----------------------------------------------------------------------------
+void FrameBufferObject::begin()
+{
+  GLint previousFboId = 0;
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &previousFboId);
+  mpGuts->mPreviousFrameBuffers.push_back( previousFboId );
+  if( isValid() ) glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, getFrameBufferId()); 
+}
+
+//----------------------------------------------------------------------------
 bool FrameBufferObject::isDepthAttachmentUsingTexture() const
 { return mpGuts->mDepthTexture.getTextureId() != 0; }
 
@@ -218,6 +238,18 @@ void FrameBufferObject::drawTo(int iIndex)
 {
   GLenum e = GL_COLOR_ATTACHMENT0_EXT + iIndex;
   glDrawBuffersARB(1, &e);
+}
+
+//----------------------------------------------------------------------------
+void FrameBufferObject::end()
+{
+	GLuint previousFboId = 0;
+  if( mpGuts->mPreviousFrameBuffers.size() > 0 )
+  {
+  	previousFboId = mpGuts->mPreviousFrameBuffers.back();
+    mpGuts->mPreviousFrameBuffers.pop_back();
+  }
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, previousFboId);
 }
 
 //----------------------------------------------------------------------------

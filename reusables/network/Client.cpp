@@ -65,6 +65,12 @@ void Client::connectToTcpServer(QString iAddress, quint16 iPort)
     getLastError().*/
 	mTcpHostPort = iPort;
   mTcpHostAddress = QHostAddress(iAddress);
+  if( mTcpHostAddress.isNull() )
+  {
+  	QHostInfo i = QHostInfo::fromName( iAddress );
+    if( !i.addresses().isEmpty() )
+  		mTcpHostAddress = i.addresses().first();
+  }
   mpTcpSocket->connectToHost(mTcpHostAddress, mTcpHostPort);
 }
 

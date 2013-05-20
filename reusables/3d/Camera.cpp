@@ -18,21 +18,21 @@ using namespace realisim::treeD;
 //-----------------------------------------------------------------------------
 //--- Camera::ProjectionInfo
 //-----------------------------------------------------------------------------
-Camera::ProjectionInfo::ProjectionInfo() : mProjectionLeft(-10.0),
-  mProjectionRight(10.0),
-  mProjectionBottom(0.0),
-  mProjectionTop(0.0),
-  mProjectionNear(0.5),
-  mProjectionFar(2000.0),
+Camera::ProjectionInfo::ProjectionInfo() : mLeft(-10.0),
+  mRight(10.0),
+  mBottom(0.0),
+  mTop(0.0),
+  mNear(0.5),
+  mFar(2000.0),
   mZoomFactor( 1.0 ),
   mProportionalToWindow(true)
 {}
 
 double Camera::ProjectionInfo::getHeight() const
-{ return mProjectionTop - mProjectionBottom; }
+{ return mTop - mBottom; }
 
 double Camera::ProjectionInfo::getWidth() const
-{ return mProjectionRight - mProjectionLeft; }
+{ return mRight - mLeft; }
 
 //-----------------------------------------------------------------------------
 //--- Camera
@@ -50,9 +50,7 @@ mProjectionInfo(),
 mPixelPerGLUnit( 0.0 ),
 mWindowInfo()
 {
-  set(Point3d(0.0, 0.0, 0.0),
-  	Point3d(0.0, 0.0, -1.0),
-    Vector3d(0.0, 1.0, 0.0));
+	setOrientation( FREE );
   setProjection(60, 1, 0.5, 1000.0, true);
 }
 
@@ -111,22 +109,29 @@ void Camera::applyProjectionTransformation() const
     glViewport(0, 0, getWindowInfo().getWidth(), getWindowInfo().getHeight() );
   }
 
-  double halfProjectionWidth = getVisibleWidth() / 2.0;
-  double halfProjectionHeigh = getVisibleHeight() / 2.0;
+	/*Afin d'appliquer correctement le zoom, qui est donné par getVisibleWidth
+    et getVisibleHeight, on doit trouver le centre de la projection
+    originale (sans zoom). Ensuite on détermine la taille du rectangle
+    de la projection avec le zoom a partir de ce centre.*/
+  double halfVisibleWidth = getVisibleWidth() / 2.0;
+  double halfVisibleHeigh = getVisibleHeight() / 2.0;
+  double cx = 0.0, cy = 0.0, l, r, b, t;
+  cx = getProjectionInfo().mLeft + getProjectionInfo().getWidth() / 2.0;
+  cy = getProjectionInfo().mBottom + getProjectionInfo().getHeight() / 2.0; 
+  l = cx - halfVisibleWidth;
+  r = cx + halfVisibleWidth;
+  b = cy - halfVisibleHeigh;
+  t = cy + halfVisibleHeigh;
   switch ( getMode() ) 
   {
     case ORTHOGONAL:
-      glOrtho(-halfProjectionWidth, halfProjectionWidth,
-              -halfProjectionHeigh, halfProjectionHeigh, 
-              getProjectionInfo().mProjectionNear,
-              getProjectionInfo().mProjectionFar);
+				glOrtho( l, r, b, t, getProjectionInfo().mNear,
+        	getProjectionInfo().mFar);
       break;
       
     case PERSPECTIVE:
-      glFrustum(-halfProjectionWidth, halfProjectionWidth,
-              -halfProjectionHeigh, halfProjectionHeigh, 
-              getProjectionInfo().mProjectionNear,
-              getProjectionInfo().mProjectionFar);
+				glFrustum( l, r, b, t, getProjectionInfo().mNear,
+        	getProjectionInfo().mFar);
       break;
     default:
       break;
@@ -139,10 +144,15 @@ void Camera::computeProjection()
 {
   if(getProjectionInfo().mProportionalToWindow)
   {
-  	double f = getWindowInfo().getWidth() / getProjectionInfo().getWidth();
-    double h = getWindowInfo().getHeight() / f / 2.0;
-    mProjectionInfo.mProjectionTop = h;
-    mProjectionInfo.mProjectionBottom = -h;
+    /*Quand on veut une projection proportionnelle, on commence par trouver
+    la hauteur (h) proportionnel a la largeur (w) courante. Ensuite, on
+    trouve le centre (cy) de la projection et y ajoute la moitié de h
+    de part et d'autre.*/
+  	double w = getWindowInfo().getWidth() / getProjectionInfo().getWidth();
+    double h = getWindowInfo().getHeight() / w / 2.0;
+    double cy = getProjectionInfo().mBottom + getProjectionInfo().getHeight() / 2.0; 
+    mProjectionInfo.mTop = cy + h;
+    mProjectionInfo.mBottom = cy - h;
   }
     
   if( getWindowInfo().mOrientation == WindowInfo::oHorizontal )
@@ -497,14 +507,6 @@ void Camera::setLat( const Vector3d& iLat )
 }
 
 //-----------------------------------------------------------------------------
-void Camera::setLook(const Point3d& iLook)
-{ set(getPos(), iLook, getUp()); }
-
-//-----------------------------------------------------------------------------
-void Camera::setPos( const Point3d& iPos)
-{ set(iPos, getLook(), getUp()); }
-
-//-----------------------------------------------------------------------------
 void Camera::setProjection(double iVisibleGlUnit, double iNear, double iFar)
 {
   setProjection(-iVisibleGlUnit / 2.0, iVisibleGlUnit / 2.0,
@@ -531,12 +533,12 @@ void Camera::setProjection(double iLeft, double iRight,
                            double iNear, double iFar, Mode iMode,
                            bool iProportional /*=true*/)
 {
-	mProjectionInfo.mProjectionLeft = iLeft;
-  mProjectionInfo.mProjectionRight = iRight;
-  mProjectionInfo.mProjectionBottom = iBottom;
-  mProjectionInfo.mProjectionTop = iTop;
-	mProjectionInfo.mProjectionNear = iNear;
-  mProjectionInfo.mProjectionFar = iFar;  
+	mProjectionInfo.mLeft = iLeft;
+  mProjectionInfo.mRight = iRight;
+  mProjectionInfo.mBottom = iBottom;
+  mProjectionInfo.mTop = iTop;
+	mProjectionInfo.mNear = iNear;
+  mProjectionInfo.mFar = iFar;  
   mProjectionInfo.mZoomFactor = 1.0;
   mMode = iMode;
 	mProjectionInfo.mProportionalToWindow = iProportional;
@@ -592,18 +594,18 @@ void Camera::setTransformationToGlobal(const Matrix4d& iTransfo)
 }
 
 //-----------------------------------------------------------------------------
-void Camera::setUp( const Vector3d& iUp )
-{
-  mUp = iUp;
-
-  Vector3d currentLookVect( getPos(), getLook()  );
-  
-  mLat = currentLookVect ^ getUp();
-  mLat.normalise();
-  
-  Vector3d updatedLookVect = getUp() ^ getLat();
-  mPos = getLook() - ( updatedLookVect.normalise() * currentLookVect.norm() );
-}
+//void Camera::setUp( const Vector3d& iUp )
+//{
+//  mUp = iUp;
+//
+//  Vector3d currentLookVect( getPos(), getLook()  );
+//  
+//  mLat = currentLookVect ^ getUp();
+//  mLat.normalise();
+//  
+//  Vector3d updatedLookVect = getUp() ^ getLat();
+//  mPos = getLook() - ( updatedLookVect.normalise() * currentLookVect.norm() );
+//}
 
 //-----------------------------------------------------------------------------
 void Camera::setWindowSize( int iWidth, int iHeight )

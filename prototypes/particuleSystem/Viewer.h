@@ -44,7 +44,6 @@ private:
   virtual void drawScene() const;
   virtual void drawParticules(bool = false) const;
   virtual void drawGravityHoles(bool = false) const;
-  virtual void drawPlatonicSolid(const realisim::math::PlatonicSolid&);
   virtual void drawSceneForPicking() const;
   virtual void handlePlusMinusState();
   virtual void mouseDoubleClickEvent(QMouseEvent*);

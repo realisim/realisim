@@ -6,8 +6,8 @@
 #include "math/Vect.h"
 #include <QImage>
 #include <qgl.h>
-#include <QByteArray>
 #include <QString>
+#include <vector>
 
 /*La classe Texture encapsule la création d'une texture (2d, 3d) d'openGL et
   facilite la gestion de la ressource ainsi que l'utilisation via le partage
@@ -82,55 +82,70 @@ public:
   enum type {t2d, t3d, tCubeMap, tInvalid};
   
   Texture();
-  Texture(QImage, GLenum = GL_RGBA, GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);  //void*, const math::Vector2i?
-  Texture(void*, const math::Vector3i&, GLenum = GL_RGBA,
-    GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);
-//  Texture(QImage, QImage, QImage, QImage, QImage, QImage,
-//    GLenum = GL_RGBA, GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);
   Texture(const Texture&);
   virtual ~Texture();
   virtual Texture& operator=(const Texture&);
   
-//virtual Texture copy(); //voir detach();
+  virtual QByteArray asBuffer( GLenum, GLenum ) const;
+	virtual QImage asImage() const;
+  virtual Texture copy();
+  virtual void generateMipmap();
   virtual GLenum getDataType() const {return mpGuts->mDataType;}
   virtual GLenum getFormat() const {return mpGuts->mFormat;}
-  virtual GLenum getInterpolation() const {return mpGuts->mInterpolation;}
-  virtual const math::Vector3i& getSize() const;
+  virtual GLenum getMagnificationFilter() const;
+  virtual GLenum getMinificationFilter() const;
+  virtual const std::vector<int>& getSize() const;
+  virtual int getSizeX() const;
+  virtual int getSizeY() const;
+  virtual int getSizeZ() const;
   virtual GLuint getTextureId() const {return mpGuts->mTextureId;}
   virtual type getType() const {return mpGuts->mType;}
-  virtual bool isValid() const;
-  virtual void resize(int, int);
-//virtual void resize(int, int, int);
-	virtual void set(QImage, GLenum = GL_RGBA, GLenum = GL_UNSIGNED_BYTE,
-    GLenum = GL_LINEAR);
-  virtual void set(QImage, QRect, GLenum = GL_RGBA, GLenum = GL_UNSIGNED_BYTE,
-    GLenum = GL_LINEAR);
-  virtual void set(void*, const math::Vector3i&, GLenum = GL_RGBA,
-    GLenum = GL_UNSIGNED_BYTE, GLenum = GL_LINEAR);
+  virtual GLenum getWrapSMode() const;
+  virtual GLenum getWrapTMode() const;
+  virtual GLenum getWrapRMode() const;
+  virtual void resize( const std::vector<int>& );
+  virtual void resize( int, int );
+  virtual void resize( int, int, int );
+	virtual void set( QImage, GLenum = GL_RGBA );
+  virtual void set( void*, const std::vector<int>&, GLenum = GL_RGBA,
+    GLenum = GL_UNSIGNED_BYTE );
+  virtual void setFilter( GLenum );
+  virtual void setFilter( GLenum, GLenum );
+  virtual void setMinificationFilter( GLenum );
+  virtual void setMagnificationFilter( GLenum );
+  virtual void setWrapMode( GLenum );
+  virtual void setWrapMode( GLenum, GLenum );
+  virtual void setWrapMode( GLenum, GLenum, GLenum );
+  virtual void setWrapSMode( GLenum );
+  virtual void setWrapTMode( GLenum );
+  virtual void setWrapRMode( GLenum );
   
 protected:
-  virtual void setDataType(GLenum iT) {mpGuts->mDataType = iT;}
-  virtual void setFormat(GLenum iF) {mpGuts->mFormat = iF;}
-  virtual void setInterpolation(GLenum iI) {mpGuts->mInterpolation = iI;}
-  virtual void setType(type iT) {mpGuts->mType = iT;}
-
   struct Guts
   {
 		explicit Guts();
     
     GLuint mTextureId;
-    math::Vector3i mSize;
+    std::vector<int> mSize;
     type mType;
     GLenum mFormat;
     GLenum mDataType;
-    GLenum mInterpolation;
+    GLenum mMinificationFilter;
+    GLenum mMagnificationFilter;
+    GLenum mWrapSMode;
+    GLenum mWrapTMode;
+    GLenum mWrapRMode;
     unsigned int mRefCount;
   };
   
   virtual void deleteGuts();
-	virtual void makeGuts();
+  virtual bool isValid() const;
+  virtual void makeGuts();
+  virtual void setDataType(GLenum iT) {mpGuts->mDataType = iT;}
+  virtual void setFormat(GLenum iF) {mpGuts->mFormat = iF;}
+  virtual void setType(type iT) {mpGuts->mType = iT;}
   virtual void shareGuts(Guts*);
-  
+
   Guts* mpGuts;
 };
 

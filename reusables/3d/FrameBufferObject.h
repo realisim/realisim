@@ -98,6 +98,7 @@ public:
   virtual void addDepthAttachment(bool);
 	virtual void addStencilAttachment();
   virtual void addColorAttachment(bool);
+  virtual void begin();
 //virtual void addColorAttachment(Texture);
   virtual void clear();
   virtual FrameBufferObject copy(); //detach voir Shader::copy  
@@ -109,6 +110,7 @@ public:
   virtual QImage getImageFrom(int) const;
   virtual Texture getTexture(int) const;
 	virtual int getWidth() const {return mpGuts->mWidth;}
+  virtual void end();
   virtual bool isValid() const;
 //virtual void removeColorAttachment(int);
 //virtual void removeDepthAttachment();
@@ -140,6 +142,7 @@ protected:
     map<int, Texture> mTextures;
     Texture mDepthTexture;
     int mMaxColorAttachment;
+    vector<GLuint> mPreviousFrameBuffers;
     unsigned int mRefCount;
   };
   

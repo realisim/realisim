@@ -78,7 +78,7 @@ void Sprite::draw(const Camera& c, bool iPicking /*= false*/) const
   
   if(getState() == sAnimating)
   {
-    QSizeF s(getTexture().getSize().getX(), getTexture().getSize().getY());
+    QSizeF s(getTexture().getSizeX(), getTexture().getSizeY() );
     //QSizeF s(getSubTextureRect().width(), getSubTextureRect().height());
     QSizeF fs(getFrameSize().width() / s.width(),
     getFrameSize().height() / s.height()); //normalized frame size
@@ -328,13 +328,13 @@ void Sprite::setFrameSize(QSize fs)
 
 //-----------------------------------------------------------------------------
 void Sprite::setTexture(const Texture& t)
-{ setTexture(t, QRect(0, 0, t.getSize().getX(), t.getSize().getY()));}
+{ setTexture(t, QRect(0, 0, t.getSizeX(), t.getSizeY() ));}
 
 //-----------------------------------------------------------------------------
 void Sprite::setTexture(const Texture& t, QRect r)
 {
   //pour l'instant, les sprites ne supportent que les textures 2d.
-  assert(t.getType() == Texture::t2d);
+  //assert(t.getType() == Texture::t2d);
   mTexture = t;
   
   /*Le systeme d'axe d'openGL et de Qt sont inversé sur l'axe y.
@@ -342,7 +342,7 @@ void Sprite::setTexture(const Texture& t, QRect r)
     obtenir la coordonné gl du coin supérieur droit. De plus,
     afin de pouvoir utiliser un QRect pour stocker le rectangle
     en coordonné gl, la hauteur du rectangle doit être négative.*/
-  QSizeF s(mTexture.getSize().getX(), mTexture.getSize().getY());
+  QSizeF s(mTexture.getSizeX(), mTexture.getSizeY() );
   QPointF tl = QPointF(r.topLeft().x() / s.width(),
     1 - r.topLeft().y() / s.height());
   QSizeF br = QSizeF(r.width() / s.width(),

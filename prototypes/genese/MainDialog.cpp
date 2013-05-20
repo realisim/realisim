@@ -88,11 +88,15 @@ void Viewer::initializeGL()
 {
   Widget3d::initializeGL();
   
-  mBackground.setTexture(Texture(QImage(":/images/fond combat.png")));
+  Texture t;
+  t.set( QImage(":/images/fond combat.png") );
+  mBackground.setTexture(t);
   //mBackground.setTexture(Texture(QImage(":/images/virus2.png")), QRect(128, 0, 64, 128));
   mBackground.setFullScreen(true);
 
   mTexture.set(QImage(":/images/virus2.png"));
+  mTexture.generateMipmap();
+  mTexture.setMinificationInterpolation( GL_LINEAR_MIPMAP_LINEAR );
   
   mViruses.reserve(kNumVirus);
   for(int i = 0; i < kNumVirus; ++i)

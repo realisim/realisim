@@ -66,39 +66,42 @@ public:
 
 //void addFragmentShader(QString); a partir d'un fichier
 //void addVertexShader(QString); a partir d'un fichier
-  void addFragmentShaderSource(QString);
-  void addVertexShaderSource(QString);
-  Shader copy();
-  int getProgramId() const {return mpGuts->mProgramId;} 
-  QString getFragmentSource(int i) const {return mpGuts->mFragmentSources[i];}
-  int getFragmentSourcesSize() const {return mpGuts->mFragmentSources.size();}
-  QString getVertexSource(int i) const {return mpGuts->mVertexSources[i];}
-  int getVertexSourcesSize() const {return mpGuts->mVertexSources.size();}
-  bool isValid() const;
-  void link();
+  virtual void addFragmentShaderSource(QString);
+  virtual void addVertexShaderSource(QString);
+  virtual void begin();
+  virtual Shader copy();
+  virtual void end();
+  virtual int getProgramId() const {return mpGuts->mProgramId;} 
+  virtual QString getFragmentSource(int i) const {return mpGuts->mFragmentSources[i];}
+  virtual int getFragmentSourcesSize() const {return mpGuts->mFragmentSources.size();}
+  virtual QString getVertexSource(int i) const {return mpGuts->mVertexSources[i];}
+  virtual int getVertexSourcesSize() const {return mpGuts->mVertexSources.size();}
+  virtual bool isValid() const;
+  virtual void link();
   
-  bool setUniform(const char*, int);
-  bool setUniform(const char*, float);
-  bool setUniform(const char*, int, const float*);
-  bool setUniform(const char*, double);
-  bool setUniform(const char*, const math::Point3i&);
-  bool setUniform(const char*, const math::Point3d&);
-  bool setUniform(const char*, const math::Point3f&);
-  bool setUniform(const char*, const math::Vector3i&);
-  bool setUniform(const char*, int, const math::Vector3i*);
-  bool setUniform(const char*, const math::Vector3d&);
-  bool setUniform(const char*, const math::Vector3f&);
-  bool setUniform(const char*, int, const math::Vector3f*);
-  bool setUniform(const char*, const math::Matrix4f&);
+  virtual bool setUniform(const char*, int);
+  virtual bool setUniform(const char*, float);
+  virtual bool setUniform(const char*, int, const float*);
+  virtual bool setUniform(const char*, int, const double*);
+  virtual bool setUniform(const char*, double);
+  virtual bool setUniform(const char*, const math::Point3i&);
+  virtual bool setUniform(const char*, const math::Point3d&);
+  virtual bool setUniform(const char*, const math::Point3f&);
+  virtual bool setUniform(const char*, const math::Vector3i&);
+  virtual bool setUniform(const char*, int, const math::Vector3i*);
+  virtual bool setUniform(const char*, const math::Vector3d&);
+  virtual bool setUniform(const char*, const math::Vector3f&);
+  virtual bool setUniform(const char*, int, const math::Vector3f*);
+  virtual bool setUniform(const char*, const math::Matrix4f&);
 
 //bindVextexAttrib et setVertexAttrib?
   
 protected:
-  void validate();
-	int getFragmentId(int i) const;
-	int getVertexId(int i) const;
-  void printProgramInfoLog(GLuint);
-  void printShaderInfoLog(GLuint);
+  virtual void validate();
+	virtual int getFragmentId(int i) const;
+	virtual int getVertexId(int i) const;
+  virtual void printProgramInfoLog(GLuint);
+  virtual void printShaderInfoLog(GLuint);
 
   struct Guts
   {
@@ -110,6 +113,7 @@ protected:
     std::vector<int> mVertexIds;
     std::vector<QString> mFragmentSources;
     std::vector<QString> mVertexSources;
+    std::vector<GLuint> mPreviousShaders;
     bool mIsValid;
   };
   

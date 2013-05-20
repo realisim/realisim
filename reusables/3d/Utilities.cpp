@@ -69,6 +69,7 @@ Texture get2dNoiseTexture(int iWidth, int iHeight)
   Chapitre 15.2 Noise Textures.*/
 Texture get3dNoiseTexture(const Vector3i& iSize)
 {
+  Texture r;
   int f, i, j, k, inc;
   int startFrequency = 4;
   int numOctaves = 4;
@@ -104,8 +105,10 @@ Texture get3dNoiseTexture(const Vector3i& iSize)
       }
     }
   }
-  
-  Texture r(noise3dTexPtr, iSize);
+
+	vector<int> s; s.resize(3);
+  s[0] = iSize.getX(); s[1] = iSize.getY(); s[2] = iSize.getZ();
+  r.set( noise3dTexPtr, s );
   free(noise3dTexPtr);
   return r;
 }
