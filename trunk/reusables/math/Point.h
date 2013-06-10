@@ -21,23 +21,253 @@ namespace realisim
 {
 namespace math
 {
+//------------------------------------------------------------------------------
+//--- Point2
+//------------------------------------------------------------------------------
   template<class U>
-  class Point
+  class Point2
+  {
+  public:
+    Point2();
+    explicit Point2(const U &val);
+    Point2(const U &x, const U &y);
+    template <class T> Point2(const Point2<T> &);
+    virtual ~Point2();
+
+    virtual const U& x() const;
+    virtual const U& y() const;
+    virtual const U* getPtr() const;
+    virtual void set(const Point2&);
+    virtual void set(const U&);
+    virtual void set(const U&, const U&);
+    virtual void setX(const U&);
+    virtual void setY(const U&);
+
+    // --------------- fonction utiles -----------------------------------------
+    virtual double dist(const Point2&) const;
+    virtual double distSqr(const Point2&) const;
+    virtual void minCoord (const Point2&);
+    virtual void maxCoord (const Point2&);
+    virtual void print() const;
+
+    // --------------- Overload: operateurs ------------------------------------
+    virtual bool operator== (const Point2&) const;
+    virtual Point2& operator=(const Point2&);
+    //virtual Vector2 operator-(const Point2&) const;
+    virtual bool operator< (const Point2&) const;
+    virtual bool operator<= (const Point2&) const;
+    virtual bool operator> (const Point2&) const;
+    virtual bool operator>= (const Point2&) const;
+
+  protected:
+  private:
+
+    U mData[2];
+  };
+
+  //! constructeur par defaut.
+  template<class U>
+  Point2<U>::Point2()
+  { memset( (void*)mData, 0, 2*sizeof(U) ); }
+
+  //---------------------------------------------------------------------------
+  template<class U>
+  Point2<U>::Point2(const U &val)
+  { mData[0] = mData[1] = val; }
+
+  //---------------------------------------------------------------------------
+  template<class U>
+  Point2<U>::Point2(const U &x, const U &y)
+  { set(x, y); }
+
+  //! constructeur copie qui permet les conversion implicite légale
+  // int a double par exemple.
+  template<class U>
+  template <class T>
+  Point2<U>::Point2(const Point2<T> &point)
+  {
+    mData[0] = (U)point.x();
+    mData[1] = (U)point.y();
+  }
+
+  //! destructeur
+  template<class U>
+  Point2<U>::~Point2()
+  {}
+
+  //!---------------------------------------------------------------------------
+  template<class U>
+  void Point2<U>::set(const Point2 &point)
+  {
+    memcpy((void*)mData, (const void*)point.mData, 2*sizeof(U));
+  }
+
+  //!---------------------------------------------------------------------------
+  template<class U>
+  void Point2<U>::set(const U &val)
+  { mData[0] = mData[1] = val; }
+  
+  //!---------------------------------------------------------------------------
+  template<class U>
+  void Point2<U>::set(const U &x, const U &y)
+  { mData[0] = x; mData[1] = y; }
+
+  //!---------------------------------------------------------------------------
+  template<class U>
+  void Point2<U>::setX(const U &x)
+  { mData[0] = x; }
+
+  //!---------------------------------------------------------------------------
+  template<class U>
+  void Point2<U>::setY(const U &y)
+  { mData[1] = y; }
+
+  //!---------------------------------------------------------------------------
+  template<class U>
+  const U& Point2<U>::x() const
+  { return mData[0]; }
+
+  //!---------------------------------------------------------------------------
+  template<class U>
+  const U& Point2<U>::y() const
+  { return mData[1]; }
+  
+  //!---------------------------------------------------------------------------
+  //retourne le pointeur sur le début du tableau de coordonnées.
+  template<class U>
+  inline const U* Point2<U>::getPtr() const
+  { return &mData[0]; }
+
+  //!---------------------------------------------------------------------------
+  //! \brief  Calcule et retourne la distance entre deux points.
+  //!
+  //! \param &point le point avec qui calculer la distance
+  //!
+  //! \return la distance entre les deux points.
+  //!---------------------------------------------------------------------------
+  template<class U>
+  double Point2<U>::dist(const Point2& p) const
+  { return sqrt( distSqr(p) ); }
+
+  //!---------------------------------------------------------------------------
+  //! \brief  Calcule et retourne la distance au carre entre deux points.
+  //!
+  //! \param &point le point avec qui calculer la distance au carre
+  //!
+  //! \return la distance au carre entre les deux points.
+  //!---------------------------------------------------------------------------
+  template<class U>
+  double Point2<U>::distSqr(const Point2& p) const
+  {
+    double x = p.mData[0] - mData[0];
+    double y = p.mData[1] - mData[1];
+    return (x*x + y*y);
+  }
+  
+  //----------------------------------------------------------------------------
+  template<class U>
+  void Point2<U>::minCoord (const Point2<U>& iP)
+  {
+    setX(std::min (x(), iP.x() ));
+    setY(std::min (y(), iP.y() )); }
+  
+  //----------------------------------------------------------------------------
+  template<class U>
+  void Point2<U>::maxCoord (const Point2<U>& iP)
+  {
+    setX (std::max (x(), iP.x() ) );
+    setY (std::max (y(), iP.y() ) );
+  }
+  
+  //----------------------------------------------------------------------------
+  template<class U>
+  void Point2<U>::print() const
+  { std::cout<<x()<<" "<<y()<<std::endl; }
+  
+
+  //! surcharge operateur = Point
+  template<class U>
+  Point2<U>& Point2<U>::operator= (const Point2& p)
+  {
+    memcpy((void*)mData, (const void*)p.mData, 2*sizeof(U));
+    return *this;
+  }
+	//----------------------------------------------------------------------------
+  //strictement egale, pour une comparaison un peu plus permissive, voir
+  //mathUtil equal( const Vect<T> &, const Vect<T> &, double )
+  template<class U>
+  bool Point2<U>::operator== (const Point2 &point) const
+  {
+    return x() == point.x() &&
+    	y() == point.y();
+  }
+  
+  //----------------------------------------------------------------------------
+  template<class U>
+  bool Point2<U>::operator< (const Point2<U>& iP) const
+  {
+  	U epsilon = std::numeric_limits<U>::epsilon();
+  	if(x() < iP.x() - epsilon) return true;
+    if(x() > iP.x() + epsilon) return false;
+    
+    if(y() < iP.y() - epsilon) return true;
+    if(y() > iP.y() + epsilon) return false;
+    return false;
+  }
+
+  //----------------------------------------------------------------------------
+  template<class U>
+  bool Point2<U>::operator<= (const Point2<U>& iP) const
+  {
+    U epsilon = std::numeric_limits<U>::epsilon();
+    if(x() >= iP.x() - epsilon && x() <= iP.x() + epsilon) return true;
+    if(x() < iP.x() - epsilon) return true;
+    if(x() > iP.x() + epsilon) return false;
+    
+    if(y() >= iP.y() - epsilon && y() <= iP.y() + epsilon) return true;
+    if(y() < iP.y() - epsilon) return true;
+    if(y() > iP.y() + epsilon) return false;
+    return false;
+  }
+
+  //----------------------------------------------------------------------------
+  template<class U>
+  bool Point2<U>::operator> (const Point2<U>& iP) const
+  {
+    //Voir operateur < et corriger ici au besoin
+    return x() > iP.x() && 
+      y() > iP.y();
+  }
+  
+  //----------------------------------------------------------------------------
+  template<class U>
+  bool Point2<U>::operator>= (const Point2<U>& iP) const
+  {
+    //Voir operateur <= et corriger ici au besoin
+    return x() >= iP.x() && 
+      y() >= iP.y();
+  }
+  
+//------------------------------------------------------------------------------
+//--- Point3
+//------------------------------------------------------------------------------
+  template<class U>
+  class Point3
   {
   public:
 
     // --------------- constructeurs -------------------------------------------
-    inline Point();
-    inline explicit Point(const U &val);
-    inline Point(const U &x, const U &y, const U &z);
+    inline Point3();
+    inline explicit Point3(const U &val);
+    inline Point3(const U &x, const U &y, const U &z);
     template <class T>
-    inline Point(const Point<T> &point);
+    inline Point3(const Point3<T> &Point3);
 
     // --------------- destructeurs --------------------------------------------
-    inline ~Point();
+    inline ~Point3();
 
     // --------------- fonction set --------------------------------------------
-    inline void set(const Point &point);
+    inline void set(const Point3&);
     inline void set(const U &val);
     inline void get(const U &val);
     inline void setX(const U &x);
@@ -49,40 +279,40 @@ namespace math
     inline const U& getX() const;
     inline const U& getY() const;
     inline const U& getZ() const;
-    inline void get(Point &point) const;
+    inline void get(Point3 &Point3) const;
     inline void getXYZ(U &x, U &y, U &z) const;
     inline const U* getPtr() const;
 
     // --------------- fonction utiles -----------------------------------------
-    inline double dist(const Point &point) const;
-    inline U distSqr(const Point &point) const;
-    inline double fastDist(const Point &point) const;
-    inline void minCoord (const Point<U>& iP);
-    inline void maxCoord (const Point<U>& iP);
+    inline double dist(const Point3&) const;
+    inline U distSqr(const Point3 &) const;
+    inline double fastDist(const Point3&) const;
+    inline void minCoord (const Point3<U>&);
+    inline void maxCoord (const Point3<U>&);
     inline void print() const;
 
     // --------------- Overload: operateurs ------------------------------------
-    inline bool operator== (const Point &point) const;
-    inline Point& operator=  (const Point &point);
+    inline bool operator== (const Point3&) const;
+    inline Point3& operator=  (const Point3&);
 
   // FAIT DU SENS???
-    inline Point<U> operator-  (const Point &point) const;
-    inline Point<U> operator+  (const Point &point) const;
-    inline Point<U>& operator-= (const Point &point);
-    inline Point<U>& operator+= (const Point &point);
-    inline Point<U> operator*  (const U &val) const;
-    inline Point<U>& operator*= (const U &val);
-    inline Point<U>  operator/  (const U &val) const;
-    inline Point<U>& operator/= (const U &val);  
-  //   inline Point&        operator*= (const Point &point);
+    inline Point3<U> operator-  (const Point3 &Point3) const;
+    inline Point3<U> operator+  (const Point3 &Point3) const;
+    inline Point3<U>& operator-= (const Point3 &Point3);
+    inline Point3<U>& operator+= (const Point3 &Point3);
+    inline Point3<U> operator*  (const U &val) const;
+    inline Point3<U>& operator*= (const U &val);
+    inline Point3<U>  operator/  (const U &val) const;
+    inline Point3<U>& operator/= (const U &val);  
+  //   inline Point3&        operator*= (const Point3 &Point3);
   //
-  //   inline Point operator* (const Point &point) const;
-  //   inline Point operator+ (const Point &point) const;
-    inline Point<U> operator- (const U &val) const;
-    inline bool operator< (const Point<U>&) const;
-    inline bool operator<= (const Point<U>&) const;
-    inline bool operator> (const Point<U>&) const;
-    inline bool operator>= (const Point<U>&) const;
+  //   inline Point3 operator* (const Point3 &Point3) const;
+  //   inline Point3 operator+ (const Point3 &Point3) const;
+    inline Point3<U> operator- (const U &val) const;
+    inline bool operator< (const Point3<U>&) const;
+    inline bool operator<= (const Point3<U>&) const;
+    inline bool operator> (const Point3<U>&) const;
+    inline bool operator>= (const Point3<U>&) const;
 
   protected:
   private:
@@ -92,40 +322,24 @@ namespace math
 
   //! constructeur par defaut.
   template<class U>
-  inline Point<U>::Point()
+  inline Point3<U>::Point3()
   { memset( (void*)mData, 0, 3*sizeof(U) ); }
 
-  //!---------------------------------------------------------------------------
-  //! \brief  Constructeur avec parametre.
-  //!
-  //! Construit un objet de type \c Point ou chacune des valeurs cartesiennes
-  //! vaut la meme valeur.
-  //!
-  //! \param val valeur d'initialisation
-  //!---------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
   template<class U>
-  inline Point<U>::Point(const U &val)
+  inline Point3<U>::Point3(const U &val)
   { mData[0] = mData[1] = mData[2] = val; }
 
-  //!---------------------------------------------------------------------------
-  //! \brief  Constructeur avec parametres.
-  //!
-  //! Construit un objet de type \c Point avec chacune des valeurs cartesiennes
-  //! passees en parametre.
-  //!
-  //! \param x valeur d'initialisation pour x_
-  //! \param y valeur d'initialisation pour y_
-  //! \param z valeur d'initialisation pour z_
-  //!---------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
   template<class U>
-  inline Point<U>::Point(const U &x, const U &y, const U &z)
+  inline Point3<U>::Point3(const U &x, const U &y, const U &z)
   { setXYZ(x, y, z); }
 
   //! constructeur copie qui permet les conversion implicite légale
   // int a double par exemple.
   template<class U>
   template <class T>
-  inline Point<U>::Point(const Point<T> &point)
+  inline Point3<U>::Point3(const Point3<T> &point)
   {
     mData[0] = (U)point.getX();
     mData[1] = (U)point.getY();
@@ -134,7 +348,7 @@ namespace math
 
   //! destructeur
   template<class U>
-  inline Point<U>::~Point()
+  inline Point3<U>::~Point3()
   {}
 
   //!---------------------------------------------------------------------------
@@ -145,7 +359,7 @@ namespace math
   //! \param &point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline void Point<U>::set(const Point &point)
+  inline void Point3<U>::set(const Point3 &point)
   {
     memcpy((void*)mData, (const void*)point.mData, 3*sizeof(U));
   }
@@ -158,7 +372,7 @@ namespace math
   //! \param &val
   //!---------------------------------------------------------------------------
   template<class U>
-  inline void Point<U>::set(const U &val)
+  inline void Point3<U>::set(const U &val)
   { mData[0] = mData[1] = mData[2] = val; }
 
   //!---------------------------------------------------------------------------
@@ -167,7 +381,7 @@ namespace math
   //! \param &x
   //!---------------------------------------------------------------------------
   template<class U>
-  inline void Point<U>::setX(const U &x)
+  inline void Point3<U>::setX(const U &x)
   { mData[0] = x; }
 
   //!---------------------------------------------------------------------------
@@ -176,7 +390,7 @@ namespace math
   //! \param &y
   //!---------------------------------------------------------------------------
   template<class U>
-  inline void Point<U>::setY(const U &y)
+  inline void Point3<U>::setY(const U &y)
   { mData[1] = y; }
 
   //!---------------------------------------------------------------------------
@@ -185,7 +399,7 @@ namespace math
   //! \param &z
   //!---------------------------------------------------------------------------
   template<class U>
-  inline void Point<U>::setZ(const U &z)
+  inline void Point3<U>::setZ(const U &z)
   { mData[2] = z;}
 
   //!---------------------------------------------------------------------------
@@ -198,7 +412,7 @@ namespace math
   //! \param &z
   //!---------------------------------------------------------------------------
   template<class U>
-  inline void Point<U>::setXYZ(const U &x, const U &y, const U &z)
+  inline void Point3<U>::setXYZ(const U &x, const U &y, const U &z)
   { mData[0] = x; mData[1] = y; mData[2] = z; }
 
   //!---------------------------------------------------------------------------
@@ -208,9 +422,9 @@ namespace math
   //!
   //! \param &point Le point qui va etre comme le point que l'on veut
   //!---------------------------------------------------------------------------
-  template<class U>
-  inline void Point<U>::get(Point &point) const
-  { memcpy((void*)point.mData, (const void*)mData, 3*sizeof(U)); }
+//  template<class U>
+//  inline void Point3<U>::get(Point3 &point) const
+//  { memcpy((void*)point.mData, (const void*)mData, 3*sizeof(U)); }
 
   //!---------------------------------------------------------------------------
   //! \brief  Permet d'obtenir la valeur x du point.
@@ -218,7 +432,7 @@ namespace math
   //! \return la valeur X du point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline const U& Point<U>::getX() const
+  inline const U& Point3<U>::getX() const
   { return mData[0]; }
 
   //!---------------------------------------------------------------------------
@@ -227,7 +441,7 @@ namespace math
   //! \return la valeur Y du point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline const U& Point<U>::getY() const
+  inline const U& Point3<U>::getY() const
   { return mData[1]; }
 
   //!---------------------------------------------------------------------------
@@ -236,7 +450,7 @@ namespace math
   //! \return la valeur Z du point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline const U& Point<U>::getZ() const
+  inline const U& Point3<U>::getZ() const
   { return mData[2]; }
 
   //!---------------------------------------------------------------------------
@@ -249,7 +463,7 @@ namespace math
   //! \param &z
   //!---------------------------------------------------------------------------
   template<class U>
-  inline void Point<U>::getXYZ(U &x, U &y, U &z) const
+  inline void Point3<U>::getXYZ(U &x, U &y, U &z) const
   {
     x=mData[0];
     y=mData[1];
@@ -258,7 +472,7 @@ namespace math
   
   //retourne le pointeur sur le début du tableau de coordonnées.
   template<class U>
-  inline const U* Point<U>::getPtr() const
+  inline const U* Point3<U>::getPtr() const
   { return &mData[0]; }
 
   //!---------------------------------------------------------------------------
@@ -269,7 +483,7 @@ namespace math
   //! \return la distance entre les deux points.
   //!---------------------------------------------------------------------------
   template<class U>
-  inline double Point<U>::dist(const Point &point) const
+  inline double Point3<U>::dist(const Point3 &point) const
   {
     double x = point.mData[0] - mData[0];
     double y = point.mData[1] - mData[1];
@@ -286,7 +500,7 @@ namespace math
   //! \return la distance au carre entre les deux points.
   //!---------------------------------------------------------------------------
   template<class U>
-  inline U Point<U>::distSqr(const Point &point) const
+  inline U Point3<U>::distSqr(const Point3 &point) const
   {
     U x = point.mData[0] - mData[0];
     U y = point.mData[1] - mData[1];
@@ -307,7 +521,7 @@ namespace math
   //! \return une estimation de la distance entre les deux points.
   //!---------------------------------------------------------------------------
   template<class U>
-  inline double Point<U>::fastDist(const Point &point) const
+  inline double Point3<U>::fastDist(const Point3 &point) const
   {
     double max, med, min, mom;
 
@@ -333,7 +547,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class U>
-  inline void Point<U>::minCoord (const Point<U>& iP)
+  inline void Point3<U>::minCoord (const Point3<U>& iP)
   {
     setX (std::min (getX (), iP.getX ()));
     setY (std::min (getY (), iP.getY ()));
@@ -342,7 +556,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class U>
-  inline void Point<U>::maxCoord (const Point<U>& iP)
+  inline void Point3<U>::maxCoord (const Point3<U>& iP)
   {
     setX (std::max (getX (), iP.getX ()));
     setY (std::max (getY (), iP.getY ()));
@@ -350,7 +564,7 @@ namespace math
   }
   
   template<class U>
-  inline void Point<U>::print() const
+  inline void Point3<U>::print() const
   {
     std::cout<<getX()<<" "<<getY()<<" "<<getZ()<<std::endl;
   }
@@ -358,7 +572,7 @@ namespace math
 
   //! surcharge operateur = Point
   template<class U>
-  inline Point<U>& Point<U>::operator= (const Point &point)
+  inline Point3<U>& Point3<U>::operator= (const Point3 &point)
   {
     memcpy((void*)mData, (const void*)point.mData, 3*sizeof(U));
     return *this;
@@ -367,7 +581,7 @@ namespace math
   //strictement egale, pour une comparaison un peu plus permissive, voir
   //mathUtil equal( const Vect<T> &, const Vect<T> &, double )
   template<class U>
-  inline bool Point<U>::operator== (const Point &point) const
+  inline bool Point3<U>::operator== (const Point3 &point) const
   {
     return getX() == point.getX() &&
     	getY() == point.getY() &&
@@ -375,9 +589,9 @@ namespace math
   }
 
   template<class U>
-  inline Point<U> Point<U>::operator- (const Point &point) const
+  inline Point3<U> Point3<U>::operator- (const Point3 &point) const
   {
-    Point<U> result;
+    Point3<U> result;
 
     result.mData[0] = mData[0] - point.mData[0];
     result.mData[1] = mData[1] - point.mData[1];
@@ -388,7 +602,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class U>
-  inline bool Point<U>::operator< (const Point<U>& iP) const
+  inline bool Point3<U>::operator< (const Point3<U>& iP) const
   {
   	U epsilon = std::numeric_limits<U>::epsilon();
   	if(getX() < iP.getX() - epsilon) return true;
@@ -411,7 +625,7 @@ namespace math
 
   //----------------------------------------------------------------------------
   template<class U>
-  inline bool Point<U>::operator<= (const Point<U>& iP) const
+  inline bool Point3<U>::operator<= (const Point3<U>& iP) const
   {
     U epsilon = std::numeric_limits<U>::epsilon();
     if(getX() >= iP.getX() - epsilon && getX() <= iP.getX() + epsilon) return true;
@@ -436,7 +650,7 @@ namespace math
 
   //----------------------------------------------------------------------------
   template<class U>
-  inline bool Point<U>::operator> (const Point<U>& iP) const
+  inline bool Point3<U>::operator> (const Point3<U>& iP) const
   {
     //Voir operateur < et corriger ici au besoin
     return getX() > iP.getX() && 
@@ -446,7 +660,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class U>
-  inline bool Point<U>::operator>= (const Point<U>& iP) const
+  inline bool Point3<U>::operator>= (const Point3<U>& iP) const
   {
     //Voir operateur <= et corriger ici au besoin
     return getX() >= iP.getX() && 
@@ -456,9 +670,9 @@ namespace math
 
 
   template<class U>
-  inline Point<U> Point<U>::operator+  (const Point &point) const
+  inline Point3<U> Point3<U>::operator+  (const Point3 &point) const
   {
-    Point<U> result;
+    Point3<U> result;
 
     result.mData[0] = mData[0] + point.mData[0];
     result.mData[1] = mData[1] + point.mData[1];
@@ -468,7 +682,7 @@ namespace math
   }
 
   template<class U>
-  inline Point<U>& Point<U>::operator+= (const Point &point)
+  inline Point3<U>& Point3<U>::operator+= (const Point3 &point)
   {
     mData[0] += point.mData[0];
     mData[1] += point.mData[1];
@@ -480,9 +694,9 @@ namespace math
   //----------------------------------------------------------------------------
   //! surcharge operateur * avec T
   template<class U>
-  inline Point<U> Point<U>::operator* (const U &val) const
+  inline Point3<U> Point3<U>::operator* (const U &val) const
   {
-    Point<U> point;
+    Point3<U> point;
     
     point.mData[0] = mData[0] * val;
     point.mData[1] = mData[1] * val;
@@ -493,7 +707,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class U>
-  inline Point<U>& Point<U>::operator*= (const U &val)
+  inline Point3<U>& Point3<U>::operator*= (const U &val)
   {
     mData[0] *= val;
     mData[1] *= val;
@@ -504,10 +718,10 @@ namespace math
   //----------------------------------------------------------------------------
   //! surcharge operateur / avec T
   template<class U>  
-  inline Point<U> Point<U>::operator/ (const U &val) const
+  inline Point3<U> Point3<U>::operator/ (const U &val) const
   {
     double vTmp;
-    Point<U> p(*this);
+    Point3<U> p(*this);
     
     if(val>EPSILON || val<-EPSILON)
       vTmp=((double)1.0)/(double)val;
@@ -525,7 +739,7 @@ namespace math
   
   //! surcharge operateur /= avec T
   template<class U>
-  inline Point<U>& Point<U>::operator/= (const U &val)
+  inline Point3<U>& Point3<U>::operator/= (const U &val)
   {
     double vTmp;
     
@@ -544,9 +758,9 @@ namespace math
 
   //----------------------------------------------------------------------------
   template<class U>
-  inline Point<U> Point<U>::operator- (const U &val) const
+  inline Point3<U> Point3<U>::operator- (const U &val) const
   {
-    Point<U> result;
+    Point3<U> result;
 
     result.mData[0] = mData[0] - val;
     result.mData[1] = mData[1] - val;
@@ -556,7 +770,7 @@ namespace math
   }
 
   template<class U>
-  inline Point<U>& Point<U>::operator-= (const Point &point)
+  inline Point3<U>& Point3<U>::operator-= (const Point3 &point)
   {
     mData[0] -= point.mData[0];
     mData[1] -= point.mData[1];
@@ -565,9 +779,12 @@ namespace math
     return *this;
   }
   
-  typedef Point<float>        Point3f;
-  typedef Point<double>       Point3d;
-  typedef Point<int>          Point3i;
+  typedef Point3<float>        Point3f;
+  typedef Point3<double>       Point3d;
+  typedef Point3<int>          Point3i;
+  typedef Point2<float>        Point2f;
+  typedef Point2<double>        Point2d;
+  typedef Point2<int>        Point2i;
 } // math
 } // end of namespace realisim
 #endif //realisim_math_POINT_H

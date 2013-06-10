@@ -51,7 +51,7 @@ mPixelPerGLUnit( 0.0 ),
 mWindowInfo()
 {
 	setOrientation( FREE );
-  setProjection(60, 1, 0.5, 1000.0, true);
+  setPerspectiveProjection(60, 1, 0.5, 1000.0, true);
 }
 
 //-----------------------------------------------------------------------------
@@ -219,7 +219,7 @@ void Camera::move( const Vector3d& iDelta )
       
       //La projection sur l'axe laterale reprentera la rotation par rapport
       //a l'axe vertical (y) de la base
-      Vector3d projDeltaOnLat = getLat() * ( getLat() & iDelta );
+      Vector3d projDeltaOnLat = getLat() * ( getLat() * iDelta );
       
       //ROTATION PAR RAPPORT A LA COMPOSANTE Y DE LA TRANSFO DE LA CAMERA
       double angle1 = projDeltaOnLat.norm() * DEUX_PI / visibleGlUnit;
@@ -227,7 +227,7 @@ void Camera::move( const Vector3d& iDelta )
       //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
       //est dans le même sens que ce dernier ou non... Si ce n'est pas le
       //cas, on change la direction de l'angle.
-      if( math::equal( projDeltaOnLat + getLat() * projDeltaOnLat.norm(),
+      if( math::isEqual( projDeltaOnLat + getLat() * projDeltaOnLat.norm(),
             Vector3d(0.0) ) )
       {
         angle1 *= -1;
@@ -269,8 +269,8 @@ void Camera::move( const Vector3d& iDelta )
       Vector3d x = Vector3d(1.0, 0.0, 0.0);//mTransformation.getBaseX();
       Vector3d z = Vector3d(0.0, 0.0, 1.0);//mTransformation.getBaseZ();
 
-      Vector3d projLatOnX = x * ( x & newLat );
-      Vector3d projLatOnZ = z * ( z & newLat );
+      Vector3d projLatOnX = x * ( x * newLat );
+      Vector3d projLatOnZ = z * ( z * newLat );
       Vector3d projXZ = projLatOnX + projLatOnZ;
       setLat( projXZ );
  
@@ -278,14 +278,14 @@ void Camera::move( const Vector3d& iDelta )
       //ROTATION PAR RAPPORT AU VECTEUR LAT
       //La projection de iDelta sur l'axe Up représente la rotation autour
       //de l'axe latérale
-      Vector3d projDeltaOnUp = getUp() * ( getUp() & iDelta );
+      Vector3d projDeltaOnUp = getUp() * ( getUp() * iDelta );
 
       double angle2 = projDeltaOnUp.norm() * DEUX_PI / visibleGlUnit * -1;
             
       //on test pour voir si le vecteur iDelta projeté sur le vecteur latérale
       //est dans le même sens que ce dernier ou non... Si ce n'est pas le
       //cas, on change la direction de l'angle.
-      if( math::equal( projDeltaOnUp + getUp() * projDeltaOnUp.norm(),
+      if( math::isEqual( projDeltaOnUp + getUp() * projDeltaOnUp.norm(),
          Vector3d(0.0) ) )
       {
         angle2 *= -1;
@@ -329,16 +329,17 @@ Camera::operator=( const Camera& iCam )
 
 //-----------------------------------------------------------------------------
 /*Convertie une position pixel a l'écran en coordonnée GL
-  Les paramètres sont en pixels. Le point converti sera en
-  coordonné locale. iPoint doit être en coordonné locale de la camera. Ce point
+  Les paramètres sont en pixels et puisque le systeme de fenetrage est Qt, 
+  l'origine (0, 0) est dans le coin supérieur gauche. Le point converti sera en
+  coordonné globale. iPoint doit être en coordonné locale de la camera. Ce point
   représente la position d'un plan, parallele à la camera. Le Point3d
   retourné par cette fonction est donc l'intersection de la projection du point
   iX, iY avec ce plan. La projection de caméra est tenue en compte. */
 Point3d Camera::pixelToGL( int iX, int iY,
   const Point3d& iPoint /*= Point3d(0.0)*/ ) const
 {
-	//l'axe de Qt est inversé par rapport a openGL
-	iY = getWindowInfo().getHeight() - iY;
+  //l'axe de Qt est inversé par rapport a openGL
+  iY = getWindowInfo().getHeight() - iY;
   
   double modelView[16];
   glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
@@ -370,8 +371,6 @@ Point3d Camera::pixelToGL( int iX, int iY,
     &p0x, &p0y, &p0z);
 
   return Point3d(p0x, p0y, p0z);
-  /*on remet le point p0 dans le systeme de coordonnée locale.*/
-  //return Point3d(p0x, p0y, p0z) * getTransformationToLocal();
 }
 
 //-----------------------------------------------------------------------------
@@ -441,9 +440,9 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
     Vector3d glDelta = p1 - p0;
     
     //projection de glDelta sur lateral
-    Vector3d projGlDeltaOnLat = getLat() * ( getLat() & glDelta );
+    Vector3d projGlDeltaOnLat = getLat() * ( getLat() * glDelta );
     //projection de glDelta sur up
-    Vector3d projGlDeltaOnUp = getUp() * ( getUp() & glDelta );
+    Vector3d projGlDeltaOnUp = getUp() * ( getUp() * glDelta );
     result = getLat() * iDeltaX/(abs(iDeltaX)) * projGlDeltaOnLat.norm() + 
       getUp() * iDeltaY/(abs(iDeltaY)) * projGlDeltaOnUp.norm();
   }
@@ -507,15 +506,23 @@ void Camera::setLat( const Vector3d& iLat )
 }
 
 //-----------------------------------------------------------------------------
-void Camera::setProjection(double iVisibleGlUnit, double iNear, double iFar)
+void Camera::setOrthoProjection(double iVisibleGlUnit, double iNear, double iFar)
 {
   setProjection(-iVisibleGlUnit / 2.0, iVisibleGlUnit / 2.0,
    -1.0, 1.0, iNear, iFar, ORTHOGONAL, true);
 }
 
 //-----------------------------------------------------------------------------
+void Camera::setOrthoProjection(double iVisibleGlUnitX, double iVisibleGlUnitY,
+	double iNear, double iFar)
+{
+  setProjection(-iVisibleGlUnitX / 2.0, iVisibleGlUnitX / 2.0,
+   -iVisibleGlUnitY / 2.0, iVisibleGlUnitY / 2.0, iNear, iFar, ORTHOGONAL, false);
+}
+
+//-----------------------------------------------------------------------------
 /*iFov est en degree*/
-void Camera::setProjection(double iFov, double iRatio,
+void Camera::setPerspectiveProjection(double iFov, double iRatio,
                            double iNear, double iFar,
                            bool iProportional /*=true*/)
 {
@@ -616,8 +623,9 @@ void Camera::setWindowSize( int iWidth, int iHeight )
     mWindowInfo.mOrientation = WindowInfo::oVertical;
   
   //le coté le plus long montre la valeur mVisibleGLUnit unité GL
-  mWindowInfo.mShortSide = qMin(iWidth, iHeight);
-  mWindowInfo.mLongSide = qMax(iWidth, iHeight);
+  /*la valeur minimale pour les cote est de 1, on evite que la taille soit 0*/
+  mWindowInfo.mShortSide = qMax( qMin(iWidth, iHeight), 1 );
+  mWindowInfo.mLongSide = qMax( qMax(iWidth, iHeight), 1 );
   
   computeProjection();
 }

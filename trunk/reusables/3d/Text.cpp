@@ -49,8 +49,7 @@ Text::Text( QString iT /* = "" */ ) : mText( iT ),
   mFont( QFont( "futura", 20 ) ),
   mFrontColor( "white" ),
   mBackgroundColor( 0, 0, 0, 0 ),
-  mHasDropShadow( false ),
-  mIsRenderValid( false )
+  mHasDropShadow( false )
 {}
 
 Text::Text(const Text& iT) : mText( iT.getText() ),
@@ -58,8 +57,7 @@ Text::Text(const Text& iT) : mText( iT.getText() ),
   mFont( iT.getFont() ),
   mFrontColor( iT.getFrontColor() ),
   mBackgroundColor( iT.getBackgroundColor() ),
-  mHasDropShadow( iT.hasDropShadow() ),
-  mIsRenderValid( iT.isRenderValid() )
+  mHasDropShadow( iT.hasDropShadow() )
 {}
 
 Text::~Text()
@@ -73,7 +71,6 @@ Text& Text::operator=(const Text& iT)
   mFrontColor = iT.getFrontColor();
   mBackgroundColor = iT.getBackgroundColor();
   mHasDropShadow = iT.hasDropShadow();
-  mIsRenderValid = iT.isRenderValid();
 	return *this;
 }
 
@@ -81,14 +78,12 @@ Text& Text::operator=(const Text& iT)
 void Text::addDropShadow( bool iD )
 {
 	mHasDropShadow = iD;
-  mIsRenderValid = false;
+  render();
 }
 
 //------------------------------------------------------------------------------
 void Text::draw() const
 {
-	if( !isRenderValid() ) render();
-  
   glEnable( GL_TEXTURE_2D );
   glEnable( GL_BLEND );
   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -100,11 +95,11 @@ void Text::draw() const
   	glTexCoord2d( 0.0, 0.0 );
     glVertex2i( 0, 0 );
     glTexCoord2d( 0.0, 1.0 );
-    glVertex2i( 0, getTexture().getSizeY() );
+    glVertex2i( 0, getTexture().height() );
     glTexCoord2d( 1.0, 1.0 );
-    glVertex2i( getTexture().getSizeX(), getTexture().getSizeY() );
+    glVertex2i( getTexture().width(), getTexture().height() );
     glTexCoord2d( 1.0, 0.0 );
-    glVertex2i( getTexture().getSizeX(), 0 );
+    glVertex2i( getTexture().width(), 0 );
   glEnd();
   glEnable( GL_LIGHTING );
   glDisable( GL_BLEND );
@@ -136,9 +131,12 @@ bool Text::hasDropShadow() const
 { return mHasDropShadow; }
 
 //------------------------------------------------------------------------------
+int Text::height() const
+{ return getTexture().height(); }
+
+//------------------------------------------------------------------------------
 void Text::render() const
 {
-  mIsRenderValid = true;
 	QFontMetrics fm( getFont() );
   QRect r = fm.boundingRect( QRect(), Qt::TextExpandTabs, getText(), 0, 0 );
   QImage im( r.size(), QImage::Format_ARGB32 );
@@ -244,16 +242,20 @@ void Text::render() const
 
 //------------------------------------------------------------------------------
 void Text::setBackgroundColor( QColor iC )
-{ mBackgroundColor = iC; mIsRenderValid = false; }
+{ mBackgroundColor = iC; render(); }
 
 //------------------------------------------------------------------------------
 void Text::setText( QString iT )
-{ mText = iT; mIsRenderValid = false; }
+{ mText = iT; render(); }
 
 //------------------------------------------------------------------------------
 void Text::setFont( QFont iF )
-{ mFont = iF; mIsRenderValid = false; }
+{ mFont = iF; render(); }
 
 //------------------------------------------------------------------------------
 void Text::setFrontColor( QColor iC )
-{ mFrontColor = iC; mIsRenderValid = false; }
+{ mFrontColor = iC; render(); }
+
+//------------------------------------------------------------------------------
+int Text::width() const
+{ return getTexture().width(); }

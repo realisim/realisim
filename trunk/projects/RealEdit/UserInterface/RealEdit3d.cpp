@@ -614,8 +614,8 @@ void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* ipE)
           Vector3d z = Vector3d(0.0, 0.0, 1.0);
 				      
     			Vector3d newLat = Vector3d(newPos, newLook) ^ c.getUp();
-          Vector3d projLatOnX = x * ( x & newLat );
-          Vector3d projLatOnZ = z * ( z & newLat );
+          Vector3d projLatOnX = x * ( x * newLat );
+          Vector3d projLatOnZ = z * ( z * newLat );
           Vector3d projXZ = projLatOnX + projLatOnZ;
           
           Vector3d newUp = projXZ ^ -normal;

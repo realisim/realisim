@@ -69,7 +69,7 @@ namespace math
     inline void setY(const T &y);
     inline void setZ(const T &z);
     inline void setQuat(const T &w, const T &x, const T &y, const T &z);
-    inline void setRot(const T &angle, const Vect<T>& iAxis);
+    inline void setRot(const T &angle, const Vector3<T>& iAxis);
 
     // --------------- fonction get --------------------------------------------
     inline T getW() const;
@@ -83,7 +83,7 @@ namespace math
 
     // --------------- fonction utiles -----------------------------------------
     inline Quaternion<T>& inverse();        
-    inline Point<T> multRotation( const Quaternion<T> &quat ) const;
+    inline Point3<T> multRotation( const Quaternion<T> &quat ) const;
     inline Quaternion<T>& normalize();
     inline void print() const;
 
@@ -261,9 +261,9 @@ namespace math
   }
 
   template<class T>
-  inline Point<T> Quaternion<T>::multRotation(const Quaternion<T> &quat) const
+  inline Point3<T> Quaternion<T>::multRotation(const Quaternion<T> &quat) const
   {
-    Point<T> result;
+    Point3<T> result;
 
     result.setX(w_*quat.x_ + x_*quat.w_ + y_*quat.z_ - z_*quat.y_);
     result.setY(w_*quat.y_ - x_*quat.z_ + y_*quat.w_ + z_*quat.x_);
@@ -450,7 +450,7 @@ namespace math
   //! \param axisZ
   //!---------------------------------------------------------------------------
   template<class T>
-  inline void Quaternion<T>::setRot(const T &angle, const Vect<T>& iAxis)
+  inline void Quaternion<T>::setRot(const T &angle, const Vector3<T>& iAxis)
   {
     T sinTmp = std::sin(angle/(T)(2.0));
 
