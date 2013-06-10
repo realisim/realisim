@@ -109,11 +109,11 @@ void Viewer::paintGL()
   	glTexCoord2d( 0.0, 0.0 );
     glVertex2i( 0, 0 );
     glTexCoord2d( 0.0, 1.0 );
-    glVertex2i( 0, mTex.getSizeY() );
+    glVertex2i( 0, mTex.height() );
     glTexCoord2d( 1.0, 1.0 );
-    glVertex2i( mTex.getSizeX(), mTex.getSizeY() );
+    glVertex2i( mTex.width(), mTex.height() );
     glTexCoord2d( 1.0, 0.0 );
-    glVertex2i( mTex.getSizeX(), 0 );
+    glVertex2i( mTex.width(), 0 );
   glEnd();
   glEnable( GL_LIGHTING );
   glDisable( GL_TEXTURE_2D );

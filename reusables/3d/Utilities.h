@@ -20,12 +20,17 @@ namespace treeD
 {
 namespace utilities
 {
+	using namespace math;
+
   unsigned int colorToId(const QColor&);
-  void draw(const math::PlatonicSolid&);
-  void drawCircle( math::Vector3d, const math::Point3d&, double );
+  void draw(const PlatonicSolid&);
+  void drawCircle( Vector3d, const Point3d&, double );
+  void drawCircle2d( const Point2d&, double );
+  void drawRectangle2d( const Point2d&, const Vector2d& );
+  void drawRectangle2d( const Texture&, const Point2d&, const Vector2d& );
 //Texture get1dNoiseTexture();  
   Texture get2dNoiseTexture(int, int);//const Vector2i&);
-  Texture get3dNoiseTexture(const math::Vector3i&);
+  Texture get3dNoiseTexture(const Vector3i&);
   QColor idToColor(unsigned int);
 }//utilities
 }//treeD

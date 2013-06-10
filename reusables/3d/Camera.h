@@ -48,9 +48,11 @@ public:
   
   enum Mode{ ORTHOGONAL = 0, PERSPECTIVE };
   enum Orientation{ XY, ZY, XZ, FREE };
+  
+  //windowInfo devrait etre remplacé par viewport...
   struct WindowInfo
   {
-    WindowInfo(){;}
+    WindowInfo() : mLongSide(1), mShortSide(1){;}
     enum Orientation { oHorizontal, oVertical };
     int getHeight() const{return mOrientation == oVertical ? mLongSide : mShortSide;}    
     int getWidth() const{return mOrientation == oHorizontal ? mLongSide : mShortSide;}
@@ -83,8 +85,9 @@ public:
   Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
   void set( const Point3d&, const Point3d&, const Vector3d& );
   void set( const Point3d&, const Point3d&, const Vector3d&, const Vector3d& );
-  void setProjection(double, double, double);
-  void setProjection(double, double, double, double, bool = true);
+  void setOrthoProjection(double, double, double);
+  void setOrthoProjection(double, double, double, double);
+  void setPerspectiveProjection(double, double, double, double, bool = true);
   void setProjection(double, double, double, double, double, double, Mode, bool = true);
   void setOrientation( Orientation );
   void setTransformationToLocal(const Matrix4d&);

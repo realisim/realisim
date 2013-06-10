@@ -38,7 +38,7 @@ void draw( const PlatonicSolid& iPs )
 void drawCircle( Vector3d iN, const Point3d& iP, double iR )
 {
 	//on trouve l'angle entre iN et Z (parce qu'on dessine en sur le plan z)
-  double rot = acos( iN.normalise() & Vector3d( 0.0, 0.0, 1.0 ) );
+  double rot = acos( iN.normalise() * Vector3d( 0.0, 0.0, 1.0 ) );
   //on trouve le vecteur perpendiculaire a la rotation
   Vector3d r = iN ^ Vector3d( 0.0, 0.0, 1.0 );
   r.normalise();
@@ -56,6 +56,43 @@ void drawCircle( Vector3d iN, const Point3d& iP, double iR )
   glEnd();
   glPopMatrix();
 }
+
+//------------------------------------------------------------------------------
+/*dessine un cercle de rayon iR centré en iP sur le plan xy*/
+void drawCircle2d( const Point2d& iP, double iR )
+{ drawCircle( Vector3d( 0.0, 0.0, 1.0 ), Point3d( iP.x(), iP.y(), 0.0 ), iR ); }
+
+//------------------------------------------------------------------------------
+/*dessine un rectangle dans le plan xy. origine iO et taille iS*/
+void drawRectangle2d( const Point2d& iO, const Vector2d& iS)
+{
+  glBegin(GL_QUADS);
+  glVertex2d( iO.x(), iO.y() );
+  glVertex2d( iO.x(), iO.y() + iS.y() );
+  glVertex2d( iO.x() + iS.x(), iO.y() + iS.y() );
+  glVertex2d( iO.x() + iS.x(), iO.y() );
+  glEnd();
+}
+
+//------------------------------------------------------------------------------
+/*dessine un rectangle dans le plan xy. origine iO et taille iS*/
+void drawRectangle2d( const Texture& iT, const Point2d& iO, const Vector2d& iS )
+{
+	glEnable( GL_TEXTURE_2D );
+  glBindTexture( GL_TEXTURE_2D, iT.getTextureId() );
+  glBegin(GL_QUADS);
+  glTexCoord2d( 0.0, 0.0 );
+  glVertex2d( iO.x(), iO.y() );
+  glTexCoord2d( 0.0, 1.0 );
+  glVertex2d( iO.x(), iO.y() + iS.y() );
+  glTexCoord2d( 1.0, 1.0 );
+  glVertex2d( iO.x() + iS.x(), iO.y() + iS.y() );
+  glTexCoord2d( 1.0, 0.0 );
+  glVertex2d( iO.x() + iS.x(), iO.y() );
+  glEnd();
+	glDisable( GL_TEXTURE_2D );
+}
+
 
 //------------------------------------------------------------------------------
 Texture get2dNoiseTexture(int iWidth, int iHeight)

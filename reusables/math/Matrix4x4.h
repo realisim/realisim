@@ -54,14 +54,14 @@ namespace math
     inline void setRow4(const T &a41, const T &a42, const T &a43, const T &a44);
     
     inline void setRotation(const Matrix4<T>& iRot);
-    inline void setTranslation( const Point<T>& iTrans );
-    inline void translate(const Vect<T>& iTrans);
+    inline void setTranslation( const Point3<T>& iTrans );
+    inline void translate(const Vector3<T>& iTrans);
 
     // --------------- fonction get --------------------------------------------
-    inline Vect<T> getBaseX() const;
-    inline Vect<T> getBaseY() const;
-    inline Vect<T> getBaseZ() const;
-    inline Point<T> getTranslation() const;
+    inline Vector3<T> getBaseX() const;
+    inline Vector3<T> getBaseY() const;
+    inline Vector3<T> getBaseZ() const;
+    inline Point3<T> getTranslation() const;
     inline Matrix4<T> getRotation() const;
 
     // --------------- fonction utiles -----------------------------------------
@@ -168,45 +168,47 @@ namespace math
   
   //! permet de setter la 4e ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
-  inline void Matrix4<T>::setTranslation(const Point<T>& iTrans)
+  inline void Matrix4<T>::setTranslation(const Point3<T>& iTrans)
   {
     mat_[12] = iTrans.getX(); mat_[13] = iTrans.getY(); mat_[14] = iTrans.getZ();
   }
   
   // permet d'ajouter la translation iTrans a la matrice
   template<class T>
-  inline void Matrix4<T>::translate(const Vect<T>& iTrans)
+  inline void Matrix4<T>::translate(const Vector3<T>& iTrans)
   {
-  	Point3d t = getTranslation() + toPoint(iTrans);
+  	Point3d t( getTranslation().getX() + iTrans.getX(),
+    	getTranslation().getY() + iTrans.getY(),
+      getTranslation().getZ() + iTrans.getZ() );
     setTranslation(t);
   }
 
   //! permet d'obtenir la 1er ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
-  inline Vect<T> Matrix4<T>::getBaseX() const
+  inline Vector3<T> Matrix4<T>::getBaseX() const
   {
-    return Vect<T>( mat_[0], mat_[1], mat_[2]);
+    return Vector3<T>( mat_[0], mat_[1], mat_[2]);
   }
 
   //! permet d'obtenir la 2e ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
-  inline Vect<T> Matrix4<T>::getBaseY() const
+  inline Vector3<T> Matrix4<T>::getBaseY() const
   {
-    return Vect<T>( mat_[4], mat_[5], mat_[6]);
+    return Vector3<T>( mat_[4], mat_[5], mat_[6]);
   }
 
   //! permet d'obtenir la 3e ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
-  inline Vect<T> Matrix4<T>::getBaseZ() const
+  inline Vector3<T> Matrix4<T>::getBaseZ() const
   {
-   return Vect<T>( mat_[8], mat_[9], mat_[10]);
+   return Vector3<T>( mat_[8], mat_[9], mat_[10]);
   }
   
   //! permet d'obtenir la translation
   template<class T>
-  inline Point<T> Matrix4<T>::getTranslation() const
+  inline Point3<T> Matrix4<T>::getTranslation() const
   {
-    return Point<T>( mat_[12], mat_[13], mat_[14]);
+    return Point3<T>( mat_[12], mat_[13], mat_[14]);
   }
   
   //----------------------------------------------------------------------------

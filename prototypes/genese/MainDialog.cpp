@@ -96,7 +96,7 @@ void Viewer::initializeGL()
 
   mTexture.set(QImage(":/images/virus2.png"));
   mTexture.generateMipmap();
-  mTexture.setMinificationInterpolation( GL_LINEAR_MIPMAP_LINEAR );
+  mTexture.setMinificationFiler( GL_LINEAR_MIPMAP_LINEAR );
   
   mViruses.reserve(kNumVirus);
   for(int i = 0; i < kNumVirus; ++i)

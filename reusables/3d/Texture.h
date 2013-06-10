@@ -89,24 +89,26 @@ public:
   virtual QByteArray asBuffer( GLenum, GLenum ) const;
 	virtual QImage asImage() const;
   virtual Texture copy();
+  virtual int depth() const;
   virtual void generateMipmap();
   virtual GLenum getDataType() const {return mpGuts->mDataType;}
   virtual GLenum getFormat() const {return mpGuts->mFormat;}
   virtual GLenum getMagnificationFilter() const;
-  virtual GLenum getMinificationFilter() const;
-  virtual const std::vector<int>& getSize() const;
-  virtual int getSizeX() const;
-  virtual int getSizeY() const;
-  virtual int getSizeZ() const;
+  virtual GLenum getMinificationFilter() const;      
   virtual GLuint getTextureId() const {return mpGuts->mTextureId;}
   virtual type getType() const {return mpGuts->mType;}
   virtual GLenum getWrapSMode() const;
   virtual GLenum getWrapTMode() const;
   virtual GLenum getWrapRMode() const;
+  virtual int height() const;
   virtual void resize( const std::vector<int>& );
   virtual void resize( int, int );
   virtual void resize( int, int, int );
 	virtual void set( QImage, GLenum = GL_RGBA );
+  virtual void set( void*, const math::Vector2i&, GLenum = GL_RGBA,
+    GLenum = GL_UNSIGNED_BYTE );
+  virtual void set( void*, const math::Vector3i&, GLenum = GL_RGBA,
+    GLenum = GL_UNSIGNED_BYTE );
   virtual void set( void*, const std::vector<int>&, GLenum = GL_RGBA,
     GLenum = GL_UNSIGNED_BYTE );
   virtual void setFilter( GLenum );
@@ -119,6 +121,8 @@ public:
   virtual void setWrapSMode( GLenum );
   virtual void setWrapTMode( GLenum );
   virtual void setWrapRMode( GLenum );
+  virtual const std::vector<int>& size() const;
+  virtual int width() const;
   
 protected:
   struct Guts

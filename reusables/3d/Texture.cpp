@@ -56,8 +56,8 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
 
   switch( getType() )
   {
-  case t2d: numberOfComponent = getSizeX() * getSizeY() * componentPerPixel; break;
-  case t3d: numberOfComponent = getSizeX() * getSizeY() * getSizeZ() * componentPerPixel; break;
+  case t2d: numberOfComponent = width() * height() * componentPerPixel; break;
+  case t3d: numberOfComponent = width() * height() * depth() * componentPerPixel; break;
   default: break;
   }   
 
@@ -111,7 +111,7 @@ QImage Texture::asImage() const
 {
 	//GL_BGRA pour Qt
 	QByteArray b = asBuffer( GL_BGRA, GL_UNSIGNED_BYTE );
-  QImage r( getSizeX(), getSizeY(), QImage::Format_ARGB32 );
+  QImage r( width(), height(), QImage::Format_ARGB32 );
   memcpy( r.bits(), b.data(), b.size() );
   //opengl et Qt on l'axe y inversé
   return r.mirrored( false, true );
@@ -121,7 +121,7 @@ QImage Texture::asImage() const
 Texture Texture::copy()
 {
   Texture t;
-  t.mpGuts->mSize = getSize();
+  t.mpGuts->mSize = size();
   t.mpGuts->mType = getType();
   t.mpGuts->mFormat = getFormat();
   t.mpGuts->mDataType = getDataType();
@@ -130,70 +130,9 @@ Texture Texture::copy()
   t.mpGuts->mWrapSMode = getWrapSMode();
   t.mpGuts->mWrapTMode = getWrapTMode();
   t.mpGuts->mWrapRMode = getWrapRMode();
-  t.set( asBuffer( getFormat(), getDataType() ).data(), getSize(),
+  t.set( asBuffer( getFormat(), getDataType() ).data(), size(),
   	getFormat(), getDataType() );
-      
-   //void* p = 0;
-//   int componentPerPixel = 3, numberOfComponent = 0;
-//   switch( t.getFormat() )
-//   {
-//   case GL_BGR: componentPerPixel = 3; break;
-//   case GL_BGRA: componentPerPixel = 4; break;
-//   case GL_RGB: componentPerPixel = 3; break;
-//   case GL_RGBA: componentPerPixel = 4; break;
-//   case GL_LUMINANCE: componentPerPixel = 1; break;
-//   default: break;
-//   }
-//   
-//   switch( t.getType() )
-//   {
-//   case t2d: numberOfComponent = getSizeX() * getSizeY() * componentPerPixel; break;
-//   case t3d: numberOfComponent = getSizeX() * getSizeY() * getSizeZ() * componentPerPixel; break;
-//   default: break;
-//   }   
-//   
-//   switch( getDataType() )
-//   {
-//   case GL_BYTE: p = new char[ numberOfComponent ]; break;
-//   case GL_UNSIGNED_BYTE: p = new unsigned char[ numberOfComponent ]; break;
-//   case GL_SHORT: p = new short[ numberOfComponent ]; break;
-//   case GL_UNSIGNED_SHORT: p = new unsigned short[ numberOfComponent ]; break;
-//   case GL_INT: p = new int[ numberOfComponent ]; break;
-//   case GL_UNSIGNED_INT: p = new unsigned int[ numberOfComponent ]; break;
-//   case GL_FLOAT: p = new float[ numberOfComponent ]; break;
-//   case GL_2_BYTES: break;
-//   case GL_3_BYTES: break;
-//   case GL_4_BYTES: break;
-//   case GL_DOUBLE: p = new double[ numberOfComponent ]; break;
-//   default: break;
-//   }     
-//   
-//   switch( t.getType() )
-//   {
-//   case t2d:
-//   {
-//      glEnable( GL_TEXTURE_2D );
-//      glBindTexture( GL_TEXTURE_2D, getTextureId() );
-//      glGetTexImage( GL_TEXTURE_2D, 0, getFormat(), getDataType(), p );
-//      t.set( p, t.getSize(), t.getFormat(), t.getDataType() );
-//      glBindTexture( GL_TEXTURE_2D, 0 );
-//      glDisable( GL_TEXTURE_2D );
-//   }
-//   break;
-//   case t3d:
-//   {
-//      glEnable( GL_TEXTURE_3D );
-//      glBindTexture( GL_TEXTURE_3D, getTextureId() );
-//      glGetTexImage( GL_TEXTURE_3D, 0, getFormat(), getDataType(), p );
-//      t.set( p, t.getSize(), t.getFormat(), t.getDataType() );
-//      glBindTexture( GL_TEXTURE_3D, 0 );
-//      glDisable( GL_TEXTURE_3D );
-//   }
-//   break;
-//   default: break;
-//   }
-//   
-//   if( p ) { delete[] p; p = 0; };
+
    return t;
 }
 //----------------------------------------------------------------------------
@@ -237,19 +176,19 @@ GLenum Texture::getMinificationFilter() const
 { return mpGuts->mMinificationFilter; }
 
 //----------------------------------------------------------------------------
-const vector<int>& Texture::getSize() const
+const vector<int>& Texture::size() const
 {return mpGuts->mSize;}
 
 //----------------------------------------------------------------------------
-int Texture::getSizeX() const
+int Texture::width() const
 { return getType() != tInvalid ? mpGuts->mSize[0] : 0; }
 
 //----------------------------------------------------------------------------
-int Texture::getSizeY() const
+int Texture::height() const
 { return getType() != tInvalid ? mpGuts->mSize[1] : 0; }
 
 //----------------------------------------------------------------------------
-int Texture::getSizeZ() const
+int Texture::depth() const
 { return getType() == t3d ? mpGuts->mSize[2] : 0; }
 
 //----------------------------------------------------------------------------
@@ -285,7 +224,7 @@ void Texture::resize( const vector<int>& iS)
       glPushAttrib(GL_ENABLE_BIT);
       glEnable(GL_TEXTURE_2D);
       glBindTexture(GL_TEXTURE_2D, getTextureId());
-      glTexImage2D(GL_TEXTURE_2D, 0, getFormat(), getSizeX(), getSizeY(),
+      glTexImage2D(GL_TEXTURE_2D, 0, getFormat(), width(), height(),
         0, getFormat(), getDataType(), 0);
       glBindTexture(GL_TEXTURE_2D, 0);
       glPopAttrib();
@@ -296,8 +235,8 @@ void Texture::resize( const vector<int>& iS)
       glPushAttrib(GL_ENABLE_BIT);
       glEnable(GL_TEXTURE_3D);
       glBindTexture(GL_TEXTURE_3D, getTextureId());
-      glTexImage3D(GL_TEXTURE_3D, 0, getFormat(), getSizeX(), getSizeY(),
-        getSizeZ(), 0, getFormat(), getDataType(), 0);
+      glTexImage3D(GL_TEXTURE_3D, 0, getFormat(), width(), height(),
+        depth(), 0, getFormat(), getDataType(), 0);
       glBindTexture(GL_TEXTURE_3D, 0);
       glPopAttrib();
     	break;
@@ -327,9 +266,26 @@ void Texture::set(QImage i, GLenum iF/*= GL_RGBA*/ )
 {
 	if(!i.isNull())
   { i = QGLWidget::convertToGLFormat(i); }
+
   vector<int> s;
   s.push_back( i.width() ); s.push_back( i.height() ); 
   set( i.bits(), s, iF, GL_UNSIGNED_BYTE );    
+}
+
+//----------------------------------------------------------------------------
+void Texture::set(void* iPtr, const Vector2i& iS, GLenum iF/*= GL_RGBA*/,
+  GLenum iDt /*= GL_UNSIGNED_BYTE*/ )
+{
+	vector<int> s(2, 0); s[0] = iS.x(); s[1] = iS.y();
+  set( iPtr, s, iF, iDt );    
+}
+
+//----------------------------------------------------------------------------
+void Texture::set(void* iPtr, const Vector3i& iS, GLenum iF/*= GL_RGBA*/,
+  GLenum iDt /*= GL_UNSIGNED_BYTE*/ )
+{
+	vector<int> s(3, 0); s[0] = iS.getX(); s[1] = iS.getY(); s[2] = iS.getZ();
+  set( iPtr, s, iF, iDt );    
 }
 
 //----------------------------------------------------------------------------
@@ -357,7 +313,7 @@ void Texture::set(void* iPtr, const vector<int>& iS, GLenum iF/*= GL_RGBA*/,
       glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, getWrapSMode() );
       glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, getWrapTMode() );
             
-      glTexImage2D(GL_TEXTURE_2D, 0, getFormat(), getSizeX(), getSizeY(),
+      glTexImage2D(GL_TEXTURE_2D, 0, getFormat(), width(), height(),
         0, getFormat(), getDataType(), iPtr );
       glBindTexture(GL_TEXTURE_2D, 0);
       glPopClientAttrib();
@@ -382,8 +338,8 @@ void Texture::set(void* iPtr, const vector<int>& iS, GLenum iF/*= GL_RGBA*/,
       glTexParameterf( GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, getWrapTMode() );
       glTexParameterf( GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, getWrapRMode() );
             
-      glTexImage3D(GL_TEXTURE_3D, 0, getFormat(), getSizeX(), getSizeY(),
-        getSizeZ(), 0, getFormat(), getDataType(), iPtr);
+      glTexImage3D(GL_TEXTURE_3D, 0, getFormat(), width(), height(),
+        depth(), 0, getFormat(), getDataType(), iPtr);
 
       glBindTexture(GL_TEXTURE_3D, 0);
       glPopClientAttrib();

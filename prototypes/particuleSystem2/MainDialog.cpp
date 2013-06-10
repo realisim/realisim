@@ -222,7 +222,11 @@ void MainDialog::createUi()
 	mpParticules->setCurrentRow( -1 );
 
   mpViewer = new Viewer(pMainFrame, mParticules);
-  mpViewer->setCameraOrientation(Camera::FREE);
+  //mpViewer->setCameraOrientation(Camera::FREE);
+  Camera c = mpViewer->getCamera();
+  c.setWindowSize(200, 200);
+  c.setProjection(200, 0.5, 200);
+  mpViewer->setCamera( c );
   pLyt->addWidget(mpViewer, 4);
 }
 //-----------------------------------------------------------------------------

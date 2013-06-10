@@ -9,13 +9,12 @@
 #include <QString>
 #include "Texture.h"
 
-/*
-*/
 
 namespace realisim
 {
 namespace treeD
 {
+/* Cette classe permet de faire un rendu texte dans une texture openGL.*/
 
 class Text
 {
@@ -33,14 +32,15 @@ public:
   virtual Texture getTexture() const;
   virtual const QString& getText() const;
   virtual bool hasDropShadow() const;
+  virtual int height() const;
   virtual void setBackgroundColor( QColor );
   virtual void setText( QString );
   virtual void setFont( QFont );
   virtual void setFrontColor( QColor );
+  virtual int width() const;
   
 protected:
 	virtual void render() const;
-  virtual bool isRenderValid() const {return mIsRenderValid;}
 
   QString mText;
   mutable Texture mTexture;
@@ -48,7 +48,6 @@ protected:
   QColor mFrontColor;
   QColor mBackgroundColor;
   bool mHasDropShadow;
-	mutable bool mIsRenderValid;
 };
 
 }//treeD
