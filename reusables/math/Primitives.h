@@ -74,6 +74,7 @@ public:
   virtual Point2d bottomRight() const;
   virtual double left() const;
   virtual double right() const;
+  virtual Point2d point(int) const;
   virtual std::vector<Point2d> points() const;
   virtual void setBottom(double);
   virtual void setBottomLeft(const Point2d&);

@@ -34,7 +34,7 @@ ProjectWindow::ProjectWindow(QWidget* ipParent /*=0*/) : QWidget(ipParent),
   Camera c;
 	RealEdit3d* pV1 = new RealEdit3d( this, 0, mController);
   //c = pV1->getCamera();
-  c.setProjection(20, 1, 10000);
+  c.setOrthoProjection(20, 1, 10000);
   pV1->setCamera(c, false);
 //  pV1->setCameraMode( Camera::ORTHOGONAL );
   pV1->setCameraOrientation( Camera::XY );
@@ -50,7 +50,7 @@ ProjectWindow::ProjectWindow(QWidget* ipParent /*=0*/) : QWidget(ipParent),
   pV3->setCameraOrientation( Camera::XZ );
 
 	RealEdit3d* pV4 = new RealEdit3d (this, pV1, mController);
-  c.setProjection(60, 1.0, 0.005, 10000);
+  c.setPerspectiveProjection(60, 1.0, 0.005, 10000);
   pV4->setCamera(c, false);
   pV4->setCameraOrientation( Camera::FREE );
 

@@ -328,18 +328,28 @@ Camera::operator=( const Camera& iCam )
 }
 
 //-----------------------------------------------------------------------------
-/*Convertie une position pixel a l'écran en coordonnée GL
-  Les paramètres sont en pixels et puisque le systeme de fenetrage est Qt, 
-  l'origine (0, 0) est dans le coin supérieur gauche. Le point converti sera en
-  coordonné globale. iPoint doit être en coordonné locale de la camera. Ce point
-  représente la position d'un plan, parallele à la camera. Le Point3d
-  retourné par cette fonction est donc l'intersection de la projection du point
-  iX, iY avec ce plan. La projection de caméra est tenue en compte. */
+/*Convertie une position pixel a l'écran en coordonnée GL.
+  Les paramètres sont en pixels. Puisque le systeme de fenetrage est Qt, 
+  contrairement a openGL, l'origine (0, 0) est dans le coin supérieur gauche.
+  Ainsi la coordonné y est inversée. Le point converti sera en  coordonné
+  globale. iPoint doit être en coordonné locale de la camera. Ce point
+  représente la position d'un plan, parallele à la camera. Le Point3d retourné
+  par cette fonction est donc l'intersection de la projection du point iX, iY
+  avec ce plan. La projection de caméra est tenue en compte.
+  Note: cette methode applique les projections de projection et de modelview
+    afin de faire les calculs.*/
 Point3d Camera::pixelToGL( int iX, int iY,
   const Point3d& iPoint /*= Point3d(0.0)*/ ) const
 {
   //l'axe de Qt est inversé par rapport a openGL
   iY = getWindowInfo().getHeight() - iY;
+  
+  glMatrixMode( GL_PROJECTION );
+  glPushMatrix(); glLoadIdentity();
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix(); glLoadIdentity();
+  applyProjectionTransformation();
+  applyModelViewTransformation();
   
   double modelView[16];
   glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
@@ -370,6 +380,10 @@ Point3d Camera::pixelToGL( int iX, int iY,
     modelView, projection, viewport,
     &p0x, &p0y, &p0z);
 
+	glMatrixMode( GL_PROJECTION );
+  glPopMatrix();
+  glMatrixMode( GL_MODELVIEW );
+  glPopMatrix();
   return Point3d(p0x, p0y, p0z);
 }
 
@@ -393,6 +407,14 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
   }
   else //PERSPECTIVE
   {
+  
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix(); glLoadIdentity();
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix(); glLoadIdentity();
+    applyProjectionTransformation();
+    applyModelViewTransformation();
+
     double modelView[16];
     glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
     double projection[16];
@@ -429,6 +451,11 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
     gluUnProject(winx + iDeltaX, winy + iDeltaY, winz,
       modelView, projection, viewport,
       &p1x, &p1y, &p1z);
+      
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
     
     /*on met les points dans le systeme de coordonné local. La transformation
       de la camera est du systeme local vers le system global. On a donc besoin

@@ -28,6 +28,7 @@ Viewer::Viewer(Engine& iE, QWidget* ipParent /*=0*/) :
   mEngine( iE )
 {
   setFocusPolicy(Qt::StrongFocus);
+  setMouseTracking( true );
   //mGameCamera = getCamera();
   //mGameCamera.set( Point3d( 0.0, 0.0, 5.0 ),
 //  	Point3d( 0.0, 0.0, 0.0 ),
@@ -69,31 +70,27 @@ void Viewer::drawGame()
   const Engine::Stage& stage = mEngine.getStage();
   glPushMatrix();
   glScaled(stage.cellSize().x(), stage.cellSize().y(), 0);
-  mTerrain.draw();
+  mEditionMap.draw();
   glPopMatrix();
-  glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-  for( int j = 0; j < stage.terrainSize().y(); ++j )
-	  for( int i = 0; i < stage.terrainSize().x(); ++i )
-    {
-    	utilities::drawRectangle2d(
-        Point2d( i * stage.cellSize().x(), j * stage.cellSize().y() ),
-        Vector2d( stage.cellSize() ) );
-    }
-  glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+//  glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+//  for( int j = 0; j < stage.terrainSize().y(); ++j )
+//	  for( int i = 0; i < stage.terrainSize().x(); ++i )
+//    {
+//    	utilities::drawRectangle2d(
+//        Point2d( i * stage.cellSize().x(), j * stage.cellSize().y() ),
+//        Vector2d( stage.cellSize() ) );
+//    }
+//  glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
   
   // dessine le joueur
   glDisable( GL_LIGHTING );
   glDisable( GL_DEPTH_TEST );
-  glColor3ub( 255, 255, 255 );
+  
   glPushMatrix();
-  Point2d p = mEngine.getPlayerPosition();
-  glTranslated( p.x(), p.y(), 0.0 );
-  glColor3ub( 0, 0, 0 );
-  glScaled( mEngine.getPlayerCollisionRadius(), mEngine.getPlayerCollisionRadius(), 0);
-  glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-  utilities::drawRectangle2d( Point2d(-1.0, -1.0), Vector2d(2.0) );
-  glColor3ub( 240, 12, 0 ); //presque rouge
-  utilities::drawCircle2d( Point2d(0.0, 0.0), 1.0 );
+  glColor4ub( 255, 255, 255, 255 );
+  glTranslated(mEngine.getPlayerPosition().x(),
+  	mEngine.getPlayerPosition().y(), 0.0 );
+  mPlayer.draw();
   glPopMatrix();
   
   //dessine les intersections entre le joueur et le terrain
@@ -133,6 +130,19 @@ void Viewer::drawGame()
 //		utilities::drawRectangle2d( Point2d(0.0), Vector2d(1.0) );
 //    glPopMatrix();
 //  }
+  
+  //affiche letat du jouer
+  QString playerState;
+  switch ( mEngine.getPlayerState() ) 
+  {
+    case Engine::Player::sIdle : playerState = "idle"; break;
+    case Engine::Player::sWalking : playerState = "walking"; break;
+    case Engine::Player::sRunning : playerState = "running"; break;
+    case Engine::Player::sFalling : playerState = "falling"; break;
+    case Engine::Player::sJumping : playerState = "jumping"; break;
+    default: break;
+  }
+  renderText(10, 10, playerState );
   
   glMatrixMode( GL_PROJECTION );
   glPopMatrix();
@@ -276,27 +286,65 @@ glColor3ub( 255, 255, 255);
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::initializeEditing()
+void Viewer::refreshEditionMap()
 {
   const Engine::Stage& s = mEngine.getStage();
   QByteArray ba = s.terrain();
   Texture terrainTex; terrainTex.set( (void*)ba.constData(), s.terrainSize(),
   	GL_LUMINANCE, GL_UNSIGNED_BYTE );
-  mTerrain.setAnchorPoint( Sprite::aBottomLeft );
-  mTerrain.set( terrainTex );	
+  mEditionMap.setAnchorPoint( Sprite::aBottomLeft );
+  mEditionMap.set( terrainTex );	
 }
 
 //-----------------------------------------------------------------------------
 void Viewer::initializeGL()
-{ Widget3d::initializeGL(); }
+{
+	Widget3d::initializeGL();
+  
+//  mPlayer.set( QImage( ":/images/explosion.png" ) );
+//  mPlayer.setFrameGrid(4, 4);
+//  mPlayer.setNumberOfFrames( 16 );
+//  mPlayer.setAnimationDuration(400);
+//  mPlayer.animate();
+
+//  Texture t;
+//  t.set( QImage( ":/images/player test1.jpg" ) );
+//  t.setWrapMode( GL_CLAMP );
+//  mPlayer.set( t, QRect( QPoint(20, 0), QSize( 40, 20 ) ) );
+//  mPlayer.setFrameGrid( 2, 1 );
+//  mPlayer.setNumberOfFrames( 2 );
+//  mPlayer.setAnimationDuration(400);
+//  mPlayer.animate();
+
+  Texture t;
+  t.set( QImage( ":/images/player test3.png" ) );
+  t.setWrapMode( GL_CLAMP_TO_EDGE );
+  t.setFilter( GL_NEAREST );
+  mPlayer.set( t );
+  mPlayer.setFrameGrid( 1, 1 );
+  mPlayer.setNumberOfFrames( 1 );
+  mPlayer.animate( false );
+}
 
 //-----------------------------------------------------------------------------
 void Viewer::keyPressEvent( QKeyEvent* ipE )
-{ mEngine.keyPressed( ipE->key() ); }
+{ if( !ipE->isAutoRepeat() ) mEngine.keyPressed( ipE->key() ); }
 
 //-----------------------------------------------------------------------------
 void Viewer::keyReleaseEvent( QKeyEvent* ipE )
 { mEngine.keyReleased( ipE->key() ); }
+
+//-----------------------------------------------------------------------------
+void Viewer::mouseMoveEvent( QMouseEvent* ipE )
+{ mEngine.mouseMoved( Point2i( ipE->x(), ipE->y() ) ); }
+
+//-----------------------------------------------------------------------------
+void Viewer::mousePressEvent( QMouseEvent* ipE )
+{ mEngine.mousePressed( ipE->button() ); }
+
+//-----------------------------------------------------------------------------
+void Viewer::mouseReleaseEvent( QMouseEvent* ipE )
+{ mEngine.mouseReleased( ipE->button() ); }
 
 //-----------------------------------------------------------------------------
 void Viewer::paintGL()
@@ -319,11 +367,20 @@ void Viewer::gotEvent( Engine::event iE )
 {
 	switch (iE) 
   {
+  	case Engine::eStageChanged:
+    switch (mEngine.getState()) 
+      {
+        case Engine::sEditing:
+        	refreshEditionMap();
+          break;
+        default: break;
+      }
+    break;
   	case Engine::eStateChanged:
     	switch (mEngine.getState()) 
       {
         case Engine::sEditing:
-        	initializeEditing();
+        	refreshEditionMap();
           break;
         default: break;
       }
