@@ -10,6 +10,7 @@ namespace realisim{namespace treeD{class Camera;}}
 #include <QString>
 #include <QTime>
 #include "3d/Texture.h"
+#include "math/Primitives.h"
 
 /*Sprite permet d'afficher/animer une texture à l'écran. La méthode draw affiche
   le sprite dans le plan x,y et la taille du sprite est identique à celle de 
@@ -41,7 +42,7 @@ public:
   enum anchor{aBottomLeft, aBottomCenter, aBottomRight,
     aCenterLeft, aCenter, aCenterRight,
     aTopLeft, aTopCenter, aTopRight};
-	enum state{sAnimating, sStatic};
+	enum state{sAnimated, sIdle};
   
   Sprite();
   Sprite(const Sprite&);
@@ -51,8 +52,13 @@ public:
   virtual void draw() const;
   virtual anchor anchorPoint() const {return mAnchor;}
   virtual int getAnimationDuration() const {return mAnimationDuration;}
-  virtual Texture getTexture() const {return mTexture;}
-	virtual state getState() const {return mState;}
+  virtual const math::Vector2i& getFrameGrid() const {return mFrameGrid;}
+  virtual int getFrameHeight() const {return mFrameSize.y();}
+  virtual int getNumberOfFrames() const {return mNumberOfFrames;}
+  virtual int getFrameWidth() const {return mFrameSize.x();}
+  virtual const math::Vector2i& getFrameSize() const {return mFrameSize;}
+  virtual state getState() const {return mState;}
+  virtual Texture getTexture() const {return mTexture;}	
   virtual bool isLooping() const {return mIsLooping;}
   virtual void setAnchorPoint(anchor a) { mAnchor = a; }
   virtual void setAnimationDuration(double d) {mAnimationDuration = d;}
@@ -60,10 +66,14 @@ public:
   virtual void set(const Texture& t);
   virtual void set(const Texture& t, QRect);
   virtual void set(QImage);
-  virtual void animate();
-  //virtual void stopAnimation();
+  virtual void setFrameGrid( int, int ); 
+  virtual void setNumberOfFrames( int iF ) {mNumberOfFrames = iF;}
+  virtual void animate(bool = true);
 
 protected:
+	virtual int getCurrentFrameIndex() const;
+	virtual QRect getPixelTextureCoordinate() const { return mPixelTextureCoordinate; }
+  virtual math::Rectangle getFrameTextureCoordinate() const;
 	virtual QTime getTimer() const {return mTimer;}
   virtual void setState(state);
 
@@ -73,6 +83,11 @@ protected:
   QTime mTimer;
   int mAnimationDuration;
   bool mIsLooping;
+  math::Vector2i mFrameSize;
+  QRect mPixelTextureCoordinate;
+  int mNumberOfFrames;
+  math::Vector2i mFrameGrid;
+  mutable int mCurrentFrameIndex;
 };
 
 }//treeD

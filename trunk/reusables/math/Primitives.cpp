@@ -105,6 +105,22 @@ Point2d Rectangle::bottomRight() const
 //------------------------------------------------------------------------------  
 double Rectangle::left() const
 { return mBottomLeft.x(); }
+
+//------------------------------------------------------------------------------
+Point2d Rectangle::point(int i) const
+{
+	Point2d r(0.0);
+  switch (i) 
+  {
+    case 0: r = bottomLeft(); break;
+    case 1: r = topLeft(); break;
+    case 2: r = topRight(); break;
+    case 3: r = bottomRight(); break;
+    default: break;
+  }
+	return r;
+}
+
 //------------------------------------------------------------------------------  
 vector<Point2d> Rectangle::points() const
 {

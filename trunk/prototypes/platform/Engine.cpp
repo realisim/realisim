@@ -16,8 +16,8 @@ const double kDt = 0.015; //temps pour chaque step de l'engin en secondes
 //------------------------------------------------------------------------------
 //---Stage
 //------------------------------------------------------------------------------
-Engine::Stage::Stage() : mCellSize( 24, 24 ), 
-	mTerrainSize( 50, 50 ),
+Engine::Stage::Stage() : mCellSize( 32, 32 ), 
+	mTerrainSize( 400, 400 ),
 	mTerrain( mTerrainSize.x() * mTerrainSize.y(), Stage::ctEmpty )
 {}
 
@@ -40,30 +40,28 @@ int Engine::Stage::getCellIndex( const Point2d& p ) const
 vector<int> Engine::Stage::getCellIndices( const Point2d& iP, const Vector2i& iK ) const
 {
 	vector<int> r;
-//printf("player pos (%f, %f), kernelSize (%d, %d) \n", iP.x(), iP.y(),
-//	iK.x(), iK.y());
   //on trouve la coordonnée de la cellule pour la poisition iP
   Vector2i playerCell( iP.x() / cellSize().x(), iP.y() / cellSize().y());
-//printf("player cell (%d, %d)\n", playerCell.x(), playerCell.y() );
 
   Vector2i terrainCell;
   for( int j = -iK.y() / 2; j <= iK.y() / 2; ++j )
   	for( int i = -iK.x() / 2; i <= iK.x() / 2; ++i )
     {
     	terrainCell = playerCell + Vector2i( i, j );
-//printf("terrainCell cell (%d, %d)\n", terrainCell.x(), terrainCell.y() );
-//      if( terrainCell.x() >= 0 && terrainCell.x() < terrainSize().x() &&
-//         terrainCell.y() >= 0 && terrainCell.y() < terrainSize().y() )
-//      {
-//printf("terrainCell index (%d)\n", terrainCell.y() * terrainSize().x() + terrainCell.x() );
-//      	r.push_back( terrainCell.y() * terrainSize().x() + terrainCell.x() );
-//      }
-			int clampX = min( max( terrainCell.x(), 0 ), terrainSize().x() );
-      int clampY = min( max( terrainCell.y(), 0 ), terrainSize().y() );
+
+			int clampX = min( max( terrainCell.x(), 0 ), terrainSize().x() - 1 );
+      int clampY = min( max( terrainCell.y(), 0 ), terrainSize().y() - 1 );
 			r.push_back( clampY * terrainSize().x() + clampX );
     }
   
   return r;
+}
+
+//------------------------------------------------------------------------------
+Vector2i Engine::Stage::getCellPixelCoordinate( int iIndex ) const
+{
+	Vector2i r = getCellCoordinate( iIndex );
+  return Vector2i( r.x() * cellSize().x(), r.y() * cellSize().y() );
 }
 
 //------------------------------------------------------------------------------
@@ -75,10 +73,14 @@ Engine::Engine() : QObject(), mState( sIdle ),
   mMainMenuItem( mmiStart ),
   mConfigureMenuItem( cmiDifficulty ),
   mPauseMenuItem( pmiBack ),
-  mKeys()
+  mKeys(),
+  mMouseButtons(),
+  mMousePos( -1, -1 ),
+  mMouseDelta(0, 0)
 {
+
 	int w = 800, h = 600;
-	mGameCamera.setOrthoProjection( w, h, 0.5, 200 );
+	mGameCamera.setOrthoProjection( w, h, 0.0, 200 );
   mGameCamera.setWindowSize(w, h);
   mGameCamera.set( Point3d( 0.0, 0.0, 5.0 ),
   	Point3d( 0.0, 0.0, 0.0 ),
@@ -87,12 +89,15 @@ Engine::Engine() : QObject(), mState( sIdle ),
   //des valeur bidon dans le terrain
   for( int i = 0; i < getStage().terrainSize().x(); ++i )
   	mStage.mTerrain[i] = Stage::ctGround ;
+  mStage.mTerrain[ getStage().terrainSize().x() + 15  ]  = Stage::ctGround ;
+  mStage.mTerrain[ getStage().terrainSize().x() + 22  ]  = Stage::ctGround ;
+  mStage.mTerrain[ getStage().terrainSize().x() + 30  ]  = Stage::ctGround ;
   mStage.mTerrain[ 10 * getStage().terrainSize().x() + 3  ]  = Stage::ctGround ;
   mStage.mTerrain[ 10 * getStage().terrainSize().x() + 5  ]  = Stage::ctGround ;
   mStage.mTerrain[ 10 * getStage().terrainSize().x() + 7  ]  = Stage::ctGround ;
     
   //init de la position du joueur
-  mPlayer.position = Point2d( 100, 100 );
+  mPlayer.mPosition = Point2d( 100, 100 );
   
 	goToState( sMainMenu );
 }
@@ -101,10 +106,6 @@ Engine::~Engine()
 {
 	mClients.clear();
 }
-
-//------------------------------------------------------------------------------
-Engine::configureMenuItem Engine::getCurrentConfigureMenuItem() const
-{ return mConfigureMenuItem; }
 
 //------------------------------------------------------------------------------
 std::vector<QString> Engine::getConfigureMenuItems() const
@@ -121,10 +122,18 @@ std::vector<QString> Engine::getConfigureMenuItems() const
   }
   return r;
 }
+
+//------------------------------------------------------------------------------
+Engine::configureMenuItem Engine::getCurrentConfigureMenuItem() const
+{ return mConfigureMenuItem; }
   
 //------------------------------------------------------------------------------
 Engine::mainMenuItem Engine::getCurrentMainMenuItem() const
 { return mMainMenuItem; }
+
+//------------------------------------------------------------------------------
+Engine::pauseMenuItem Engine::getCurrentPauseMenuItem() const
+{ return mPauseMenuItem; }
 
 //------------------------------------------------------------------------------
 vector<QString> Engine::getMainMenuItems() const
@@ -142,10 +151,6 @@ vector<QString> Engine::getMainMenuItems() const
   }
   return r;
 }
-  
-//------------------------------------------------------------------------------
-Engine::pauseMenuItem Engine::getCurrentPauseMenuItem() const
-{ return mPauseMenuItem; }
 
 //------------------------------------------------------------------------------
 vector<QString> Engine::getPauseMenuItems() const
@@ -165,32 +170,11 @@ vector<QString> Engine::getPauseMenuItems() const
 }
 
 //------------------------------------------------------------------------------
-//vector<Tile> Engine::getTiles( const Point2d& iO, const Point2d& iE) const
-//{
-//	int tileW = 1024, tileH = 1024;
-//	vector<Tile> r;
-//  Point2i o( iO );
-//  Point2i e( iE );
-//  
-//  int startXIndex = round(o.x() / (double)tileW - 0.5);
-//  int endXIndex = round(e.x() / (double)tileW - 0.5);
-//  int startYIndex = round(o.y() / (double)tileH - 0.5);
-//  int endYIndex = round(e.y() / (double)tileH - 0.5);
-//  
-////printf("startx %d endx %d starty %d end%d\n", startXIndex, endXIndex,
-////	startYIndex, endYIndex);
-//  for( int j = startYIndex; j <= endYIndex; ++j )
-//  {
-//  	for( int i = startXIndex; i <= endXIndex; ++i )
-//    {
-//    	Tile t;
-//      t.setOrigin( Point2d( tileW * i, tileH * j ) );
-//      t.setSize( Vector2d( tileW, tileH ) );
-//      r.push_back( t );
-//    }
-//  }
-//  return r;
-//}
+BoundingBox2d Engine::getPlayerBoundingBox() const
+{	
+	return BoundingBox2d( mPlayer.mPosition - Vector2d( mPlayer.mSize / 2 ),
+    Vector2d( mPlayer.mSize ) );
+}
   
 //------------------------------------------------------------------------------
 void Engine::goToState( state iS )
@@ -315,31 +299,16 @@ void Engine::handleEditing()
   
   //application de la gravité
   //d += Vector2d(0.0, -2);
-    
-  //verification des collisions
-  mPlayer.intersection.clear();
-  int iKernel = 3;
-  /*On va chercher les cellules (3 x 3) autour de la position du joueur*/
-  vector<int> cells = mStage.getCellIndices( mPlayer.position, Vector2i(iKernel) );
-  bool left = false, right = false, bottom = false, top = false;
-  
-  for( size_t i = 0; i < cells.size(); ++i )
-  {
-    if( (uchar)mStage.terrain().at( cells[i] ) != Engine::Stage::ctEmpty )
-    {
-printf("intersection on cells %d\n", cells[i]);
-    	Intersection2d intersection = intersects( 
-	      Circle( mPlayer.position, getPlayerCollisionRadius() ),
-      	Rectangle( Point2d(
-          cells[i] % mStage.terrainSize().x() * mStage.cellSize().x(),
-          cells[i] / mStage.terrainSize().x() * mStage.cellSize().y()),
-          mStage.cellSize() ) );
-      mPlayer.intersection.add( intersection );
-    }
-  }
-  
   //déplacement du joueur
-  mPlayer.position = mPlayer.position + d;
+  mPlayer.mPosition = mPlayer.mPosition + d;
+
+	if( isMousePressed( Qt::LeftButton ) )
+  {
+  	Point3d gl = mGameCamera.pixelToGL( getMousePos().x(), getMousePos().y() );
+  	int index = mStage.getCellIndex( Point2d( gl.getX(), gl.getY() ) );
+    mStage.mTerrain[index] = Stage::ctGround;
+    send(eStageChanged);
+  }
 
   //deplacement de la camera pour suivre le joueur
   Matrix4d m = mGameCamera.getTransformationToGlobal();
@@ -377,6 +346,126 @@ void Engine::handleMainMenu()
 }
 
 //------------------------------------------------------------------------------
+void Engine::handleMapCollisions()
+{
+  //verification des collisions
+  mPlayer.mIntersection.clear();
+  int iKernel = 3;
+  /*On va chercher les cellules (3 x 3) autour de la position du joueur sous
+    la forme suivante :
+     6 7 8
+     3 4 5
+     0 1 2*/
+  vector<int> cells = mStage.getCellIndices( mPlayer.mPosition, Vector2i(iKernel) );
+  //on replace les cellule pour gere les collision dans lorder suivant
+  /*
+     6 1 7
+     2 8 3
+     4 0 5  */
+  bool isOnGround = false;
+  vector<int> tmp(cells);
+  cells[0] = tmp[1]; cells[1] = tmp[7]; cells[2] = tmp[3];
+  cells[3] = tmp[5]; cells[4] = tmp[0]; cells[5] = tmp[2];
+  cells[6] = tmp[6]; cells[7] = tmp[8]; cells[8] = tmp[4];
+  for( size_t i = 0; i < cells.size(); ++i )
+  {
+    if( (uchar)mStage.terrain().at( cells[i] ) != Engine::Stage::ctEmpty )
+    {
+    	Vector2i cellPixelCoordinate = mStage.getCellPixelCoordinate( cells[i] );
+    	Rectangle r( toPoint(cellPixelCoordinate),
+        mStage.cellSize() );
+
+    	//intersection en utilisant minkowski
+      BoundingBox2d mink;
+      for( int j = 0; j < 4; j++ )
+	      for( int i = 0; i < 4; i++ )
+        {
+        	mink.add( toPoint(getPlayerBoundingBox().point(j) - r.point(i)) );
+        }
+        
+      if( mink.contains(Point2d(0.0), false ) )
+      {
+      	Intersection2d intersection;
+        intersection.add( toPoint(cellPixelCoordinate) + 
+          getStage().cellSize() / 2.0 , Vector2d( 0.0, 1.0 ) );
+        mPlayer.mIntersection.add(intersection);
+        
+        //on replace le joueur
+        Vector2i cellSize = getStage().cellSize();
+        switch( i )
+        {        
+        case 0: //bas
+          	mPlayer.mPosition.setY( cellPixelCoordinate.y() + cellSize.y() +
+	        	mPlayer.mSize.y() / 2 );
+            isOnGround = true;
+          break;        
+        case 1: //haut
+        	mPlayer.mPosition.setY( cellPixelCoordinate.y() -
+        		mPlayer.mSize.y() / 2 );
+            mPlayer.mVelocity.setY( 0.0 );
+            break;
+        case 2: //gauche
+        	mPlayer.mPosition.setX( cellPixelCoordinate.x() + cellSize.x() +
+        		mPlayer.mSize.x() / 2 );
+          mPlayer.mVelocity.setX(0.0);
+          break;      	
+        case 3: //droite
+        	mPlayer.mPosition.setX( cellPixelCoordinate.x() -
+        		mPlayer.mSize.x() / 2 );
+          mPlayer.mVelocity.setX(0.0);
+          break;
+        case 4: //bas gauche
+        case 5: // bas droite
+        	if( mPlayer.mState != Player::sJumping )
+          {
+          	mPlayer.mPosition.setY( cellPixelCoordinate.y() + cellSize.y() +
+        		mPlayer.mSize.y() / 2 ); 
+            isOnGround = true;
+          }
+          break;
+        case 6: //haut gauche
+        case 7: //haut droite
+        	if( mPlayer.mState != Player::sFalling )
+          {
+          	mPlayer.mPosition.setY( cellPixelCoordinate.y() -
+            	mPlayer.mSize.y() / 2 );
+            isOnGround = true;
+          }
+        	break; 
+        case 8: break;
+        default: break;
+        }
+      }
+    }
+  }
+  
+  if( isOnGround )
+  {
+  	mPlayer.mAcceleration.setY( 0.0 );
+    mPlayer.mVelocity.setY( 0.0 );
+    mPlayer.mState = Player::sWalking;
+  }
+  
+  //friction en x. seulement si il n'y a pas d'input usagé
+  bool applyFriction = ! ( isKeyPressed( Qt::Key_A ) ||
+  	isKeyPressed( Qt::Key_D ) );
+  if(applyFriction && isOnGround)
+		mPlayer.mVelocity.setX( mPlayer.mVelocity.x() * 0.8 );
+
+  if( mPlayer.mVelocity.y() < 0.0 )
+  {
+  	switch (mPlayer.mState) {
+      case Player::sIdle:
+      case Player::sWalking:
+      case Player::sJumping:
+      	mPlayer.mState = Player::sFalling;
+        break;
+      default: break;
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
 void Engine::handlePauseMenu()
 {
 	//on commence par regarder l'input usager
@@ -406,110 +495,82 @@ void Engine::handlePauseMenu()
 }
 
 //------------------------------------------------------------------------------
-void Engine::handlePlaying()
-{	
-	const bool debug = false;
-  bool iterate = false;
-  if( isKeyPressed( Qt::Key_Escape ) ) goToState( sPaused );
-  
-  Vector2d d(0.0);
+void Engine::handlePlayerInput()
+{
+  mPlayer.mAcceleration.setX( 0.0 );
+  const double maxHAccel = 1000;
   //input usagé
-  if( isKeyPressed( Qt::Key_A ) ) d -= Vector2d(2, 0);
-  if( isKeyPressed( Qt::Key_D ) ) d += Vector2d(2, 0);
-  if( isKeyPressed( Qt::Key_W ) ) d += Vector2d(0, 3);
-  if( isKeyPressed( Qt::Key_S ) ) d -= Vector2d(0, 2);
-  if( isKeyPressed( Qt::Key_Plus, true ) ) iterate = true; 
-   
-   
- 	//application de la gravité
-  d += Vector2d(0.0, -2);
-
-	if( debug && !iterate ) return;
-
-  //verification des collisions
-  mPlayer.intersection.clear();
-  int iKernel = 3;
-  double dt = 1.0;
-	bool bottomLeft, left, topLeft, top, topRight, right, bottomRight, bottom;
-  bottomLeft = left = topLeft = top = topRight = right = bottomRight = bottom = false;
-  /*On va chercher les cellules (3 x 3) autour de la position du joueur*/
-  vector<int> cells = mStage.getCellIndices( mPlayer.position, Vector2i(iKernel) );
-  for( size_t i = 0; i < cells.size(); ++i )
+  if( isKeyPressed( Qt::Key_A ) )
   {
-    if( (uchar)mStage.terrain().at( cells[i] ) != Engine::Stage::ctEmpty )
-    {
-    	Circle c( mPlayer.position + d, getPlayerCollisionRadius() );
-    	Rectangle cell( Point2d(
-          cells[i] % mStage.terrainSize().x() * mStage.cellSize().x(),
-          cells[i] / mStage.terrainSize().x() * mStage.cellSize().y()),
-          mStage.cellSize() );
-    	Intersection2d intersection = intersects( c, cell );
-      
-      if( intersection.hasPoints() )
-      {
-printf("player pos %f, %f and collision at %f, %f\n",
-	mPlayer.position.x() + d.x(),
-  mPlayer.position.y() + d.y(),
-  intersection.point(0).x(), intersection.point(0).y() );
-  			
-        //on trouve le temps exact de la collision
-        double inc = 0.5;
-        dt = inc;
-        while( inc > 1.0e-8 )
-        {
-        	Circle c( mPlayer.position + d * dt, getPlayerCollisionRadius() );
-          Intersection2d i2 = intersects( c, cell );
-          inc /= 2.0;
-          if( i2.hasPoints() )
-          {
-          	dt -= inc;
-            intersection = i2;
-          }
-          else
-          	dt += inc;
-        }
-        
-  			//int c = cells[i] - getStage().getCellIndex( mPlayer.position );
-//        Vector2i contactingCell(c % getStage().terrainSize().x(),
-//        	c / getStage().terrainSize().x() );
-				
-        Vector2i contactingCell = 
-        	getStage().getCellCoordinate( cells[i] ) -
-          getStage().getCellCoordinate(mPlayer.position) ;
-          
-        left |= contactingCell.x() < 0 ;
-        right |= contactingCell.x() > 0 ;
-        bottom |= contactingCell.y() < 0;
-        top |= contactingCell.y() > 0;
-printf( "collision avec cellule %d, %d par rapport au joueur\n",
-	contactingCell.x(), contactingCell.y() );
-      }    
-      mPlayer.intersection.add(intersection);  
+    	switch ( mPlayer.mState ) {
+    	case Player::sIdle :
+        mPlayer.mAcceleration -= Vector2d(maxHAccel, 0);
+        mPlayer.mState = Player::sWalking;
+        break;
+      case Player::sWalking :
+      case Player::sFalling :
+      case Player::sJumping :
+      	mPlayer.mAcceleration -= Vector2d(maxHAccel, 0);
+        break;
+      default: break;
+    }
+  }
+  if( isKeyPressed( Qt::Key_D ) )
+  {
+    	switch ( mPlayer.mState ) {
+    	case Player::sIdle :
+          mPlayer.mAcceleration += Vector2d(maxHAccel, 0);
+	        mPlayer.mState = Player::sWalking;
+      	break;
+      case Player::sWalking :
+      case Player::sFalling :
+      case Player::sJumping :
+      	mPlayer.mAcceleration += Vector2d(maxHAccel, 0);
+      	break;
+      default: break;
+    }
+  }
+  if( isKeyPressed( Qt::Key_W ) )
+  {
+  	switch ( mPlayer.mState ) {
+    	case Player::sIdle :
+      case Player::sWalking :
+    		mPlayer.mVelocity += Vector2d(0, 500);
+        mPlayer.mState = Player::sJumping;
+        break;
+      default: break;
     }
   }
   
-printf("left %d, right %d, bottom %d, top %d\n",
-	left ? 1:0,
-  right ? 1:0,
-  bottom ? 1:0,
-  top ? 1:0);
+  //application de la gravité
+  mPlayer.mAcceleration.setY( mPlayer.mAcceleration.y() - 100 );
 
-	Vector2d f;
-	for( int i = 0; i < mPlayer.intersection.numberOfPoints(); ++i )
-  { f += mPlayer.intersection.normal(i); }
-
-  //déplacement du joueur
-  Vector2d dsurf = d.projectOn((1 - dt) * f);
-  mPlayer.position = mPlayer.position + d - d.projectOn((1 - dt) * f);
-printf("position apres collision: %f, %f, dt %f,"
-  "projection d sur f %f, %f\n", mPlayer.position.x(), mPlayer.position.y(),
-  dt,dsurf.x(), dsurf.y() ); 
+	//déplacement du joueur a la position désiré
+  mPlayer.mVelocity += mPlayer.mAcceleration * kDt;
+  mPlayer.mVelocity.setX( mPlayer.mVelocity.x() >= 0.0 ? 
+  	min(400.0, mPlayer.mVelocity.x()) : max(-400.0, mPlayer.mVelocity.x()) );
+  mPlayer.mPosition = mPlayer.mPosition + mPlayer.mVelocity * kDt;
+printf("velocity %f, %f acceleration %f, %f\n", mPlayer.mVelocity.x(),
+	mPlayer.mVelocity.y(), mPlayer.mAcceleration.x(), mPlayer.mAcceleration.y() );
+}
+//------------------------------------------------------------------------------
+void Engine::handlePlaying()
+{	
+	//--- debuggage --
+	const bool debug = false; bool iterate = false;
+  if( isKeyPressed( Qt::Key_Plus, true ) ) iterate = true;
+  if( debug && !iterate ) return;
+  //--- fin debuggage
+  
+  if( isKeyPressed( Qt::Key_Escape ) ) goToState( sPaused );
+  
+  handlePlayerInput();
+  handleMapCollisions();
 
   //deplacement de la camera pour suivre le joueur
   Matrix4d m = mGameCamera.getTransformationToGlobal();
-  m.setTranslation( Point3d( mPlayer.position.x(), mPlayer.position.y(), 0.0 ) );
+  m.setTranslation( Point3d( mPlayer.mPosition.x(), mPlayer.mPosition.y(), 0.0 ) );
   mGameCamera.setTransformationToGlobal( m );
-
 }
 
 //------------------------------------------------------------------------------
@@ -526,12 +587,41 @@ bool Engine::isKeyPressed( Qt::Key iK, bool iReset /*=false*/ )
 }
 
 //------------------------------------------------------------------------------
+bool Engine::isMousePressed( Qt::MouseButtons iB, bool iReset /*=false*/ )
+{
+	bool r = false;
+  map<int, bool>::iterator it;
+  if( (it = mMouseButtons.find( iB )) != mMouseButtons.end() )
+  { 
+  	r = it->second;
+    if( iReset ) mMouseButtons[iB] = false;
+  }
+  return r;
+}
+
+//------------------------------------------------------------------------------
 void Engine::keyPressed( int iKey )
 { mKeys[iKey] = true; }
 
 //------------------------------------------------------------------------------
 void Engine::keyReleased( int iKey )
 { mKeys[iKey] = false; }
+  
+//------------------------------------------------------------------------------
+void Engine::mouseMoved( Point2i iPos )
+{	
+  if( mMousePos.x() != -1 && mMousePos.y() != -1 )
+		mMouseDelta = iPos - mMousePos;
+  mMousePos = iPos;
+}
+
+//------------------------------------------------------------------------------
+void Engine::mousePressed( int iButton )
+{ mMouseButtons[iButton] = true; }
+
+//------------------------------------------------------------------------------
+void Engine::mouseReleased( int iButton )
+{ mMouseButtons[iButton] = false; }
   
 //------------------------------------------------------------------------------
 void Engine::registerClient( Client* ipC )

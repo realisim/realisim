@@ -17,11 +17,16 @@ using namespace std;
 
 Sprite::Sprite() :
  mTexture(),
- mState(sStatic),
+ mState(sIdle),
  mAnchor(aCenter),
  mTimer(),
- mAnimationDuration(),
- mIsLooping(false)
+ mAnimationDuration(1000),
+ mIsLooping(true),
+ mFrameSize(0),
+ mPixelTextureCoordinate(),
+ mNumberOfFrames(1),
+ mFrameGrid(1, 1),
+ mCurrentFrameIndex(0)
 {}
 
 Sprite::Sprite(const Sprite& s) :
@@ -30,7 +35,12 @@ Sprite::Sprite(const Sprite& s) :
  mAnchor(s.anchorPoint()),
  mTimer(s.getTimer()),
  mAnimationDuration(s.getAnimationDuration()),
- mIsLooping(s.isLooping())
+ mIsLooping(s.isLooping()),
+ mFrameSize(s.getFrameSize()),
+ mPixelTextureCoordinate(s.getPixelTextureCoordinate()),
+ mNumberOfFrames(s.getNumberOfFrames()),
+ mFrameGrid(s.getFrameGrid()),
+ mCurrentFrameIndex(s.getCurrentFrameIndex())
 {}
 
 Sprite& Sprite::operator=(const Sprite& s)
@@ -41,6 +51,11 @@ Sprite& Sprite::operator=(const Sprite& s)
   mTimer = s.getTimer();
   mAnimationDuration = s.getAnimationDuration();
   mIsLooping = s.isLooping();
+  mFrameSize = s.getFrameSize();
+  mPixelTextureCoordinate = s.getPixelTextureCoordinate();
+  mNumberOfFrames = s.getNumberOfFrames();
+  mFrameGrid = s.getFrameGrid();
+  mCurrentFrameIndex = s.getCurrentFrameIndex();
   return *this;
 }
 
@@ -70,17 +85,73 @@ void Sprite::draw() const
   glDisable( GL_LIGHTING );
   
 	glPushMatrix();
-  glScaled( getTexture().width(), getTexture().height(), 0.0 );
+  glScaled( getFrameWidth(), getFrameHeight(), 0.0 );
   glTranslated( trans.getX(), trans.getY(), trans.getZ() );
-  utilities::drawRectangle2d( getTexture(), Point2d( -0.5 ), Vector2d( 1.0 ) );
+  
+  Point2d o( -0.5 );
+  Vector2d s( 1.0 );
+  math::Rectangle tc = getFrameTextureCoordinate();
+  glEnable( GL_TEXTURE_2D );
+  glBindTexture( GL_TEXTURE_2D, getTexture().getTextureId() );
+  glBegin(GL_QUADS);
+  glTexCoord2d( tc.bottomLeft().x(), tc.bottomLeft().y() );
+  glVertex2d( o.x(), o.y() );
+  glTexCoord2d( tc.topLeft().x(), tc.topLeft().y() );
+  glVertex2d( o.x(), o.y() + s.y() );
+  glTexCoord2d( tc.topRight().x(), tc.topRight().y() );
+  glVertex2d( o.x() + s.x(), o.y() + s.y() );
+  glTexCoord2d( tc.bottomRight().x(), tc.bottomRight().y() );
+  glVertex2d( o.x() + s.x(), o.y() );
+  glEnd();
+	glDisable( GL_TEXTURE_2D );
+
   glPopMatrix();
   glDisable(GL_BLEND);
   glEnable(GL_LIGHTING);
 }
 
 //-----------------------------------------------------------------------------
-void Sprite::animate()
-{ setState(sAnimating); }
+void Sprite::animate( bool iAnimate /*=true*/ )
+{ iAnimate ? setState(sAnimated) : setState(sIdle); }
+
+//-----------------------------------------------------------------------------
+/*Retourne l'index de la frame courante pour l'animation.*/
+int Sprite::getCurrentFrameIndex() const
+{
+	if( getState() == sAnimated )
+  {
+  	int e = getTimer().elapsed();
+    double t = ( e % getAnimationDuration() );
+    t = isLooping() ? t / (double)getAnimationDuration() : max(t, 1.0);
+    mCurrentFrameIndex = round(t * ( getNumberOfFrames() - 1 ));
+  }
+	return mCurrentFrameIndex;
+}
+
+//-----------------------------------------------------------------------------
+/*Retourne les coordonnées de texture opengl pour le frame courant de
+  l'animation*/
+math::Rectangle Sprite::getFrameTextureCoordinate() const
+{
+  int i = getCurrentFrameIndex();
+  Vector2i fg = getFrameGrid();
+  int row = i / fg.x();
+  int column = i % fg.x();
+	QPoint topLeft = getPixelTextureCoordinate().topLeft();
+  topLeft.rx() += column * getFrameSize().x();
+  topLeft.ry() += row * getFrameSize().y();
+  QPoint bottomRight( topLeft.x() + getFrameSize().x(),
+  	topLeft.y() + getFrameSize().y() );
+  
+  //on convertit le tout pour openGL
+  Point2d bottomLeft( topLeft.x() / (double)getTexture().width(),
+  	( getTexture().height() - bottomRight.y() ) / 
+    (double)getTexture().height() );
+  Point2d topRight(
+  	bottomLeft.x() + getFrameWidth() / (double)getTexture().width(),
+    bottomLeft.y() + getFrameHeight() / (double)getTexture().height() );
+  return Rectangle(bottomLeft, topRight);
+}
 
 //-----------------------------------------------------------------------------
 void Sprite::set(const Texture& t)
@@ -92,6 +163,9 @@ void Sprite::set(const Texture& t, QRect r)
   //pour l'instant, les sprites ne supportent que les textures 2d.
   assert(t.getType() == Texture::t2d);
   mTexture = t;
+  mPixelTextureCoordinate = r;
+  mFrameSize.set( r.width() / getFrameGrid().x(),
+  	r.height() / getFrameGrid().y() );
 }
 
 //-----------------------------------------------------------------------------
@@ -105,30 +179,26 @@ void Sprite::set(QImage i)
 }
 
 //-----------------------------------------------------------------------------
+void Sprite::setFrameGrid( int ix, int iy )
+{
+	mFrameGrid = Vector2i(ix, iy);
+  mFrameSize.set( getPixelTextureCoordinate().width() / ix,
+  	getPixelTextureCoordinate().height() / iy );
+} 
+
+//-----------------------------------------------------------------------------
 void Sprite::setState( state iS )
 {
 	switch (iS) 
   {
-    case sAnimating:
+    case sAnimated:
     	mTimer.start();
-      mState = sAnimating;
+      mState = sAnimated;
     break;
-    case sStatic:
-    	mState = sStatic;
+    case sIdle:
+    	mState = sIdle;
     break;
     default: break;
   }
 }
-
-//-----------------------------------------------------------------------------
-//void Sprite::startAnimation(double d, bool l, QSize s)
-//{
-//  setAnimationDuration(d);
-//  setAsLooping(l);
-//  startAnimation();
-//}
-//
-//-----------------------------------------------------------------------------
-//void Sprite::stopAnimation()
-//{ setState(sStatic); }
 

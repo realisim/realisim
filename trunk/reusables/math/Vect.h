@@ -618,21 +618,21 @@ namespace math
     inline Vector2<T>&  operator=  (const T &val);
     
     inline Vector2<T>  operator+  (const Vector2<T> &vect) const;
-    inline Vector2<T>  operator+  (const T &val) const;
+    inline Vector2<T>  operator+  (const double &val) const;
     inline Vector2<T>& operator+= (const Vector2<T> &vect);
-    inline Vector2<T>& operator+= (const T &val);
+    inline Vector2<T>& operator+= (const double &val);
     
     inline Vector2<T>  operator-  (const Vector2<T> &vect) const;
-    inline Vector2<T>  operator-  (const T &val) const;
+    inline Vector2<T>  operator-  (const double &val) const;
     inline Vector2<T>  operator-  ();
     inline Vector2<T>& operator-= (const Vector2<T> &vect);
-    inline Vector2<T>& operator-= (const T &val);
+    inline Vector2<T>& operator-= (const double &val);
     
-    inline Vector2<T>  operator*  (const T &val) const;    
-    inline Vector2<T>& operator*= (const T &val);
+    inline Vector2<T>  operator*  (const double &val) const;    
+    inline Vector2<T>& operator*= (const double &val);
     
-    inline Vector2<T>  operator/  (const T &val) const;
-    inline Vector2<T>& operator/= (const T &val);  
+    inline Vector2<T>  operator/  (const double &val) const;
+    inline Vector2<T>& operator/= (const double &val);  
     inline bool operator== ( const Vector2<T>& ) const;
     inline bool operator!= ( const Vector2<T>& ) const;
   
@@ -845,7 +845,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class T>
-  inline Vector2<T> Vector2<T>::operator+ (const T &val) const
+  inline Vector2<T> Vector2<T>::operator+ (const double &val) const
   {
     Vector2<T> r;
     r.mData[0] = x() + val;
@@ -864,7 +864,7 @@ namespace math
     
   //----------------------------------------------------------------------------
   template<class T>
-  inline Vector2<T>& Vector2<T>::operator+= (const T &val)
+  inline Vector2<T>& Vector2<T>::operator+= (const double &val)
   {
     mData[0] += val;
     mData[1] += val;
@@ -883,7 +883,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class T>
-  inline Vector2<T> Vector2<T>::operator- (const T &val) const
+  inline Vector2<T> Vector2<T>::operator- (const double &val) const
   {
     Vector2<T> r;
     r.mData[0] = x() - val;
@@ -912,7 +912,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class T>
-  inline Vector2<T>& Vector2<T>::operator-= (const T &val)
+  inline Vector2<T>& Vector2<T>::operator-= (const double &val)
   {
     mData[0] -= val;
     mData[1] -= val;
@@ -921,7 +921,7 @@ namespace math
     
   //----------------------------------------------------------------------------
   template<class T>
-  inline Vector2<T> Vector2<T>::operator* (const T &val) const
+  inline Vector2<T> Vector2<T>::operator* (const double &val) const
   {
     Vector2<T> r;
     r.mData[0] = x() * val;
@@ -931,7 +931,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class T>
-  inline Vector2<T>& Vector2<T>::operator*= (const T &val)
+  inline Vector2<T>& Vector2<T>::operator*= (const double &val)
   {
     mData[0] *= val;
     mData[1] *= val;
@@ -940,7 +940,7 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class T>  
-  inline Vector2<T> Vector2<T>::operator/ (const T &val) const
+  inline Vector2<T> Vector2<T>::operator/ (const double &val) const
   {
     double vTmp;
     Vector2<T> vect(*this);
@@ -950,13 +950,13 @@ namespace math
     else
       vTmp=(double)0.0;
       
-    vect *= vTmp;    
+    vect *= vTmp;
     return vect;
   }
   
   //----------------------------------------------------------------------------
   template<class T>
-  inline Vector2<T>& Vector2<T>::operator/= (const T &val)
+  inline Vector2<T>& Vector2<T>::operator/= (const double &val)
   {
     double vTmp;
     

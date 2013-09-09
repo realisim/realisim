@@ -28,18 +28,22 @@ protected:
   virtual void drawMenu();
   virtual void drawGame();
   virtual void gotEvent( Engine::event );
-  virtual void initializeEditing();
   virtual void initializeGL();
   virtual void keyPressEvent( QKeyEvent* );
   virtual void keyReleaseEvent( QKeyEvent* );
+  virtual void mouseMoveEvent( QMouseEvent* );
+  virtual void mousePressEvent( QMouseEvent* );
+  virtual void mouseReleaseEvent( QMouseEvent* );
   virtual void paintGL();
+  virtual void refreshEditionMap();
   virtual void resizeGL(int, int);
   
   Engine& mEngine;
   treeD::Camera mGameCamera;
   
   //pour edition
-  treeD::Sprite mTerrain;
+  treeD::Sprite mEditionMap;
+  treeD::Sprite mPlayer;
 };
 
 

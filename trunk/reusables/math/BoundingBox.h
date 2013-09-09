@@ -22,40 +22,22 @@ class BoundingBox2d
 {
   public:
     BoundingBox2d();
-    BoundingBox2d(const BoundingBox2d&){assert(0);}
+    BoundingBox2d( const Point2d& p, const Vector2d& s );
+    BoundingBox2d(const BoundingBox2d&);
     virtual ~BoundingBox2d();
   
-  virtual void add (const Point2d& iV);
+  virtual void add (const Point2d&);
+  virtual bool contains( const Point2d&, bool ) const;
   virtual void clear();
-  virtual const Point2d& bottomLeft() const {return mMin;}
-  virtual const Point2d& topRight() const {return mMax;}
-  virtual const Vector2d size() const { return mMax - mMin; }
+  virtual const Point2d& bottomLeft() const;
+  virtual Point2d point(int) const;
+virtual std::vector<Point2d> points() const;
+  virtual const Point2d& topRight() const;
+  virtual Vector2d size() const;
 protected:
   Point2d mMin;
   Point2d mMax;
 };
-
-BoundingBox2d::BoundingBox2d() :
-  mMin(std::numeric_limits<double>::max()),
-  mMax(-std::numeric_limits<double>::max())
-{}
-
-BoundingBox2d::~BoundingBox2d()
-{}
-
-//------------------------------------------------------------------------------
-void BoundingBox2d::add (const Point2d& iP)
-{
-  mMin.minCoord (iP);
-  mMax.maxCoord (iP);
-}
-
-//------------------------------------------------------------------------------
-void BoundingBox2d::clear()
-{
-  mMin.set(std::numeric_limits<double>::max());
-  mMax.set(-std::numeric_limits<double>::max());
-}
 
 //------------------------------------------------------------------------------
 //--  BoundingBox3
