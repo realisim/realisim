@@ -90,7 +90,7 @@ void Text::draw() const
   glDisable( GL_LIGHTING );
     
   glColor4ub( 255, 255, 255, 255 );
-  glBindTexture( GL_TEXTURE_2D, getTexture().getTextureId() );
+  glBindTexture( GL_TEXTURE_2D, getTexture().getId() );
   glBegin( GL_QUADS );
   	glTexCoord2d( 0.0, 0.0 );
     glVertex2i( 0, 0 );
@@ -200,14 +200,14 @@ void Text::render() const
     filter.setWrapMode( GL_CLAMP );
     
     Shader s;
-    s.addFragmentShaderSource( kBlur );
+    s.addFragmentSource( kBlur );
     s.link();
     
     //on dessine le drop shadow
     s.begin();
     glEnable( GL_TEXTURE_2D );
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture( GL_TEXTURE_2D, filter.getTextureId() );
+    glBindTexture( GL_TEXTURE_2D, filter.getId() );
     s.setUniform("texture", 0);
     s.setUniform("filter", 1);
     s.setUniform("scale", 2.0);
@@ -218,11 +218,13 @@ void Text::render() const
     
     //on dessine le texte.
     mTexture.set( im );
+    mTexture.setFilter( GL_LINEAR );
     mTexture.setWrapMode( GL_CLAMP ); 
 		draw();
     
     //on recupere le resultat
     mTexture = fbo.getTexture( 0 ).copy();
+    mTexture.setFilter( GL_LINEAR );
     mTexture.setWrapMode( GL_CLAMP );
     
     glMatrixMode( GL_PROJECTION );
@@ -234,27 +236,37 @@ void Text::render() const
     fbo.end();
   }
   else 
-  {
+  {  	
     mTexture.set( im );
+    mTexture.setFilter( GL_LINEAR );
     mTexture.setWrapMode( GL_CLAMP ); 
   }
 }
 
 //------------------------------------------------------------------------------
 void Text::setBackgroundColor( QColor iC )
-{ mBackgroundColor = iC; render(); }
+{ 
+	if(mBackgroundColor != iC)
+	{mBackgroundColor = iC; render(); }
+}
 
 //------------------------------------------------------------------------------
 void Text::setText( QString iT )
-{ mText = iT; render(); }
+{
+	if( mText != iT ) 
+  {mText = iT; render();}
+}
 
 //------------------------------------------------------------------------------
 void Text::setFont( QFont iF )
-{ mFont = iF; render(); }
+{ 
+	if(mFont != iF)
+	{mFont = iF; render(); }
+}
 
 //------------------------------------------------------------------------------
 void Text::setFrontColor( QColor iC )
-{ mFrontColor = iC; render(); }
+{ if(mFrontColor != iC) {mFrontColor = iC; render(); } }
 
 //------------------------------------------------------------------------------
 int Text::width() const

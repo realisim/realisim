@@ -113,7 +113,7 @@ void Particules::drawParticules() const
 	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-  glBindTexture( GL_TEXTURE_2D, mTexture.getTextureId() );
+  glBindTexture( GL_TEXTURE_2D, mTexture.getId() );
   glPointSize( mSize );
   
   glEnableClientState( GL_VERTEX_ARRAY );

@@ -7,7 +7,7 @@
 
 #include "math/Primitives.h"
 #include "math/Point.h"
-#include "Line3d.h"
+//#include "Line3d.h"
 #include "Plane.h"
 #include <vector>
 
@@ -40,8 +40,8 @@ namespace math
   };
 	enum intersectionType{ itNone, itPoint, itContained };
   
-Point3d intersect( const Line3d&, const Plane& );
-Point3d intersect( const Plane&, const Line3d& );
+//Point3d intersect( const Line3d&, const Plane& );
+//Point3d intersect( const Plane&, const Line3d& );
 
 	Intersection2d intersects( const Circle&, const LineSegment2d& );
   Intersection2d intersects( const LineSegment2d&, const Circle& );

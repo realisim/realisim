@@ -85,6 +85,7 @@ public:
   Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
   void set( const Point3d&, const Point3d&, const Vector3d& );
   void set( const Point3d&, const Point3d&, const Vector3d&, const Vector3d& );
+  void setMode( Mode );
   void setOrthoProjection(double, double, double);
   void setOrthoProjection(double, double, double, double);
   void setPerspectiveProjection(double, double, double, double, bool = true);

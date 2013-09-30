@@ -66,8 +66,8 @@ public:
 
 //void addFragmentShader(QString); a partir d'un fichier
 //void addVertexShader(QString); a partir d'un fichier
-  virtual void addFragmentShaderSource(QString);
-  virtual void addVertexShaderSource(QString);
+  virtual void addFragmentSource(QString);
+  virtual void addVertexSource(QString);
   virtual void begin();
   virtual Shader copy();
   virtual void end();
