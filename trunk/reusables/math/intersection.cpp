@@ -29,29 +29,29 @@ void Intersection2d::add( const Point2d& p, const Vector2d& n )
   
 //------------------------------------------------------------------------------
 /* voir http://en.wikipedia.org/wiki/Line-plane_intersection */
-Point3d intersect( const Line3d& iL, const Plane& iP )
-{
-	Point3d r( std::numeric_limits<double>::quiet_NaN() );
-	intersectionType t = itNone;
-	double numerator = Vector3d( iL.getOrigin(), iP.getPoint() ) * iP.getNormal();
-  double denominator = iL.getDirection() * iP.getNormal();
-  
-  t = itPoint;
-  if( isEqual( denominator, 0.0 ) )
-  	t = itNone;
-  if( isEqual( numerator, 0.0 ) && isEqual( denominator, 0.0 ) )
-  	t = itContained;
-	double d = std::numeric_limits<double>::quiet_NaN();
-  if( t == itPoint )
-  {
-  	d = numerator / denominator;
-    r = iL.getOrigin() + d * iL.getDirection();
-  }
-  return r;
-}
-//------------------------------------------------------------------------------
-Point3d intersect( const Plane& iP, const Line3d& iL )
-{ return intersect( iL, iP ); }
+//Point3d intersect( const Line3d& iL, const Plane& iP )
+//{
+//	Point3d r( std::numeric_limits<double>::quiet_NaN() );
+//	intersectionType t = itNone;
+//	double numerator = Vector3d( iL.getOrigin(), iP.getPoint() ) * iP.getNormal();
+//  double denominator = iL.getDirection() * iP.getNormal();
+//  
+//  t = itPoint;
+//  if( isEqual( denominator, 0.0 ) )
+//  	t = itNone;
+//  if( isEqual( numerator, 0.0 ) && isEqual( denominator, 0.0 ) )
+//  	t = itContained;
+//	double d = std::numeric_limits<double>::quiet_NaN();
+//  if( t == itPoint )
+//  {
+//  	d = numerator / denominator;
+//    r = iL.getOrigin() + d * iL.getDirection();
+//  }
+//  return r;
+//}
+////------------------------------------------------------------------------------
+//Point3d intersect( const Plane& iP, const Line3d& iL )
+//{ return intersect( iL, iP ); }
 
 //------------------------------------------------------------------------------
 /* Considérons le segment de ligne l (AB) et le cercre centré en C 

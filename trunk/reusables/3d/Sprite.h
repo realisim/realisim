@@ -42,7 +42,6 @@ public:
   enum anchor{aBottomLeft, aBottomCenter, aBottomRight,
     aCenterLeft, aCenter, aCenterRight,
     aTopLeft, aTopCenter, aTopRight};
-	enum state{sAnimated, sIdle};
   
   Sprite();
   Sprite(const Sprite&);
@@ -53,11 +52,9 @@ public:
   virtual anchor anchorPoint() const {return mAnchor;}
   virtual int getAnimationDuration() const {return mAnimationDuration;}
   virtual const math::Vector2i& getFrameGrid() const {return mFrameGrid;}
-  virtual int getFrameHeight() const {return mFrameSize.y();}
   virtual int getNumberOfFrames() const {return mNumberOfFrames;}
-  virtual int getFrameWidth() const {return mFrameSize.x();}
+  virtual QRect getRect() const {return mRect;}
   virtual const math::Vector2i& getFrameSize() const {return mFrameSize;}
-  virtual state getState() const {return mState;}
   virtual Texture getTexture() const {return mTexture;}	
   virtual bool isLooping() const {return mIsLooping;}
   virtual void setAnchorPoint(anchor a) { mAnchor = a; }
@@ -67,24 +64,24 @@ public:
   virtual void set(const Texture& t, QRect);
   virtual void set(QImage);
   virtual void setFrameGrid( int, int ); 
+  virtual void setRect( const QRect&);
   virtual void setNumberOfFrames( int iF ) {mNumberOfFrames = iF;}
-  virtual void animate(bool = true);
+  virtual void startAnimation();
 
 protected:
 	virtual int getCurrentFrameIndex() const;
-	virtual QRect getPixelTextureCoordinate() const { return mPixelTextureCoordinate; }
   virtual math::Rectangle getFrameTextureCoordinate() const;
+virtual int getFrameHeight() const {return mFrameSize.y();}
+virtual int getFrameWidth() const {return mFrameSize.x();}
 	virtual QTime getTimer() const {return mTimer;}
-  virtual void setState(state);
 
   Texture mTexture;
-  state mState;
   anchor mAnchor;
   QTime mTimer;
   int mAnimationDuration;
   bool mIsLooping;
   math::Vector2i mFrameSize;
-  QRect mPixelTextureCoordinate;
+  QRect mRect;
   int mNumberOfFrames;
   math::Vector2i mFrameGrid;
   mutable int mCurrentFrameIndex;

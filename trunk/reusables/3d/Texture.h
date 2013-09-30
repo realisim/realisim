@@ -95,7 +95,7 @@ public:
   virtual GLenum getFormat() const {return mpGuts->mFormat;}
   virtual GLenum getMagnificationFilter() const;
   virtual GLenum getMinificationFilter() const;      
-  virtual GLuint getTextureId() const {return mpGuts->mTextureId;}
+  virtual GLuint getId() const {return mpGuts->mTextureId;}
   virtual type getType() const {return mpGuts->mType;}
   virtual GLenum getWrapSMode() const;
   virtual GLenum getWrapTMode() const;

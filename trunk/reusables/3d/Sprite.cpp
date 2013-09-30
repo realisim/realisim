@@ -17,27 +17,25 @@ using namespace std;
 
 Sprite::Sprite() :
  mTexture(),
- mState(sIdle),
  mAnchor(aCenter),
  mTimer(),
  mAnimationDuration(1000),
  mIsLooping(true),
  mFrameSize(0),
- mPixelTextureCoordinate(),
+ mRect(),
  mNumberOfFrames(1),
  mFrameGrid(1, 1),
  mCurrentFrameIndex(0)
-{}
+{ startAnimation(); }
 
 Sprite::Sprite(const Sprite& s) :
  mTexture(s.getTexture()),
- mState(s.getState()),
  mAnchor(s.anchorPoint()),
  mTimer(s.getTimer()),
  mAnimationDuration(s.getAnimationDuration()),
  mIsLooping(s.isLooping()),
  mFrameSize(s.getFrameSize()),
- mPixelTextureCoordinate(s.getPixelTextureCoordinate()),
+ mRect(s.getRect()),
  mNumberOfFrames(s.getNumberOfFrames()),
  mFrameGrid(s.getFrameGrid()),
  mCurrentFrameIndex(s.getCurrentFrameIndex())
@@ -46,13 +44,12 @@ Sprite::Sprite(const Sprite& s) :
 Sprite& Sprite::operator=(const Sprite& s)
 {
   mTexture = s.getTexture();
-  mState = s.getState();
   mAnchor = s.anchorPoint();
   mTimer = s.getTimer();
   mAnimationDuration = s.getAnimationDuration();
   mIsLooping = s.isLooping();
   mFrameSize = s.getFrameSize();
-  mPixelTextureCoordinate = s.getPixelTextureCoordinate();
+  mRect = s.getRect();
   mNumberOfFrames = s.getNumberOfFrames();
   mFrameGrid = s.getFrameGrid();
   mCurrentFrameIndex = s.getCurrentFrameIndex();
@@ -92,7 +89,7 @@ void Sprite::draw() const
   Vector2d s( 1.0 );
   math::Rectangle tc = getFrameTextureCoordinate();
   glEnable( GL_TEXTURE_2D );
-  glBindTexture( GL_TEXTURE_2D, getTexture().getTextureId() );
+  glBindTexture( GL_TEXTURE_2D, getTexture().getId() );
   glBegin(GL_QUADS);
   glTexCoord2d( tc.bottomLeft().x(), tc.bottomLeft().y() );
   glVertex2d( o.x(), o.y() );
@@ -111,20 +108,17 @@ void Sprite::draw() const
 }
 
 //-----------------------------------------------------------------------------
-void Sprite::animate( bool iAnimate /*=true*/ )
-{ iAnimate ? setState(sAnimated) : setState(sIdle); }
-
-//-----------------------------------------------------------------------------
 /*Retourne l'index de la frame courante pour l'animation.*/
 int Sprite::getCurrentFrameIndex() const
 {
-	if( getState() == sAnimated )
+	if( getNumberOfFrames() > 1 )
   {
   	int e = getTimer().elapsed();
     double t = ( e % getAnimationDuration() );
-    t = isLooping() ? t / (double)getAnimationDuration() : max(t, 1.0);
+    t = isLooping() ? t / (double)getAnimationDuration() : min(t, 1.0);
     mCurrentFrameIndex = round(t * ( getNumberOfFrames() - 1 ));
-  }
+	}
+  else mCurrentFrameIndex = 0;
 	return mCurrentFrameIndex;
 }
 
@@ -137,7 +131,7 @@ math::Rectangle Sprite::getFrameTextureCoordinate() const
   Vector2i fg = getFrameGrid();
   int row = i / fg.x();
   int column = i % fg.x();
-	QPoint topLeft = getPixelTextureCoordinate().topLeft();
+	QPoint topLeft = getRect().topLeft();
   topLeft.rx() += column * getFrameSize().x();
   topLeft.ry() += row * getFrameSize().y();
   QPoint bottomRight( topLeft.x() + getFrameSize().x(),
@@ -163,9 +157,7 @@ void Sprite::set(const Texture& t, QRect r)
   //pour l'instant, les sprites ne supportent que les textures 2d.
   assert(t.getType() == Texture::t2d);
   mTexture = t;
-  mPixelTextureCoordinate = r;
-  mFrameSize.set( r.width() / getFrameGrid().x(),
-  	r.height() / getFrameGrid().y() );
+  setRect( r );
 }
 
 //-----------------------------------------------------------------------------
@@ -182,23 +174,19 @@ void Sprite::set(QImage i)
 void Sprite::setFrameGrid( int ix, int iy )
 {
 	mFrameGrid = Vector2i(ix, iy);
-  mFrameSize.set( getPixelTextureCoordinate().width() / ix,
-  	getPixelTextureCoordinate().height() / iy );
+  mFrameSize.set( getRect().width() / ix,
+  	getRect().height() / iy );
 } 
 
 //-----------------------------------------------------------------------------
-void Sprite::setState( state iS )
+void Sprite::setRect( const QRect& iR )
 {
-	switch (iS) 
-  {
-    case sAnimated:
-    	mTimer.start();
-      mState = sAnimated;
-    break;
-    case sIdle:
-    	mState = sIdle;
-    break;
-    default: break;
-  }
-}
+	mRect = iR;
+	setFrameGrid( getFrameGrid().x(), getFrameGrid().y() );
+} 
+
+//-----------------------------------------------------------------------------
+void Sprite::startAnimation()
+{ mTimer.start(); mCurrentFrameIndex = 0; }
+
 

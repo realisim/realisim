@@ -8,8 +8,7 @@ namespace realisim
   using namespace math;
 namespace treeD 
 {
-namespace utilities 
-{
+
 //-----------------------------------------------------------------------------
 //decode un QColor en id. Voir méthode idToColor
 unsigned int colorToId(const QColor& iC)
@@ -79,7 +78,7 @@ void drawRectangle2d( const Point2d& iO, const Vector2d& iS)
 void drawRectangle2d( const Texture& iT, const Point2d& iO, const Vector2d& iS )
 {
 	glEnable( GL_TEXTURE_2D );
-  glBindTexture( GL_TEXTURE_2D, iT.getTextureId() );
+  glBindTexture( GL_TEXTURE_2D, iT.getId() );
   glBegin(GL_QUADS);
   glTexCoord2d( 0.0, 0.0 );
   glVertex2d( iO.x(), iO.y() );
@@ -169,6 +168,5 @@ QColor idToColor(unsigned int iId)
 }
 
 
-}
 }
 }

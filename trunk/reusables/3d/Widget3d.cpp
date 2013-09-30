@@ -204,8 +204,7 @@ Widget3d::paintGL()
 vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
   int iHeight /*= 1*/ )
 {
-	using namespace utilities; //pour colorToId
-  
+	makeCurrent();
   GLint viewport[4]; //x, y, width, height
   glGetIntegerv(GL_VIEWPORT,viewport);
   
@@ -344,6 +343,8 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
   
   if( iAnimate )
   {
+    mCam.setMode( mNewCam.getMode() );
+    mCam.setOrientation( mNewCam.getOrientation() );
     /*L'animation de la camera va interpoler la transformation entre la
       la vielle camera (mOldCam) et la nouvelle camera (mNewCame). Cette
       matrice interpolé sera appliqué a la camera courante (mCam).*/

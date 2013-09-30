@@ -23,8 +23,8 @@ Shader::Shader() : mpGuts(0)
 Shader::Shader(QString iVertexSource, QString iFragmentSource) : mpGuts(0)
 { 
   makeGuts();
-  addVertexShaderSource(iVertexSource);
-  addFragmentShaderSource(iFragmentSource);
+  addVertexSource(iVertexSource);
+  addFragmentSource(iFragmentSource);
   link();
 }
 
@@ -45,7 +45,7 @@ Shader& Shader::operator=(const Shader& iT)
 }
 
 //----------------------------------------------------------------------------
-void Shader::addFragmentShaderSource(QString iSource)
+void Shader::addFragmentSource(QString iSource)
 {
   if(getProgramId() == 0)
     mpGuts->mProgramId = glCreateProgram();
@@ -76,7 +76,7 @@ void Shader::addFragmentShaderSource(QString iSource)
 }
 
 //----------------------------------------------------------------------------
-void Shader::addVertexShaderSource(QString iSource)
+void Shader::addVertexSource(QString iSource)
 {
   if(getProgramId() == 0)
     mpGuts->mProgramId = glCreateProgram();
@@ -127,9 +127,9 @@ Shader Shader::copy()
 {
 	Shader s;
   for(int i = 0; i < getVertexSourcesSize(); ++i)
-    s.addVertexShaderSource(getVertexSource(i));
+    s.addVertexSource(getVertexSource(i));
   for(int i = 0; i < getFragmentSourcesSize(); ++i)
-    s.addFragmentShaderSource(getFragmentSource(i));
+    s.addFragmentSource(getFragmentSource(i));
   s.link();
   
   return s;
@@ -245,6 +245,7 @@ void Shader::printProgramInfoLog(GLuint iObj)
 
   if (infologLength > 0)
   {
+  	printf("link log for program %d\n", iObj);
     infoLog = (char *)malloc(infologLength);
     glGetProgramInfoLog(iObj, infologLength, &charsWritten, infoLog);
     printf("%s\n",infoLog);

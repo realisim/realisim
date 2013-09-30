@@ -144,8 +144,8 @@ void FrameBufferObject::addColorAttachment(bool iUseTexture)
     t.set( 0, s, GL_RGBA, GL_UNSIGNED_BYTE );
     t.setWrapMode( GL_CLAMP );
     mpGuts->mTextures[index] = t;
-    mpGuts->mColorAttachments.push_back( make_pair(t.getTextureId(), true));
-	  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getTextureId(), 0);
+    mpGuts->mColorAttachments.push_back( make_pair(t.getId(), true));
+	  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getId(), 0);
 	}
 	
 	validate();
@@ -186,7 +186,7 @@ void FrameBufferObject::addDepthAttachment(bool iUseTexture)
     t.setFilter( GL_LINEAR, GL_LINEAR );
     mpGuts->mDepthTexture = t;
     glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
-      GL_TEXTURE_2D, getDepthTexture().getTextureId(), 0);
+      GL_TEXTURE_2D, getDepthTexture().getId(), 0);
   }
 	
 	validate();
@@ -231,7 +231,7 @@ void FrameBufferObject::begin()
 
 //----------------------------------------------------------------------------
 bool FrameBufferObject::isDepthAttachmentUsingTexture() const
-{ return mpGuts->mDepthTexture.getTextureId() != 0; }
+{ return mpGuts->mDepthTexture.getId() != 0; }
 
 //----------------------------------------------------------------------------
 void FrameBufferObject::drawTo(int iIndex)
@@ -295,7 +295,7 @@ QImage FrameBufferObject::getImageFrom(int iIndex) const
     Texture t = getTexture(iIndex);
   	glPushAttrib(GL_ENABLE_BIT);
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, t.getTextureId());
+    glBindTexture(GL_TEXTURE_2D, t.getId());
     glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, t.getDataType(), r.bits());
     glBindTexture(GL_TEXTURE_2D, 0);
     glPopAttrib();
@@ -359,7 +359,7 @@ void FrameBufferObject::resize(int iWidth, int iHeight)
     {
       Texture t = getTexture(i);
     	t.resize(getWidth(), getHeight());
-      glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getTextureId(), 0);
+      glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getId(), 0);
     }
   }
   
@@ -378,7 +378,7 @@ void FrameBufferObject::resize(int iWidth, int iHeight)
     {
     	mpGuts->mDepthTexture.resize(getWidth(), getHeight());
       glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
-        GL_TEXTURE_2D, getDepthTexture().getTextureId(), 0);
+        GL_TEXTURE_2D, getDepthTexture().getId(), 0);
     }
   }
   

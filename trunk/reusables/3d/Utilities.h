@@ -18,8 +18,7 @@ namespace realisim
 {
 namespace treeD
 {
-namespace utilities
-{
+
 	using namespace math;
 
   unsigned int colorToId(const QColor&);
@@ -32,7 +31,7 @@ namespace utilities
   Texture get2dNoiseTexture(int, int);//const Vector2i&);
   Texture get3dNoiseTexture(const Vector3i&);
   QColor idToColor(unsigned int);
-}//utilities
+
 }//treeD
 }//realisim
 

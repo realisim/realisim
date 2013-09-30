@@ -533,6 +533,10 @@ void Camera::setLat( const Vector3d& iLat )
 }
 
 //-----------------------------------------------------------------------------
+void Camera::setMode( Mode iMode )
+{ mMode = iMode; }
+
+//-----------------------------------------------------------------------------
 void Camera::setOrthoProjection(double iVisibleGlUnit, double iNear, double iFar)
 {
   setProjection(-iVisibleGlUnit / 2.0, iVisibleGlUnit / 2.0,
@@ -574,7 +578,7 @@ void Camera::setProjection(double iLeft, double iRight,
 	mProjectionInfo.mNear = iNear;
   mProjectionInfo.mFar = iFar;  
   mProjectionInfo.mZoomFactor = 1.0;
-  mMode = iMode;
+  setMode(iMode);
 	mProjectionInfo.mProportionalToWindow = iProportional;
   computeProjection();
 }

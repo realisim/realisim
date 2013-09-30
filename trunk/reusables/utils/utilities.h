@@ -11,6 +11,8 @@ namespace utils
 {
 
 QByteArray fromFile(const QString&);
+QString getGuid();
+QString getMacAddress();
 bool toFile(const QString&, const QByteArray&);
 
 }
