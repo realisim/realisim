@@ -65,7 +65,8 @@ MACRO(ADD_OPENCL)
   #pour windows… je sais pas.
 ENDMACRO(ADD_OPENCL)
 
-option( REALEDIT_BUILDOPTION "Build RealEdit" ON )
+option( REALEDIT_BUILDOPTION "Build RealEdit" OFF )
+option( SPRITEEDITOR_BUILDOPTION "Build SpriteEditor" ON )
 option( PROTOTYPES_BUILDOPTION "Build Prototypes" OFF )
 
 add_subdirectory( projects )
