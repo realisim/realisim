@@ -114,9 +114,12 @@ int Sprite::getCurrentFrameIndex() const
 	if( getNumberOfFrames() > 1 )
   {
   	int e = getTimer().elapsed();
-    double t = ( e % getAnimationDuration() );
-    t = isLooping() ? t / (double)getAnimationDuration() : min(t, 1.0);
-    mCurrentFrameIndex = round(t * ( getNumberOfFrames() - 1 ));
+    double t;
+    t = isLooping() ? 
+    	( e % getAnimationDuration() ) / (double)getAnimationDuration() :
+      e / (double)getAnimationDuration();
+    t = isLooping() ? t : min(t, 1.0);
+    mCurrentFrameIndex = floor(t * ( getNumberOfFrames() ));
 	}
   else mCurrentFrameIndex = 0;
 	return mCurrentFrameIndex;

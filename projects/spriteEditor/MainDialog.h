@@ -82,6 +82,7 @@ protected slots:
   void save();
   void saveAs();
   void spriteSelectionChanged(int);
+  void spriteTokenChanged(QWidget*);
   void tabChanged(int);
   void textureSelectionChanged(int);
   
@@ -90,9 +91,10 @@ protected:
 
 	enum tabType{ ttTexture = 0, ttSprite };
   virtual void timerEvent(QTimerEvent*);
-  void updateSpriteUi();
-  void updateTextureUi();
-  void updateUi();
+  virtual void updatePreviewerCamera();
+  virtual void updateSpriteUi();
+  virtual void updateTextureUi();
+  virtual void updateUi();
   
   //--- data
 	realisim::utils::SpriteCatalog mSpriteCatalog;
@@ -104,12 +106,20 @@ protected:
   //--- ui
   Viewer* mpViewer;
   Viewer* mpPreviewer;
-  QListWidget* mpTextures;
-  QListWidget* mpSprites;
+  QListWidget* mpTextures;  
   QPushButton* mpAddTexture;
   QPushButton* mpRemoveTexture;
+
+  
+  //pour sprite
+  QListWidget* mpSprites;
   QPushButton* mpAddSprite;
   QPushButton* mpRemoveSprite;
+  QSpinBox* mpDuration;
+  QSpinBox* mpFrameGridX;
+  QSpinBox* mpFrameGridY;
+  QSpinBox* mpNumFrames;
+  QCheckBox* mpIsLooping;
 };
 
 #endif
