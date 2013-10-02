@@ -214,6 +214,7 @@ void Viewer::handleDrag()
         default: break;
       }
       s.setRect(r);
+      mMain.updatePreviewerCamera();
     }
     break;
     case sNavigation:
@@ -259,9 +260,7 @@ void Viewer::initializeGL()
   glDisable(GL_LIGHTING);
   glDisable(GL_DEPTH_TEST);
   
-printf("frag source %s\n", kShowAlphaShader.toStdString().c_str() );
   mShowAlphaShader.addFragmentSource( kShowAlphaShader );
-  //mShowAlphaShader.addVertexSource( kShowAlphaShaderV );
   mShowAlphaShader.link();
 }
 
@@ -315,10 +314,10 @@ void Viewer::mouseMoveEvent( QMouseEvent* e )
   
   update();
   
-printf( "mMouseState %d, mMousePos %d, %d, mDragDelta %d, %d"
-	"hoverId %d, selectedId %d\n",
-	mMouseState, mMousePos.x(), mMousePos.y(), mDragDelta.x(), mDragDelta.y(),
-  mHoverId, mSelectedId );
+//printf( "mMouseState %d, mMousePos %d, %d, mDragDelta %d, %d"
+//	"hoverId %d, selectedId %d\n",
+//	mMouseState, mMousePos.x(), mMousePos.y(), mDragDelta.x(), mDragDelta.y(),
+//  mHoverId, mSelectedId );
 }
 
 //-----------------------------------------------------------------------------
@@ -338,14 +337,25 @@ void Viewer::mousePressEvent( QMouseEvent* e )
     case msDrag: break;
     default: break;
   }
-
+  
+  Sprite& s = mMain.mSpriteCatalog.getSprite( mMain.mSpriteToken );
+  if( s.getRect().isNull() )
+  {
+  	const Camera& c = getCamera();
+  	Point3d glMousePos = c.pixelToGL( mMousePos.x(), mMousePos.y() );  
+    Texture& t = mMain.mSpriteCatalog.getTexture( mMain.mTextureToken );
+    QPoint p( round(glMousePos.getX()),
+      t.height() - round(glMousePos.getY()) );
+  	s.setRect( QRect(p.x(), p.y(), 1, 1) );
+    mHoverId = pBottomRightHandle;
+  }
   mSelectedId = mHoverId;
   handleSelection();
   update();
-printf( "mMouseState %d, mMousePos %d, %d, mDragDelta %d, %d"
-	"hoverId %d, selectedId %d\n",
-	mMouseState, mMousePos.x(), mMousePos.y(), mDragDelta.x(), mDragDelta.y(),
-  mHoverId, mSelectedId );
+//printf( "mMouseState %d, mMousePos %d, %d, mDragDelta %d, %d"
+//	"hoverId %d, selectedId %d\n",
+//	mMouseState, mMousePos.x(), mMousePos.y(), mDragDelta.x(), mDragDelta.y(),
+//  mHoverId, mSelectedId );
 }
 
 //-----------------------------------------------------------------------------
@@ -365,10 +375,10 @@ void Viewer::mouseReleaseEvent( QMouseEvent* e )
   }
 
   update();
-printf( "mMouseState %d, mMousePos %d, %d, mDragDelta %d, %d"
-	"hoverId %d, selectedId %d\n",
-	mMouseState, mMousePos.x(), mMousePos.y(), mDragDelta.x(), mDragDelta.y(),
-  mHoverId, mSelectedId );
+//printf( "mMouseState %d, mMousePos %d, %d, mDragDelta %d, %d"
+//	"hoverId %d, selectedId %d\n",
+//	mMouseState, mMousePos.x(), mMousePos.y(), mDragDelta.x(), mDragDelta.y(),
+//  mHoverId, mSelectedId );
 }
   
 //-----------------------------------------------------------------------------
@@ -485,6 +495,10 @@ MainDialog::MainDialog() : QMainWindow(),
       pVlyt->setSpacing(5); pVlyt->setMargin(5);
       {
       	mpSprites = new QListWidget( pSpriteFrame );
+        QItemDelegate* delegate = new QItemDelegate( mpSprites );
+        connect(delegate, SIGNAL(commitData(QWidget*)), 
+        	this, SLOT( spriteTokenChanged(QWidget*)) );
+        mpSprites->setItemDelegate( delegate );	
         mpSprites->setAlternatingRowColors(true);
         connect( mpSprites, SIGNAL(currentRowChanged(int)),
         	this, SLOT( spriteSelectionChanged(int) ) );
@@ -494,53 +508,53 @@ MainDialog::MainDialog() : QMainWindow(),
         	QHBoxLayout* pLine1 = new QHBoxLayout();
           {
           	QLabel* l = new QLabel( "duration:", pSpriteFrame );
-            QSpinBox* s = new QSpinBox(pSpriteFrame);
-            s->setRange( 1, 10000 );
-            connect( s, SIGNAL(valueChanged(int)),
+            mpDuration = new QSpinBox(pSpriteFrame);
+            mpDuration->setRange( 1, 10000 );
+            connect( mpDuration, SIGNAL(valueChanged(int)),
             	this, SLOT(durationChanged(int)) );
             pLine1->addWidget(l);
             pLine1->addStretch(1);
-            pLine1->addWidget(s);
+            pLine1->addWidget(mpDuration);
           }
           
           QHBoxLayout* pLine2 = new QHBoxLayout();
           {
           	QLabel* l = new QLabel( "frame grid:", pSpriteFrame );
-            QSpinBox* s = new QSpinBox(pSpriteFrame);
-            s->setRange(1, 100);            
-            connect( s, SIGNAL(valueChanged(int)),
+            mpFrameGridX = new QSpinBox(pSpriteFrame);
+            mpFrameGridX->setRange(1, 100);            
+            connect( mpFrameGridX, SIGNAL(valueChanged(int)),
             	this, SLOT(frameGridXChanged(int)) );
-            QSpinBox* s2 = new QSpinBox(pSpriteFrame);
-            s2->setRange(1, 100);
-            connect( s2, SIGNAL(valueChanged(int)),
+            mpFrameGridY = new QSpinBox(pSpriteFrame);
+            mpFrameGridY->setRange(1, 100);
+            connect( mpFrameGridY, SIGNAL(valueChanged(int)),
             	this, SLOT(frameGridYChanged(int)) );
             pLine2->addWidget(l);
             pLine2->addStretch(1);
-            pLine2->addWidget(s);
-            pLine2->addWidget(s2);
+            pLine2->addWidget(mpFrameGridX);
+            pLine2->addWidget(mpFrameGridY);
           }
           
           QHBoxLayout* pLine3 = new QHBoxLayout();
           {
           	QLabel* l = new QLabel( "nombres de frames:", pSpriteFrame );
-            QSpinBox* s = new QSpinBox(pSpriteFrame);
-            s->setRange(1, 1000);            
-            connect( s, SIGNAL(valueChanged(int)),
+            mpNumFrames = new QSpinBox(pSpriteFrame);
+            mpNumFrames->setRange(1, 1000);            
+            connect( mpNumFrames, SIGNAL(valueChanged(int)),
             	this, SLOT(numberOfFramesChanged(int)) );
             pLine3->addWidget(l);
             pLine3->addStretch(1);
-            pLine3->addWidget(s);
+            pLine3->addWidget(mpNumFrames);
           }
           
           QHBoxLayout* pLine4 = new QHBoxLayout();
           {
           	QLabel* l = new QLabel( "looping:", pSpriteFrame );
-            QCheckBox* c = new QCheckBox(pSpriteFrame);
-            connect( c, SIGNAL(stateChanged(int)),
+            mpIsLooping = new QCheckBox(pSpriteFrame);
+            connect( mpIsLooping, SIGNAL(stateChanged(int)),
             	this, SLOT(loopingChanged(int)) );
             pLine4->addWidget(l);
             pLine4->addStretch(1);
-            pLine4->addWidget(c);
+            pLine4->addWidget(mpIsLooping);
           }
           
           QHBoxLayout* pLine5 = new QHBoxLayout();
@@ -616,11 +630,10 @@ void MainDialog::addSpriteClicked()
   {
   	Sprite s;
     Texture t = mSpriteCatalog.getTexture( mTextureToken );
-    s.set( t, QRect(10, 10, 20, 30) );
+    s.set( t, QRect(0,0,0,0) );
     QString token = utils::getGuid();
   	mSpriteCatalog.add( token, s );
-    if(mSpriteToken.isEmpty())
-      mSpriteToken = token;
+    mSpriteToken = token;
   }
   updateSpriteUi();
 }
@@ -702,9 +715,9 @@ void MainDialog::removeSpriteClicked()
 	int c = mpSprites->currentRow();
 	mSpriteCatalog.removeSprite( mSpriteToken );
   if( mpSprites->count() > c + 1 )
-  	spriteSelectionChanged(c+1);//mSpriteToken = mpSprites->item( c+1 )->text();
+  	spriteSelectionChanged(c+1);
   else if( mpSprites->count() > 1 )
-  	spriteSelectionChanged(c-1);//mSpriteToken = mpSprites->item( c-1 )->text();
+  	spriteSelectionChanged(c-1);
   else
     mSpriteToken = QString();
 
@@ -717,9 +730,9 @@ void MainDialog::removeTextureClicked()
 	int c = mpTextures->currentRow();
 	mSpriteCatalog.removeTexture( mTextureToken );
   if( mpTextures->count() > c + 1 )
-  	textureSelectionChanged(c+1);//mTextureToken = mpTextures->item( c+1 )->text();
+  	textureSelectionChanged(c+1);
   else if( mpTextures->count() > 1 )
-  	textureSelectionChanged(c-1);//mTextureToken = mpTextures->item( c-1 )->text();
+  	textureSelectionChanged(c-1);
   else
     mTextureToken = QString();
 
@@ -757,26 +770,27 @@ void MainDialog::saveAs()
 void MainDialog::spriteSelectionChanged(int i)
 {
   mSpriteToken = mpSprites->item(i)->text();
-  updateSpriteUi();
   
-  const Sprite& s = mSpriteCatalog.getSprite( mSpriteToken );
-  Camera c = mpPreviewer->getCamera();
-  Vector2i fs = s.getFrameSize();
-  c.setOrthoProjection( max( fs.x(), fs.y() ),
-  	0.5, 200);
-	c.setZoom(1.0);
-  Matrix4d m;
-  //m.setTranslation( Point3d( -fs.x()/2.0, -fs.y()/2.0, 0.0 ) );
-  c.setTransformationToGlobal( m );
-  c.set( Point3d(0.0, 0.0, 5.0),
-  	Point3d(0.0, 0.0, 0.0),
-    Vector3d(0.0, 1.0, 0.0) );
-  mpPreviewer->setCamera(c, false);
+  updatePreviewerCamera();
   mpPreviewer->update();
-  
   mpViewer->update();
+  
+  updateSpriteUi();
 }
 
+//-----------------------------------------------------------------------------
+void MainDialog::spriteTokenChanged(QWidget* iEditor)
+{
+	Sprite s = mSpriteCatalog.getSprite( mSpriteToken );
+  QString newToken = dynamic_cast<QLineEdit*>(iEditor)->text();
+  mSpriteCatalog.add(newToken, s);
+	if( !mSpriteCatalog.hasError() )
+  {
+  	mSpriteCatalog.removeSprite(mSpriteToken);
+  	mSpriteToken = newToken;
+  }
+  updateUi();
+}
 //-----------------------------------------------------------------------------
 void MainDialog::tabChanged(int i)
 {
@@ -822,6 +836,27 @@ void MainDialog::textureSelectionChanged(int i)
 }
 
 //-----------------------------------------------------------------------------
+void MainDialog::updatePreviewerCamera()
+{
+	mpPreviewer->makeCurrent();
+  //camera du preview
+  const Sprite& s = mSpriteCatalog.getSprite( mSpriteToken );
+  Camera c = mpPreviewer->getCamera();
+  Vector2i fs = s.getFrameSize();
+  c.setOrthoProjection( max( fs.x(), fs.y() ),
+  	0.5, 200);
+	c.setZoom(0.5);
+  Matrix4d m;
+  //m.setTranslation( Point3d( -fs.x()/2.0, -fs.y()/2.0, 0.0 ) );
+  c.setTransformationToGlobal( m );
+  c.set( Point3d(0.0, 0.0, 5.0),
+  	Point3d(0.0, 0.0, 0.0),
+    Vector3d(0.0, 1.0, 0.0) );
+  mpPreviewer->setCamera(c, false);
+  mpPreviewer->doneCurrent();
+}
+
+//-----------------------------------------------------------------------------
 void MainDialog::updateSpriteUi()
 {
 	mpSprites->blockSignals(true);
@@ -829,7 +864,11 @@ void MainDialog::updateSpriteUi()
 
   vector<QString> sprites = mSpriteCatalog.getSpritesForTexture( mTextureToken );
   for( size_t i = 0; i < sprites.size(); ++i )
-  { mpSprites->addItem( sprites[i] ); }
+  { 
+  	QListWidgetItem* item = new QListWidgetItem( sprites[i], mpSprites );
+    item->setFlags( item->flags() | Qt::ItemIsEditable );
+    //mpSprites->addItem( sprites[i] );
+  }
   
   if(mpSprites->findItems( mSpriteToken, Qt::MatchExactly ).count() > 0 )
   {
@@ -837,8 +876,17 @@ void MainDialog::updateSpriteUi()
       Qt::MatchExactly)[0]);
   }
   mpSprites->blockSignals(false);
-  
   mpRemoveSprite->setEnabled( !mSpriteToken.isEmpty() );
+  
+  if( !mSpriteToken.isEmpty() )
+  {
+    Sprite& s = mSpriteCatalog.getSprite( mSpriteToken );
+    mpDuration->setValue( s.getAnimationDuration() );
+    mpFrameGridX->setValue( s.getFrameGrid().x() );
+    mpFrameGridY->setValue( s.getFrameGrid().y() );
+    mpNumFrames->setValue( s.getNumberOfFrames() );
+    mpIsLooping->setChecked( s.isLooping() );
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -869,4 +917,9 @@ void MainDialog::updateUi()
 	updateTextureUi();
   updateSpriteUi();
   mpViewer->update();
+  
+  if( mSpriteCatalog.hasError() )
+  	QMessageBox::warning ( this, "Warning", 
+    	mSpriteCatalog.getAndClearLastErrors(), 
+      QMessageBox::Ok, QMessageBox::Ok );
 }

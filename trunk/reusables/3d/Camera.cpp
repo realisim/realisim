@@ -184,11 +184,11 @@ void Camera::computeProjection()
 //-----------------------------------------------------------------------------
 /*retourne la largeur visible en unité GL*/
 double Camera::getVisibleHeight() const
-{ return mProjectionInfo.getHeight() * getZoom(); }
+{ return mProjectionInfo.getHeight() * 1.0 / getZoom(); }
 
 //-----------------------------------------------------------------------------
 double Camera::getVisibleWidth() const
-{ return mProjectionInfo.getWidth() * getZoom(); }
+{ return mProjectionInfo.getWidth() * 1.0 / getZoom(); }
 
 //-----------------------------------------------------------------------------
 /*déplace la caméra. Le delta est en coordonnée GL et locale à la caméra.*/
