@@ -72,6 +72,7 @@ public:
 	virtual double bottom() const;
   virtual Point2d bottomLeft() const;
   virtual Point2d bottomRight() const;
+  virtual double height() const;
   virtual double left() const;
   virtual double right() const;
   virtual Point2d point(int) const;
@@ -88,6 +89,7 @@ public:
   virtual double top() const;
   virtual Point2d topLeft() const;
   virtual Point2d topRight() const;
+  virtual double width() const;
   
 protected:
 	Point2d mBottomLeft;

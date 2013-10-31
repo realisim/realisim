@@ -49,7 +49,8 @@ public:
   virtual ~Sprite();
   
   virtual void draw() const;
-  virtual anchor anchorPoint() const {return mAnchor;}
+  virtual anchor getAnchorPoint() const {return mAnchor;}
+//virtual void fromBinary() const; voir spriteCatalog
   virtual int getAnimationDuration() const {return mAnimationDuration;}
   virtual const math::Vector2i& getFrameGrid() const {return mFrameGrid;}
   virtual int getNumberOfFrames() const {return mNumberOfFrames;}
@@ -67,6 +68,7 @@ public:
   virtual void setRect( const QRect&);
   virtual void setNumberOfFrames( int iF ) {mNumberOfFrames = iF;}
   virtual void startAnimation();
+//virtual void toBinary() const; voir spriteCatalog
 
 protected:
 	virtual int getCurrentFrameIndex() const;

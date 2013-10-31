@@ -17,7 +17,7 @@ class SpriteCatalog
 {
 public:  
   SpriteCatalog();
-  SpriteCatalog(const SpriteCatalog&) {}
+  SpriteCatalog(const SpriteCatalog&);
   SpriteCatalog& operator=(const SpriteCatalog&) { assert(0); return *this; }
   virtual ~SpriteCatalog();
   

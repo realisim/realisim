@@ -178,6 +178,44 @@ void Viewer::drawSprites( bool iPicking /*=false*/ ) const
 }
 
 //-----------------------------------------------------------------------------
+void Viewer::drawTexture( bool iPicking /*=false*/ )
+{
+//dessine la texture courante
+  Texture t = mMain.mSpriteCatalog.getTexture( mMain.mTextureToken );  
+  pushShader( mShowAlphaShader );
+  mShowAlphaShader.setUniform("textureWidth", t.width());
+  mShowAlphaShader.setUniform("textureHeight", t.height());
+  glColor3ub(255, 255, 255);
+  glDisable(GL_LIGHTING);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  
+  int numberOfRepeatX = 1;
+  int numberOfRepeatY = 1;
+  Point2d o(0.0);
+  Vector2i s( t.width(), t.height() );
+  if( t.getWrapSMode() == GL_REPEAT )
+  	numberOfRepeatX = 8;
+  if( t.getWrapTMode() == GL_REPEAT )
+  	numberOfRepeatY = 8;
+  
+  glEnable( GL_TEXTURE_2D );
+  glBindTexture( GL_TEXTURE_2D, t.getId() );
+  glBegin(GL_QUADS);
+  glTexCoord2d( 0.0, 0.0 );
+  glVertex2d( o.x(), o.y() );
+  glTexCoord2d( 0.0, numberOfRepeatY );
+  glVertex2d( o.x(), o.y() + s.y() );
+  glTexCoord2d( numberOfRepeatX, numberOfRepeatY );
+  glVertex2d( o.x() + s.x(), o.y() + s.y() );
+  glTexCoord2d( numberOfRepeatX, 0.0 );
+  glVertex2d( o.x() + s.x(), o.y() );
+  glEnd();
+  glDisable( GL_TEXTURE_2D );
+  popShader();
+}
+
+//-----------------------------------------------------------------------------
 //QColor Viewer::getColor( colors iC ) const
 //{
 //	QColor r( 0, 0, 0);
@@ -393,18 +431,8 @@ void Viewer::paintGL()
   }
   else
   {
-    //dessine la texture courante
-    Texture t = mMain.mSpriteCatalog.getTexture( mMain.mTextureToken );  
-    pushShader( mShowAlphaShader );
-    mShowAlphaShader.setUniform("textureWidth", t.width());
-    mShowAlphaShader.setUniform("textureHeight", t.height());
-    glColor3ub(255, 255, 255);
-    glDisable(GL_LIGHTING);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    drawRectangle2d( t, Point2d(0.0), Vector2i(t.width(), t.height()) );
-    popShader();
     
+    drawTexture();
     //dessine les sprites pour la texture courante
     drawSprites();
     
@@ -468,6 +496,69 @@ MainDialog::MainDialog() : QMainWindow(),
         mpTextures->setAlternatingRowColors(true);
         connect( mpTextures, SIGNAL(currentRowChanged(int)),
         	this, SLOT( textureSelectionChanged(int) ) );
+				
+        QHBoxLayout* pFilterLyt = new QHBoxLayout(pTextureFrame);
+        { 
+          QLabel* pMin = new QLabel( "Min.", pTextureFrame );
+          mpMinificationFilter = new QComboBox(pTextureFrame);
+          connect( mpMinificationFilter, SIGNAL( activated( int ) ),
+            this, SLOT( minMagFilterChanged() ) );
+          mpMinificationFilter->addItem("nearest");
+          mpMinificationFilter->addItem("linear");
+          mpMinificationFilter->addItem("nearest mipmap nearest");
+          mpMinificationFilter->addItem("linear mipmap nearest");
+          mpMinificationFilter->addItem("nearest mipmap linear");
+          mpMinificationFilter->addItem("linear mipmap linear");
+          
+          QLabel* pMag = new QLabel( "Mag.", pTextureFrame );
+          mpMagnificationFilter = new QComboBox(pTextureFrame);
+          connect( mpMagnificationFilter, SIGNAL( activated( int ) ),
+            this, SLOT( minMagFilterChanged() ) );
+          mpMagnificationFilter->addItem("nearest");
+          mpMagnificationFilter->addItem("linear");
+          
+          pFilterLyt->addWidget(pMin);
+          pFilterLyt->addWidget(mpMinificationFilter);
+          pFilterLyt->addWidget(pMag);
+          pFilterLyt->addWidget(mpMagnificationFilter);
+          pFilterLyt->addStretch(1);
+        }
+        
+        QHBoxLayout* pWrapModeLyt = new QHBoxLayout();
+        {
+        	QLabel* pS = new QLabel( "x", pTextureFrame );
+          mpWrapSMode = new QComboBox(pTextureFrame);
+          connect( mpWrapSMode, SIGNAL( activated( int ) ),
+            this, SLOT( wrapModeChanged() ) );
+          mpWrapSMode->addItem("clamp to edge");
+          mpWrapSMode->addItem("clamp to border");
+          mpWrapSMode->addItem("mirror repeat");
+          mpWrapSMode->addItem("repeat");
+          
+          QLabel* pT = new QLabel( "y", pTextureFrame );
+          mpWrapTMode = new QComboBox(pTextureFrame);
+          connect( mpWrapTMode, SIGNAL( activated( int ) ),
+            this, SLOT( wrapModeChanged() ) );
+          mpWrapTMode->addItem("clamp to edge");
+          mpWrapTMode->addItem("clamp to border");
+          mpWrapTMode->addItem("mirror repeat");
+          mpWrapTMode->addItem("repeat");
+          
+          pWrapModeLyt->addWidget(pS);
+          pWrapModeLyt->addWidget(mpWrapSMode);
+          pWrapModeLyt->addWidget(pT);
+          pWrapModeLyt->addWidget(mpWrapTMode);
+          pWrapModeLyt->addStretch(1);
+        }
+        
+        QHBoxLayout* pLine1 = new QHBoxLayout();
+        {
+        	mpRefresh = new QPushButton("Rafraîchir...", pTextureFrame);
+          connect( mpRefresh, SIGNAL(clicked()), this, 
+          	SLOT(refreshTextureClicked()) );
+          pLine1->addWidget( mpRefresh );
+          pLine1->addStretch(1);
+        }
 
 				QHBoxLayout* pAddRemoveLyt = new QHBoxLayout();
         {
@@ -482,12 +573,16 @@ MainDialog::MainDialog() : QMainWindow(),
           pAddRemoveLyt->addWidget(mpRemoveTexture);
         }
         
-        pVlyt->addWidget(mpTextures);        
+        pVlyt->addWidget(mpTextures); 
+        pVlyt->addLayout(pFilterLyt);
+        pVlyt->addLayout(pWrapModeLyt);       
+        pVlyt->addLayout(pLine1);
         pVlyt->addStretch(1);
         pVlyt->addLayout( pAddRemoveLyt );
       }
     }
 
+		//controle pour les sprites
   	QFrame* pSpriteFrame = new QFrame();
     pTabs->insertTab(ttSprite, pSpriteFrame, "Sprites");
     {
@@ -557,6 +652,26 @@ MainDialog::MainDialog() : QMainWindow(),
             pLine4->addWidget(mpIsLooping);
           }
           
+          QHBoxLayout* pLine4_1 = new QHBoxLayout();
+          {
+          	QLabel* l = new QLabel( "ancrage:", pSpriteFrame );
+            mpAnchor = new QComboBox(pSpriteFrame);
+            connect( mpAnchor, SIGNAL( activated(int)),
+            	this, SLOT( anchorChanged(int) ) );
+            mpAnchor->insertItem( Sprite::aBottomLeft, "bas gauche" );
+            mpAnchor->insertItem( Sprite::aBottomCenter, "bas centre" );
+            mpAnchor->insertItem( Sprite::aBottomRight, "bas droite" );
+            mpAnchor->insertItem( Sprite::aCenterLeft, "centre gauche" );
+            mpAnchor->insertItem( Sprite::aCenter, "centre" );
+            mpAnchor->insertItem( Sprite::aCenterRight, "centre droite" );
+            mpAnchor->insertItem( Sprite::aTopLeft, "haut gauche" );
+            mpAnchor->insertItem( Sprite::aTopCenter, "haut centre" );
+            mpAnchor->insertItem( Sprite::aTopRight, "haut droite" );
+            pLine4_1->addWidget(l);
+            pLine4_1->addStretch(1);
+            pLine4_1->addWidget(mpAnchor);
+          }
+          
           QHBoxLayout* pLine5 = new QHBoxLayout();
           {
             mpPreviewer = new Viewer( *this, pSpriteFrame, mpViewer );
@@ -571,6 +686,7 @@ MainDialog::MainDialog() : QMainWindow(),
           pControlsLyt->addLayout(pLine2);
           pControlsLyt->addLayout(pLine3);
           pControlsLyt->addLayout(pLine4);
+          pControlsLyt->addLayout(pLine4_1);
           pControlsLyt->addLayout(pLine5);
         }
         
@@ -639,6 +755,15 @@ void MainDialog::addSpriteClicked()
 }
 
 //-----------------------------------------------------------------------------
+void MainDialog::anchorChanged( int iIndex )
+{
+	Sprite& s = mSpriteCatalog.getSprite( mSpriteToken );
+  s.setAnchorPoint( (Sprite::anchor)iIndex );
+  updateUi();
+}
+
+
+//-----------------------------------------------------------------------------
 void MainDialog::closeCatalogClicked()
 {
 	mSpriteCatalog.clear();
@@ -685,6 +810,34 @@ void MainDialog::loopingChanged(int iS)
 }
 
 //-----------------------------------------------------------------------------
+void MainDialog::minMagFilterChanged()
+{
+	Texture t = mSpriteCatalog.getTexture( mTextureToken );
+	GLenum filter = GL_NEAREST;
+  switch( mpMinificationFilter->currentIndex() )
+  {
+    case 0: filter = GL_NEAREST; break;
+    case 1: filter = GL_LINEAR; break;
+    case 2: filter = GL_NEAREST_MIPMAP_NEAREST; break;
+    case 3: filter = GL_NEAREST_MIPMAP_LINEAR; break;
+    case 4: filter = GL_LINEAR_MIPMAP_NEAREST; break;
+    case 5: filter = GL_LINEAR_MIPMAP_LINEAR; break;
+    default: break;
+  }
+  t.setMinificationFilter( filter );
+
+	switch( mpMagnificationFilter->currentIndex() )
+  {
+    case 0: filter = GL_NEAREST; break;
+    case 1: filter = GL_LINEAR; break;
+    default: filter = GL_NEAREST; break;
+  }
+  t.setMagnificationFilter( filter );
+
+	updateUi();
+}
+
+//-----------------------------------------------------------------------------
 void MainDialog::numberOfFramesChanged(int iN)
 {
   Sprite& s = mSpriteCatalog.getSprite( mSpriteToken );
@@ -706,6 +859,21 @@ void MainDialog::openCatalogClicked()
     mSaveFileName = c;
   }
 
+  updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::refreshTextureClicked()
+{
+	QString fileName = QFileDialog::getOpenFileName(this, 
+  	tr("Rafraîchir la texture"),
+  	"/home", tr("Images (*.png *.bmp *.jpg *.jpeg)"));
+  if(!fileName.isEmpty())
+  {
+    QImage im(fileName);
+    Texture t = mSpriteCatalog.getTexture( mTextureToken );
+    t.set( im );
+  }
   updateUi();
 }
 
@@ -886,12 +1054,14 @@ void MainDialog::updateSpriteUi()
     mpFrameGridY->setValue( s.getFrameGrid().y() );
     mpNumFrames->setValue( s.getNumberOfFrames() );
     mpIsLooping->setChecked( s.isLooping() );
+    mpAnchor->setCurrentIndex( (int)s.getAnchorPoint() );
   }
 }
 
 //-----------------------------------------------------------------------------
 void MainDialog::updateTextureUi()
 {
+	Texture t = mSpriteCatalog.getTexture( mTextureToken );
 	mpTextures->blockSignals(true);
 	mpTextures->clear();
   for(int i = 0; i < mSpriteCatalog.getNumberOfTextures(); ++i)
@@ -906,6 +1076,50 @@ void MainDialog::updateTextureUi()
 	}
   mpTextures->blockSignals(false);
   
+  //les filtres
+  int index = 0;
+  switch( t.getMinificationFilter() )
+  {
+    case GL_NEAREST: index = 0; break;
+    case GL_LINEAR: index = 1; break;
+    case GL_NEAREST_MIPMAP_NEAREST: index = 2; break;
+    case GL_NEAREST_MIPMAP_LINEAR: index = 3; break;
+    case GL_LINEAR_MIPMAP_NEAREST: index = 4; break;
+    case GL_LINEAR_MIPMAP_LINEAR: index = 5; break;
+    default: break;
+  }
+  mpMinificationFilter->setCurrentIndex(index);
+  
+  switch (t.getMagnificationFilter()) 
+  {
+    case GL_NEAREST: index = 0; break;
+    case GL_LINEAR: index = 1; break;
+    default: break;
+  }
+  mpMagnificationFilter->setCurrentIndex(index);
+  
+  //wrapMode
+  switch (t.getWrapSMode()) 
+  {
+    case GL_CLAMP_TO_EDGE: index = 0; break;
+    case GL_CLAMP_TO_BORDER: index = 1; break;
+    case GL_MIRRORED_REPEAT: index = 2; break;
+    case GL_REPEAT: index = 3; break;
+    default: break;
+  }
+  mpWrapSMode->setCurrentIndex(index);
+  
+  switch (t.getWrapTMode()) 
+  {
+    case GL_CLAMP_TO_EDGE: index = 0; break;
+    case GL_CLAMP_TO_BORDER: index = 1; break;
+    case GL_MIRRORED_REPEAT: index = 2; break;
+    case GL_REPEAT: index = 3; break;
+    default: break;
+  }
+  mpWrapTMode->setCurrentIndex(index);
+  
+  mpRefresh->setEnabled( !mTextureToken.isEmpty() );
   mpRemoveTexture->setEnabled( !mTextureToken.isEmpty() );
 }
 
@@ -922,4 +1136,33 @@ void MainDialog::updateUi()
   	QMessageBox::warning ( this, "Warning", 
     	mSpriteCatalog.getAndClearLastErrors(), 
       QMessageBox::Ok, QMessageBox::Ok );
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::wrapModeChanged()
+{
+	Texture t = mSpriteCatalog.getTexture( mTextureToken );
+  GLenum mode = GL_CLAMP_TO_EDGE;
+  
+  switch (mpWrapSMode->currentIndex()) 
+  {
+    case 0: mode = GL_CLAMP_TO_EDGE; break;
+    case 1: mode = GL_CLAMP_TO_BORDER; break;
+    case 2: mode = GL_MIRRORED_REPEAT; break;
+    case 3: mode = GL_REPEAT; break;
+    default: break;
+  }
+  t.setWrapSMode( mode );
+
+  switch (mpWrapTMode->currentIndex()) 
+  {
+    case 0: mode = GL_CLAMP_TO_EDGE; break;
+    case 1: mode = GL_CLAMP_TO_BORDER; break;
+    case 2: mode = GL_MIRRORED_REPEAT; break;
+    case 3: mode = GL_REPEAT; break;
+    default: break;
+  }
+  t.setWrapTMode( mode );
+  
+	updateUi();
 }

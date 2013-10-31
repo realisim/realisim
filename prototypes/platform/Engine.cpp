@@ -3,6 +3,7 @@
 #include "Engine.h"
 #include "Math/MathUtils.h"
 #include "Math/Primitives.h"
+#include "utils/utilities.h"
 #include <QPainter>
 
 using namespace std;
@@ -11,15 +12,72 @@ using namespace realisim;
 	using namespace treeD;
 	using namespace platform;
 
-const double kDt = 0.015; //temps pour chaque step de l'engin en secondes
+namespace 
+{
+	const double kDt = 0.015; //temps pour chaque step de l'engin en secondes
+	const int kStageHeader = 0x9ab36ef2;
+  
+  const int kStageVersion = 2;
+  const int kStageFistCompatibleVersion = 1;
+}
+
 
 //------------------------------------------------------------------------------
 //---Stage
 //------------------------------------------------------------------------------
 Engine::Stage::Stage() : mCellSize( 32, 32 ), 
-	mTerrainSize( 400, 400 ),
+	mTerrainSize( 30, 40 ),
 	mTerrain( mTerrainSize.x() * mTerrainSize.y(), Stage::ctEmpty )
 {}
+
+//------------------------------------------------------------------------------
+/*retourne tous les indices de le map qui ont la valeure iCt*/
+std::vector<int> Engine::Stage::find( cellType iCt ) const
+{
+	vector<int> r;
+  for(int i = 0; i < mTerrain.size(); ++i)
+  	if( (uchar)mTerrain[i] == iCt ) r.push_back(i);
+  return r;
+}
+
+//------------------------------------------------------------------------------
+void Engine::Stage::fromBinary( QByteArray iBa )
+{
+  QDataStream in(&iBa, QIODevice::ReadOnly);
+  
+  qint32 header;
+  quint32 version, firstCompatibleVersion, cellSizeX, cellSizeY,
+  	terrainSizeX, terrainSizeY;
+  in >> header;
+  if (header != kStageHeader) { printf("Format de fichier invalide."); return; }
+  in >> version;
+  in >> firstCompatibleVersion;
+
+	if( version >= firstCompatibleVersion )
+  {
+    in >> cellSizeX;
+    in >> cellSizeY;
+    mCellSize.set( cellSizeX, cellSizeY );
+    
+    in >> terrainSizeX;
+    in >> terrainSizeY;
+    mTerrainSize.set( terrainSizeX, terrainSizeY );
+    
+    in >> mTerrain;
+    
+    if( version >= 2 )
+    	in >> mBackgroundToken;
+  }
+  else 
+  {
+    printf( "La version de fichier du Stage est trop récente et n'est pas "
+      "supportée." );
+  }
+}
+
+//------------------------------------------------------------------------------
+QString Engine::Stage::getBackgroundToken() const
+{ return mBackgroundToken; }
 
 //------------------------------------------------------------------------------
 Vector2i Engine::Stage::getCellCoordinate( const Point2d& p ) const
@@ -27,28 +85,37 @@ Vector2i Engine::Stage::getCellCoordinate( const Point2d& p ) const
 
 //------------------------------------------------------------------------------
 Vector2i Engine::Stage::getCellCoordinate( int index ) const
-{ return Vector2i( index % terrainSize().x(), index / terrainSize().y() ); }
+{ return Vector2i(  index % terrainSize().x(), index / terrainSize().x() ); }
 
 //------------------------------------------------------------------------------
+/*Retourne l'index de la cellule au pixel p*/
 int Engine::Stage::getCellIndex( const Point2d& p ) const
 { 
-	return (int)p.y() / cellSize().y() * terrainSize().x() + 
-  	(int)p.x() / cellSize().x();
+	Vector2i c = getCellCoordinate( p );
+  return getCellIndex( c.x(), c.y() );
 }
+
+//------------------------------------------------------------------------------
+//retourn l'index de la cellule x, y
+int Engine::Stage::getCellIndex( int x, int y ) const
+{ return y * terrainSize().x() + x; }
 
 //------------------------------------------------------------------------------
 vector<int> Engine::Stage::getCellIndices( const Point2d& iP, const Vector2i& iK ) const
 {
 	vector<int> r;
   //on trouve la coordonnée de la cellule pour la poisition iP
-  Vector2i playerCell( iP.x() / cellSize().x(), iP.y() / cellSize().y());
+  Vector2i c = getCellCoordinate( iP );
 
   Vector2i terrainCell;
   for( int j = -iK.y() / 2; j <= iK.y() / 2; ++j )
   	for( int i = -iK.x() / 2; i <= iK.x() / 2; ++i )
     {
-    	terrainCell = playerCell + Vector2i( i, j );
+    	terrainCell = c + Vector2i( i, j );
 
+			//if( terrainCell.x() >= 0 && terrainCell.x() < terrainSize().x() &&
+     // 	 terrainCell.y() >= 0 && terrainCell.y() < terrainSize().y() )
+      //r.push_back( terrainCell.y() * terrainSize().x() + terrainCell.x() );
 			int clampX = min( max( terrainCell.x(), 0 ), terrainSize().x() - 1 );
       int clampY = min( max( terrainCell.y(), 0 ), terrainSize().y() - 1 );
 			r.push_back( clampY * terrainSize().x() + clampX );
@@ -61,8 +128,52 @@ vector<int> Engine::Stage::getCellIndices( const Point2d& iP, const Vector2i& iK
 Vector2i Engine::Stage::getCellPixelCoordinate( int iIndex ) const
 {
 	Vector2i r = getCellCoordinate( iIndex );
-  return Vector2i( r.x() * cellSize().x(), r.y() * cellSize().y() );
+  return getCellPixelCoordinate( r.x(), r.y() );
 }
+
+//------------------------------------------------------------------------------
+Vector2i Engine::Stage::getCellPixelCoordinate( int iX, int iY ) const
+{  return Vector2i( iX * cellSize().x(), iY * cellSize().y() ); }
+
+//------------------------------------------------------------------------------
+void Engine::Stage::setBackgroundToken( QString iBt )
+{ mBackgroundToken = iBt; }
+
+//------------------------------------------------------------------------------
+QByteArray Engine::Stage::toBinary() const
+{
+  QByteArray r;
+  QDataStream out(&r, QIODevice::WriteOnly);
+
+  //header
+  out << (quint32)kStageHeader;
+  //version courante
+  out << (quint32)kStageVersion;
+  out << (quint32)kStageFistCompatibleVersion;
+  out.setVersion(QDataStream::Qt_4_7);
+
+	//cellsize
+  out << (quint32)mCellSize.x();
+  out << (quint32)mCellSize.y();
+  //terrain size
+  out << (quint32)mTerrainSize.x();
+  out << (quint32)mTerrainSize.y();
+  //terrain data
+  out << mTerrain;
+  
+  //backgroundToken
+  out << mBackgroundToken;
+  return r;
+}
+
+//------------------------------------------------------------------------------
+unsigned char Engine::Stage::value(int iX, int iY) const
+{ return value( iY * terrainSize().x() + iX ); }
+
+//------------------------------------------------------------------------------
+unsigned char Engine::Stage::value(int iIndex) const
+{ return (unsigned char)terrain()[iIndex]; }
+
 
 //------------------------------------------------------------------------------
 //---Engine
@@ -76,28 +187,26 @@ Engine::Engine() : QObject(), mState( sIdle ),
   mKeys(),
   mMouseButtons(),
   mMousePos( -1, -1 ),
-  mMouseDelta(0, 0)
+  mMouseDelta(0, 0),
+  mEditingTool( Stage::ctGround )
 {
-
 	int w = 800, h = 600;
 	mGameCamera.setOrthoProjection( w, h, 0.0, 200 );
   mGameCamera.setWindowSize(w, h);
   mGameCamera.set( Point3d( 0.0, 0.0, 5.0 ),
   	Point3d( 0.0, 0.0, 0.0 ),
     Vector3d( 0.0, 1.0, 0.0 ) );
-    
-  //des valeur bidon dans le terrain
-  for( int i = 0; i < getStage().terrainSize().x(); ++i )
-  	mStage.mTerrain[i] = Stage::ctGround ;
-  mStage.mTerrain[ getStage().terrainSize().x() + 15  ]  = Stage::ctGround ;
-  mStage.mTerrain[ getStage().terrainSize().x() + 22  ]  = Stage::ctGround ;
-  mStage.mTerrain[ getStage().terrainSize().x() + 30  ]  = Stage::ctGround ;
-  mStage.mTerrain[ 10 * getStage().terrainSize().x() + 3  ]  = Stage::ctGround ;
-  mStage.mTerrain[ 10 * getStage().terrainSize().x() + 5  ]  = Stage::ctGround ;
-  mStage.mTerrain[ 10 * getStage().terrainSize().x() + 7  ]  = Stage::ctGround ;
+
+	loadStage("stage.bin");
     
   //init de la position du joueur
-  mPlayer.mPosition = Point2d( 100, 100 );
+  vector<int> start = getStage().find( Stage::ctStart );
+  if( !start.empty() )
+  	mPlayer.mPosition = toPoint(
+    	getStage().getCellPixelCoordinate( start[0] ) + 
+      getStage().cellSize() / 2 );
+  else
+	  mPlayer.mPosition = Point2d( 0, 0 );
   
 	goToState( sMainMenu );
 }
@@ -105,6 +214,21 @@ Engine::Engine() : QObject(), mState( sIdle ),
 Engine::~Engine()
 {
 	mClients.clear();
+}
+
+//------------------------------------------------------------------------------
+void Engine::addError( QString e ) const
+{ 
+	mErrors += mErrors.isEmpty() ? e : "\n" + e;
+  const_cast<Engine*>(this)->send( eErrorRaised );
+}
+
+//------------------------------------------------------------------------------
+QString Engine::getAndClearLastErrors() const
+{
+  QString r = mErrors;
+  mErrors.clear();
+  return r;
 }
 
 //------------------------------------------------------------------------------
@@ -175,7 +299,24 @@ BoundingBox2d Engine::getPlayerBoundingBox() const
 	return BoundingBox2d( mPlayer.mPosition - Vector2d( mPlayer.mSize / 2 ),
     Vector2d( mPlayer.mSize ) );
 }
-  
+
+//------------------------------------------------------------------------------
+realisim::utils::SpriteCatalog& Engine::getSpriteCatalog()
+{ return mSpriteCatalog; }
+
+//------------------------------------------------------------------------------
+/*retourne l'index de toutes les cellules visibles de la tuile*/
+vector<int> Engine::getVisibleCells() const
+{
+	const Camera& c = getGameCamera();
+  const Stage& s = mStage;
+  Point2d look( c.getTransformationToGlobal().getTranslation().getX(),
+    c.getTransformationToGlobal().getTranslation().getY() );
+  return s.getCellIndices( look, Vector2i(
+  	(int)ceil( c.getVisibleWidth() / s.cellSize().x() ) + 1,
+    (int)ceil( c.getVisibleHeight() / s.cellSize().y() ) ) + 1 );
+}
+
 //------------------------------------------------------------------------------
 void Engine::goToState( state iS )
 {
@@ -251,6 +392,7 @@ void Engine::goToState( state iS )
       switch (iS) 
       {
       	case sPaused:
+        	saveStage("stage.bin");
           mState = sPaused;
           break;
         default: break;
@@ -261,6 +403,10 @@ void Engine::goToState( state iS )
   
   send( eStateChanged );
 }
+
+//------------------------------------------------------------------------------
+bool Engine::hasError() const
+{ return mErrors.isEmpty(); }
 
 //------------------------------------------------------------------------------
 void Engine::handleConfigureMenu()
@@ -292,21 +438,27 @@ void Engine::handleEditing()
   
   Vector2d d(0.0);
   //input usagé
-  if( isKeyPressed( Qt::Key_A ) ) d -= Vector2d(2, 0);
-  if( isKeyPressed( Qt::Key_D ) ) d += Vector2d(2, 0);
-  if( isKeyPressed( Qt::Key_W ) ) d += Vector2d(0, 3);
-  if( isKeyPressed( Qt::Key_S ) ) d -= Vector2d(0, 2);
+  if( isKeyPressed( Qt::Key_A ) ) d -= Vector2d(5, 0);
+  if( isKeyPressed( Qt::Key_D ) ) d += Vector2d(5, 0);
+  if( isKeyPressed( Qt::Key_W ) ) d += Vector2d(0, 5);
+  if( isKeyPressed( Qt::Key_S ) ) d -= Vector2d(0, 5);
   
   //application de la gravité
   //d += Vector2d(0.0, -2);
   //déplacement du joueur
   mPlayer.mPosition = mPlayer.mPosition + d;
 
+  Point3d gl = mGameCamera.pixelToGL( getMousePos().x(), getMousePos().y() );
+  int index = mStage.getCellIndex( Point2d( gl.getX(), gl.getY() ) );
+  
 	if( isMousePressed( Qt::LeftButton ) )
   {
-  	Point3d gl = mGameCamera.pixelToGL( getMousePos().x(), getMousePos().y() );
-  	int index = mStage.getCellIndex( Point2d( gl.getX(), gl.getY() ) );
-    mStage.mTerrain[index] = Stage::ctGround;
+    mStage.mTerrain[index] = getEditingTool();
+    send(eStageChanged);
+  }
+  else if( isMousePressed( Qt::RightButton ) )
+  {
+  	mStage.mTerrain[index] = Stage::ctEmpty;
     send(eStageChanged);
   }
 
@@ -369,7 +521,7 @@ void Engine::handleMapCollisions()
   cells[6] = tmp[6]; cells[7] = tmp[8]; cells[8] = tmp[4];
   for( size_t i = 0; i < cells.size(); ++i )
   {
-    if( (uchar)mStage.terrain().at( cells[i] ) != Engine::Stage::ctEmpty )
+    if( mStage.value( cells[i] ) == Engine::Stage::ctGround )
     {
     	Vector2i cellPixelCoordinate = mStage.getCellPixelCoordinate( cells[i] );
     	Rectangle r( toPoint(cellPixelCoordinate),
@@ -447,8 +599,11 @@ void Engine::handleMapCollisions()
   }
   
   //friction en x. seulement si il n'y a pas d'input usagé
-  bool applyFriction = ! ( isKeyPressed( Qt::Key_A ) ||
-  	isKeyPressed( Qt::Key_D ) );
+  //ou changment de direciton
+  bool applyFriction = ! ( (isKeyPressed( Qt::Key_A ) ||
+  	isKeyPressed( Qt::Key_D ) ) ) || 
+    mPlayer.mAcceleration.x() / fabs(mPlayer.mAcceleration.x()) != 
+    mPlayer.mVelocity.x() / fabs(mPlayer.mVelocity.x());
   if(applyFriction && isOnGround)
 		mPlayer.mVelocity.setX( mPlayer.mVelocity.x() * 0.8 );
 
@@ -463,6 +618,9 @@ void Engine::handleMapCollisions()
       default: break;
     }
   }
+  
+  if( mPlayer.mVelocity.norm() < 0.1 )
+  { mPlayer.mState = Player::sIdle; }
 }
 
 //------------------------------------------------------------------------------
@@ -530,7 +688,7 @@ void Engine::handlePlayerInput()
       default: break;
     }
   }
-  if( isKeyPressed( Qt::Key_W ) )
+  if( isKeyPressed( Qt::Key_W, true ) )
   {
   	switch ( mPlayer.mState ) {
     	case Player::sIdle :
@@ -568,9 +726,7 @@ void Engine::handlePlaying()
   handleMapCollisions();
 
   //deplacement de la camera pour suivre le joueur
-  Matrix4d m = mGameCamera.getTransformationToGlobal();
-  m.setTranslation( Point3d( mPlayer.mPosition.x(), mPlayer.mPosition.y(), 0.0 ) );
-  mGameCamera.setTransformationToGlobal( m );
+  moveGameCamera();
 }
 
 //------------------------------------------------------------------------------
@@ -608,6 +764,13 @@ void Engine::keyReleased( int iKey )
 { mKeys[iKey] = false; }
   
 //------------------------------------------------------------------------------
+void Engine::loadStage( QString iPath )
+{
+	mStage.fromBinary( utils::fromFile( iPath ) );
+  send( eStageChanged );
+}  
+  
+//------------------------------------------------------------------------------
 void Engine::mouseMoved( Point2i iPos )
 {	
   if( mMousePos.x() != -1 && mMousePos.y() != -1 )
@@ -624,6 +787,67 @@ void Engine::mouseReleased( int iButton )
 { mMouseButtons[iButton] = false; }
   
 //------------------------------------------------------------------------------
+void Engine::moveGameCamera()  
+{
+  Matrix4d m = mGameCamera.getTransformationToGlobal();
+  Point2d desired = mPlayer.mPosition;
+  Point2d final = desired;
+	Vector2d viewSize( mGameCamera.getVisibleWidth(),
+  	mGameCamera.getVisibleHeight() );
+  Rectangle desiredView(
+    Point2d( desired.x() - mGameCamera.getVisibleWidth() / 2 ,
+    	desired.y() - mGameCamera.getVisibleHeight() / 2 ),
+    viewSize );
+    
+  const Stage& s = getStage();
+  
+  Point2d stageLowerLeft = toPoint( s.getCellPixelCoordinate(
+  	s.getCellIndex( 0, 0 ) ) );
+  Point2d stageUpperRight = toPoint( s.getCellPixelCoordinate(
+  	s.getCellIndex( s.terrainSize().x() - 1, s.terrainSize().y() - 1 ) ) );
+  stageUpperRight = stageUpperRight + Vector2d( s.cellSize() );
+	Rectangle stageRect( stageLowerLeft, stageUpperRight );
+
+	//le stage fit en entier dans la vue
+	if( stageRect.width() < desiredView.width() &&
+  	stageRect.height() < desiredView.height() )
+  {
+  	final = Point2d( stageRect.left() + stageRect.width() / 2.0,
+  		stageRect.bottom() + stageRect.height() / 2.0 );
+  }
+  else //le stage fit pas dans la vue
+  {
+    if( stageLowerLeft.x() > desiredView.left() )
+    {
+      desiredView.setLeft( stageLowerLeft.x() );
+      desiredView.setRight( stageLowerLeft.x() + viewSize.x() );
+    }
+    if( stageLowerLeft.y() > desiredView.bottom() )
+    {
+      desiredView.setBottom( stageLowerLeft.y() );
+      desiredView.setTop( stageLowerLeft.y() + viewSize.y() );
+    }
+    
+    if( stageUpperRight.x() < desiredView.right() )
+    {
+      desiredView.setRight( stageUpperRight.x() );
+      desiredView.setLeft( stageUpperRight.x() - viewSize.x() );
+    }
+    if( stageUpperRight.y() < desiredView.top() )
+    {
+      desiredView.setTop( stageUpperRight.y() );
+      desiredView.setBottom( stageUpperRight.y() - viewSize.y() );
+    }
+    
+    final = Point2d( desiredView.left() + desiredView.width() / 2.0,
+  		desiredView.bottom() + desiredView.height() / 2.0 );
+  }
+  
+  m.setTranslation( Point3d(final.x(), final.y(), 0.0) );
+  mGameCamera.setTransformationToGlobal( m );
+}
+
+//------------------------------------------------------------------------------
 void Engine::registerClient( Client* ipC )
 {
 	vector<Client*>::iterator it = find(mClients.begin(), mClients.end(), ipC);
@@ -632,10 +856,42 @@ void Engine::registerClient( Client* ipC )
 }
 
 //------------------------------------------------------------------------------
+void Engine::saveStage( QString iPath )
+{
+	utils::toFile( iPath, getStage().toBinary() );
+}  
+
+//------------------------------------------------------------------------------
 void Engine::send( event iE )
 {
 	for( size_t i = 0; i < mClients.size(); ++i )
   { mClients[i]->gotEvent( iE ); }
+}
+
+//------------------------------------------------------------------------------
+void Engine::setBackgroundToken( QString iToken )
+{ mStage.setBackgroundToken( iToken ); }
+
+//------------------------------------------------------------------------------
+void Engine::setSpriteCatalog( QString iPath )
+{
+	QByteArray ba = utils::fromFile(iPath);
+	mSpriteCatalog.fromBinary( ba );
+}
+
+//------------------------------------------------------------------------------
+QString Engine::toString( Stage::cellType iCt )
+{
+	QString r("indéfini");
+  switch (iCt) 
+  {
+    case Stage::ctEmpty: r = "vide"; break;
+    case Stage::ctStart: r = "départ"; break;
+    case Stage::ctWayPoint: r = "waypoint"; break;
+    case Stage::ctGround: r = "sol"; break;
+    default: break;
+  }
+  return r;
 }
 
 //------------------------------------------------------------------------------

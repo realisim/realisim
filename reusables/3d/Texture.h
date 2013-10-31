@@ -90,6 +90,7 @@ public:
 	virtual QImage asImage() const;
   virtual Texture copy();
   virtual int depth() const;
+//virtual void fromBinary() const; voir spriteCatalog
   virtual void generateMipmap();
   virtual GLenum getDataType() const {return mpGuts->mDataType;}
   virtual GLenum getFormat() const {return mpGuts->mFormat;}
@@ -122,6 +123,7 @@ public:
   virtual void setWrapTMode( GLenum );
   virtual void setWrapRMode( GLenum );
   virtual const std::vector<int>& size() const;
+//virtual void toBinary() const; voir spriteCatalog
   virtual int width() const;
   
 protected:

@@ -29,11 +29,12 @@ protected:
 	enum mouseState{ msIdle, msDown, msMove, msDrag };
   enum pickables{ pTopLeftHandle, pTopRightHandle,
   	pBottomLeftHandle, pBottomRightHandle };
-  enum colors{ cHover, cSelect };
+//enum colors{ cHover, cSelect };
   
   virtual void drawModeButton(bool = false) const;
   virtual void drawSceneForPicking() const;
   virtual void drawSprites(bool = false) const;
+  virtual void drawTexture(bool = false);
 //  virtual QColor getColor( colors ) const;
   virtual void handleDrag();
   virtual void handleSelection();
@@ -70,13 +71,16 @@ public slots:
 protected slots:
 	void addSpriteClicked();
 	void addTextureClicked();
+  void anchorChanged(int);
   void closeCatalogClicked();
   void durationChanged(int);
   void frameGridXChanged(int);
   void frameGridYChanged(int);
   void loopingChanged(int);
+  void minMagFilterChanged();
   void numberOfFramesChanged(int);
 	void openCatalogClicked();
+  void refreshTextureClicked();
   void removeSpriteClicked();
   void removeTextureClicked();
   void save();
@@ -85,6 +89,7 @@ protected slots:
   void spriteTokenChanged(QWidget*);
   void tabChanged(int);
   void textureSelectionChanged(int);
+  void wrapModeChanged();
   
 protected:
 	friend class Viewer;
@@ -106,10 +111,16 @@ protected:
   //--- ui
   Viewer* mpViewer;
   Viewer* mpPreviewer;
+  
+  //pour texture
   QListWidget* mpTextures;  
   QPushButton* mpAddTexture;
   QPushButton* mpRemoveTexture;
-
+  QPushButton* mpRefresh;
+  QComboBox* mpMagnificationFilter;
+  QComboBox* mpMinificationFilter;
+  QComboBox* mpWrapSMode;
+  QComboBox* mpWrapTMode;
   
   //pour sprite
   QListWidget* mpSprites;
@@ -120,6 +131,7 @@ protected:
   QSpinBox* mpFrameGridY;
   QSpinBox* mpNumFrames;
   QCheckBox* mpIsLooping;
+  QComboBox* mpAnchor;
 };
 
 #endif
