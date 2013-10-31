@@ -102,6 +102,11 @@ Point2d Rectangle::bottomLeft() const
 //------------------------------------------------------------------------------  
 Point2d Rectangle::bottomRight() const
 { return Point2d( right(), bottom() ); }
+
+//------------------------------------------------------------------------------  
+double Rectangle::width() const
+{ return size().x(); }
+
 //------------------------------------------------------------------------------  
 double Rectangle::left() const
 { return mBottomLeft.x(); }
@@ -170,6 +175,9 @@ void Rectangle::setTopRight(const Point2d& iV)
 //------------------------------------------------------------------------------  
 Vector2d Rectangle::size() const
 { return mTopRight - mBottomLeft; }
+//------------------------------------------------------------------------------  
+double Rectangle::height() const
+{ return size().y(); }
 
 }
 }

@@ -30,7 +30,7 @@ Sprite::Sprite() :
 
 Sprite::Sprite(const Sprite& s) :
  mTexture(s.getTexture()),
- mAnchor(s.anchorPoint()),
+ mAnchor(s.getAnchorPoint()),
  mTimer(s.getTimer()),
  mAnimationDuration(s.getAnimationDuration()),
  mIsLooping(s.isLooping()),
@@ -44,7 +44,7 @@ Sprite::Sprite(const Sprite& s) :
 Sprite& Sprite::operator=(const Sprite& s)
 {
   mTexture = s.getTexture();
-  mAnchor = s.anchorPoint();
+  mAnchor = s.getAnchorPoint();
   mTimer = s.getTimer();
   mAnimationDuration = s.getAnimationDuration();
   mIsLooping = s.isLooping();
@@ -64,7 +64,7 @@ void Sprite::draw() const
 {
 
 	Vector3d trans(0.0);
-  switch ( anchorPoint() )
+  switch ( getAnchorPoint() )
   {
     case aBottomLeft: trans.setXYZ(0.5, 0.5, 0.0); break;
     case aBottomCenter: trans.setXYZ(0.0, 0.5, 0.0); break;
@@ -79,7 +79,6 @@ void Sprite::draw() const
   }
   glEnable( GL_BLEND );
   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-  glDisable( GL_LIGHTING );
   
 	glPushMatrix();
   glScaled( getFrameWidth(), getFrameHeight(), 0.0 );
@@ -104,7 +103,6 @@ void Sprite::draw() const
 
   glPopMatrix();
   glDisable(GL_BLEND);
-  glEnable(GL_LIGHTING);
 }
 
 //-----------------------------------------------------------------------------
@@ -141,8 +139,10 @@ math::Rectangle Sprite::getFrameTextureCoordinate() const
   	topLeft.y() + getFrameSize().y() );
   
   //on convertit le tout pour openGL
+  /*Le petit +1 pour bottomLeft est le résultat de la définition de QRect.
+    voir la doc. */
   Point2d bottomLeft( topLeft.x() / (double)getTexture().width(),
-  	( getTexture().height() - bottomRight.y() ) / 
+  	( getTexture().height() + 1 - bottomRight.y() ) / 
     (double)getTexture().height() );
   Point2d topRight(
   	bottomLeft.x() + getFrameWidth() / (double)getTexture().width(),

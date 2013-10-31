@@ -1,6 +1,6 @@
 
 #include <iostream>
-#include "MainDialog.h"
+#include "MainWindow.h"
 #include <QApplication>
 #include <QIcon>
 
@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
     QTextCodec::setCodecForCStrings (QTextCodec::codecForName("UTF-8"));
-    MainDialog m;
+    MainWindow m;
     m.show();
 	
     if ( startMainApp() == 0 )

@@ -197,11 +197,11 @@ GLenum Texture::getWrapSMode() const
 
 //----------------------------------------------------------------------------
 GLenum Texture::getWrapTMode() const
-{ return mpGuts->mWrapSMode; }
+{ return mpGuts->mWrapTMode; }
 
 //----------------------------------------------------------------------------
 GLenum Texture::getWrapRMode() const
-{ return mpGuts->mWrapSMode; }
+{ return mpGuts->mWrapRMode; }
 
 //----------------------------------------------------------------------------
 bool Texture::isValid() const

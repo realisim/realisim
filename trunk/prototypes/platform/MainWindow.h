@@ -1,7 +1,7 @@
 
 
-#ifndef MainDialog_hh
-#define MainDialog_hh
+#ifndef MainWindow_hh
+#define MainWindow_hh
 
 #include "Engine.h"
 #include <QMainWindow>
@@ -40,26 +40,39 @@ protected:
   
   Engine& mEngine;
   treeD::Camera mGameCamera;
+//  utils::SpriteCatalog& mSpriteCatalog;
   
   //pour edition
   treeD::Sprite mEditionMap;
-  treeD::Sprite mPlayer;
+  //treeD::Texture mBrick;
+  //treeD::Texture mEditionGrid;
+  //treeD::Texture mStart;
 };
 
 
-class MainDialog : public QMainWindow, public realisim::platform::Engine::Client
+class MainWindow : public QMainWindow, public realisim::platform::Engine::Client
 {
 	Q_OBJECT
 public:
-	MainDialog();
-	~MainDialog(){};
+	MainWindow();
+	~MainWindow(){};
   
 public slots:
-            
+  
+protected slots:
+	virtual void backgroundChanged(int);
+	virtual void cellTypeChanged(int);
+
 protected:
 	virtual void gotEvent( realisim::platform::Engine::event );
+  virtual void populateBackground();
+  virtual void updateUi();
+  
 	realisim::platform::Engine mEngine;
   realisim::platform::Viewer* mpViewer;
+  QFrame* mpEditionPanel;
+  QComboBox* mpCellType;
+  QComboBox* mpBackground;
 };
 
 #endif

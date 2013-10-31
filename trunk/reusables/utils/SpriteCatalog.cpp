@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include "utils/SpriteCatalog.h"
+#include "utils/utilities.h"
 
 using namespace realisim;
 using namespace math;
@@ -20,6 +21,12 @@ treeD::Texture SpriteCatalog::mDummyTexture;
 treeD::Sprite SpriteCatalog::mDummySprite;
 
 SpriteCatalog::SpriteCatalog()
+{}
+
+SpriteCatalog::SpriteCatalog( const SpriteCatalog& iSc) :
+	mSprites( iSc.mSprites ),
+  mTextures( iSc.mTextures ),
+  mErrors( iSc.mErrors )
 {}
 
 SpriteCatalog::~SpriteCatalog()
@@ -317,7 +324,7 @@ QByteArray SpriteCatalog::toBinary() const
   	const Sprite& s = *(itSprite->second);
   	out << itSprite->first; //token
     out << getTextureToken(s); //token de la texture parent
-    out << (qint32)s.anchorPoint();
+    out << (qint32)s.getAnchorPoint();
     out << (qint32)s.getAnimationDuration();
     out << (bool)s.isLooping();
     out << s.getRect();

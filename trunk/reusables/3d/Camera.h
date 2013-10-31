@@ -77,6 +77,8 @@ public:
   const Matrix4d& getTransformationToLocal() const { return mToLocal; }
   const Matrix4d& getTransformationToGlobal() const { return mToGlobal; }
   const Vector3d& getUp() const { return mUp; }
+  double getVisibleHeight() const;
+  double getVisibleWidth() const;
   const WindowInfo& getWindowInfo() const {return mWindowInfo;}
   const double getZoom() const { return mProjectionInfo.mZoomFactor; }
   void move( const Vector3d& );
@@ -118,8 +120,6 @@ protected:
   
   void computeLatAndUp(); 
   void computeProjection(); 
-  double getVisibleHeight() const;
-  double getVisibleWidth() const;
   const ProjectionInfo& getProjectionInfo() const {return mProjectionInfo;}
   void setLat( const Vector3d& iLat );  
   void setUp( const Vector3d& iUp );
