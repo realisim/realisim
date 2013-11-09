@@ -16,29 +16,29 @@ using namespace realisim;
 using namespace realisim::treeD;
 
 //-----------------------------------------------------------------------------
-//--- Camera::ProjectionInfo
+//--- Camera::Projection
 //-----------------------------------------------------------------------------
-Camera::ProjectionInfo::ProjectionInfo() : mLeft(-10.0),
+Camera::Projection::Projection() : mLeft(-10.0),
   mRight(10.0),
   mBottom(0.0),
   mTop(0.0),
   mNear(0.5),
   mFar(2000.0),
   mZoomFactor( 1.0 ),
-  mProportionalToWindow(true)
+  mProportionalToWindow(true),
+  mType( tPerspective )
 {}
 
-double Camera::ProjectionInfo::getHeight() const
+double Camera::Projection::getHeight() const
 { return mTop - mBottom; }
 
-double Camera::ProjectionInfo::getWidth() const
+double Camera::Projection::getWidth() const
 { return mRight - mLeft; }
 
 //-----------------------------------------------------------------------------
 //--- Camera
 //-----------------------------------------------------------------------------
-Camera::Camera( Mode iMode /*= PERSPECTIVE*/ ) : 
-mMode( iMode ),
+Camera::Camera() : 
 mOrientation( FREE ),
 mToLocal(),
 mToGlobal(),
@@ -56,7 +56,6 @@ mWindowInfo()
 
 //-----------------------------------------------------------------------------
 Camera::Camera( const Camera& iCam ) : 
-mMode(iCam.getMode()),
 mOrientation(iCam.getOrientation()),
 mToLocal(iCam.getTransformationToLocal()),
 mToGlobal(iCam.getTransformationToGlobal()),
@@ -64,7 +63,7 @@ mPos(iCam.getPos()),
 mLat(iCam.getLat()),
 mLook(iCam.getLook()),
 mUp(iCam.getUp()),
-mProjectionInfo(iCam.getProjectionInfo()),
+mProjectionInfo(iCam.getProjection()),
 mPixelPerGLUnit(iCam.getPixelPerGLUnit()),
 mWindowInfo(iCam.getWindowInfo())
 {
@@ -113,28 +112,21 @@ void Camera::applyProjectionTransformation() const
     et getVisibleHeight, on doit trouver le centre de la projection
     originale (sans zoom). Ensuite on détermine la taille du rectangle
     de la projection avec le zoom a partir de ce centre.*/
+  const Projection& p = getProjection();
   double halfVisibleWidth = getVisibleWidth() / 2.0;
   double halfVisibleHeigh = getVisibleHeight() / 2.0;
   double cx = 0.0, cy = 0.0, l, r, b, t;
-  cx = getProjectionInfo().mLeft + getProjectionInfo().getWidth() / 2.0;
-  cy = getProjectionInfo().mBottom + getProjectionInfo().getHeight() / 2.0; 
+  cx = p.mLeft + p.getWidth() / 2.0;
+  cy = p.mBottom + p.getHeight() / 2.0; 
   l = cx - halfVisibleWidth;
   r = cx + halfVisibleWidth;
   b = cy - halfVisibleHeigh;
   t = cy + halfVisibleHeigh;
-  switch ( getMode() ) 
+  switch ( p.mType ) 
   {
-    case ORTHOGONAL:
-				glOrtho( l, r, b, t, getProjectionInfo().mNear,
-        	getProjectionInfo().mFar);
-      break;
-      
-    case PERSPECTIVE:
-				glFrustum( l, r, b, t, getProjectionInfo().mNear,
-        	getProjectionInfo().mFar);
-      break;
-    default:
-      break;
+    case Projection::tOrthogonal: glOrtho( l, r, b, t, p.mNear, p.mFar); break;
+    case Projection::tPerspective: glFrustum( l, r, b, t, p.mNear, p.mFar); break;
+    default: break;
   }
   glMatrixMode(GL_MODELVIEW);
 }
@@ -142,15 +134,16 @@ void Camera::applyProjectionTransformation() const
 //-----------------------------------------------------------------------------
 void Camera::computeProjection()
 {
-  if(getProjectionInfo().mProportionalToWindow)
+	const Projection& p = getProjection();
+  if(p.mProportionalToWindow)
   {
     /*Quand on veut une projection proportionnelle, on commence par trouver
     la hauteur (h) proportionnel a la largeur (w) courante. Ensuite, on
     trouve le centre (cy) de la projection et y ajoute la moitié de h
     de part et d'autre.*/
-  	double w = getWindowInfo().getWidth() / getProjectionInfo().getWidth();
+  	double w = getWindowInfo().getWidth() / p.getWidth();
     double h = getWindowInfo().getHeight() / w / 2.0;
-    double cy = getProjectionInfo().mBottom + getProjectionInfo().getHeight() / 2.0; 
+    double cy = p.mBottom + p.getHeight() / 2.0; 
     mProjectionInfo.mTop = cy + h;
     mProjectionInfo.mBottom = cy - h;
   }
@@ -312,7 +305,6 @@ void Camera::move( const Vector3d& iDelta )
 Camera&
 Camera::operator=( const Camera& iCam )
 {
-  mMode = iCam.getMode();
   mOrientation = iCam.getOrientation();
   mToLocal = iCam.getTransformationToLocal();
   mToGlobal = iCam.getTransformationToGlobal();
@@ -320,7 +312,7 @@ Camera::operator=( const Camera& iCam )
   mLat = iCam.getLat();
   mLook = iCam.getLook();
   mUp = iCam.getUp();
-  mProjectionInfo = iCam.getProjectionInfo();
+  mProjectionInfo = iCam.getProjection();
   mPixelPerGLUnit = iCam.getPixelPerGLUnit();
   mWindowInfo = iCam.getWindowInfo();
   
@@ -399,13 +391,13 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
 	const Point3d& iPoint /*= Point3d(MAX_DOUBLE)*/ ) const
 {
   Vector3d result(0.0);
-  if(getMode() == ORTHOGONAL ||
+  if(getProjection().mType == Projection::tOrthogonal ||
      (iPoint == Point3d(MAX_DOUBLE)))
   {
     result = getLat() * iDeltaX / mPixelPerGLUnit +
       getUp() * iDeltaY / mPixelPerGLUnit;
   }
-  else //PERSPECTIVE
+  else //Projection::tPerspective
   {
   
     glMatrixMode( GL_PROJECTION );
@@ -533,14 +525,10 @@ void Camera::setLat( const Vector3d& iLat )
 }
 
 //-----------------------------------------------------------------------------
-void Camera::setMode( Mode iMode )
-{ mMode = iMode; }
-
-//-----------------------------------------------------------------------------
 void Camera::setOrthoProjection(double iVisibleGlUnit, double iNear, double iFar)
 {
   setProjection(-iVisibleGlUnit / 2.0, iVisibleGlUnit / 2.0,
-   -1.0, 1.0, iNear, iFar, ORTHOGONAL, true);
+   -1.0, 1.0, iNear, iFar, Projection::tOrthogonal, true);
 }
 
 //-----------------------------------------------------------------------------
@@ -548,7 +536,8 @@ void Camera::setOrthoProjection(double iVisibleGlUnitX, double iVisibleGlUnitY,
 	double iNear, double iFar)
 {
   setProjection(-iVisibleGlUnitX / 2.0, iVisibleGlUnitX / 2.0,
-   -iVisibleGlUnitY / 2.0, iVisibleGlUnitY / 2.0, iNear, iFar, ORTHOGONAL, false);
+   -iVisibleGlUnitY / 2.0, iVisibleGlUnitY / 2.0, iNear, iFar,
+   Projection::tOrthogonal, false);
 }
 
 //-----------------------------------------------------------------------------
@@ -562,13 +551,17 @@ void Camera::setPerspectiveProjection(double iFov, double iRatio,
   //iRatio = halfWidth / halfHeight;
   double halfWidth = iRatio * halfHeight;
   setProjection(-halfWidth, halfWidth, -halfHeight, halfHeight,
-    iNear, iFar, PERSPECTIVE, iProportional);
+    iNear, iFar, Projection::tPerspective, iProportional);
 }
+
+//-----------------------------------------------------------------------------
+void Camera::setProjection( const Projection& iP )
+{ mProjectionInfo = iP; }
 
 //-----------------------------------------------------------------------------
 void Camera::setProjection(double iLeft, double iRight,
                            double iBottom, double iTop,
-                           double iNear, double iFar, Mode iMode,
+                           double iNear, double iFar, Projection::type iType,
                            bool iProportional /*=true*/)
 {
 	mProjectionInfo.mLeft = iLeft;
@@ -578,7 +571,7 @@ void Camera::setProjection(double iLeft, double iRight,
 	mProjectionInfo.mNear = iNear;
   mProjectionInfo.mFar = iFar;  
   mProjectionInfo.mZoomFactor = 1.0;
-  setMode(iMode);
+  mProjectionInfo.mType = iType;
 	mProjectionInfo.mProportionalToWindow = iProportional;
   computeProjection();
 }

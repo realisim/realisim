@@ -102,6 +102,7 @@ public:
   virtual GLenum getWrapTMode() const;
   virtual GLenum getWrapRMode() const;
   virtual int height() const;
+  virtual bool isValid() const;
   virtual void resize( const std::vector<int>& );
   virtual void resize( int, int );
   virtual void resize( int, int, int );
@@ -144,8 +145,7 @@ protected:
     unsigned int mRefCount;
   };
   
-  virtual void deleteGuts();
-  virtual bool isValid() const;
+  virtual void deleteGuts();  
   virtual void makeGuts();
   virtual void setDataType(GLenum iT) {mpGuts->mDataType = iT;}
   virtual void setFormat(GLenum iF) {mpGuts->mFormat = iF;}

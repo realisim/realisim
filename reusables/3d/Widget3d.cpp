@@ -343,7 +343,7 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
   
   if( iAnimate )
   {
-    mCam.setMode( mNewCam.getMode() );
+    mCam.setProjection( mNewCam.getProjection() );
     mCam.setOrientation( mNewCam.getOrientation() );
     /*L'animation de la camera va interpoler la transformation entre la
       la vielle camera (mOldCam) et la nouvelle camera (mNewCame). Cette
@@ -474,15 +474,25 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
 {
   makeCurrent();
 
-  if(getCamera().getMode() == Camera::ORTHOGONAL)
+  if(getCamera().getProjection().mType == Camera::Projection::tOrthogonal)
   {
     double zoom = 1 / 1.15;
     if(ipE->delta() < 0)
       zoom = 1.15;
     double finalZoom = getCamera().getZoom() * zoom;
     if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
-    {
+    {                  
+      Point3d glPos = mCam.pixelToGL( ipE->x(), ipE->y() );
+      double xPreZoom = glPos.getX(), yPreZoom = glPos.getY();
       mCam.setZoom(finalZoom);
+      glPos = mCam.pixelToGL( ipE->x(), ipE->y() );
+      double xPostZoom = glPos.getX(), yPostZoom = glPos.getY();
+      Camera::Projection p = mCam.getProjection();
+      p.mLeft -= xPostZoom - xPreZoom;
+      p.mRight -= xPostZoom - xPreZoom;
+      p.mTop -= yPostZoom - yPreZoom;
+      p.mBottom -= yPostZoom - yPreZoom;
+      mCam.setProjection( p );      
       mCam.applyProjectionTransformation();
     }
   }

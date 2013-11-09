@@ -7,8 +7,18 @@
 #include "math/Vect.h"
 
 /*
-  --members
-  mMode: mode de projection, Orthogonal ou Perspective
+	-- struct
+  Projection
+    mLeft;
+    mRight;
+    mBottom;
+    mTop;
+    mNear;
+    mFar;
+    mZoomFactor: Facteur multiplicateur sur mVisibleGLUnit.
+    mProportional:
+
+  -- membres
   mOrientation: Orientation de la camera
 mTransformation: transformation appliqué au systeme d'axe de la caméra.
     cette transformation est: syteme local à system global. Le Widget 3d
@@ -18,14 +28,6 @@ mTransformation: transformation appliqué au systeme d'axe de la caméra.
   mLat: vecteur latéral normalisé
   mLook:  point visé.
   mUp: vecteur up normalisé.
-  mLeft;
-  mRight;
-  mBottom;
-  mTop;
-  mNear;
-  mFar;
-  mZoomFactor: Facteur multiplicateur sur mVisibleGLUnit.
-  mProportional:
   mPixelPerGLUnit: le rapport entre les pixel d'écran et les unité GL.
   mWindowInfo: Information sur la fenetre. Utile afin de calculer la
     matrice de projection.
@@ -45,8 +47,6 @@ using namespace realisim::math;
 class Camera
 {
 public:
-  
-  enum Mode{ ORTHOGONAL = 0, PERSPECTIVE };
   enum Orientation{ XY, ZY, XZ, FREE };
   
   //windowInfo devrait etre remplacé par viewport...
@@ -61,8 +61,28 @@ public:
     int mLongSide;
     int mShortSide;
   };
+  
+  struct Projection
+  {
+  	Projection();
+    enum type{ tOrthogonal = 0, tPerspective };
+    
+    double getHeight() const;
+    double getWidth() const;    
+    
+  	double mLeft;
+    double mRight;
+    double mBottom;
+    double mTop;
+    double mNear;
+    double mFar;
+    double mZoomFactor;
+    bool mProportionalToWindow;
+    type mType;
+  };
 
-  Camera( Mode iMode = PERSPECTIVE );
+
+  Camera();
   Camera( const Camera& iCam );
   virtual ~Camera();
   
@@ -70,10 +90,10 @@ public:
   void applyProjectionTransformation() const;
   const Vector3d& getLat() const { return mLat; }
   const Point3d& getLook() const { return mLook; }
-  Mode getMode() const { return mMode; }
   Orientation getOrientation() const { return mOrientation; }
   const Point3d& getPos() const { return mPos; }
   const double getPixelPerGLUnit() const { return mPixelPerGLUnit; }
+  const Projection& getProjection() const {return mProjectionInfo;}
   const Matrix4d& getTransformationToLocal() const { return mToLocal; }
   const Matrix4d& getTransformationToGlobal() const { return mToGlobal; }
   const Vector3d& getUp() const { return mUp; }
@@ -87,11 +107,11 @@ public:
   Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
   void set( const Point3d&, const Point3d&, const Vector3d& );
   void set( const Point3d&, const Point3d&, const Vector3d&, const Vector3d& );
-  void setMode( Mode );
   void setOrthoProjection(double, double, double);
   void setOrthoProjection(double, double, double, double);
   void setPerspectiveProjection(double, double, double, double, bool = true);
-  void setProjection(double, double, double, double, double, double, Mode, bool = true);
+  void setProjection( const Projection& );
+  void setProjection(double, double, double, double, double, double, Projection::type, bool = true);
   void setOrientation( Orientation );
   void setTransformationToLocal(const Matrix4d&);
   void setTransformationToGlobal(const Matrix4d&);
@@ -100,31 +120,12 @@ public:
 //  QString toString() const;
 void print() const;
   
-protected:
-	struct ProjectionInfo
-  {
-  	ProjectionInfo();
-    
-    double getHeight() const;
-    double getWidth() const;    
-    
-  	double mLeft;
-    double mRight;
-    double mBottom;
-    double mTop;
-    double mNear;
-    double mFar;
-    double mZoomFactor;
-    bool mProportionalToWindow;
-  };
-  
+protected:  
   void computeLatAndUp(); 
   void computeProjection(); 
-  const ProjectionInfo& getProjectionInfo() const {return mProjectionInfo;}
   void setLat( const Vector3d& iLat );  
   void setUp( const Vector3d& iUp );
   
-  Mode mMode;
   Orientation mOrientation;
   Matrix4d mToLocal;
   Matrix4d mToGlobal;
@@ -132,7 +133,7 @@ protected:
   Vector3d mLat;
   Point3d mLook;
   Vector3d mUp;
-  ProjectionInfo mProjectionInfo;
+  Projection mProjectionInfo;
   double mPixelPerGLUnit;
   WindowInfo mWindowInfo;
 };
