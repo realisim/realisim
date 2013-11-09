@@ -188,7 +188,7 @@ void Text::render() const
     c.setWindowSize( r.width(), r.height() );
     c.setProjection( 0, r.width(), 
       0, r.height(), 0.5, 100.0,
-      Camera::ORTHOGONAL );
+      Camera::Projection::tOrthogonal );
     c.applyModelViewTransformation();
     c.applyProjectionTransformation();
     

@@ -62,27 +62,14 @@ Sprite::~Sprite()
 //-----------------------------------------------------------------------------
 void Sprite::draw() const
 {
-
-	Vector3d trans(0.0);
-  switch ( getAnchorPoint() )
-  {
-    case aBottomLeft: trans.setXYZ(0.5, 0.5, 0.0); break;
-    case aBottomCenter: trans.setXYZ(0.0, 0.5, 0.0); break;
-    case aBottomRight: trans.setXYZ(-0.5, 0.5, 0.0); break;
-    case aCenterLeft: trans.setXYZ(0.5, 0.0, 0.0); break;
-    case aCenter: trans.setXYZ(0.0, 0.0, 0.0); break;
-    case aCenterRight: trans.setXYZ(-0.5, 0.0, 0.0); break;
-    case aTopLeft: trans.setXYZ(0.5, -0.5, 0.0); break;
-    case aTopCenter: trans.setXYZ(0.0, -0.5, 0.0); break;
-    case aTopRight: trans.setXYZ(-0.5, -0.5, 0.0); break;
-    default: break;
-  }
+	
+	Vector2d trans = getTranslation();
   glEnable( GL_BLEND );
   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
   
 	glPushMatrix();
+  glTranslated( trans.x(), trans.y(), 0.0 );
   glScaled( getFrameWidth(), getFrameHeight(), 0.0 );
-  glTranslated( trans.getX(), trans.getY(), trans.getZ() );
   
   Point2d o( -0.5 );
   Vector2d s( 1.0 );
@@ -148,6 +135,30 @@ math::Rectangle Sprite::getFrameTextureCoordinate() const
   	bottomLeft.x() + getFrameWidth() / (double)getTexture().width(),
     bottomLeft.y() + getFrameHeight() / (double)getTexture().height() );
   return Rectangle(bottomLeft, topRight);
+}
+
+//-----------------------------------------------------------------------------
+/*Retourne la translation en pixel appliquée au sprite en fonction de son point 
+  d'ancrage.*/
+Vector2d Sprite::getTranslation() const
+{
+	Vector2d r(0.0);
+
+  switch ( getAnchorPoint() )
+  {
+    case aBottomLeft: r.set(0.5, 0.5); break;
+    case aBottomCenter: r.set(0.0, 0.5); break;
+    case aBottomRight: r.set(-0.5, 0.5); break;
+    case aCenterLeft: r.set(0.5, 0.0); break;
+    case aCenter: r.set(0.0, 0.0); break;
+    case aCenterRight: r.set(-0.5, 0.0); break;
+    case aTopLeft: r.set(0.5, -0.5); break;
+    case aTopCenter: r.set(0.0, -0.5); break;
+    case aTopRight: r.set(-0.5, -0.5); break;
+    default: break;
+  }
+	r.set( r.x() * getFrameSize().x(), r.y() * getFrameSize().y() );
+  return r ;
 }
 
 //-----------------------------------------------------------------------------

@@ -56,7 +56,8 @@ public:
   virtual int getNumberOfFrames() const {return mNumberOfFrames;}
   virtual QRect getRect() const {return mRect;}
   virtual const math::Vector2i& getFrameSize() const {return mFrameSize;}
-  virtual Texture getTexture() const {return mTexture;}	
+  virtual Texture getTexture() const {return mTexture;}
+  virtual math::Vector2d getTranslation() const;
   virtual bool isLooping() const {return mIsLooping;}
   virtual void setAnchorPoint(anchor a) { mAnchor = a; }
   virtual void setAnimationDuration(double d) {mAnimationDuration = d;}
