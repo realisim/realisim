@@ -48,6 +48,7 @@ public:
   Sprite& operator=(const Sprite&);
   virtual ~Sprite();
   
+  virtual QImage asQImage() const;
   virtual void draw() const;
   virtual anchor getAnchorPoint() const {return mAnchor;}
 //virtual void fromBinary() const; voir spriteCatalog

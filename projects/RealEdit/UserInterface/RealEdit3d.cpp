@@ -25,7 +25,6 @@
 using namespace realisim;
   using namespace math;
   using namespace treeD;
-  	using namespace utilities;
 using namespace realEdit;
   using namespace commands;
 using namespace std;
@@ -597,7 +596,7 @@ void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* ipE)
           normal = m.getPolygon(id).getNormal(0);
         }
         
-        if(c.getMode() == Camera::PERSPECTIVE)
+        if(c.getProjection().mType == Camera::Projection::tPerspective)
         {
         	/*on trouve la position finale que la caméra doit
             avoir pour faire face a la selection*/

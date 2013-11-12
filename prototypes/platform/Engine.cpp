@@ -17,7 +17,7 @@ namespace
 	const double kDt = 0.015; //temps pour chaque step de l'engin en secondes
 	const int kStageHeader = 0x9ab36ef2;
   
-  const int kStageVersion = 2;
+  const int kStageVersion = 4;
   const int kStageFistCompatibleVersion = 1;
 }
 
@@ -25,10 +25,71 @@ namespace
 //------------------------------------------------------------------------------
 //---Stage
 //------------------------------------------------------------------------------
-Engine::Stage::Stage() : mCellSize( 32, 32 ), 
+Engine::Stage::Stage() :
+	mName( "stage" ),
+  mCellSize( 32, 32 ), 
 	mTerrainSize( 30, 40 ),
-	mTerrain( mTerrainSize.x() * mTerrainSize.y(), Stage::ctEmpty )
-{}
+	mTerrain( mTerrainSize.x() * mTerrainSize.y(), Stage::ctEmpty ),
+  mLayers()
+{ mLayers.push_back( new Layer( getTerrainSize() ) ); }
+
+Engine::Stage::Stage( QString iName, Vector2i iSize ) : 
+	mName( iName ),
+	mCellSize( 32, 32 ), 
+	mTerrainSize( iSize ),
+	mTerrain( mTerrainSize.x() * mTerrainSize.y(), Stage::ctEmpty ),
+  mLayers(),
+  mBackgroundToken()
+{ mLayers.push_back( new Layer( getTerrainSize() ) ); }
+
+Engine::Stage::Stage( const Stage& iS) :
+	mName( iS.getName() ),
+  mCellSize( iS.getCellSize() ), 
+	mTerrainSize( iS.getTerrainSize() ),
+	mTerrain( iS.getTerrain() ),
+  mLayers(),
+  mBackgroundToken( iS.getBackgroundToken() )
+{ 
+	for( int i = 0; i < iS.getNumberOfLayers(); ++i )
+  	mLayers.push_back( new Layer( *iS.mLayers[i] ) );
+}
+
+Engine::Stage& Engine::Stage::operator=( const Stage& iS )
+{
+	mName = iS.getName();
+  mCellSize = iS.getCellSize();
+  mTerrainSize = iS.getTerrainSize();
+  mTerrain = iS.getTerrain();
+
+  for( int i = 0; i < iS.getNumberOfLayers(); ++i )
+  	mLayers.push_back( new Layer( *iS.mLayers[i] ) );
+  mBackgroundToken = iS.getBackgroundToken();
+	return *this;
+}
+
+Engine::Stage::~Stage()
+{ clear(); }
+
+//------------------------------------------------------------------------------
+void Engine::Stage::addToken( int iLayer, QString iToken )
+{
+	vector<QString>& t = mLayers[iLayer]->mTokens;	
+	if( std::find( t.begin(), t.end(), iToken ) == t.end() ) 
+		t.push_back( iToken );
+}
+
+//------------------------------------------------------------------------------
+void Engine::Stage::clear()
+{
+	mName = QString();
+	mCellSize.set(0, 0);
+  mTerrainSize.set(0, 0);
+  mTerrain = QByteArray();
+	for( int i = 0; i < getNumberOfLayers(); ++i )
+  	delete mLayers[i];
+  mLayers.clear();
+  mBackgroundToken = QString();
+}
 
 //------------------------------------------------------------------------------
 /*retourne tous les indices de le map qui ont la valeure iCt*/
@@ -43,18 +104,28 @@ std::vector<int> Engine::Stage::find( cellType iCt ) const
 //------------------------------------------------------------------------------
 void Engine::Stage::fromBinary( QByteArray iBa )
 {
+	clear();
   QDataStream in(&iBa, QIODevice::ReadOnly);
   
   qint32 header;
   quint32 version, firstCompatibleVersion, cellSizeX, cellSizeY,
   	terrainSizeX, terrainSizeY;
   in >> header;
-  if (header != kStageHeader) { printf("Format de fichier invalide."); return; }
+  if (header != kStageHeader) 
+  { 
+  	printf("Format de fichier invalide."); 
+    *this = Stage();
+  	return;
+  }
   in >> version;
   in >> firstCompatibleVersion;
 
 	if( version >= firstCompatibleVersion )
   {
+  	if( version >= 4 ) 
+    { in >> mName; }
+    else { mName = "stage"; }
+  
     in >> cellSizeX;
     in >> cellSizeY;
     mCellSize.set( cellSizeX, cellSizeY );
@@ -67,6 +138,29 @@ void Engine::Stage::fromBinary( QByteArray iBa )
     
     if( version >= 2 )
     	in >> mBackgroundToken;
+     
+    if( version < 3 )
+    	mLayers.push_back( new Layer( mTerrainSize ) );
+      
+    // ajout des layers
+    if( version >= 3 )
+    {
+    	unsigned int numLayers = 0, numTokens = 0;
+      QString token;
+      in >> numLayers;
+      for( uint i = 0; i < numLayers; ++i )
+      {
+      	Layer* l = new Layer( mTerrainSize );
+        in >> l->mData;
+        in >> numTokens;
+        for( uint j = 0; j < numTokens; ++j )
+        {
+        	in >> token;
+          l->mTokens.push_back( token );
+        }
+        mLayers.push_back( l );
+      }
+    }
   }
   else 
   {
@@ -81,11 +175,11 @@ QString Engine::Stage::getBackgroundToken() const
 
 //------------------------------------------------------------------------------
 Vector2i Engine::Stage::getCellCoordinate( const Point2d& p ) const
-{ return Vector2i( (int)p.x() / cellSize().x(), p.y() / cellSize().y() ); }
+{ return Vector2i( (int)p.x() / getCellSize().x(), p.y() / getCellSize().y() ); }
 
 //------------------------------------------------------------------------------
 Vector2i Engine::Stage::getCellCoordinate( int index ) const
-{ return Vector2i(  index % terrainSize().x(), index / terrainSize().x() ); }
+{ return Vector2i(  index % getTerrainSize().x(), index / getTerrainSize().x() ); }
 
 //------------------------------------------------------------------------------
 /*Retourne l'index de la cellule au pixel p*/
@@ -98,7 +192,7 @@ int Engine::Stage::getCellIndex( const Point2d& p ) const
 //------------------------------------------------------------------------------
 //retourn l'index de la cellule x, y
 int Engine::Stage::getCellIndex( int x, int y ) const
-{ return y * terrainSize().x() + x; }
+{ return y * getTerrainSize().x() + x; }
 
 //------------------------------------------------------------------------------
 vector<int> Engine::Stage::getCellIndices( const Point2d& iP, const Vector2i& iK ) const
@@ -116,9 +210,9 @@ vector<int> Engine::Stage::getCellIndices( const Point2d& iP, const Vector2i& iK
 			//if( terrainCell.x() >= 0 && terrainCell.x() < terrainSize().x() &&
      // 	 terrainCell.y() >= 0 && terrainCell.y() < terrainSize().y() )
       //r.push_back( terrainCell.y() * terrainSize().x() + terrainCell.x() );
-			int clampX = min( max( terrainCell.x(), 0 ), terrainSize().x() - 1 );
-      int clampY = min( max( terrainCell.y(), 0 ), terrainSize().y() - 1 );
-			r.push_back( clampY * terrainSize().x() + clampX );
+			int clampX = min( max( terrainCell.x(), 0 ), getTerrainSize().x() - 1 );
+      int clampY = min( max( terrainCell.y(), 0 ), getTerrainSize().y() - 1 );
+			r.push_back( clampY * getTerrainSize().x() + clampX );
     }
   
   return r;
@@ -133,7 +227,32 @@ Vector2i Engine::Stage::getCellPixelCoordinate( int iIndex ) const
 
 //------------------------------------------------------------------------------
 Vector2i Engine::Stage::getCellPixelCoordinate( int iX, int iY ) const
-{  return Vector2i( iX * cellSize().x(), iY * cellSize().y() ); }
+{  return Vector2i( iX * getCellSize().x(), iY * getCellSize().y() ); }
+
+//------------------------------------------------------------------------------
+/*retourne le token de sprite pour le layer iLayer de la cellule iIndex*/
+QString Engine::Stage::getToken( int iLayer, int iIndex ) const
+{
+	QString r;
+  if( iLayer >= 0 && iLayer < getNumberOfLayers() )
+  {
+  	int v = mLayers[iLayer]->mData[iIndex];
+    if( v >= 0 && v < (int)mLayers[iLayer]->mTokens.size() )
+  		r = mLayers[iLayer]->mTokens[v];
+  }
+  return r;
+}
+
+
+//------------------------------------------------------------------------------
+/*retourne les token de sprites pour le layer iLayer*/
+vector<QString> Engine::Stage::getTokens( int iLayer ) const
+{
+	vector<QString> r;
+  if( iLayer >= 0 && iLayer < getNumberOfLayers() )
+  	r = mLayers[iLayer]->mTokens;
+  return r;
+}
 
 //------------------------------------------------------------------------------
 void Engine::Stage::setBackgroundToken( QString iBt )
@@ -151,8 +270,11 @@ QByteArray Engine::Stage::toBinary() const
   out << (quint32)kStageVersion;
   out << (quint32)kStageFistCompatibleVersion;
   out.setVersion(QDataStream::Qt_4_7);
-
-	//cellsize
+	
+  //nom
+  out << mName;
+  
+	//getCellSize
   out << (quint32)mCellSize.x();
   out << (quint32)mCellSize.y();
   //terrain size
@@ -163,16 +285,29 @@ QByteArray Engine::Stage::toBinary() const
   
   //backgroundToken
   out << mBackgroundToken;
+  
+  //layers
+  out << (quint32)getNumberOfLayers();
+  for( int i = 0; i < getNumberOfLayers(); ++i )
+  {
+  	Layer* pl = mLayers[i];
+  	out << pl->mData;
+    out << (quint32)pl->mTokens.size();
+    for( int j = 0; j < (int)pl->mTokens.size(); ++j )
+    {
+    	out << pl->mTokens[j];
+    }
+  }
   return r;
 }
 
 //------------------------------------------------------------------------------
 unsigned char Engine::Stage::value(int iX, int iY) const
-{ return value( iY * terrainSize().x() + iX ); }
+{ return value( iY * getTerrainSize().x() + iX ); }
 
 //------------------------------------------------------------------------------
 unsigned char Engine::Stage::value(int iIndex) const
-{ return (unsigned char)terrain()[iIndex]; }
+{ return (unsigned char)getTerrain()[iIndex]; }
 
 
 //------------------------------------------------------------------------------
@@ -188,7 +323,8 @@ Engine::Engine() : QObject(), mState( sIdle ),
   mMouseButtons(),
   mMousePos( -1, -1 ),
   mMouseDelta(0, 0),
-  mEditingTool( Stage::ctGround )
+  mEditingTool( Stage::ctGround ),
+  mCurrentLayer(0)
 {
 	int w = 800, h = 600;
 	mGameCamera.setOrthoProjection( w, h, 0.0, 200 );
@@ -198,15 +334,6 @@ Engine::Engine() : QObject(), mState( sIdle ),
     Vector3d( 0.0, 1.0, 0.0 ) );
 
 	loadStage("stage.bin");
-    
-  //init de la position du joueur
-  vector<int> start = getStage().find( Stage::ctStart );
-  if( !start.empty() )
-  	mPlayer.mPosition = toPoint(
-    	getStage().getCellPixelCoordinate( start[0] ) + 
-      getStage().cellSize() / 2 );
-  else
-	  mPlayer.mPosition = Point2d( 0, 0 );
   
 	goToState( sMainMenu );
 }
@@ -224,12 +351,32 @@ void Engine::addError( QString e ) const
 }
 
 //------------------------------------------------------------------------------
+void Engine::addTokenToLayer( int iLayer, QString iToken )
+{
+	if( iLayer >= 0 )
+  {
+  	mStage.addToken( iLayer, iToken );
+  }
+  else
+  {
+  	QString m;
+    m.sprintf( "Impossible d'ajouter le sprite %s à la couche %d.",
+    	iToken.toStdString().c_str(), iLayer );
+  	addError( m );
+  }
+}
+
+//------------------------------------------------------------------------------
 QString Engine::getAndClearLastErrors() const
 {
   QString r = mErrors;
   mErrors.clear();
   return r;
 }
+
+//------------------------------------------------------------------------------
+int Engine::getCurrentLayer() const
+{ return mCurrentLayer; }
 
 //------------------------------------------------------------------------------
 std::vector<QString> Engine::getConfigureMenuItems() const
@@ -313,8 +460,8 @@ vector<int> Engine::getVisibleCells() const
   Point2d look( c.getTransformationToGlobal().getTranslation().getX(),
     c.getTransformationToGlobal().getTranslation().getY() );
   return s.getCellIndices( look, Vector2i(
-  	(int)ceil( c.getVisibleWidth() / s.cellSize().x() ) + 1,
-    (int)ceil( c.getVisibleHeight() / s.cellSize().y() ) ) + 1 );
+  	(int)ceil( c.getVisibleWidth() / s.getCellSize().x() ) + 1,
+    (int)ceil( c.getVisibleHeight() / s.getCellSize().y() ) ) + 1 );
 }
 
 //------------------------------------------------------------------------------
@@ -392,7 +539,7 @@ void Engine::goToState( state iS )
       switch (iS) 
       {
       	case sPaused:
-        	saveStage("stage.bin");
+        	saveStage( mStage.getName() + ".bin");
           mState = sPaused;
           break;
         default: break;
@@ -451,15 +598,23 @@ void Engine::handleEditing()
   Point3d gl = mGameCamera.pixelToGL( getMousePos().x(), getMousePos().y() );
   int index = mStage.getCellIndex( Point2d( gl.getX(), gl.getY() ) );
   
+  Stage::Layer* l = mStage.mLayers[ getCurrentLayer() ];
 	if( isMousePressed( Qt::LeftButton ) )
   {
-    mStage.mTerrain[index] = getEditingTool();
-    send(eStageChanged);
+    mStage.mTerrain[index] = getEditingTool();    
+    for( int i = 0; i < (int)l->mTokens.size(); ++i )
+    {
+    	if( l->mTokens[i] == getEditingSpriteToken() )
+      {
+      	l->mData[index] = i;
+        break;
+      }
+    }
   }
   else if( isMousePressed( Qt::RightButton ) )
   {
   	mStage.mTerrain[index] = Stage::ctEmpty;
-    send(eStageChanged);
+    l->mData[index] = 255;
   }
 
   //deplacement de la camera pour suivre le joueur
@@ -525,7 +680,7 @@ void Engine::handleMapCollisions()
     {
     	Vector2i cellPixelCoordinate = mStage.getCellPixelCoordinate( cells[i] );
     	Rectangle r( toPoint(cellPixelCoordinate),
-        mStage.cellSize() );
+        mStage.getCellSize() );
 
     	//intersection en utilisant minkowski
       BoundingBox2d mink;
@@ -539,11 +694,11 @@ void Engine::handleMapCollisions()
       {
       	Intersection2d intersection;
         intersection.add( toPoint(cellPixelCoordinate) + 
-          getStage().cellSize() / 2.0 , Vector2d( 0.0, 1.0 ) );
+          getStage().getCellSize() / 2.0 , Vector2d( 0.0, 1.0 ) );
         mPlayer.mIntersection.add(intersection);
         
         //on replace le joueur
-        Vector2i cellSize = getStage().cellSize();
+        Vector2i cellSize = getStage().getCellSize();
         switch( i )
         {        
         case 0: //bas
@@ -707,9 +862,11 @@ void Engine::handlePlayerInput()
   mPlayer.mVelocity += mPlayer.mAcceleration * kDt;
   mPlayer.mVelocity.setX( mPlayer.mVelocity.x() >= 0.0 ? 
   	min(400.0, mPlayer.mVelocity.x()) : max(-400.0, mPlayer.mVelocity.x()) );
+  mPlayer.mVelocity.setY( mPlayer.mVelocity.y() >= 0.0 ? 
+  	min(1400.0, mPlayer.mVelocity.y()) : max(-1400.0, mPlayer.mVelocity.y()) );
   mPlayer.mPosition = mPlayer.mPosition + mPlayer.mVelocity * kDt;
-printf("velocity %f, %f acceleration %f, %f\n", mPlayer.mVelocity.x(),
-	mPlayer.mVelocity.y(), mPlayer.mAcceleration.x(), mPlayer.mAcceleration.y() );
+//printf("velocity %f, %f acceleration %f, %f\n", mPlayer.mVelocity.x(),
+//	mPlayer.mVelocity.y(), mPlayer.mAcceleration.x(), mPlayer.mAcceleration.y() );
 }
 //------------------------------------------------------------------------------
 void Engine::handlePlaying()
@@ -762,12 +919,35 @@ void Engine::keyPressed( int iKey )
 //------------------------------------------------------------------------------
 void Engine::keyReleased( int iKey )
 { mKeys[iKey] = false; }
+
+//------------------------------------------------------------------------------  
+void Engine::loadStage( const Stage& iS )
+{
+	mStage.clear();
+  mStage = iS;
+
+  //init de la position du joueur
+  vector<int> start = getStage().find( Stage::ctStart );
+  if( !start.empty() )
+  	mPlayer.mPosition = toPoint(
+    	getStage().getCellPixelCoordinate( start[0] ) + 
+      getStage().getCellSize() / 2 );
+  else
+	  mPlayer.mPosition = Point2d( 10, 10 );
   
+	//on met le joueur et la camera dans la premiere case
+  Matrix4d m = mGameCamera.getTransformationToGlobal();
+  m.setTranslation( Point3d( mPlayer.mPosition.x(), mPlayer.mPosition.y(), 0.0 ) );
+  mGameCamera.setTransformationToGlobal( m );
+  
+  send( eStageLoaded );
+}
 //------------------------------------------------------------------------------
 void Engine::loadStage( QString iPath )
 {
-	mStage.fromBinary( utils::fromFile( iPath ) );
-  send( eStageChanged );
+	Stage s;
+  s.fromBinary( utils::fromFile( iPath ) );
+  loadStage(s);
 }  
   
 //------------------------------------------------------------------------------
@@ -804,8 +984,8 @@ void Engine::moveGameCamera()
   Point2d stageLowerLeft = toPoint( s.getCellPixelCoordinate(
   	s.getCellIndex( 0, 0 ) ) );
   Point2d stageUpperRight = toPoint( s.getCellPixelCoordinate(
-  	s.getCellIndex( s.terrainSize().x() - 1, s.terrainSize().y() - 1 ) ) );
-  stageUpperRight = stageUpperRight + Vector2d( s.cellSize() );
+  	s.getCellIndex( s.getTerrainSize().x() - 1, s.getTerrainSize().y() - 1 ) ) );
+  stageUpperRight = stageUpperRight + Vector2d( s.getCellSize() );
 	Rectangle stageRect( stageLowerLeft, stageUpperRight );
 
 	//le stage fit en entier dans la vue
@@ -848,6 +1028,14 @@ void Engine::moveGameCamera()
 }
 
 //------------------------------------------------------------------------------
+void Engine::newStage( QString iName, int iX, int iY )
+{
+	loadStage( Stage( iName, Vector2i( iX, iY ) ) );
+	//mStage.clear();
+  //mStage = Stage( iName, Vector2i( iX, iY ) );
+}
+
+//------------------------------------------------------------------------------
 void Engine::registerClient( Client* ipC )
 {
 	vector<Client*>::iterator it = find(mClients.begin(), mClients.end(), ipC);
@@ -871,6 +1059,15 @@ void Engine::send( event iE )
 //------------------------------------------------------------------------------
 void Engine::setBackgroundToken( QString iToken )
 { mStage.setBackgroundToken( iToken ); }
+
+//------------------------------------------------------------------------------
+void Engine::setCurrentLayer( int iL )
+{
+	if( iL >= 0 && iL < mStage.getNumberOfLayers() ) 
+		mCurrentLayer = iL;
+  else
+  	mCurrentLayer = 0;
+}
 
 //------------------------------------------------------------------------------
 void Engine::setSpriteCatalog( QString iPath )

@@ -56,6 +56,7 @@ public:
     enum Orientation { oHorizontal, oVertical };
     int getHeight() const{return mOrientation == oVertical ? mLongSide : mShortSide;}    
     int getWidth() const{return mOrientation == oHorizontal ? mLongSide : mShortSide;}
+    Vector2i getSize() const { return Vector2i( getWidth(), getHeight() ); }
 
     Orientation mOrientation;
     int mLongSide;
@@ -100,6 +101,7 @@ public:
   double getVisibleHeight() const;
   double getVisibleWidth() const;
   const WindowInfo& getWindowInfo() const {return mWindowInfo;}
+  Point2d glToPixel( const Point3d& ) const;
   const double getZoom() const { return mProjectionInfo.mZoomFactor; }
   void move( const Vector3d& );
   Camera& operator=( const Camera& );

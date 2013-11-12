@@ -307,7 +307,7 @@ QByteArray SpriteCatalog::toBinary() const
     out << itTex->first;
     //les données
     const Texture& t = itTex->second;
-    out << t.asImage();
+    out << t.asQImage();
     out << (qint32)t.getMinificationFilter();
     out << (qint32)t.getMagnificationFilter();
     out << (qint32)t.getWrapRMode();

@@ -84,6 +84,10 @@ public:
   virtual bool setUniform(const char*, int, const float*);
   virtual bool setUniform(const char*, int, const double*);
   virtual bool setUniform(const char*, double);
+  virtual bool setUniform(const char*, const math::Point2i&);
+  virtual bool setUniform(const char*, const math::Point2d&);
+  virtual bool setUniform(const char*, const math::Vector2i&);
+  virtual bool setUniform(const char*, const math::Vector2d&);
   virtual bool setUniform(const char*, const math::Point3i&);
   virtual bool setUniform(const char*, const math::Point3d&);
   virtual bool setUniform(const char*, const math::Point3f&);

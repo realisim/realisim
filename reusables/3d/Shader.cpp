@@ -66,6 +66,7 @@ void Shader::addFragmentSource(QString iSource)
     glCompileShader(getFragmentId(fragmentIndex));
     glAttachShader(getProgramId(), getFragmentId(fragmentIndex));
   }
+  link();
 
 //Print the info log when in debug mode
 #ifndef NDEBUG
@@ -97,6 +98,8 @@ void Shader::addVertexSource(QString iSource)
     glCompileShader(getVertexId(vertexIndex));
     glAttachShader(getProgramId(), getVertexId(vertexIndex));
   }
+  link();
+  
 //Print the info log when in debug mode
 #ifndef NDEBUG
   int vertexIndex = mpGuts->mVertexSources.size() - 1;
@@ -213,7 +216,7 @@ int Shader::getVertexId(int i) const
 
 //----------------------------------------------------------------------------
 bool Shader::isValid() const
-{ return mpGuts->mIsValid;}
+{ return mpGuts->mIsValid; }
 
 //----------------------------------------------------------------------------
 void Shader::link()
@@ -330,6 +333,52 @@ bool Shader::setUniform(const char* iName, double iValue)
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform1f(loc, (float)iValue);
+  return loc >= 0 ? true : false;
+}
+
+//----------------------------------------------------------------------------
+bool Shader::setUniform(const char* iName, const math::Point2i& iV)
+{
+	if(!isValid())
+    return false;
+    
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniform2i( loc, iV.x(), iV.y() );
+  return loc >= 0 ? true : false;
+}
+
+//----------------------------------------------------------------------------
+bool Shader::setUniform(const char* iName, const math::Point2d& iV)
+{
+	if(!isValid())
+    return false;
+  
+  Point2f v( iV );
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniform2f( loc, v.x(), v.y() );
+  return loc >= 0 ? true : false;
+}
+
+//----------------------------------------------------------------------------
+bool Shader::setUniform(const char* iName, const math::Vector2i& iV)
+{
+  if(!isValid())
+    return false;
+    
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniform2i( loc, iV.x(), iV.y() );
+  return loc >= 0 ? true : false;
+}
+
+//----------------------------------------------------------------------------
+bool Shader::setUniform(const char* iName, const math::Vector2d& iV)
+{
+	if(!isValid())
+    return false;
+  
+  Vector2f v( iV );
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniform2f( loc, v.x(), v.y() );
   return loc >= 0 ? true : false;
 }
 

@@ -22,12 +22,14 @@ namespace
     "vec4 color = texture2D(texture, gl_TexCoord[0].xy);\n"
     "if(color.a == 0.0)"
     "{\n"
+      "const int tileSize = 8;"
     	"bool on = false;"
-    	"if( int(mod( float(pixel.x / 10), 2.0 )) == 0 )\n"
+    	"if( int(mod( float(pixel.x / tileSize), 2.0 )) == 0 )\n"
       	"on = true;"
-      "if( int(mod( float(pixel.y / 10), 2.0 )) != 0 )\n"
+      "if( int(mod( float(pixel.y / tileSize), 2.0 )) != 0 )\n"
       	"on = !on;"
-      "if(on) color = vec4(0.84, 0.84, 0.84, 1.0);\n"
+      "if(on) color = vec4(1.0, 1.0, 1.0, 1.0);\n"
+      "else color = vec4( 0.65, 0.65, 0.65, 1.0 );\n"
     "}"
     "gl_FragColor = color;\n"
     "}";
@@ -66,7 +68,7 @@ void Viewer::drawModeButton(bool iPicking /*=false*/) const
   cam.setWindowSize( width(), height() );
   cam.setProjection( 0, width(), 
     0, height(), 0.5, 100.0,
-    Camera::ORTHOGONAL );
+    Camera::Projection::tOrthogonal );
   cam.applyModelViewTransformation();
   cam.applyProjectionTransformation();
   
@@ -253,6 +255,7 @@ void Viewer::handleDrag()
       }
       s.setRect(r);
       mMain.updatePreviewerCamera();
+      mMain.updateUi();
     }
     break;
     case sNavigation:
@@ -297,6 +300,7 @@ void Viewer::initializeGL()
 	Widget3d::initializeGL();
   glDisable(GL_LIGHTING);
   glDisable(GL_DEPTH_TEST);
+  glClearColor( 1.0, 1.0, 1.0, 1.0);
   
   mShowAlphaShader.addFragmentSource( kShowAlphaShader );
   mShowAlphaShader.link();
@@ -600,6 +604,15 @@ MainDialog::MainDialog() : QMainWindow(),
           
         QVBoxLayout* pControlsLyt = new QVBoxLayout();
         {
+        	QHBoxLayout* pLine0 = new QHBoxLayout();
+          {
+          	QLabel* l = new QLabel( "taille (px):", pSpriteFrame );
+            mpSize = new QLabel( "0 x 0", pSpriteFrame);
+            pLine0->addWidget(l);
+            pLine0->addStretch(1);
+            pLine0->addWidget(mpSize);
+          }
+          
         	QHBoxLayout* pLine1 = new QHBoxLayout();
           {
           	QLabel* l = new QLabel( "duration:", pSpriteFrame );
@@ -682,6 +695,7 @@ MainDialog::MainDialog() : QMainWindow(),
             pLine5->addWidget(mpPreviewer);
           }
           
+          pControlsLyt->addLayout(pLine0);
           pControlsLyt->addLayout(pLine1);
           pControlsLyt->addLayout(pLine2);
           pControlsLyt->addLayout(pLine3);
@@ -939,8 +953,8 @@ void MainDialog::spriteSelectionChanged(int i)
 {
   mSpriteToken = mpSprites->item(i)->text();
   
-  updatePreviewerCamera();
   mpPreviewer->update();
+  updatePreviewerCamera();
   mpViewer->update();
   
   updateSpriteUi();
@@ -1015,7 +1029,7 @@ void MainDialog::updatePreviewerCamera()
   	0.5, 200);
 	c.setZoom(0.5);
   Matrix4d m;
-  //m.setTranslation( Point3d( -fs.x()/2.0, -fs.y()/2.0, 0.0 ) );
+  m.setTranslation( Point3d(s.getTranslation().x(), s.getTranslation().y(), 0.0) );
   c.setTransformationToGlobal( m );
   c.set( Point3d(0.0, 0.0, 5.0),
   	Point3d(0.0, 0.0, 0.0),
@@ -1049,6 +1063,8 @@ void MainDialog::updateSpriteUi()
   if( !mSpriteToken.isEmpty() )
   {
     Sprite& s = mSpriteCatalog.getSprite( mSpriteToken );
+    mpSize->setText( QString::number( s.getFrameSize().x() ) + 
+      " x " + QString::number( s.getFrameSize().y() ) );
     mpDuration->setValue( s.getAnimationDuration() );
     mpFrameGridX->setValue( s.getFrameGrid().x() );
     mpFrameGridY->setValue( s.getFrameGrid().y() );
