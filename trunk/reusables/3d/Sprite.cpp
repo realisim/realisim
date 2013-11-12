@@ -60,6 +60,10 @@ Sprite::~Sprite()
 {}
 
 //-----------------------------------------------------------------------------
+QImage Sprite::asQImage() const
+{ return getTexture().asQImage().copy( getRect() ); }
+
+//-----------------------------------------------------------------------------
 void Sprite::draw() const
 {
 	

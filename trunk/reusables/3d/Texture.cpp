@@ -107,7 +107,7 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
 }
 
 //----------------------------------------------------------------------------
-QImage Texture::asImage() const
+QImage Texture::asQImage() const
 {
 	//GL_BGRA pour Qt
 	QByteArray b = asBuffer( GL_BGRA, GL_UNSIGNED_BYTE );

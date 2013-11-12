@@ -35,18 +35,11 @@ protected:
   virtual void mousePressEvent( QMouseEvent* );
   virtual void mouseReleaseEvent( QMouseEvent* );
   virtual void paintGL();
-  virtual void refreshEditionMap();
   virtual void resizeGL(int, int);
   
   Engine& mEngine;
-  treeD::Camera mGameCamera;
-//  utils::SpriteCatalog& mSpriteCatalog;
-  
-  //pour edition
-  treeD::Sprite mEditionMap;
-  //treeD::Texture mBrick;
-  //treeD::Texture mEditionGrid;
-  //treeD::Texture mStart;
+	treeD::FrameBufferObject mFbo;
+  treeD::Shader mPostProcessShader;
 };
 
 
@@ -60,19 +53,31 @@ public:
 public slots:
   
 protected slots:
+	virtual void addSpriteToLayerClicked();
 	virtual void backgroundChanged(int);
 	virtual void cellTypeChanged(int);
+  virtual void layerSelectionChanged(QListWidgetItem*);
+  virtual void newMapClicked();
+  virtual void openMapClicked();
+  virtual void removeSpriteFromLayerClicked();
+  virtual void spriteSelectionChanged(int, int);
 
 protected:
 	virtual void gotEvent( realisim::platform::Engine::event );
   virtual void populateBackground();
+  virtual void populateLayers();
+  virtual void populateSprites();
   virtual void updateUi();
   
 	realisim::platform::Engine mEngine;
   realisim::platform::Viewer* mpViewer;
-  QFrame* mpEditionPanel;
+  QString mEditionPath;
+  
+  QWidget* mpEditionPanel;
   QComboBox* mpCellType;
   QComboBox* mpBackground;
+  QListWidget* mpLayers;
+  QTableWidget* mpSprites;	
 };
 
 #endif

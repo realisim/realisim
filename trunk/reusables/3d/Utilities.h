@@ -11,7 +11,20 @@
 
 namespace realisim {namespace math {class PlatonicSolid;} }
 
-/*
+/* Divers utilitaires openGL.
+  
+  ScreenSpaceProjection est un garde qui sert a faire un projection 2d
+  orthogonale afin de dessiner directement a l'écran en coordonné pixel.
+  Typiquement:
+  
+  {
+  	ScreenSpaceProjection( 100, 100 );
+    glBegin(...);
+    ...
+    glEnd();
+  }
+  
+  La projection originale est appliquée lorsque l'object se détruit.
 */
 
 namespace realisim
@@ -20,6 +33,13 @@ namespace treeD
 {
 
 	using namespace math;
+
+	class ScreenSpaceProjection
+  {
+  	public:
+  	explicit ScreenSpaceProjection( const math::Vector2d& );
+    ~ScreenSpaceProjection();
+  };
 
   unsigned int colorToId(const QColor&);
   void draw(const PlatonicSolid&);

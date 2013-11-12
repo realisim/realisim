@@ -126,6 +126,7 @@ protected:
   QListWidget* mpSprites;
   QPushButton* mpAddSprite;
   QPushButton* mpRemoveSprite;
+  QLabel* mpSize;
   QSpinBox* mpDuration;
   QSpinBox* mpFrameGridX;
   QSpinBox* mpFrameGridY;

@@ -1,4 +1,5 @@
 
+#include "3d/Camera.h"
 #include "3d/Utilities.h"
 #include "math/Noise.h"
 #include "math/PlatonicSolid.h"
@@ -8,6 +9,34 @@ namespace realisim
   using namespace math;
 namespace treeD 
 {
+
+//-----------------------------------------------------------------------------
+ScreenSpaceProjection::ScreenSpaceProjection( const math::Vector2d& iS )
+{
+  glMatrixMode( GL_PROJECTION );
+  glPushMatrix(); glLoadIdentity();
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix(); glLoadIdentity();
+
+  Camera c;
+  c.set( Point3d(0.0, 0.0, 5.0), 
+    Point3d(0.0, 0.0, 0.0),
+    Vector3d( 0.0, 1.0, 0.0 ) );
+  c.setWindowSize( iS.x(), iS.y() );
+  c.setProjection( 0, iS.x(), 
+    0, iS.y(), 0.5, 100.0,
+    Camera::Projection::tOrthogonal );
+  c.applyModelViewTransformation();
+  c.applyProjectionTransformation();
+}
+
+ScreenSpaceProjection::~ScreenSpaceProjection()
+{
+  glMatrixMode( GL_PROJECTION );
+  glPopMatrix();
+  glMatrixMode( GL_MODELVIEW );
+  glPopMatrix();
+}
 
 //-----------------------------------------------------------------------------
 //decode un QColor en id. Voir méthode idToColor

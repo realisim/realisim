@@ -27,7 +27,7 @@ public:
   enum mainMenuItem{ mmiStart, mmiConfigure, mmiQuit, mmiCount };
   enum configureMenuItem{ cmiDifficulty, cmiBack, cmiCount };
   enum pauseMenuItem{ pmiBack, pmiEdit, pmiQuit, pmiCount };
-  enum event{ eStageChanged, eStateChanged, eFrameDone, eQuit,
+  enum event{ eStageLoaded, eStateChanged, eFrameDone, eQuit,
     eErrorRaised };
   
   class Client
@@ -57,20 +57,17 @@ public:
     Intersection2d mIntersection;
   };
   
-  /*
-  	expliquer les valeurs possible du terrain
-  */
+  /* expliquer les valeurs possible du terrain */
   class Stage
   {
   	friend class Engine;
   	public:
     	Stage();
-      virtual ~Stage() {}
+      virtual ~Stage();
     
     	enum cellType{ ctEmpty = 0, ctStart, ctWayPoint, ctGround,
       	ctNumberOfCellType };
       
-    	virtual Vector2i cellSize() const {return mCellSize;}
       virtual std::vector<int> find( cellType ) const;      
 virtual QString getBackgroundToken() const;
       virtual Vector2i getCellCoordinate( const Point2d& ) const;
@@ -80,36 +77,53 @@ virtual QString getBackgroundToken() const;
       virtual std::vector<int> getCellIndices( const Point2d&, const Vector2i& ) const;
       virtual Vector2i getCellPixelCoordinate( int ) const;
       virtual Vector2i getCellPixelCoordinate( int, int ) const;
-    	virtual const QByteArray terrain() const { return mTerrain; }
-      virtual int terrainHeight() const { return mTerrainSize.y(); };
-      virtual Vector2i terrainSize() const {return mTerrainSize;}
-      virtual int terrainWidth() const { return mTerrainSize.x(); };
+      virtual Vector2i getCellSize() const {return mCellSize;}
+      virtual QString getName() const { return mName; }
+      virtual int getNumberOfLayers() const { return mLayers.size(); }
+      virtual const QByteArray getTerrain() const { return mTerrain; }
+      virtual int getTerrainHeight() const { return mTerrainSize.y(); };
+      virtual Vector2i getTerrainSize() const {return mTerrainSize;}      
+      virtual int getTerrainWidth() const { return mTerrainSize.x(); };
+      virtual QString getToken( int, int ) const;
+      virtual std::vector<QString> getTokens( int ) const;      
       virtual QByteArray toBinary() const;
       virtual unsigned char value(int, int) const;
       virtual unsigned char value(int) const;
       
     protected:
+    	Stage( QString, Vector2i );
+      Stage (const Stage&);
+      Stage& operator=( const Stage& );
     
     	struct Layer
       {
+      	Layer( Vector2i iDataSize ) : 
+        	mData( iDataSize.x() * iDataSize.y(), 255 ) {;}
+        Layer( const Layer& iL ) : mData( iL.mData ), mTokens( iL.mTokens ) {;}
       	QByteArray mData;
-        std::vector< std::pair<QString, cellType> > mAssociation;
+        std::vector< QString > mTokens;
       };
       
+      virtual void addToken( int, QString );
+      virtual void clear();
       virtual void fromBinary( QByteArray );
     	virtual void setBackgroundToken( QString );
       
+      QString mName;
       Vector2i mCellSize;
       Vector2i mTerrainSize;
       QByteArray mTerrain;
-      std::vector<Layer> mLayers;
+      std::vector<Layer*> mLayers;
       QString mBackgroundToken; //vector?
   };
   
-  QString getAndClearLastErrors() const;
+  virtual void addTokenToLayer( int, QString );
+  virtual QString getAndClearLastErrors() const;
   virtual configureMenuItem getCurrentConfigureMenuItem() const;
+  virtual int getCurrentLayer() const;
   virtual std::vector<QString> getConfigureMenuItems() const;
   virtual Stage::cellType getEditingTool() const { return mEditingTool; }
+virtual QString getEditingSpriteToken() const { return mEditingSpriteToken; }
   virtual const treeD::Camera& getGameCamera() const {return mGameCamera;}
   virtual pauseMenuItem getCurrentPauseMenuItem() const;
   virtual std::vector<QString> getPauseMenuItems() const;
@@ -134,10 +148,13 @@ virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual void mouseMoved( Point2i );
   virtual void mousePressed( int );
   virtual void mouseReleased( int );
+  virtual void newStage( QString, int, int );
   virtual void registerClient( Client* );
   virtual void saveStage( QString );
   virtual void setBackgroundToken( QString );
+virtual void setCurrentLayer( int );
   virtual void setEditingTool( Stage::cellType iCt ) {mEditingTool = iCt;}
+virtual void setEditingSpriteToken( QString i ) {mEditingSpriteToken = i;}
 virtual void setSpriteCatalog( QString );
   virtual QString toString( Stage::cellType );
   virtual void unregisterClient( Client* );
@@ -159,6 +176,8 @@ protected:
   Stage::cellType mEditingTool;
   realisim::utils::SpriteCatalog mSpriteCatalog;
   mutable QString mErrors;
+  int mCurrentLayer;
+  QString mEditingSpriteToken;
 
 	virtual void addError( QString ) const;
   virtual void goToState( state );
@@ -171,6 +190,7 @@ protected:
   virtual void handlePlayerInput();
   virtual bool isKeyPressed( Qt::Key, bool = false );
   virtual bool isMousePressed( Qt::MouseButtons, bool =false );
+  virtual void loadStage( const Stage& );
   virtual void moveGameCamera();
   virtual void send( event );
   virtual void timerEvent( QTimerEvent* );

@@ -184,6 +184,40 @@ double Camera::getVisibleWidth() const
 { return mProjectionInfo.getWidth() * 1.0 / getZoom(); }
 
 //-----------------------------------------------------------------------------
+Point2d Camera::glToPixel( const Point3d& iP ) const
+{
+  glMatrixMode( GL_PROJECTION );
+  glPushMatrix(); glLoadIdentity();
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix(); glLoadIdentity();
+  applyProjectionTransformation();
+  applyModelViewTransformation();
+  
+  double modelView[16];
+  glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+  double projection[16];
+  glGetDoublev(GL_PROJECTION_MATRIX, projection);
+  int viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+
+  double x, y, z;
+	bool sucess = gluProject(iP.getX(), iP.getY(), iP.getZ(), 
+    modelView, 
+    projection, 
+    viewport, 
+    &x, &y, &z);
+  if ( !sucess ) { x = 0; y = 0; z = 0; }
+
+	glMatrixMode( GL_PROJECTION );
+  glPopMatrix();
+  glMatrixMode( GL_MODELVIEW );
+  glPopMatrix();
+
+	//dépendant de l'orientation de la camera?
+	return Point2d( x, y );
+}
+
+//-----------------------------------------------------------------------------
 /*déplace la caméra. Le delta est en coordonnée GL et locale à la caméra.*/
 void Camera::move( const Vector3d& iDelta )
 {
@@ -561,7 +595,8 @@ void Camera::setProjection( const Projection& iP )
 //-----------------------------------------------------------------------------
 void Camera::setProjection(double iLeft, double iRight,
                            double iBottom, double iTop,
-                           double iNear, double iFar, Projection::type iType,
+                           double iNear, double iFar,
+                           Projection::type iType,
                            bool iProportional /*=true*/)
 {
 	mProjectionInfo.mLeft = iLeft;
