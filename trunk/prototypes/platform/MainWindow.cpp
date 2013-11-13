@@ -63,29 +63,66 @@ void Viewer::draw()
     case Engine::sPlaying:
     {
     	pushFrameBuffer( mFbo );
+      //mFbo.resize( 1, 600);
       mFbo.drawTo(0);
-      glClear( GL_COLOR_BUFFER_BIT );
+
+//      glMatrixMode( GL_PROJECTION );
+//      glPushMatrix(); glLoadIdentity();
+//      glMatrixMode( GL_MODELVIEW );
+//      glPushMatrix(); glLoadIdentity();
+
+      glEnable(GL_DEPTH_TEST);
+//      Camera c;
+//      c.set( Point3d( mEngine.getPlayerPosition().x(),
+//      	mEngine.getPlayerPosition().y(), 0.0),
+//        Point3d( 1.0, 0.0, 0.0 ),
+//        Vector3d( 0.0, 1.0, 0.0 ) );
+//      c.setWindowSize( 1, 600 );
+//      c.setProjection( 0, 1, 0, 600, 0, 1000, Camera::Projection::tPerspective );
+//      c.applyModelViewTransformation();
+//      c.applyProjectionTransformation();      
+      
     	drawGame();
+
+//			glDisable( GL_DEPTH_TEST );      
+//      glMatrixMode( GL_PROJECTION );
+//      glPopMatrix();
+//      glMatrixMode( GL_MODELVIEW );
+//      glPopMatrix();
+      
       popFrameBuffer();
       
-      const Camera& gc = mEngine.getGameCamera();
-      Point3f playerGlPos( mEngine.getPlayerPosition().x(),
-      	mEngine.getPlayerPosition().y(), 0.0 );
-      Point2d playerScreenPos = gc.glToPixel( playerGlPos );
+      //drawGame();
       
       const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
 			ScreenSpaceProjection ssp( wi.getSize() );
       {
-      	glEnable(GL_BLEND);
-  			glColor4ub(255, 255, 255, 255);  
-        pushShader( mPostProcessShader );
-        mPostProcessShader.setUniform( "playerPos", playerScreenPos );
-        mPostProcessShader.setUniform( "lightRadius", 100.0 );
-        drawRectangle2d(mFbo.getTexture(0), Point2d(0.0),
-          Vector2d( wi.getSize() ) );
-        popShader();
-        glDisable(GL_BLEND);
+      	Texture t = mFbo.getDepthTexture();
+//        QByteArray ba = t.asBuffer( GL_RGBA, GL_FLOAT );
+//        QImage im( (const uchar*)ba.constData(), t.width(), t.height(), QImage::Format_ARGB32 );
+//        im.save( "depthBuffer.png", "PNG" );
+        glColor4ub(255, 255, 255, 255);
+      	drawRectangle2d( t, Point2d( 0 ), Vector2d(t.width(), t.height() ) );
       }
+      
+//      const Camera& gc = mEngine.getGameCamera();
+//      Point3f playerGlPos( mEngine.getPlayerPosition().x(),
+//      	mEngine.getPlayerPosition().y(), 0.0 );
+//      Point2d playerScreenPos = gc.glToPixel( playerGlPos );
+//      
+//      const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
+//			ScreenSpaceProjection ssp( wi.getSize() );
+//      {
+//      	glEnable(GL_BLEND);
+//  			glColor4ub(255, 255, 255, 255);  
+//        pushShader( mPostProcessShader );
+//        mPostProcessShader.setUniform( "playerPos", playerScreenPos );
+//        mPostProcessShader.setUniform( "lightRadius", 100.0 );
+//        drawRectangle2d(mFbo.getTexture(0), Point2d(0.0),
+//          Vector2d( wi.getSize() ) );
+//        popShader();
+//        glDisable(GL_BLEND);
+//      }
       break;
     }
     case Engine::sPaused: drawMenu(); break; 
@@ -402,6 +439,7 @@ void Viewer::initializeGL()
 
 	mEngine.setSpriteCatalog( "level1.cat" );
 	mFbo.addColorAttachment(true);
+  mFbo.addDepthAttachment(true);
   
   mPostProcessShader.addFragmentSource( kShaderBidon );
 }

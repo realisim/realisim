@@ -141,11 +141,14 @@ void Viewer::drawGlowOverLay()
   int viewportWidth = getCamera().getWindowInfo().getWidth() / 4;
   int viewportHeight = getCamera().getWindowInfo().getHeight() / 4;
   
+  Vector2d screenSize = getCamera().getWindowInfo().getSize();
+  Vector2d offScreenSize(viewportWidth, viewportHeight);
+  
   pushFrameBuffer(mFbo);
   glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT | GL_COLOR_BUFFER_BIT | GL_VIEWPORT_BIT);
   glDisable(GL_LIGHTING);
-  glViewport(0, 0, viewportWidth, viewportHeight);
-  mFbo.resize(viewportWidth, viewportHeight);
+  glViewport(0, 0, offScreenSize.x(), offScreenSize.y());
+  mFbo.resize(offScreenSize.x(), offScreenSize.y());
   mFbo.drawTo(0);
   glClearColor(0.0, 0.0, 0.0, 0.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -155,21 +158,22 @@ void Viewer::drawGlowOverLay()
   popShader();
   
   Texture t1 = mFbo.getTexture(0);
+  Texture depthTexture = mFbo.getDepthTexture().copy();
   //QImage _i = mFbo.getImageFrom(0);
   //bool _a = _i.save("/Users/po/Desktop/0.png", "PNG");
   mFbo.drawTo(1);
   glClearColor(0.0, 0.0, 0.0, 0.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  Sprite s1;
-  s1.setTexture(t1);
-  s1.setFullScreen(true);
   pushShader(mBlurShader);
   mBlurShader.setUniform("texture", 0);
   mBlurShader.setUniform("isBlurVertical", false);
   mBlurShader.setUniform("kernel", kernel);
   mBlurShader.setUniform("kernelValues", kernel, &kernelValues[0]);
   mBlurShader.setUniform("scale", kScale);
-	s1.draw(getCamera());
+  {
+  ScreenSpaceProjection ssp( offScreenSize );
+  drawRectangle2d(t1, Point2d(0.0), offScreenSize );
+  }
   
   Texture t2 = mFbo.getTexture(1);
   //_i = mFbo.getImageFrom(1);
@@ -177,15 +181,15 @@ void Viewer::drawGlowOverLay()
   mFbo.drawTo(2);
   glClearColor(0.0, 0.0, 0.0, 0.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  Sprite s2;
-  s2.setTexture(t2);
-  s2.setFullScreen(true);
   mBlurShader.setUniform("texture", 0);
   mBlurShader.setUniform("isBlurVertical", true);
   mBlurShader.setUniform("kernel", kernel);
   mBlurShader.setUniform("kernelValues", kernel, &kernelValues[0]);
   mBlurShader.setUniform("scale", kScale);
-	s2.draw(getCamera());
+	{
+  ScreenSpaceProjection ssp( offScreenSize );
+  drawRectangle2d(t2, Point2d(0.0), offScreenSize );
+  }
   popShader();
   glPopAttrib();
   popFrameBuffer();
@@ -197,13 +201,22 @@ void Viewer::drawGlowOverLay()
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glColor4d(0.0, 0.0, 0.0, 0.4);
-  Sprite s3;
-  s3.setTexture(t3);
-s3.setFullScreen(true);
-//  s3.setAnchorPoint(Sprite::aTopLeft);
-//  s3.set2dPositioningOn(true);
-// s3.set2dPosition(10, 10, 0);
-	s3.draw(getCamera());
+  {
+  ScreenSpaceProjection ssp( screenSize );
+  drawRectangle2d(t3, Point2d(0.0), screenSize );
+  }
+  
+  glDisable(GL_DEPTH_TEST);
+  glDisable( GL_LIGHTING );
+  glColor3ub(255, 255, 255);
+  {
+  ScreenSpaceProjection ssp( screenSize );
+  drawRectangle2d( t1, Point2d(5.0), offScreenSize );
+  drawRectangle2d( t2, Point2d(10.0 + offScreenSize.x(), 5.0), offScreenSize );
+  drawRectangle2d( t3, Point2d(15.0 + 2 * offScreenSize.x(), 5.0), offScreenSize );
+  drawRectangle2d( depthTexture, Point2d(20.0 + 3 * offScreenSize.x(), 5.0), offScreenSize );
+  }
+  
   glPopAttrib();
 }
 
@@ -218,18 +231,7 @@ void Viewer::initDisplayList()
   mTextureBlur.set(QImage(":/images/three_blur.png"));
   mTexture2.set(QImage(":/images/three_red.png"));
   mTextureBlur2.set(QImage(":/images/three_red_blur.png"));
-  glBindTexture(GL_TEXTURE_2D, mTexture.getTextureId());
   glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
-  glBindTexture(GL_TEXTURE_2D, 0);
-  glBindTexture(GL_TEXTURE_2D, mTextureBlur.getTextureId());
-  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  glBindTexture(GL_TEXTURE_2D, mTexture2.getTextureId());
-  glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
-  glBindTexture(GL_TEXTURE_2D, 0);
-  glBindTexture(GL_TEXTURE_2D, mTextureBlur2.getTextureId());
-  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-  glBindTexture(GL_TEXTURE_2D, 0);
   
   float t0[2] = { 0.0f, 0.0f};
   float t1[2] = { 0.0f, 1.0f};
@@ -251,10 +253,10 @@ void Viewer::initDisplayList()
   
   glActiveTexture(GL_TEXTURE0);
   glEnable(GL_TEXTURE_2D);
-  glBindTexture(GL_TEXTURE_2D, mTexture.getTextureId());
+  glBindTexture(GL_TEXTURE_2D, mTexture.getId());
   glActiveTexture(GL_TEXTURE1);
   glEnable(GL_TEXTURE_2D);
-  glBindTexture(GL_TEXTURE_2D, mTextureBlur.getTextureId());
+  glBindTexture(GL_TEXTURE_2D, mTextureBlur.getId());
   glBegin(GL_QUADS);
     //top
     glNormal3d(0.0, 1.0, 0.0);
@@ -360,10 +362,10 @@ void Viewer::initDisplayList()
   
   glActiveTexture(GL_TEXTURE0);
   glEnable(GL_TEXTURE_2D);
-  glBindTexture(GL_TEXTURE_2D, mTexture2.getTextureId());
+  glBindTexture(GL_TEXTURE_2D, mTexture2.getId());
   glActiveTexture(GL_TEXTURE1);
   glEnable(GL_TEXTURE_2D);
-  glBindTexture(GL_TEXTURE_2D, mTextureBlur2.getTextureId());
+  glBindTexture(GL_TEXTURE_2D, mTextureBlur2.getId());
   glBegin(GL_QUADS);
     //top
     glNormal3d(0.0, 1.0, 0.0);
@@ -478,7 +480,7 @@ void Viewer::initializeGL()
   
   //change texture param
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, mFbo.getTexture(2).getTextureId());
+  glBindTexture(GL_TEXTURE_2D, mFbo.getTexture(2).getId());
   glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
   glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
   glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
@@ -486,18 +488,18 @@ void Viewer::initializeGL()
   
   QFile f(":/shaders/main.frag");
   f.open(QIODevice::ReadOnly);
-  mBlurShader.addFragmentShaderSource(f.readAll());
+  mBlurShader.addFragmentSource(f.readAll());
   f.close();
   
   f.setFileName(":/shaders/blur.frag");
   f.open(QIODevice::ReadOnly);
-  mBlurShader.addFragmentShaderSource(f.readAll());
+  mBlurShader.addFragmentSource(f.readAll());
   mBlurShader.link();
   f.close();
   
   f.setFileName(":/shaders/onlyOneTexture.frag");
   f.open(QIODevice::ReadOnly);
-  mOnlyOneTextureShader.addFragmentShaderSource(f.readAll());
+  mOnlyOneTextureShader.addFragmentSource(f.readAll());
   mOnlyOneTextureShader.link();
   f.close();
   
