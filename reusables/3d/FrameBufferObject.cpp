@@ -1,9 +1,11 @@
 
 #include "FrameBufferObject.h"
+#include "math/Vect.h"
 #include "OpenGLInfo.h"
 #include <QDebug>
 
 using namespace realisim;
+	using namespace math;
   using namespace treeD;
   
 
@@ -305,6 +307,10 @@ QImage FrameBufferObject::getImageFrom(int iIndex) const
 }
 
 //----------------------------------------------------------------------------
+Vector2i FrameBufferObject::getSize() const
+{ return Vector2i( getWidth(), getHeight() ); }
+
+//----------------------------------------------------------------------------
 /*Retourne la texture associé au colorAttachement à condition que l'appel à
   addColorAttachment(bool iUseTexture) avait le paramètre iUseTexture vrai.*/
 Texture FrameBufferObject::getTexture(int iIndex) const
@@ -397,6 +403,10 @@ void FrameBufferObject::resize(int iWidth, int iHeight)
 }
 
 //----------------------------------------------------------------------------
+void FrameBufferObject::resize( Vector2i iSize )
+{ resize( iSize.x(), iSize.y() ); }
+
+//----------------------------------------------------------------------------
 void FrameBufferObject::shareGuts(Guts* g)
 {
   mpGuts = g;
@@ -432,6 +442,6 @@ void FrameBufferObject::validate()
     s += "Unsupported by FBO implementation."; break;
   default: s += "Unknow error."; break;
   }
-  qDebug() << s;
+  if( !isValid() ) qDebug() << s;
 }
 

@@ -562,7 +562,7 @@ void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* ipE)
         }
         else if(m.hasSegment(id))
         {
-          aimed = ( m.getSegment(id).getPoint1().pos() +
+          aimed = toPoint( m.getSegment(id).getPoint1().pos() +
             m.getSegment(id).getPoint2().pos() ) / 2.0;
           uint count = 0;
           //normal moyenne au point 1
@@ -626,7 +626,7 @@ void RealEdit3d::mouseDoubleClickEvent(QMouseEvent* ipE)
         }
         else
         {
-          Point3d delta = aimed - c.getLook();
+          Vector3d delta = aimed - c.getLook();
           c.set(c.getPos() + delta, aimed, c.getUp());
         }
         

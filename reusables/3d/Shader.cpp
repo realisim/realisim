@@ -98,7 +98,6 @@ void Shader::addVertexSource(QString iSource)
     glCompileShader(getVertexId(vertexIndex));
     glAttachShader(getProgramId(), getVertexId(vertexIndex));
   }
-  link();
   
 //Print the info log when in debug mode
 #ifndef NDEBUG
@@ -133,8 +132,6 @@ Shader Shader::copy()
     s.addVertexSource(getVertexSource(i));
   for(int i = 0; i < getFragmentSourcesSize(); ++i)
     s.addFragmentSource(getFragmentSource(i));
-  s.link();
-  
   return s;
 }
 
@@ -151,7 +148,7 @@ void Shader::end()
 }
 
 //----------------------------------------------------------------------------
-void Shader::validate()
+void Shader::validate() const
 {
   mpGuts->mIsValid = true;
   int status;
@@ -216,10 +213,13 @@ int Shader::getVertexId(int i) const
 
 //----------------------------------------------------------------------------
 bool Shader::isValid() const
-{ return mpGuts->mIsValid; }
+{
+	if( !mpGuts->mIsValid ) link();
+  return mpGuts->mIsValid;
+}
 
 //----------------------------------------------------------------------------
-void Shader::link()
+void Shader::link() const
 {
   glLinkProgram(getProgramId());
   validate();
@@ -238,7 +238,7 @@ void Shader::makeGuts()
 //{ mpGuts = new Guts(iFragmentSource, iVertexSource); }
 
 //----------------------------------------------------------------------------
-void Shader::printProgramInfoLog(GLuint iObj)
+void Shader::printProgramInfoLog(GLuint iObj) const
 {
   int infologLength = 0;
   int charsWritten  = 0;
@@ -258,7 +258,7 @@ void Shader::printProgramInfoLog(GLuint iObj)
 
 
 //----------------------------------------------------------------------------
-void Shader::printShaderInfoLog(GLuint iObj)
+void Shader::printShaderInfoLog(GLuint iObj) const
 {
   int infologLength = 0;
   int charsWritten  = 0;
@@ -482,7 +482,21 @@ bool Shader::setUniform(const char* iName, const Matrix4f& iValue)
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
-  glUniformMatrix4fv(loc, 16, false, iValue.getPtr());
+  /*pas besoin de faire le transpose, nos matrice son column-major comme
+    openGL.*/
+  glUniformMatrix4fv(loc, 1, false, iValue.getPtr());
+  return loc >= 0 ? true : false;
+}
+
+//----------------------------------------------------------------------------
+bool Shader::setUniform(const char* iName, const Matrix4d& iValue)
+{
+	if(!isValid())
+    return false;
+    
+  Matrix4f m( iValue );
+  GLint loc = glGetUniformLocation(getProgramId(), iName);
+  glUniformMatrix4fv(loc, 1, false, m.getPtr());
   return loc >= 0 ? true : false;
 }
 

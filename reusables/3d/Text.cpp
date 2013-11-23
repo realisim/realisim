@@ -175,12 +175,6 @@ void Text::render() const
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    glMatrixMode( GL_PROJECTION );
-    glPushMatrix();
-    glMatrixMode( GL_MODELVIEW );
-    glPushMatrix();
-    glLoadIdentity();
-    
     Camera c;
     c.set( Point3d(0.0, 0.0, 5.0), 
 	    Point3d(0.0, 0.0, 0.0),
@@ -189,8 +183,7 @@ void Text::render() const
     c.setProjection( 0, r.width(), 
       0, r.height(), 0.5, 100.0,
       Camera::Projection::tOrthogonal );
-    c.applyModelViewTransformation();
-    c.applyProjectionTransformation();
+    c.pushProjections();
     
     int kernelSize = 3;
     vector< float > f = meanKernel2D<float>( kernelSize );
@@ -227,10 +220,7 @@ void Text::render() const
     mTexture.setFilter( GL_LINEAR );
     mTexture.setWrapMode( GL_CLAMP );
     
-    glMatrixMode( GL_PROJECTION );
-    glPopMatrix();
-    glMatrixMode( GL_MODELVIEW );
-    glPopMatrix();
+    c.popProjections();
     
     glPopAttrib();
     fbo.end();

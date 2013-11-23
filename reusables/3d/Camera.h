@@ -69,7 +69,8 @@ public:
     enum type{ tOrthogonal = 0, tPerspective };
     
     double getHeight() const;
-    double getWidth() const;    
+    double getWidth() const;  
+    Vector2d getSize() const { return Vector2d( getWidth(), getHeight() ); }  
     
   	double mLeft;
     double mRight;
@@ -95,9 +96,11 @@ public:
   const Point3d& getPos() const { return mPos; }
   const double getPixelPerGLUnit() const { return mPixelPerGLUnit; }
   const Projection& getProjection() const {return mProjectionInfo;}
+  const Matrix4d& getProjectionMatrix() const;
   const Matrix4d& getTransformationToLocal() const { return mToLocal; }
   const Matrix4d& getTransformationToGlobal() const { return mToGlobal; }
   const Vector3d& getUp() const { return mUp; }
+  const Matrix4d& getViewMatrix() const;
   double getVisibleHeight() const;
   double getVisibleWidth() const;
   const WindowInfo& getWindowInfo() const {return mWindowInfo;}
@@ -107,8 +110,9 @@ public:
   Camera& operator=( const Camera& );
   Point3d pixelToGL( int, int, const Point3d& = Point3d(0.0)) const;
   Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
+  void popProjections() const;
+  void pushProjections() const;  
   void set( const Point3d&, const Point3d&, const Vector3d& );
-  void set( const Point3d&, const Point3d&, const Vector3d&, const Vector3d& );
   void setOrthoProjection(double, double, double);
   void setOrthoProjection(double, double, double, double);
   void setPerspectiveProjection(double, double, double, double, bool = true);
@@ -118,6 +122,7 @@ public:
   void setTransformationToLocal(const Matrix4d&);
   void setTransformationToGlobal(const Matrix4d&);
   void setWindowSize( int, int );
+  void setWindowSize( Vector2i );
   void setZoom(double);
 //  QString toString() const;
 void print() const;
@@ -138,6 +143,8 @@ protected:
   Projection mProjectionInfo;
   double mPixelPerGLUnit;
   WindowInfo mWindowInfo;
+  mutable Matrix4d mProjectionMatrix;
+  mutable Matrix4d mViewMatrix;
 };
 
 } //treeD

@@ -6,13 +6,21 @@
 //!-----------------------------------------------------------------------------
 /*Classe qui représente un matrice 4x4 de la forme
 
-   m = a00 a01 a02 a03    m = r r r s  -> r: rotation
-       a10 a11 a12 a13        r r r s     s: scale
-       a20 a21 a22 a23        r r r s     t: translation
+   m = a00 a01 a02 a03    m = s r r x  -> r: rotation
+       a10 a11 a12 a13        r s r x     s: scale
+       a20 a21 a22 a23        r r s x     t: translation
        a30 a31 a32 a33        t t t 1
        
   Par défaut la matrice est initialisée comme une matrice identité.
   il est possible d'obtenir la valeur i, j de la matrice par l'opérateur ().
+  
+  La matrice est de type row-major et les multiplications sont "right multiply"
+  ou post-multiply. La documentation opengl utilise column-major et le left
+  multiply. Ce qui peut porter a confusion...
+  
+  Par exemple (de wiki):
+  "pre-multiply (or left multiply) A by B" means BA, while "post-multiply (or 
+  right multiply) A by C" means AC.
 */
 
 #ifndef MATRIX_4_H
@@ -38,11 +46,13 @@ namespace math
 
     // --------------- constructeurs -------------------------------------------
     inline Matrix4();
+    inline Matrix4( const T* );
     inline Matrix4(const T &a11, const T &a12, const T &a13, const T &a14,
                   const T &a21, const T &a22, const T &a23, const T &a24,
                   const T &a31, const T &a32, const T &a33, const T &a34,
                   const T &a41, const T &a42, const T &a43, const T &a44);
     inline Matrix4(const Matrix4 &matrix);
+    template< class U > Matrix4( const Matrix4<U>& );
 
     // --------------- destructeurs --------------------------------------------
     ~Matrix4();
@@ -54,6 +64,7 @@ namespace math
     inline void setRow4(const T &a41, const T &a42, const T &a43, const T &a44);
     
     inline void setRotation(const Matrix4<T>& iRot);
+    inline void setScaling( const Vector3<T>& iScale );
     inline void setTranslation( const Point3<T>& iTrans );
     inline void translate(const Vector3<T>& iTrans);
 
@@ -66,6 +77,7 @@ namespace math
 
     // --------------- fonction utiles -----------------------------------------
     inline const T* getPtr() const;
+    inline T* getNonConstPtr();
     inline Matrix4<T>& inverse();
     inline void loadIdentity();
     inline void multEquMat3(const Matrix4 &matrix);
@@ -93,10 +105,12 @@ namespace math
   //! constructeur par défaut.
   template<class T>
   inline Matrix4<T>::Matrix4()
-  {
-    loadIdentity();
-  }
+  { loadIdentity();}
 
+	template<class T>
+  inline Matrix4<T>::Matrix4( const T* iM )
+  { memcpy(&mat_[0], iM, 16 * sizeof(T)); }
+  
   //! constructeur avec parametre
   template<class T>
   inline Matrix4<T>::Matrix4(
@@ -114,8 +128,17 @@ namespace math
   //! constructeur copie
   template<class T>
   inline Matrix4<T>::Matrix4(const Matrix4 &matrix)
-  {
-    memcpy( (void*)mat_, (void*)matrix.mat_, 16*sizeof(T) );
+  { memcpy( (void*)mat_, (void*)matrix.mat_, 16*sizeof(T) ); }
+  
+  //!---------------------------------------------------------------------------
+  /*permet la conversion implicite entre les type int, double, float etc...*/
+  template<class T>
+  template<class U>
+  Matrix4<T>::Matrix4( const Matrix4<U>& iV )
+  { mat_[0]  = (U)iV(0,0); mat_[1]  = (U)iV(0,1); mat_[2]  = (U)iV(0,2); mat_[3]  = (U)iV(0,3);
+    mat_[4]  = (U)iV(1,0); mat_[5]  = (U)iV(1,1); mat_[6]  = (U)iV(1,2); mat_[7]  = (U)iV(1,3);
+    mat_[8]  = (U)iV(2,0); mat_[9]  = (U)iV(2,1); mat_[10] = (U)iV(2,2); mat_[11] = (U)iV(2,3);
+    mat_[12] = (U)iV(3,0); mat_[13] = (U)iV(3,1); mat_[14] = (U)iV(3,2); mat_[15] = (U)iV(3,3); 
   }
 
   //! destructeur
@@ -164,6 +187,13 @@ namespace math
     mat_[0] = iRot(0, 0); mat_[1] = iRot(0, 1); mat_[2] = iRot(0, 2);
     mat_[4] = iRot(1, 0); mat_[5] = iRot(1, 1); mat_[6] = iRot(1, 2);
     mat_[8] = iRot(2, 0); mat_[9] = iRot(2, 1); mat_[10] = iRot(2, 2);
+  }
+  
+  //ecrase la diagonale qui représente le scaling
+  template<class T>
+  inline void Matrix4<T>::setScaling(const Vector3<T>& iV)
+  {
+    mat_[0] = iV.getX(); mat_[5] = iV.getY(); mat_[10] = iV.getZ();
   }
   
   //! permet de setter la 4e ligne de la sous matrice 3x3 ("coin" sup gauche)
@@ -430,9 +460,11 @@ namespace math
   //! fct qui retourne un pointeur sur la matrice (pratique pour OGL par ex.)
   template<class T>
   inline const T* Matrix4<T>::getPtr() const
-  {
-    return &mat_[0];
-  }
+  { return &mat_[0]; }
+  
+  template<class T>
+  inline T* Matrix4<T>::getNonConstPtr()
+  { return &mat_[0]; }
 
   //! surcharge operateur =
   template<class T>

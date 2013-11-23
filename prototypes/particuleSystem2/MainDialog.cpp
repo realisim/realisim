@@ -225,8 +225,9 @@ void MainDialog::createUi()
   //mpViewer->setCameraOrientation(Camera::FREE);
   Camera c = mpViewer->getCamera();
   c.setWindowSize(200, 200);
-  c.setProjection(200, 0.5, 200);
-  mpViewer->setCamera( c );
+  //c.setOrthoProjection(200, 0.5, 200);
+  c.setPerspectiveProjection(60, 1 , 1 , 200 , true);
+  mpViewer->setCamera( c, false );
   pLyt->addWidget(mpViewer, 4);
 }
 //-----------------------------------------------------------------------------

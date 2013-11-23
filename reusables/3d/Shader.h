@@ -77,7 +77,7 @@ public:
   virtual QString getVertexSource(int i) const {return mpGuts->mVertexSources[i];}
   virtual int getVertexSourcesSize() const {return mpGuts->mVertexSources.size();}
   virtual bool isValid() const;
-  virtual void link();
+  virtual void link() const;
   
   virtual bool setUniform(const char*, int);
   virtual bool setUniform(const char*, float);
@@ -97,15 +97,16 @@ public:
   virtual bool setUniform(const char*, const math::Vector3f&);
   virtual bool setUniform(const char*, int, const math::Vector3f*);
   virtual bool setUniform(const char*, const math::Matrix4f&);
+  virtual bool setUniform(const char*, const math::Matrix4d&);
 
 //bindVextexAttrib et setVertexAttrib?
   
 protected:
-  virtual void validate();
+  virtual void validate() const;
 	virtual int getFragmentId(int i) const;
 	virtual int getVertexId(int i) const;
-  virtual void printProgramInfoLog(GLuint);
-  virtual void printShaderInfoLog(GLuint);
+  virtual void printProgramInfoLog(GLuint) const;
+  virtual void printShaderInfoLog(GLuint) const;
 
   struct Guts
   {
@@ -118,7 +119,7 @@ protected:
     std::vector<QString> mFragmentSources;
     std::vector<QString> mVertexSources;
     std::vector<GLuint> mPreviousShaders;
-    bool mIsValid;
+    mutable bool mIsValid;
   };
   
   virtual void deleteGuts();

@@ -177,7 +177,7 @@ MainDialog::MainDialog() : QMainWindow(),
   
   //set la camera
   Camera c = mpViewer->getCamera();
-  c.setProjection(20, 1, 10000);
+  c.setOrthoProjection(20, 1, 10000);
   c.setZoom(30);
 	mpViewer->setCamera(c, false);
   

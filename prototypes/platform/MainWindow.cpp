@@ -24,7 +24,7 @@ namespace
 {
 	const int kSpriteTableWidth = 8;
   
-  const QString kShaderBidon = "#version 120\n"
+  const QString kLightFade = "#version 120\n"
   "uniform sampler2D texture;\n"
   "uniform vec2 playerPos;\n"
   "uniform float lightRadius;\n"
@@ -36,6 +36,76 @@ namespace
   "  float normSquared = d.x*d.x + d.y*d.y;\n"
   "  float n = 1.0 / ( normSquared/lightRadiusSquared );\n"
   "  color.a = min( 1.0, n );\n"
+  "  gl_FragColor = color;\n"
+  "}\n";
+  
+  const QString kLightOfSight = "#version 120\n"
+  "uniform sampler2D texture;\n"
+  "uniform vec2 playerPos;\n"
+  "uniform float lightRadius;\n"
+  "void main()\n"
+  "{\n"
+  "  float lightRadiusSquared = lightRadius*lightRadius;\n"
+  "  \n"
+  "  vec2 d = gl_FragCoord.xy - playerPos;\n"
+  "  float norm = sqrt(d.x*d.x + d.y*d.y);\n"
+  "  vec2 n = d / norm;"
+  "  vec4 color;\n"
+  "  float numSample = norm / 8;\n"
+  "  for( int i = 0; i < numSample; ++i )\n"
+  "  {\n"
+  "    vec2 p = playerPos + i * 8 * n; p.x = p.x / 800; p.y = p.y / 600;\n"
+  "    color = texture2D(texture, p);\n"
+  "    if( color.r < 0.5 ) discard;"
+  "    color.a = 0.3;\n"
+  "  }\n"
+  "  gl_FragColor = color;\n"
+  "}\n";
+  
+  
+  const QString kWriteDepthVert = "#version 120\n"
+  "uniform mat4 MVPMatrix;\n"
+  "uniform mat4 BiasMVPMatrix;\n"
+  "varying vec4 windowCoord;\n"
+  "void main()\n"
+  "{\n"
+  "  windowCoord = BiasMVPMatrix * gl_Vertex;\n"
+  "  gl_Position = MVPMatrix * gl_Vertex; \n"
+  "}\n"; 
+  
+  const QString kWriteDepthFrag = "#version 120\n"
+  "varying vec4 windowCoord;\n"
+  "void main()\n"
+  "{\n"
+  "  gl_FragColor = vec4(windowCoord.x / windowCoord.w, 0.0, 0.0, 1.0); \n"
+  "}\n"; 
+  
+  
+  const QString kShadowLightVertex = "#version 120\n"
+  "uniform mat4 MVPMatrix;\n"
+  "uniform mat4 MCToShadowMap;\n"
+  "varying vec4 shadowCoord;\n"
+  "void main()\n"
+  "{\n"
+  "  vec4 texCoord = MCToShadowMap * gl_Vertex;"
+  "  shadowCoord = texCoord;\n"
+  "  gl_Position = MVPMatrix * gl_Vertex; \n"
+  "}\n";
+  
+  const QString kShadowLightFrag  = "#version 120\n"
+  "uniform sampler2DShadow shadowMap;\n"
+  "varying vec4 shadowCoord;"
+  "void main()\n"
+  "{\n"
+  "	 vec4 color = vec4(0.0, 0.0, 0.0, 1.0);\n"  
+  "  vec4 shadowCoord2 = vec4(shadowCoord.xyz / shadowCoord.w, shadowCoord.w);"
+  "  bvec2 gtz = greaterThan(shadowCoord2.xy, vec2(0.0, 0.0) );\n"
+  "  bvec2 lto = lessThan(shadowCoord2.xy, vec2(1.0, 1.0) );\n"
+  "if( gtz.x && lto.x && gtz.y && lto.y  ) "
+  "  {\n"
+  		 "if( shadowCoord2.z < shadow2D( shadowMap, shadowCoord2.xyz ).z + 0.001 )"
+  "      color.rgb = vec3(1.0);\n"
+  "  }\n"
   "  gl_FragColor = color;\n"
   "}\n";
 }
@@ -59,75 +129,54 @@ void Viewer::draw()
   {
     case Engine::sMainMenu: drawMenu(); break;
     case Engine::sConfigureMenu: drawMenu(); break;
-    case Engine::sEditing: drawGame(); break;
+    case Engine::sEditing:
+    	drawGame();
+      break;
     case Engine::sPlaying:
     {
-    	pushFrameBuffer( mFbo );
-      //mFbo.resize( 1, 600);
-      mFbo.drawTo(0);
-
-//      glMatrixMode( GL_PROJECTION );
-//      glPushMatrix(); glLoadIdentity();
-//      glMatrixMode( GL_MODELVIEW );
-//      glPushMatrix(); glLoadIdentity();
-
-      glEnable(GL_DEPTH_TEST);
-//      Camera c;
-//      c.set( Point3d( mEngine.getPlayerPosition().x(),
-//      	mEngine.getPlayerPosition().y(), 0.0),
-//        Point3d( 1.0, 0.0, 0.0 ),
-//        Vector3d( 0.0, 1.0, 0.0 ) );
-//      c.setWindowSize( 1, 600 );
-//      c.setProjection( 0, 1, 0, 600, 0, 1000, Camera::Projection::tPerspective );
-//      c.applyModelViewTransformation();
-//      c.applyProjectionTransformation();      
-      
-    	drawGame();
-
-//			glDisable( GL_DEPTH_TEST );      
-//      glMatrixMode( GL_PROJECTION );
-//      glPopMatrix();
-//      glMatrixMode( GL_MODELVIEW );
-//      glPopMatrix();
-      
-      popFrameBuffer();
-      
-      //drawGame();
+      Texture lightMask = renderLight();
+      drawGame();
       
       const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
 			ScreenSpaceProjection ssp( wi.getSize() );
       {
-      	Texture t = mFbo.getDepthTexture();
-//        QByteArray ba = t.asBuffer( GL_RGBA, GL_FLOAT );
-//        QImage im( (const uchar*)ba.constData(), t.width(), t.height(), QImage::Format_ARGB32 );
-//        im.save( "depthBuffer.png", "PNG" );
-        glColor4ub(255, 255, 255, 255);
-      	drawRectangle2d( t, Point2d( 0 ), Vector2d(t.width(), t.height() ) );
+	      glEnable(GL_BLEND);
+  			glColor4ub(255, 255, 255, 200);
+        drawRectangle2d( lightMask, 
+        	Point2d( 10 + 2 * mFbo.getSize().x(), 5 ), mFbo.getSize() );
+        glDisable(GL_BLEND);
       }
-      
-//      const Camera& gc = mEngine.getGameCamera();
-//      Point3f playerGlPos( mEngine.getPlayerPosition().x(),
-//      	mEngine.getPlayerPosition().y(), 0.0 );
-//      Point2d playerScreenPos = gc.glToPixel( playerGlPos );
-//      
-//      const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
-//			ScreenSpaceProjection ssp( wi.getSize() );
-//      {
-//      	glEnable(GL_BLEND);
-//  			glColor4ub(255, 255, 255, 255);  
-//        pushShader( mPostProcessShader );
-//        mPostProcessShader.setUniform( "playerPos", playerScreenPos );
-//        mPostProcessShader.setUniform( "lightRadius", 100.0 );
-//        drawRectangle2d(mFbo.getTexture(0), Point2d(0.0),
-//          Vector2d( wi.getSize() ) );
-//        popShader();
-//        glDisable(GL_BLEND);
-//      }
       break;
     }
     case Engine::sPaused: drawMenu(); break; 
     default: break;
   }
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::drawDataMap()
+{
+	const Engine::Stage& stage = mEngine.getStage();
+  vector<int> visibleCells = mEngine.getVisibleCells();
+
+  bool draw = false;
+  for( size_t i = 0; i < visibleCells.size(); ++i )
+  {  	
+    switch ( stage.value( visibleCells[i] ) )
+    {
+      case Engine::Stage::ctGround: draw = true; 
+        glColor3ub( 255, 255, 255 ); break;
+      case Engine::Stage::ctStart: draw = true;
+        glColor3ub( 12, 12, 255 ); break;
+      default: draw = false; break;
+    }
+    if( draw )
+    {
+      Vector2i t = stage.getCellPixelCoordinate( visibleCells[i] );
+      drawRectangle2d(toPoint(t), stage.getCellSize() );
+    }
+  }
+
 }
 
 //-----------------------------------------------------------------------------
@@ -137,13 +186,8 @@ void Viewer::drawGame()
   const Engine::Stage& stage = mEngine.getStage();
   
 	//projection ortho
-  glMatrixMode( GL_PROJECTION );
-  glPushMatrix(); glLoadIdentity();
-  glMatrixMode( GL_MODELVIEW );
-  glPushMatrix(); glLoadIdentity();
-  const Camera& c = mEngine.getGameCamera();
-  c.applyProjectionTransformation();
-  c.applyModelViewTransformation();
+  const Camera& cam = mEngine.getGameCamera();
+  cam.pushProjections();
   
   //dessine le background
   {
@@ -177,30 +221,11 @@ void Viewer::drawGame()
   //dessine le data map
   glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
   glEnable( GL_BLEND );
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  vector<int> visibleCells = mEngine.getVisibleCells();
+
   if( mEngine.getState() == Engine::sEditing )
-  {
-    glColor4ub( 255, 255, 255, 255 );     
-    bool draw = false;
-    for( size_t i = 0; i < visibleCells.size(); ++i )
-    {  	
-      switch ( stage.value( visibleCells[i] ) )
-      {
-        case Engine::Stage::ctGround: draw = true; 
-          glColor4ub( 255, 255, 255, 255 ); break;
-        case Engine::Stage::ctStart: draw = true;
-          glColor4ub( 12, 12, 255, 255 ); break;
-        default: draw = false; break;
-      }
-      if( draw )
-      {
-        Vector2i t = stage.getCellPixelCoordinate( visibleCells[i] );
-        drawRectangle2d(toPoint(t), stage.getCellSize() );
-      }
-    }
-  }
-  
+  { drawDataMap(); }
+
+  vector<int> visibleCells = mEngine.getVisibleCells();  
   //dessine les layers
   for( int i = 0; i < stage.getNumberOfLayers(); ++i )
   {
@@ -217,7 +242,6 @@ void Viewer::drawGame()
       }
     }
   }
-  
   
   //les grilles d'édition et le data map
   glColor4ub( 255, 255, 255, 120 );
@@ -288,10 +312,7 @@ void Viewer::drawGame()
   }
   renderText(10, 10, playerState );
   
-  glMatrixMode( GL_PROJECTION );
-  glPopMatrix();
-  glMatrixMode( GL_MODELVIEW );
-  glPopMatrix();
+	cam.popProjections();
 }
 
 
@@ -305,15 +326,11 @@ void Viewer::drawMenu()
   c.set( Point3d( 0.0, 0.0, 5.0 ),
   	Point3d( 0.0, 0.0, 0.0 ),
     Vector3d( 0.0, 1.0, 0.0 ) );
+  c.setWindowSize(c.getWindowInfo().getWidth(), c.getWindowInfo().getHeight());
   c.setProjection( 0, c.getWindowInfo().getWidth(),
-  	0, c.getWindowInfo().getHeight(), 0.2, 100.0, Camera::Projection::tOrthogonal );
+  	0, c.getWindowInfo().getHeight(), 0.0, 6.0, Camera::Projection::tOrthogonal );
 	
-  glMatrixMode( GL_PROJECTION );
-  glPushMatrix(); glLoadIdentity();
-  glMatrixMode( GL_MODELVIEW );
-  glPushMatrix(); glLoadIdentity();
-  c.applyProjectionTransformation();
-  c.applyModelViewTransformation();
+	c.pushProjections();
   
   vector<QString> menuItems; 
   int currentMenuItem;
@@ -423,10 +440,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 glColor3ub( 255, 255, 255);
 //--------
   
-  glMatrixMode( GL_PROJECTION );
-  glPopMatrix();
-  glMatrixMode( GL_MODELVIEW );
-  glPopMatrix();
+	c.popProjections();
 }
 
 //-----------------------------------------------------------------------------
@@ -435,13 +449,20 @@ void Viewer::initializeGL()
 	Widget3d::initializeGL();
   glDisable( GL_LIGHTING );
   glDisable( GL_DEPTH_TEST );
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glClearColor(0.0, 0.0, 0.0, 0.0);
 
 	mEngine.setSpriteCatalog( "level1.cat" );
 	mFbo.addColorAttachment(true);
+  mFbo.addColorAttachment(true);
   mFbo.addDepthAttachment(true);
+  mFbo.getDepthTexture().setFilter( GL_LINEAR );
+  //mFbo.getDepthTexture().setWrapMode( GL_CLAMP );
   
-  mPostProcessShader.addFragmentSource( kShaderBidon );
+  //mShadowMapShader.addFragmentSource( kLightFade );
+  //mShadowMapShader.addFragmentSource( kLightOfSight );
+  mShadowMapShader.addVertexSource( kShadowLightVertex );
+  mShadowMapShader.addFragmentSource( kShadowLightFrag );
 }
 
 //-----------------------------------------------------------------------------
@@ -469,6 +490,79 @@ void Viewer::paintGL()
 {
   Widget3d::paintGL();
   draw();
+}
+
+//-----------------------------------------------------------------------------
+Texture Viewer::renderLight()
+{
+  const Camera& gc = mEngine.getGameCamera();
+  Texture shadowMap;
+  Matrix4d lightCamView, lightCamProjection, MCToShadowMap;
+  Matrix4d camView, camProjection;
+
+  Vector2d offSize( 1, gc.getWindowInfo().getHeight() );
+  //Vector2d offSize( gc.getWindowInfo().getSize() );
+  double sightDepth = 400;
+  mFbo.resize( offSize );
+  pushFrameBuffer( mFbo );
+  mFbo.drawTo(0);
+
+  glEnable(GL_DEPTH_TEST);
+  glClear( GL_DEPTH_BUFFER_BIT );
+  Camera c;
+  c.setWindowSize( offSize );
+  c.set(
+    Point3d( mEngine.getPlayerPosition().x(), 
+      mEngine.getPlayerPosition().y(), 0.0),
+    Point3d( mEngine.getPlayerPosition().x() + 100, 
+      mEngine.getPlayerPosition().y(), 0.0),
+    Vector3d( 0.0, 1.0, 0.0 ) );
+  c.setPerspectiveProjection(90, offSize.y() / offSize.x(), 10, sightDepth, false);
+
+  c.pushProjections();
+  lightCamView = c.getViewMatrix();
+  lightCamProjection = c.getProjectionMatrix();
+  MCToShadowMap = lightCamView * lightCamProjection;
+
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glLineWidth(5.0);
+  drawDataMap();
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  glLineWidth(1.0);
+  c.popProjections();
+  glDisable( GL_DEPTH_TEST );
+  shadowMap = mFbo.getDepthTexture().copy();
+  popFrameBuffer();
+  
+  c = gc;
+  c.setWindowSize( gc.getWindowInfo().getSize() / 4 );
+  c.pushProjections();
+  c.popProjections();
+
+  Matrix4d clipToWindow;      
+  clipToWindow.setScaling( Vector3d(0.5) );
+  clipToWindow.setTranslation( Point3d(0.5) );
+  camView = c.getViewMatrix();
+  camProjection = c.getProjectionMatrix();
+  mFbo.resize( c.getWindowInfo().getSize() );
+
+  pushFrameBuffer( mFbo );
+  pushShader( mShadowMapShader );
+  mFbo.drawTo(1);
+  glClear( GL_COLOR_BUFFER_BIT );
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, shadowMap.getId() );
+  mShadowMapShader.setUniform( "MVPMatrix", camView * camProjection );
+  mShadowMapShader.setUniform( "MCToShadowMap", MCToShadowMap * clipToWindow );
+  mShadowMapShader.setUniform( "shadowMap", 0 );
+  drawRectangle2d( 
+  toPoint( toVector(mEngine.getPlayerPosition()) - c.getProjection().getSize() ), 
+    2 * c.getProjection().getSize() );
+  //drawDataMap();
+  popShader();
+  popFrameBuffer();
+  
+  return mFbo.getTexture(1).copy();
 }
 
 //-----------------------------------------------------------------------------
@@ -518,7 +612,7 @@ MainWindow::MainWindow() : QMainWindow(),
   mpViewer = new Viewer( mEngine, pMainWidget);
   
   //--- paneau pour l'édition
-  mpEditionPanel = new QWidget( 0 );
+  mpEditionPanel = new QWidget( this );
   mpEditionPanel->setWindowFlags( mpEditionPanel->windowFlags() | Qt::Tool |
     Qt::WindowStaysOnTopHint );
 	mpEditionPanel->setMinimumSize(400, 600);

@@ -69,7 +69,7 @@ void Viewer::drawBezier(bool iPicking) const
         else if(iPicking && (getState() == sCreation || getState() == sEdition))
         {
           glPointSize(8.0);
-        	c = utilities::idToColor(i);
+        	c = idToColor(i);
           glColor4ub(c.red(), c.green(), c.blue(), c.alpha());
         }
         glVertex3dv(cp[i].getPos().getPtr());
@@ -97,7 +97,7 @@ void Viewer::drawBezier(bool iPicking) const
     if(iPicking && getState() == sSelection)
     {
       glLineWidth(5.0);
-      c = utilities::idToColor(i);
+      c = idToColor(i);
       glColor4ub(c.red(), c.green(), c.blue(), c.alpha());
     }
     glBegin(GL_LINE_STRIP);

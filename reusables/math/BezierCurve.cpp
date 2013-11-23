@@ -217,7 +217,9 @@ void BezierCurve::cubicRasterization(const vector<Point3d>& iV) const
     c = 3 * (1-t) * t * t;
     d = pow(t, 3);
     
-    mRaster.push_back(a*iV[0] + b*iV[1] + c*iV[2] + d*iV[3] );
+    //Vector3d v0 = toVector(a*iV[0]), v1, v2, v3;
+    mRaster.push_back( a*iV[0] + 
+    	toVector(b*iV[1]) + toVector(c*iV[2]) + toVector(d*iV[3]) );
     t += dt;
   }
 }
@@ -383,7 +385,7 @@ void BezierCurve::quadraticRasterization(const vector<Point3d>& iV) const
     b = 2 * (1-t) * t;
     c = t * t;
     
-    mRaster.push_back(a*iV[0] + b*iV[1] + c*iV[2]);
+    mRaster.push_back(a*iV[0] + toVector(b*iV[1]) + toVector(c*iV[2]));
     t += dt;
   }
 }

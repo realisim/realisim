@@ -296,8 +296,6 @@ namespace math
     inline Point3& operator=  (const Point3&);
 
   // FAIT DU SENS???
-    inline Point3<U> operator-  (const Point3 &Point3) const;
-    inline Point3<U> operator+  (const Point3 &Point3) const;
     inline Point3<U>& operator-= (const Point3 &Point3);
     inline Point3<U>& operator+= (const Point3 &Point3);
     inline Point3<U> operator*  (const U &val) const;
@@ -587,18 +585,6 @@ namespace math
     	getY() == point.getY() &&
       getZ() == point.getZ();
   }
-
-  template<class U>
-  inline Point3<U> Point3<U>::operator- (const Point3 &point) const
-  {
-    Point3<U> result;
-
-    result.mData[0] = mData[0] - point.mData[0];
-    result.mData[1] = mData[1] - point.mData[1];
-    result.mData[2] = mData[2] - point.mData[2];
-
-    return result;
-  }
   
   //----------------------------------------------------------------------------
   template<class U>
@@ -666,19 +652,6 @@ namespace math
     return getX() >= iP.getX() && 
       getY() >= iP.getY() &&
       getZ() >= iP.getZ();
-  }
-
-
-  template<class U>
-  inline Point3<U> Point3<U>::operator+  (const Point3 &point) const
-  {
-    Point3<U> result;
-
-    result.mData[0] = mData[0] + point.mData[0];
-    result.mData[1] = mData[1] + point.mData[1];
-    result.mData[2] = mData[2] + point.mData[2];
-
-    return result;
   }
 
   template<class U>

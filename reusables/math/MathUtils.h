@@ -102,7 +102,7 @@ namespace math
     return result;
   }
   
-  //---------------------------------------------------------------------------
+    //---------------------------------------------------------------------------
   /*Le vecteur multiplié par la matrice ne fait que modifié sont orientation,
     on n'ajoute pas la translation.*/
   template<class T>
@@ -115,6 +115,10 @@ namespace math
     return vect;
   }
   
+  //---------------------------------------------------------------------------
+  //---
+  //-- Operateur pour Point3d
+  //---
   //---------------------------------------------------------------------------
   /*On multiplie le point par la partie de rotation et on ajoute la translation
     au point.*/
@@ -129,7 +133,51 @@ namespace math
     result += Point3<T>(iMat(3, 0), iMat(3, 1), iMat(3, 2));
     return result;
   }
+  //---------------------------------------------------------------------------
+  template<class T>
+  inline Point3<T> operator* (const T& iVal, const Point3<T>& iPoint)
+  {
+  	return Point3<T>( iVal * iPoint.getX(),
+    	iVal * iPoint.getY(),
+      iVal * iPoint.getZ() );
+  }
+  //---------------------------------------------------------------------------
+  template<class T>
+  inline Point3<T> operator+ (const Point3<T> &point, const Vector3<T> &vect)
+  {
+  	return Point3<T>( point.getX() + vect.getX(),
+    	point.getY() + vect.getY(),
+    	point.getZ() + vect.getZ() );
+  }
+  //---------------------------------------------------------------------------
+  template<class T>
+  inline Point3<T> operator- (const Point3<T> &point, const Vector3<T> &vect)
+  {
+    return Point3<T>( point.getX() - vect.getX(),
+    	point.getY() - vect.getY(),
+    	point.getZ() - vect.getZ() );
+  }
+  //---------------------------------------------------------------------------
+  template<class T>
+  inline Vector3<T> operator+ (const Point3<T> &p1, const Point3<T> &p2)
+  {
+    return Vector3<T>( p1.getX() + p2.getX(),
+    	p1.getY() + p2.getY(),
+      p1.getZ() + p2.getZ() );
+  }
+  //---------------------------------------------------------------------------
+  template<class T>
+  inline Vector3<T> operator- (const Point3<T> &p1, const Point3<T> &p2)
+  {
+    return Vector3<T>( p1.getX() - p2.getX(),
+    	p1.getY() - p2.getY(),
+      p1.getZ() - p2.getZ() );
+  }
   
+  //---------------------------------------------------------------------------
+  //---
+  //-- Operateur Point2
+  //---
   //---------------------------------------------------------------------------
   template<class V>
   inline Point2<V> operator+ (const Point2<V> &p, const Vector2<V> &v)
@@ -150,44 +198,12 @@ namespace math
   template<class V>
   inline Vector2<V> operator* (double a, const Vector2<V> &v)
   { return Vector2<V>( v.x() * a, v.y() * a ); }
+
   
   //---------------------------------------------------------------------------
-  template<class V>
-  inline Point3<V> operator+ (const Point3<V> &point, const Vector3<V> &vect)
-  {
-    Point3<V> result;
-    
-    result.setX(point.getX() + vect.getX());
-    result.setY(point.getY() + vect.getY());
-    result.setZ(point.getZ() + vect.getZ());
-    
-    return result;
-  }
-  
-  //---------------------------------------------------------------------------
-  template<class V>
-  inline Point3<V> operator- (const Point3<V> &point, const Vector3<V> &vect)
-  {
-    Point3<V> result;
-    result.setX(point.getX() - vect.getX());
-    result.setY(point.getY() - vect.getY());
-    result.setZ(point.getZ() - vect.getZ());
-    return result;
-  }
-  
-  //---------------------------------------------------------------------------
-  template<class V>
-  inline Point3<V> operator* (const Point3<V> &point, const Vector3<V> &vect)
-  {
-    Point3<V> result;
-    
-    result.setX(point.getX() * vect.getX());
-    result.setY(point.getY() * vect.getY());
-    result.setZ(point.getZ() * vect.getZ());
-    
-    return result;
-  }
-  
+  //---
+  //-- Operateur Vector3
+  //---
   //---------------------------------------------------------------------------
   template<class V>
   inline Vector3<V> operator* (const V& iVal, const Vector3<V>& vect)
@@ -200,20 +216,6 @@ namespace math
     
     return result;
   }
-  
-  //---------------------------------------------------------------------------
-  template<class V>
-  inline Point3<V> operator* (const V& iVal, const Point3<V>& iPoint)
-  {
-    Point3<V> result;
-    
-    result.setX(iVal * iPoint.getX());
-    result.setY(iVal * iPoint.getY());
-    result.setZ(iVal * iPoint.getZ());
-    
-    return result;
-  }
-  
   //---------------------------------------------------------------------------
   template<class T>
   Vector3<T> getPerpendicularVector( const Vector3<T>& iV )
@@ -235,7 +237,6 @@ namespace math
 			r = Vector3<T>( (T)0.0, iV.getZ(), -iV.getY() );
   	return r;
   }
-  
   //---------------------------------------------------------------------------
   //retourne la matrice de rotation correpondant a la rotation de iAngle
   //radian autour de l'axe iAxis
@@ -249,7 +250,6 @@ namespace math
     
     return quat.getUnitRotationMatrix();
   }
-  
   //---------------------------------------------------------------------------
   //retourne la matrice de rotation correpondant a la rotation de la matrice m
   //de iAngle radian autour de l'axe iAxis
@@ -266,7 +266,6 @@ namespace math
     r.translate(toVector(axisPos));
     return r;
   }
-  
   //---------------------------------------------------------------------------
   template<class T>
   inline Matrix4<T> interpolate(const Matrix4<T>& iM1, const Matrix4<T>& iM2, 
@@ -284,8 +283,9 @@ namespace math
     Matrix4d iterationMatrix = q2.getUnitRotationMatrix();
     
     //trouver la translation totale a effectuer
-    iterationMatrix.setTranslation( iM1.getTranslation()*( 1 - iT ) + 
-      iM2.getTranslation()*( iT ) );
+    iterationMatrix.setTranslation( toPoint(
+    	iM1.getTranslation()*( 1 - iT ) + 
+      iM2.getTranslation()*( iT ) ) );
     return iterationMatrix;
   }
   
@@ -324,11 +324,11 @@ namespace math
     //On trouve la position relative du Point a tourner par rapport a l'axe
     Point3<T> relPos, rotatedPoint;
     
-    relPos = point - axisPos;
+    relPos = point - toVector(axisPos);
     rotatedPoint = rotatePoint(angle, relPos, axis);
     
     //On retranslate le point rotater
-    rotatedPoint += axisPos;
+    rotatedPoint = rotatedPoint + toVector(axisPos);
     
     return rotatedPoint;
   }

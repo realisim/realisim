@@ -18,7 +18,6 @@
 using namespace realisim;
   using namespace math;
   using namespace treeD;
-  using namespace utilities;
   
 static const int kIterationInterval = 30; //ms
 
@@ -124,7 +123,7 @@ void Viewer::drawSceneForPicking() const
   	const Polygon& pol = mData.mPolygons[i];
   	for( int j = 0; j < pol.getNumberOfVertices(); ++j )
     {
-    	QColor c = utilities::idToColor( j * mData.mPolygons.size() + i );
+    	QColor c = idToColor( j * mData.mPolygons.size() + i );
 	  	glColor4ub( c.red(), c.green(), c.blue(), c.alpha() );
   		const Point3d& p = pol.getVertex(j);
   		glVertex3d( p.getX(), p.getY(), p.getZ() );

@@ -458,9 +458,11 @@ const BB3d& RealEditModel::getBoundingBox () const
 //------------------------------------------------------------------------------
 const Point3d& RealEditModel::getCentroid () const
 {
+	Point3d c; Vector3d v(0.0);
   map<unsigned int, RealEditPoint>::const_iterator it = getPoints().begin();
   for(; it != getPoints().end(); ++it)
-    mpGuts->mCentroid += it->second.pos();
+  { mpGuts->mCentroid = mpGuts->mCentroid + toVector( it->second.pos() ); }
+    //mpGuts->mCentroid += it->second.pos();
   mpGuts->mCentroid /= getPointCount();
   
   return mpGuts->mCentroid;

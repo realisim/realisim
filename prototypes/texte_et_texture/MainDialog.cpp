@@ -104,7 +104,7 @@ void Viewer::paintGL()
   glEnable( GL_TEXTURE_2D );
   glDisable( GL_LIGHTING );
   glColor3ub( 255, 255, 255);
-  glBindTexture( GL_TEXTURE_2D, mTex.getTextureId() );
+  glBindTexture( GL_TEXTURE_2D, mTex.getId() );
   glBegin( GL_QUADS );
   	glTexCoord2d( 0.0, 0.0 );
     glVertex2i( 0, 0 );
@@ -134,7 +134,7 @@ void Viewer::paintGL()
     Vector3d( 0.0, 1.0, 0.0 ) );
   c.setProjection( 0, c.getWindowInfo().getWidth(),
   	0, c.getWindowInfo().getHeight(),
-   	0.5, 2000, Camera::ORTHOGONAL );    
+   	0.5, 2000, Camera::Projection::tOrthogonal );    
   c.applyProjectionTransformation();
   c.applyModelViewTransformation();
   
@@ -205,7 +205,7 @@ MainDialog::MainDialog() : QMainWindow(),
   
   mpViewer->setCameraOrientation(Camera::XY);
   Camera c = mpViewer->getCamera();
-	c.setProjection( 200, 0.5, 2000 );
+	c.setOrthoProjection( 200, 0.5, 2000 );
   mpViewer->setCamera(c, false);
   
   updateUi();
