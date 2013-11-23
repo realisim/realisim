@@ -53,14 +53,14 @@ void Controller::createPlatonicSolid(PlatonicSolid::type iType)
   
   vector<RealEditPoint> vPoints;
   vector<RealEditPoint> vFace;
-  for (uint i = 0; i < ps.getNumberOfVertices(); ++i) 
+  for (uint i = 0; i < (uint)ps.getNumberOfVertices(); ++i) 
   {    
     RealEditPoint p(ps.getVertex( i ));
     m.addPoint (p);
     vPoints.push_back(p);
   }
   
-  for (uint i = 0; i < ps.getNumberOfPolygons(); ++i)
+  for (uint i = 0; i < (uint)ps.getNumberOfPolygons(); ++i)
   {
     vFace.clear();
     const Polygon& p = ps.getPolygon( i );

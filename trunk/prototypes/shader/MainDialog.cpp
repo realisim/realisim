@@ -105,10 +105,10 @@ void Viewer::initializeGL()
 //  qDebug(vertexSource.toStdString().c_str());
 //  qDebug(fragmentSource.toStdString().c_str());
 //  qDebug(fragmentSource2.toStdString().c_str());
-  mShader.addVertexShaderSource(directionalLightVert);
-  mShader.addVertexShaderSource(fragmentSource);
-  mShader.addFragmentShaderSource(directionalLightFrag);
-  mShader.addFragmentShaderSource(fragmentSource2);
+  mShader.addVertexSource(directionalLightVert);
+  mShader.addVertexSource(fragmentSource);
+  mShader.addFragmentSource(directionalLightFrag);
+  mShader.addFragmentSource(fragmentSource2);
   mShader.link();
 
   //--- toon shader  
@@ -124,8 +124,8 @@ void Viewer::initializeGL()
   
 //  qDebug(vertexSource.toStdString().c_str());
 //  qDebug(fragmentSource.toStdString().c_str());
-  mShader2.addVertexShaderSource(vertexSource);
-  mShader2.addFragmentShaderSource(fragmentSource);
+  mShader2.addVertexSource(vertexSource);
+  mShader2.addFragmentSource(fragmentSource);
   mShader2.link();
   
   //--- Noise shader
@@ -141,12 +141,12 @@ void Viewer::initializeGL()
   
   //  qDebug(vertexSource.toStdString().c_str());
   //  qDebug(fragmentSource.toStdString().c_str());
-  mNoiseShader.addVertexShaderSource(vertexSource);
-  mNoiseShader.addVertexShaderSource(directionalLightVert);
-  mNoiseShader.addFragmentShaderSource(fragmentSource);
-  mNoiseShader.addFragmentShaderSource(directionalLightFrag);
+  mNoiseShader.addVertexSource(vertexSource);
+  mNoiseShader.addVertexSource(directionalLightVert);
+  mNoiseShader.addFragmentSource(fragmentSource);
+  mNoiseShader.addFragmentSource(directionalLightFrag);
   mNoiseShader.link();
-  m3dNoiseTexture = treeD::utilities::get3dNoiseTexture(Vector3i(128, 128, 128));
+  m3dNoiseTexture = treeD::get3dNoiseTexture(Vector3i(128, 128, 128));
   
   //--- sun shader
   vert.close();
@@ -161,10 +161,10 @@ void Viewer::initializeGL()
   
   //  qDebug(vertexSource.toStdString().c_str());
   //  qDebug(fragmentSource.toStdString().c_str());
-  mSunShader.addVertexShaderSource(vertexSource);
-  mSunShader.addVertexShaderSource(directionalLightVert);
-  mSunShader.addFragmentShaderSource(fragmentSource);
-  mSunShader.addFragmentShaderSource(directionalLightFrag);
+  mSunShader.addVertexSource(vertexSource);
+  mSunShader.addVertexSource(directionalLightVert);
+  mSunShader.addFragmentSource(fragmentSource);
+  mSunShader.addFragmentSource(directionalLightFrag);
   mSunShader.link();
 }
 
@@ -174,36 +174,36 @@ void Viewer::paintGL()
   Widget3d::paintGL();
   
   pushShader(mShader);
-  utilities::draw(mPs);
+  draw(mPs);
 
   pushShader(mShader2);
   glPushMatrix();
   glTranslated(2, 0, 0);
-  utilities::draw(mPs);
+  draw(mPs);
   glPopMatrix();
   popShader();
   
   glPushMatrix();
   glTranslated(4, 0, 0);
-  utilities::draw(mPs);
+  draw(mPs);
   glPopMatrix();
   
   
   glPushAttrib(GL_ENABLE_BIT);
     glEnable(GL_TEXTURE_3D);
-    glBindTexture(GL_TEXTURE_3D, m3dNoiseTexture.getTextureId());
+    glBindTexture(GL_TEXTURE_3D, m3dNoiseTexture.getId());
     pushShader(mNoiseShader);
     mNoiseShader.setUniform("Noise", 0);
     glPushMatrix();
     glTranslated(6, 0, 0);
-    utilities::draw(mPs);
+    draw(mPs);
     glPopMatrix();
     
     pushShader(mSunShader);
     mSunShader.setUniform("Noise", 0);
     glPushMatrix();
     glTranslated(8, 0, 0);
-    utilities::draw(mPs);
+    draw(mPs);
     glPopMatrix();
     popShader();
   glPopAttrib();

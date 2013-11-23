@@ -108,6 +108,7 @@ public:
 	virtual int getHeight() const {return mpGuts->mHeight;}
   virtual int getNumColorAttachment() const {return mpGuts->mColorAttachments.size();}
   virtual QImage getImageFrom(int) const;
+  virtual math::Vector2i getSize() const;
   virtual Texture getTexture(int) const;
 	virtual int getWidth() const {return mpGuts->mWidth;}
   virtual void end();
@@ -116,6 +117,7 @@ public:
 //virtual void removeDepthAttachment();
 //virtual void removeStencilAttachment();
   virtual void resize(int, int);
+  virtual void resize( math::Vector2i );
   
 protected:
   virtual bool isDepthAttachmentUsingTexture() const;

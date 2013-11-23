@@ -452,8 +452,8 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
       toVector(mNewCam.getLook()) * t;
     mCam.set(iterationMatrix.getTranslation(),
     	toPoint(interpolatedLook),
-      iterationMatrix.getBaseY(),
-      iterationMatrix.getBaseX());
+      iterationMatrix.getBaseY() );/*,
+      iterationMatrix.getBaseX());*/
 
     if ( animationTime >= mAnimationDuration )
     {
@@ -482,16 +482,20 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
     double finalZoom = getCamera().getZoom() * zoom;
     if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
     {                  
-      Point3d glPos = mCam.pixelToGL( ipE->x(), ipE->y() );
-      double xPreZoom = glPos.getX(), yPreZoom = glPos.getY();
+    	Point3d workingPlane( 0.0, 0.0, mCam.getProjection().mNear );
+      Point3d preZoom = mCam.pixelToGL( ipE->x(), ipE->y(), workingPlane );
       mCam.setZoom(finalZoom);
-      glPos = mCam.pixelToGL( ipE->x(), ipE->y() );
-      double xPostZoom = glPos.getX(), yPostZoom = glPos.getY();
+      Point3d postZoom = mCam.pixelToGL( ipE->x(), ipE->y(), workingPlane );
+      
+      //on trouve le delta en coordonnée oeil.
+      Matrix4d viewMatrix = mCam.getViewMatrix();
+      Vector3d ecDelta = ( postZoom * viewMatrix ) - ( preZoom * viewMatrix );
+      
       Camera::Projection p = mCam.getProjection();
-      p.mLeft -= xPostZoom - xPreZoom;
-      p.mRight -= xPostZoom - xPreZoom;
-      p.mTop -= yPostZoom - yPreZoom;
-      p.mBottom -= yPostZoom - yPreZoom;
+      p.mLeft -= ecDelta.getX();
+      p.mRight -= ecDelta.getX();
+      p.mTop -= ecDelta.getY();
+      p.mBottom -= ecDelta.getY();
       mCam.setProjection( p );      
       mCam.applyProjectionTransformation();
     }

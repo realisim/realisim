@@ -327,6 +327,9 @@ Engine::Engine() : QObject(), mState( sIdle ),
   mCurrentLayer(0)
 {
 	int w = 800, h = 600;
+  //mGameCamera.setProjection(-w / 2.0, w / 2.0,
+//   -h/2.0, h/2.0, 0.0, 200, Camera::Projection::tOrthogonal, true);
+
 	mGameCamera.setOrthoProjection( w, h, 0.0, 200 );
   mGameCamera.setWindowSize(w, h);
   mGameCamera.set( Point3d( 0.0, 0.0, 5.0 ),

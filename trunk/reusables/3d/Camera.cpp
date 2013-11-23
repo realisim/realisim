@@ -82,6 +82,7 @@ void Camera::applyModelViewTransformation() const
   Point3d absoluteLook = getLook() * getTransformationToGlobal();
   Vector3d absoluteUp = getUp() * getTransformationToGlobal();
   
+    
   gluLookAt( absolutePos.getX(),
              absolutePos.getY(), 
              absolutePos.getZ(),
@@ -91,6 +92,10 @@ void Camera::applyModelViewTransformation() const
              absoluteUp.getX(),
              absoluteUp.getY(),
              absoluteUp.getZ() );
+             
+    //on stock la matrice de projection
+  glGetDoublev(GL_MODELVIEW_MATRIX, mViewMatrix.getNonConstPtr() );
+//  glLoadMatrix( mViewMatrix.getPtr() );
 }
 
 //-----------------------------------------------------------------------------
@@ -122,12 +127,17 @@ void Camera::applyProjectionTransformation() const
   r = cx + halfVisibleWidth;
   b = cy - halfVisibleHeigh;
   t = cy + halfVisibleHeigh;
+
   switch ( p.mType ) 
   {
     case Projection::tOrthogonal: glOrtho( l, r, b, t, p.mNear, p.mFar); break;
     case Projection::tPerspective: glFrustum( l, r, b, t, p.mNear, p.mFar); break;
     default: break;
   }
+  
+  //on stock la matrice de projection
+  glGetDoublev(GL_PROJECTION_MATRIX, mProjectionMatrix.getNonConstPtr() );
+  
   glMatrixMode(GL_MODELVIEW);
 }
 
@@ -175,6 +185,14 @@ void Camera::computeProjection()
 //}
 
 //-----------------------------------------------------------------------------
+const Matrix4d& Camera::getViewMatrix() const
+{ return mViewMatrix; }
+
+//-----------------------------------------------------------------------------
+const Matrix4d& Camera::getProjectionMatrix() const
+{ return mProjectionMatrix; }
+
+//-----------------------------------------------------------------------------
 /*retourne la largeur visible en unité GL*/
 double Camera::getVisibleHeight() const
 { return mProjectionInfo.getHeight() * 1.0 / getZoom(); }
@@ -186,12 +204,7 @@ double Camera::getVisibleWidth() const
 //-----------------------------------------------------------------------------
 Point2d Camera::glToPixel( const Point3d& iP ) const
 {
-  glMatrixMode( GL_PROJECTION );
-  glPushMatrix(); glLoadIdentity();
-  glMatrixMode( GL_MODELVIEW );
-  glPushMatrix(); glLoadIdentity();
-  applyProjectionTransformation();
-  applyModelViewTransformation();
+  pushProjections();
   
   double modelView[16];
   glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
@@ -208,10 +221,7 @@ Point2d Camera::glToPixel( const Point3d& iP ) const
     &x, &y, &z);
   if ( !sucess ) { x = 0; y = 0; z = 0; }
 
-	glMatrixMode( GL_PROJECTION );
-  glPopMatrix();
-  glMatrixMode( GL_MODELVIEW );
-  glPopMatrix();
+  popProjections();
 
 	//dépendant de l'orientation de la camera?
 	return Point2d( x, y );
@@ -370,12 +380,7 @@ Point3d Camera::pixelToGL( int iX, int iY,
   //l'axe de Qt est inversé par rapport a openGL
   iY = getWindowInfo().getHeight() - iY;
   
-  glMatrixMode( GL_PROJECTION );
-  glPushMatrix(); glLoadIdentity();
-  glMatrixMode( GL_MODELVIEW );
-  glPushMatrix(); glLoadIdentity();
-  applyProjectionTransformation();
-  applyModelViewTransformation();
+  pushProjections();
   
   double modelView[16];
   glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
@@ -406,10 +411,7 @@ Point3d Camera::pixelToGL( int iX, int iY,
     modelView, projection, viewport,
     &p0x, &p0y, &p0z);
 
-	glMatrixMode( GL_PROJECTION );
-  glPopMatrix();
-  glMatrixMode( GL_MODELVIEW );
-  glPopMatrix();
+	popProjections();
   return Point3d(p0x, p0y, p0z);
 }
 
@@ -434,12 +436,7 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
   else //Projection::tPerspective
   {
   
-    glMatrixMode( GL_PROJECTION );
-    glPushMatrix(); glLoadIdentity();
-    glMatrixMode( GL_MODELVIEW );
-    glPushMatrix(); glLoadIdentity();
-    applyProjectionTransformation();
-    applyModelViewTransformation();
+    pushProjections();
 
     double modelView[16];
     glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
@@ -478,10 +475,7 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
       modelView, projection, viewport,
       &p1x, &p1y, &p1z);
       
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
+    popProjections();
     
     /*on met les points dans le systeme de coordonné local. La transformation
       de la camera est du systeme local vers le system global. On a donc besoin
@@ -505,6 +499,15 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
 }
 
 //-----------------------------------------------------------------------------
+void Camera::popProjections() const
+{
+  glMatrixMode( GL_PROJECTION );
+  glPopMatrix();
+  glMatrixMode( GL_MODELVIEW );
+  glPopMatrix();
+}
+
+//-----------------------------------------------------------------------------
 void Camera::print() const
 {
   using namespace std;
@@ -512,6 +515,17 @@ void Camera::print() const
   cout<<"\nLook: "<<mLook.getX()<<" "<<mLook.getY()<<" "<<mLook.getZ();
   cout<<"\nLat: "<<mLat.getX()<<" "<<mLat.getY()<<" "<<mLat.getZ();
   cout<<"\nUp: "<<mUp.getX()<<" "<<mUp.getY()<<" "<<mUp.getZ();
+}
+
+//-----------------------------------------------------------------------------
+void Camera::pushProjections() const
+{
+  glMatrixMode( GL_PROJECTION );
+  glPushMatrix(); glLoadIdentity();
+  glMatrixMode( GL_MODELVIEW );
+  glPushMatrix(); glLoadIdentity();
+  applyProjectionTransformation();
+  applyModelViewTransformation();
 }
 
 //-----------------------------------------------------------------------------
@@ -538,18 +552,6 @@ void Camera::set( const Point3d& iPos,
 }
 
 //-----------------------------------------------------------------------------
-void Camera::set( const Point3d& iPos, const Point3d& iLook,
-  const Vector3d& iUp, const Vector3d& iLat)
-{
-  mPos = iPos;
-  mLook = iLook;
-  mUp = iUp;
-  mLat = iLat;
-  mLat.normalise();
-  mUp.normalise();
-}
-
-//-----------------------------------------------------------------------------
 void Camera::setLat( const Vector3d& iLat )
 {
   mLat = iLat;
@@ -571,11 +573,12 @@ void Camera::setOrthoProjection(double iVisibleGlUnitX, double iVisibleGlUnitY,
 {
   setProjection(-iVisibleGlUnitX / 2.0, iVisibleGlUnitX / 2.0,
    -iVisibleGlUnitY / 2.0, iVisibleGlUnitY / 2.0, iNear, iFar,
-   Projection::tOrthogonal, false);
+   Projection::tOrthogonal, true);
 }
 
 //-----------------------------------------------------------------------------
-/*iFov est en degree*/
+/*iFov est en degree, iRatio est généralement le ratio du viewport sous la
+  forme height / width ) */
 void Camera::setPerspectiveProjection(double iFov, double iRatio,
                            double iNear, double iFar,
                            bool iProportional /*=true*/)
@@ -590,7 +593,7 @@ void Camera::setPerspectiveProjection(double iFov, double iRatio,
 
 //-----------------------------------------------------------------------------
 void Camera::setProjection( const Projection& iP )
-{ mProjectionInfo = iP; }
+{ mProjectionInfo = iP; computeProjection();}
 
 //-----------------------------------------------------------------------------
 void Camera::setProjection(double iLeft, double iRight,
@@ -599,16 +602,17 @@ void Camera::setProjection(double iLeft, double iRight,
                            Projection::type iType,
                            bool iProportional /*=true*/)
 {
-	mProjectionInfo.mLeft = iLeft;
-  mProjectionInfo.mRight = iRight;
-  mProjectionInfo.mBottom = iBottom;
-  mProjectionInfo.mTop = iTop;
-	mProjectionInfo.mNear = iNear;
-  mProjectionInfo.mFar = iFar;  
-  mProjectionInfo.mZoomFactor = 1.0;
-  mProjectionInfo.mType = iType;
-	mProjectionInfo.mProportionalToWindow = iProportional;
-  computeProjection();
+	Projection p;
+	p.mLeft = iLeft;
+  p.mRight = iRight;
+  p.mBottom = iBottom;
+  p.mTop = iTop;
+	p.mNear = iNear;
+  p.mFar = iFar;  
+  p.mZoomFactor = 1.0;
+  p.mType = iType;
+	p.mProportionalToWindow = iProportional;
+  setProjection(p);
 }
 
 //-----------------------------------------------------------------------------
@@ -688,6 +692,10 @@ void Camera::setWindowSize( int iWidth, int iHeight )
   
   computeProjection();
 }
+
+//-----------------------------------------------------------------------------
+void Camera::setWindowSize( Vector2i iS )
+{ setWindowSize( iS.x(), iS.y() ); }
 
 //-----------------------------------------------------------------------------
 void Camera::setZoom(double iZoom)

@@ -239,7 +239,7 @@ void Particules::iterate() const
             v = v * r;
             /* on ajoute un valeur random entre 0.0 et mRadis */
             v *= r2 / (double)RAND_MAX * mRadius;
-            p.p = mPosition + toPoint( v );
+            p.p = mPosition + v;
           }
           break;
           case tCone:
@@ -284,8 +284,8 @@ void Particules::iterate() const
         switch (a.t) 
         {
           case atPositional: 
-          	dist = toVector(p.p - a.p).fastNorm();
-          	f += toVector(p.p - a.p).normalise() * a.m / dist;
+          	dist = (p.p - a.p).fastNorm();
+          	f += (p.p - a.p).normalise() * a.m / dist;
           break;
           case atGlobal: f += a.f * a.m; break;
           default: break;

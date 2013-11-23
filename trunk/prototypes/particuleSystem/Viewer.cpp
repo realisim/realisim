@@ -24,7 +24,6 @@ using namespace realisim;
   using namespace math;
   using namespace openCL;
   using namespace treeD;
-  	using namespace utilities;
   
 const unsigned int kPlusMinusId = 10000;
 
@@ -73,7 +72,7 @@ void Viewer::drawGravityHoles(bool iPicking) const
 {
   const ParticuleSystem& ps = *mpParticuleSystem;
   //gravityHole
-  glBindTexture(GL_TEXTURE_2D, mGravityHoleTexture.getTextureId());
+  glBindTexture(GL_TEXTURE_2D, mGravityHoleTexture.getId());
   glPointSize(20.0);
   
   glColor4ub(255, 255, 255, 255);    
@@ -95,7 +94,7 @@ void Viewer::drawParticules(bool iPicking) const
 {
   //toutes les particules
   const ParticuleSystem& ps = *mpParticuleSystem;
-  glBindTexture(GL_TEXTURE_2D, mParticuleTexture.getTextureId());
+  glBindTexture(GL_TEXTURE_2D, mParticuleTexture.getId());
 	glPointSize(4.0);
 //  glBegin(GL_POINTS);
 //    for(unsigned int i = 0; i < ps.getNumberOfParticules(); i+=4)
@@ -131,7 +130,7 @@ void Viewer::drawScene() const
   glDisable(GL_TEXTURE_2D);
   glEnable(GL_DEPTH_TEST);
   
-  mPlusMinus.draw(getCamera());
+  mPlusMinus.draw();
 }
 
 //------------------------------------------------------------------------------
@@ -147,7 +146,8 @@ void Viewer::drawSceneForPicking() const
   
   QColor c = idToColor(kPlusMinusId);
   glColor4ub(c.red(), c.green(), c.blue(), c.alpha());
-  mPlusMinus.draw(getCamera(), true);
+  //mPlusMinus.draw(getCamera(), true);
+  mPlusMinus.draw();
   
   glEnable(GL_BLEND);
   glEnable(GL_TEXTURE_2D);
@@ -161,16 +161,16 @@ void Viewer::handlePlusMinusState()
 	switch (mButtonState)
   {
     case bsMinus:
-    	mPlusMinus.setTexture(t, QRect(QPoint(21, 0), QSize(21, 21)));
+    	mPlusMinus.set(t, QRect(QPoint(21, 0), QSize(21, 21)));
       break;
     case bsMinusHover:
-      mPlusMinus.setTexture(t, QRect(QPoint(21, 21), QSize(21, 21)));
+      mPlusMinus.set(t, QRect(QPoint(21, 21), QSize(21, 21)));
       break;
     case bsPlus:
-      mPlusMinus.setTexture(t, QRect(QPoint(0, 0), QSize(21, 21)));
+      mPlusMinus.set(t, QRect(QPoint(0, 0), QSize(21, 21)));
       break;
     case bsPlusHover:
-      mPlusMinus.setTexture(t, QRect(QPoint(0, 21), QSize(21, 21)));
+      mPlusMinus.set(t, QRect(QPoint(0, 21), QSize(21, 21)));
       break;
     default:
       break;
@@ -198,8 +198,8 @@ void Viewer::initializeGL()
   Texture t;
   t.set( QImage(":/images/plusMinus.png") );
   //initialisé a minus
-  mPlusMinus.setTexture(t, QRect(QPoint(21,0), QSize(21, 21)));
-  mPlusMinus.set2dPositioningOn(true);
+  mPlusMinus.set(t, QRect(QPoint(21,0), QSize(21, 21)));
+//  mPlusMinus.set2dPositioningOn(true);
   mPlusMinus.setAnchorPoint(Sprite::aBottomLeft);
 }
 
@@ -261,7 +261,7 @@ void Viewer::mouseMoveEvent(QMouseEvent* ipE)
 			Camera c = getCamera();
       Vector3d v = 
         c.pixelDeltaToGLDelta(deltaX, -deltaY, ps.getEmitterPosition());
-      ps.setEmitterPosition(ps.getEmitterPosition() + toPoint(v));
+      //ps.setEmitterPosition(ps.getEmitterPosition() + toPoint(v));
       break;
     }
     default: // gravity holes selected
@@ -271,7 +271,7 @@ void Viewer::mouseMoveEvent(QMouseEvent* ipE)
       Camera c = getCamera();
       Vector3d v = 
         c.pixelDeltaToGLDelta(deltaX, -deltaY, g.mPos);
-      ps.setGravityHolePosition(mSelectedId-2, g.mPos + toPoint(v));
+      //ps.setGravityHolePosition(mSelectedId-2, g.mPos + toPoint(v));
     }
       break;
   }
@@ -352,5 +352,5 @@ void Viewer::resizeGL(int iWidth, int iHeight)
   Widget3d::resizeGL(iWidth, iHeight);
   mFbo.resize(iWidth, iHeight);
   Camera c = getCamera();
-  mPlusMinus.set2dPosition(10, c.getWindowInfo().getHeight() - 10);
+  //mPlusMinus.set2dPosition(10, c.getWindowInfo().getHeight() - 10);
 }

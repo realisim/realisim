@@ -13,11 +13,6 @@ namespace treeD
 //-----------------------------------------------------------------------------
 ScreenSpaceProjection::ScreenSpaceProjection( const math::Vector2d& iS )
 {
-  glMatrixMode( GL_PROJECTION );
-  glPushMatrix(); glLoadIdentity();
-  glMatrixMode( GL_MODELVIEW );
-  glPushMatrix(); glLoadIdentity();
-
   Camera c;
   c.set( Point3d(0.0, 0.0, 5.0), 
     Point3d(0.0, 0.0, 0.0),
@@ -26,8 +21,7 @@ ScreenSpaceProjection::ScreenSpaceProjection( const math::Vector2d& iS )
   c.setProjection( 0, iS.x(), 
     0, iS.y(), 0.5, 100.0,
     Camera::Projection::tOrthogonal );
-  c.applyModelViewTransformation();
-  c.applyProjectionTransformation();
+  c.pushProjections();
 }
 
 ScreenSpaceProjection::~ScreenSpaceProjection()
