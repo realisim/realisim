@@ -45,10 +45,13 @@ mToGlobal(),
 mPos(),
 mLat(),
 mLook(),
+mLookVector(),
 mUp(),
 mProjectionInfo(),
 mPixelPerGLUnit( 0.0 ),
-mWindowInfo()
+mWindowInfo(),
+mProjectionMatrix(),
+mViewMatrix()
 {
 	setOrientation( FREE );
   setPerspectiveProjection(60, 1, 0.5, 1000.0, true);
@@ -62,10 +65,13 @@ mToGlobal(iCam.getTransformationToGlobal()),
 mPos(iCam.getPos()),
 mLat(iCam.getLat()),
 mLook(iCam.getLook()),
+mLookVector( iCam.getLookVector() ),
 mUp(iCam.getUp()),
 mProjectionInfo(iCam.getProjection()),
 mPixelPerGLUnit(iCam.getPixelPerGLUnit()),
-mWindowInfo(iCam.getWindowInfo())
+mWindowInfo(iCam.getWindowInfo()),
+mProjectionMatrix( iCam.getProjectionMatrix() ),
+mViewMatrix( iCam.getViewMatrix() )
 {
 }
 
@@ -76,26 +82,8 @@ Camera::~Camera()
 
 //-----------------------------------------------------------------------------
 void Camera::applyModelViewTransformation() const
-{    
-  //On place la caméra en coordonnée absolue.
-  Point3d absolutePos = getPos() * getTransformationToGlobal();
-  Point3d absoluteLook = getLook() * getTransformationToGlobal();
-  Vector3d absoluteUp = getUp() * getTransformationToGlobal();
-  
-    
-  gluLookAt( absolutePos.getX(),
-             absolutePos.getY(), 
-             absolutePos.getZ(),
-             absoluteLook.getX(),
-             absoluteLook.getY(),
-             absoluteLook.getZ(),
-             absoluteUp.getX(),
-             absoluteUp.getY(),
-             absoluteUp.getZ() );
-             
-    //on stock la matrice de projection
-  glGetDoublev(GL_MODELVIEW_MATRIX, mViewMatrix.getNonConstPtr() );
-//  glLoadMatrix( mViewMatrix.getPtr() );
+{
+  glLoadMatrixd( mViewMatrix.getPtr() );
 }
 
 //-----------------------------------------------------------------------------
@@ -170,19 +158,23 @@ void Camera::computeProjection()
 }
 
 //-----------------------------------------------------------------------------
-//void Camera::computeLatAndUp()
-//{
-//  //on commence par calculer le vecteur latérale parce que le vecteur up
-//  //final est dependant du vecteur lateral
-//  
-//  Vector3d lookVect( getPos(), getLook()  );
-//  
-//  mLat = lookVect ^ getUp();
-//  mLat.normalise();
-//  
-//  mUp = getLat() ^lookVect;
-//  mUp.normalise();
-//}
+void Camera::computeViewMatrix()
+{
+  mViewMatrix.setRow1( mLat.getX(), mLat.getY(), mLat.getZ(), 0.0 );
+  mViewMatrix.setRow2( mUp.getX(), mUp.getY(), mUp.getZ(), 0.0 );
+  mViewMatrix.setRow3( -mLookVector.getX(), -mLookVector.getY(), -mLookVector.getZ(), 0.0 );
+  mViewMatrix.setRow4( 0.0, 0.0, 0.0, 1.0 );
+  /*Ici, la transposé d'une matrice 3x3 (rotation) revient strictement à
+   l'inverse.*/
+  mViewMatrix.transpose();
+  Point3d t = -getPos() * mViewMatrix;
+  mViewMatrix.setTranslation( t );
+  mViewMatrix = getTransformationToLocal() * mViewMatrix;
+}
+
+//-----------------------------------------------------------------------------
+const Vector3d& Camera::getLookVector() const
+{return mLookVector;}
 
 //-----------------------------------------------------------------------------
 const Matrix4d& Camera::getViewMatrix() const
@@ -204,7 +196,7 @@ double Camera::getVisibleWidth() const
 //-----------------------------------------------------------------------------
 Point2d Camera::glToPixel( const Point3d& iP ) const
 {
-  pushProjections();
+  pushAndApplyMatrices();
   
   double modelView[16];
   glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
@@ -221,7 +213,7 @@ Point2d Camera::glToPixel( const Point3d& iP ) const
     &x, &y, &z);
   if ( !sucess ) { x = 0; y = 0; z = 0; }
 
-  popProjections();
+  popMatrices();
 
 	//dépendant de l'orientation de la camera?
 	return Point2d( x, y );
@@ -237,8 +229,7 @@ void Camera::move( const Vector3d& iDelta )
     case ZY:
     case XZ:
     {
-      mPos += toPoint(iDelta);
-      mLook += toPoint(iDelta);
+      set( mPos + iDelta, mLook + iDelta, getUp() );
     }
     break;
       
@@ -336,7 +327,8 @@ void Camera::move( const Vector3d& iDelta )
                      getLook() );
       
       //on applique la nouvelle position.
-      mPos = newPos;
+      //mPos = newPos;
+      setPos( newPos );
     }
       break;
       
@@ -355,10 +347,13 @@ Camera::operator=( const Camera& iCam )
   mPos = iCam.getPos();
   mLat = iCam.getLat();
   mLook = iCam.getLook();
+  mLookVector = iCam.getLookVector();
   mUp = iCam.getUp();
   mProjectionInfo = iCam.getProjection();
   mPixelPerGLUnit = iCam.getPixelPerGLUnit();
   mWindowInfo = iCam.getWindowInfo();
+  mViewMatrix = iCam.getViewMatrix();
+  mProjectionMatrix = iCam.getProjectionMatrix();
   
   return *this;
 }
@@ -380,7 +375,7 @@ Point3d Camera::pixelToGL( int iX, int iY,
   //l'axe de Qt est inversé par rapport a openGL
   iY = getWindowInfo().getHeight() - iY;
   
-  pushProjections();
+  pushAndApplyMatrices();
   
   double modelView[16];
   glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
@@ -411,7 +406,7 @@ Point3d Camera::pixelToGL( int iX, int iY,
     modelView, projection, viewport,
     &p0x, &p0y, &p0z);
 
-	popProjections();
+	popMatrices();
   return Point3d(p0x, p0y, p0z);
 }
 
@@ -436,7 +431,7 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
   else //Projection::tPerspective
   {
   
-    pushProjections();
+    pushAndApplyMatrices();
 
     double modelView[16];
     glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
@@ -475,7 +470,7 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
       modelView, projection, viewport,
       &p1x, &p1y, &p1z);
       
-    popProjections();
+    popMatrices();
     
     /*on met les points dans le systeme de coordonné local. La transformation
       de la camera est du systeme local vers le system global. On a donc besoin
@@ -499,7 +494,7 @@ Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
 }
 
 //-----------------------------------------------------------------------------
-void Camera::popProjections() const
+void Camera::popMatrices() const
 {
   glMatrixMode( GL_PROJECTION );
   glPopMatrix();
@@ -518,12 +513,12 @@ void Camera::print() const
 }
 
 //-----------------------------------------------------------------------------
-void Camera::pushProjections() const
+void Camera::pushAndApplyMatrices() const
 {
   glMatrixMode( GL_PROJECTION );
-  glPushMatrix(); glLoadIdentity();
+  glPushMatrix();
   glMatrixMode( GL_MODELVIEW );
-  glPushMatrix(); glLoadIdentity();
+  glPushMatrix();
   applyProjectionTransformation();
   applyModelViewTransformation();
 }
@@ -532,23 +527,26 @@ void Camera::pushProjections() const
 /*Définie la position de la caméra, le point visé et le vecteur up. Le 
   vecteur Latéral sera calculé à partir du vecteur up et ensuite le up
   sera recalculé afin d'assurer une base normale.*/
-void Camera::set( const Point3d& iPos,
-         const Point3d& iLook,
+void Camera::set( const Point3d& iEye,
+         const Point3d& iCenter,
          const Vector3d& iUp )
 {
-  mPos = iPos;
-  mLook = iLook;
+  mPos = iEye;
+  mLook = iCenter;
   mUp = iUp;
   
   //on commence par calculer le vecteur laterale parce que le vecteur up
   //final est dependant du vecteur lateral
-  Vector3d lookVect( getPos(), getLook()  );
+  mLookVector.set( getPos(), getLook() );
+  mLookVector.normalise();
   
-  mLat = lookVect ^ getUp();
+  mLat = mLookVector ^ mUp;
   mLat.normalise();
   
-  mUp = getLat() ^ lookVect;
+  mUp = mLat ^ mLookVector;
   mUp.normalise();
+  
+  computeViewMatrix();
 }
 
 //-----------------------------------------------------------------------------
@@ -558,7 +556,12 @@ void Camera::setLat( const Vector3d& iLat )
   mLat.normalise();
   
   mUp = ( mLat ^ Vector3d( getPos(), getLook() ) ).normalise();
+  set( getPos(), getLook(), mUp );
 }
+
+//-----------------------------------------------------------------------------
+void Camera::setPos( const Point3d& iPos )
+{ set( iPos, getLook(), getUp() ); }
 
 //-----------------------------------------------------------------------------
 void Camera::setOrthoProjection(double iVisibleGlUnit, double iNear, double iFar)
@@ -638,7 +641,7 @@ void Camera::setOrientation( Orientation iO )
            Vector3d( 0, 0, -1 ) );
       break;
     case FREE:
-      set( Point3d( 60, 60, 60 ),
+      set( Point3d(0.0, 50.0, 50.0), //Point3d( 60, 60, 60 ),
            Point3d( 0, 0, 0 ),
            Vector3d( 0, 1, 0 ) );
       break;
@@ -653,14 +656,16 @@ void Camera::setTransformationToLocal(const Matrix4d& iTransfo)
   mToLocal = iTransfo;
   mToGlobal = mToLocal;
   mToGlobal.inverse();
+	computeViewMatrix();
 }
 
 //-----------------------------------------------------------------------------
 void Camera::setTransformationToGlobal(const Matrix4d& iTransfo)
-{
+{	
   mToGlobal = iTransfo;
   mToLocal = mToGlobal;
   mToLocal.inverse();
+	computeViewMatrix();
 }
 
 //-----------------------------------------------------------------------------

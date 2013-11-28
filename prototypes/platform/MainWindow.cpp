@@ -187,7 +187,7 @@ void Viewer::drawGame()
   
 	//projection ortho
   const Camera& cam = mEngine.getGameCamera();
-  cam.pushProjections();
+  cam.pushAndApplyMatrices();
   
   //dessine le background
   {
@@ -312,7 +312,7 @@ void Viewer::drawGame()
   }
   renderText(10, 10, playerState );
   
-	cam.popProjections();
+	cam.popMatrices();
 }
 
 
@@ -330,7 +330,7 @@ void Viewer::drawMenu()
   c.setProjection( 0, c.getWindowInfo().getWidth(),
   	0, c.getWindowInfo().getHeight(), 0.0, 6.0, Camera::Projection::tOrthogonal );
 	
-	c.pushProjections();
+	c.pushAndApplyMatrices();
   
   vector<QString> menuItems; 
   int currentMenuItem;
@@ -440,7 +440,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 glColor3ub( 255, 255, 255);
 //--------
   
-	c.popProjections();
+	c.popMatrices();
 }
 
 //-----------------------------------------------------------------------------
@@ -519,7 +519,7 @@ Texture Viewer::renderLight()
     Vector3d( 0.0, 1.0, 0.0 ) );
   c.setPerspectiveProjection(90, offSize.y() / offSize.x(), 10, sightDepth, false);
 
-  c.pushProjections();
+  c.pushAndApplyMatrices();
   lightCamView = c.getViewMatrix();
   lightCamProjection = c.getProjectionMatrix();
   MCToShadowMap = lightCamView * lightCamProjection;
@@ -529,15 +529,15 @@ Texture Viewer::renderLight()
   drawDataMap();
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glLineWidth(1.0);
-  c.popProjections();
+  c.popMatrices();
   glDisable( GL_DEPTH_TEST );
   shadowMap = mFbo.getDepthTexture().copy();
   popFrameBuffer();
   
   c = gc;
   c.setWindowSize( gc.getWindowInfo().getSize() / 4 );
-  c.pushProjections();
-  c.popProjections();
+  c.pushAndApplyMatrices();
+  c.popMatrices();
 
   Matrix4d clipToWindow;      
   clipToWindow.setScaling( Vector3d(0.5) );

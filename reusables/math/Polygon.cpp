@@ -137,7 +137,6 @@ void Polygon::checkIfConvex() const
       { mIsConvex = false; break; }
     }
   }
-  printf("is convex: %d\n", mIsConvex);
 }
 //-----------------------------------------------------------------------------
 void Polygon::checkIfCoplanar() const

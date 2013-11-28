@@ -110,8 +110,8 @@ public:
   Camera& operator=( const Camera& );
   Point3d pixelToGL( int, int, const Point3d& = Point3d(0.0)) const;
   Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(math::MAX_DOUBLE)) const;
-  void popProjections() const;
-  void pushProjections() const;  
+  void popMatrices() const;
+  void pushAndApplyMatrices() const;  
   void set( const Point3d&, const Point3d&, const Vector3d& );
   void setOrthoProjection(double, double, double);
   void setOrthoProjection(double, double, double, double);
@@ -130,7 +130,10 @@ void print() const;
 protected:  
   void computeLatAndUp(); 
   void computeProjection(); 
+  void computeViewMatrix();
+  virtual const Vector3d& getLookVector() const;
   void setLat( const Vector3d& iLat );  
+  void setPos( const Point3d& );
   void setUp( const Vector3d& iUp );
   
   Orientation mOrientation;
@@ -139,6 +142,7 @@ protected:
   Point3d mPos;
   Vector3d mLat;
   Point3d mLook;
+  Vector3d mLookVector;
   Vector3d mUp;
   Projection mProjectionInfo;
   double mPixelPerGLUnit;
