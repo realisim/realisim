@@ -296,6 +296,7 @@ namespace math
     inline Point3& operator=  (const Point3&);
 
   // FAIT DU SENS???
+  	inline Point3<U> operator- () const;
     inline Point3<U>& operator-= (const Point3 &Point3);
     inline Point3<U>& operator+= (const Point3 &Point3);
     inline Point3<U> operator*  (const U &val) const;
@@ -729,6 +730,18 @@ namespace math
 //    return *this;
   }
 
+  //----------------------------------------------------------------------------
+  /*permet de mettre un - devant un Point3d  */
+  template<class T>
+  inline Point3<T> Point3<T>::operator- () const
+  { 
+    Point3<T> r;       
+    r.mData[0] = -mData[0];
+    r.mData[1] = -mData[1];
+    r.mData[2] = -mData[2];
+    return r;
+  }
+  
   //----------------------------------------------------------------------------
   template<class U>
   inline Point3<U> Point3<U>::operator- (const U &val) const

@@ -183,7 +183,7 @@ void Text::render() const
     c.setProjection( 0, r.width(), 
       0, r.height(), 0.5, 100.0,
       Camera::Projection::tOrthogonal );
-    c.pushProjections();
+    c.pushAndApplyMatrices();
     
     int kernelSize = 3;
     vector< float > f = meanKernel2D<float>( kernelSize );
@@ -220,7 +220,7 @@ void Text::render() const
     mTexture.setFilter( GL_LINEAR );
     mTexture.setWrapMode( GL_CLAMP );
     
-    c.popProjections();
+    c.popMatrices();
     
     glPopAttrib();
     fbo.end();

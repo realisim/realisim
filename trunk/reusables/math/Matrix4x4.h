@@ -31,6 +31,7 @@
 #include "Vect.h"
 #include <vector>
 #include <iostream>
+#include <iomanip>
 
 //!-----------------------------------------------------------------------------
 //! \brief Classe gÈrant les fonctionalités associées a une matrice 4x4 ou 3x3
@@ -66,7 +67,6 @@ namespace math
     inline void setRotation(const Matrix4<T>& iRot);
     inline void setScaling( const Vector3<T>& iScale );
     inline void setTranslation( const Point3<T>& iTrans );
-    inline void translate(const Vector3<T>& iTrans);
 
     // --------------- fonction get --------------------------------------------
     inline Vector3<T> getBaseX() const;
@@ -82,9 +82,12 @@ namespace math
     inline void loadIdentity();
     inline void multEquMat3(const Matrix4 &matrix);
     inline void print() const;
+    inline void translate(const Vector3<T>& iTrans);
+    inline void transpose();
 
     // --------------- Overload: operateurs unitaires --------------------------
     inline T operator()(unsigned int i, unsigned int j) const;
+    inline T& operator[] (int);
     inline Matrix4<T>& operator=  (const Matrix4 &matrix);
 
     inline Matrix4<T>  operator+  (const Matrix4 &matrix) const;
@@ -94,7 +97,7 @@ namespace math
     inline Matrix4<T>& operator-= (const Matrix4 &matrix);
 
     inline Matrix4<T>  operator*  (const Matrix4 &matrix) const;
-    inline void operator*= (const Matrix4 &matrix);
+    inline void operator*= (const Matrix4 &matrix);    
 
   protected:
   private:
@@ -213,6 +216,17 @@ namespace math
     setTranslation(t);
   }
 
+  //transpose la matrice
+  template<class T>
+  inline void Matrix4<T>::transpose()
+  {
+  	Matrix4<T> m(*this);
+  	mat_[0] = m[0]; mat_[1] = m[4]; mat_[2] = m[8]; mat_[3] = m[12];
+    mat_[4] = m[1]; mat_[5] = m[5]; mat_[6] = m[9]; mat_[7] = m[13];
+    mat_[8] = m[2]; mat_[9] = m[6]; mat_[10] = m[10]; mat_[11] = m[14];
+    mat_[12] = m[3]; mat_[13] = m[7]; mat_[14] = m[11]; mat_[15] = m[15];
+  }
+  
   //! permet d'obtenir la 1er ligne de la sous matrice 3x3 ("coin" sup gauche)
   template<class T>
   inline Vector3<T> Matrix4<T>::getBaseX() const
@@ -451,10 +465,10 @@ namespace math
   template<class T>
   inline void Matrix4<T>::print() const
   {
-    std::cout<<mat_[0]<<" "<<mat_[1]<<" "<<mat_[2]<<" "<<mat_[3]<<std::endl;
-    std::cout<<mat_[4]<<" "<<mat_[5]<<" "<<mat_[6]<<" "<<mat_[7]<<std::endl;
-    std::cout<<mat_[8]<<" "<<mat_[9]<<" "<<mat_[10]<<" "<<mat_[11]<<std::endl;
-    std::cout<<mat_[12]<<" "<<mat_[13]<<" "<<mat_[14]<<" "<<mat_[15]<<std::endl;
+  	printf( "%6.6f, %6.6f, %6.6f, %6.6f\n", mat_[0], mat_[1], mat_[2], mat_[3] );
+    printf( "%6.6f, %6.6f, %6.6f, %6.6f\n", mat_[4], mat_[5], mat_[6], mat_[7] );
+    printf( "%6.6f, %6.6f, %6.6f, %6.6f\n", mat_[8], mat_[9], mat_[10], mat_[11] );
+    printf( "%6.6f, %6.6f, %6.6f, %6.6f\n\n", mat_[12], mat_[13], mat_[14], mat_[15] );
   }
 
   //! fct qui retourne un pointeur sur la matrice (pratique pour OGL par ex.)
@@ -559,6 +573,11 @@ namespace math
       return mat_[i * 4 + j];
     return T(0);
   }
+  //----------------------------------------------------------------------------
+  //retourne une reference a l'élément i
+  template<class T>
+  inline T& Matrix4<T>::operator[] (int i)
+  { return mat_[i]; }
 
   typedef Matrix4<int>    Matrix4i;
   typedef Matrix4<float>  Matrix4f;

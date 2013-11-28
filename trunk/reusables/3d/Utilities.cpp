@@ -21,7 +21,7 @@ ScreenSpaceProjection::ScreenSpaceProjection( const math::Vector2d& iS )
   c.setProjection( 0, iS.x(), 
     0, iS.y(), 0.5, 100.0,
     Camera::Projection::tOrthogonal );
-  c.pushProjections();
+  c.pushAndApplyMatrices();
 }
 
 ScreenSpaceProjection::~ScreenSpaceProjection()
