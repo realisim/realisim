@@ -101,31 +101,8 @@ void Camera::applyProjectionTransformation() const
     glViewport(0, 0, getWindowInfo().getWidth(), getWindowInfo().getHeight() );
   }
 
-	/*Afin d'appliquer correctement le zoom, qui est donné par getVisibleWidth
-    et getVisibleHeight, on doit trouver le centre de la projection
-    originale (sans zoom). Ensuite on détermine la taille du rectangle
-    de la projection avec le zoom a partir de ce centre.*/
-  const Projection& p = getProjection();
-  double halfVisibleWidth = getVisibleWidth() / 2.0;
-  double halfVisibleHeigh = getVisibleHeight() / 2.0;
-  double cx = 0.0, cy = 0.0, l, r, b, t;
-  cx = p.mLeft + p.getWidth() / 2.0;
-  cy = p.mBottom + p.getHeight() / 2.0; 
-  l = cx - halfVisibleWidth;
-  r = cx + halfVisibleWidth;
-  b = cy - halfVisibleHeigh;
-  t = cy + halfVisibleHeigh;
-
-  switch ( p.mType ) 
-  {
-    case Projection::tOrthogonal: glOrtho( l, r, b, t, p.mNear, p.mFar); break;
-    case Projection::tPerspective: glFrustum( l, r, b, t, p.mNear, p.mFar); break;
-    default: break;
-  }
-  
-  //on stock la matrice de projection
-  glGetDoublev(GL_PROJECTION_MATRIX, mProjectionMatrix.getNonConstPtr() );
-  
+	glLoadMatrixd(mProjectionMatrix.getPtr()); 
+    
   glMatrixMode(GL_MODELVIEW);
 }
 
@@ -155,6 +132,36 @@ void Camera::computeProjection()
     mPixelPerGLUnit = getWindowInfo().getHeight() /  getVisibleHeight();
   }
 
+	/*Afin d'appliquer correctement le zoom, qui est donné par getVisibleWidth
+    et getVisibleHeight, on doit trouver le centre de la projection
+    originale (sans zoom). Ensuite on détermine la taille du rectangle
+    de la projection avec le zoom a partir de ce centre.*/
+  double halfVisibleWidth = getVisibleWidth() / 2.0;
+  double halfVisibleHeigh = getVisibleHeight() / 2.0;
+  double cx = 0.0, cy = 0.0, l, r, b, t;
+  cx = p.mLeft + p.getWidth() / 2.0;
+  cy = p.mBottom + p.getHeight() / 2.0; 
+  l = cx - halfVisibleWidth;
+  r = cx + halfVisibleWidth;
+  b = cy - halfVisibleHeigh;
+  t = cy + halfVisibleHeigh;
+
+  switch ( p.mType ) 
+  {
+    case Projection::tOrthogonal: 
+    	mProjectionMatrix.setRow1(2.0/(r-l), 0.0, 0.0, 0.0 );
+      mProjectionMatrix.setRow2(0.0, 2.0/(t-b), 0.0, 0.0);
+      mProjectionMatrix.setRow3(0.0, 0.0, -2.0/(p.mFar - p.mNear), 0.0);
+      mProjectionMatrix.setRow4(-(r+l)/(r-l), -(t+b)/(t-b), -(p.mFar+p.mNear)/(p.mFar-p.mNear), 1.0);
+      break;
+    case Projection::tPerspective: 
+    	mProjectionMatrix.setRow1( (2.0*p.mNear)/(r-l), 0.0, 0.0, 0.0 );
+      mProjectionMatrix.setRow2(0.0, (2.0*p.mNear)/(t-b), 0.0, 0.0);
+      mProjectionMatrix.setRow3((r+l)/(r-l), (t+b)/(t-b), -(p.mFar+p.mNear)/(p.mFar-p.mNear), -1.0);    	
+      mProjectionMatrix.setRow4(0.0, 0.0, (-2 * p.mFar * p.mNear)/(p.mFar - p.mNear), 0.0);
+      break;
+    default: break;
+  }
 }
 
 //-----------------------------------------------------------------------------

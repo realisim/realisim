@@ -194,7 +194,7 @@ void Text::render() const
     
     Shader s;
     s.addFragmentSource( kBlur );
-    s.link();
+//    s.link();
     
     //on dessine le drop shadow
     s.begin();
@@ -203,7 +203,7 @@ void Text::render() const
     glBindTexture( GL_TEXTURE_2D, filter.getId() );
     s.setUniform("texture", 0);
     s.setUniform("filter", 1);
-    s.setUniform("scale", 2.0);
+    s.setUniform("scale", 8.0);
     glActiveTexture(GL_TEXTURE0);
     draw();
     glDisable( GL_TEXTURE_2D );

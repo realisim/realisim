@@ -86,6 +86,7 @@ virtual QString getBackgroundToken() const;
       virtual int getTerrainWidth() const { return mTerrainSize.x(); };
       virtual QString getToken( int, int ) const;
       virtual std::vector<QString> getTokens( int ) const;      
+      virtual bool isLayerVisible( int ) const;
       virtual QByteArray toBinary() const;
       virtual unsigned char value(int, int) const;
       virtual unsigned char value(int) const;
@@ -98,15 +99,20 @@ virtual QString getBackgroundToken() const;
     	struct Layer
       {
       	Layer( Vector2i iDataSize ) : 
-        	mData( iDataSize.x() * iDataSize.y(), 255 ) {;}
-        Layer( const Layer& iL ) : mData( iL.mData ), mTokens( iL.mTokens ) {;}
+        	mData( iDataSize.x() * iDataSize.y(), 255 ),
+          mTokens(), mVisibility(true) {;}
+        Layer( const Layer& iL ) : mData( iL.mData ), mTokens( iL.mTokens ),
+          mVisibility( iL.mVisibility ) {;}
       	QByteArray mData;
         std::vector< QString > mTokens;
+        bool mVisibility;
       };
       
+      virtual void addLayer();
       virtual void addToken( int, QString );
       virtual void clear();
       virtual void fromBinary( QByteArray );
+      virtual void removeLayer(int);
     	virtual void setBackgroundToken( QString );
       
       QString mName;
@@ -117,6 +123,7 @@ virtual QString getBackgroundToken() const;
       QString mBackgroundToken; //vector?
   };
   
+  virtual void addLayer();
   virtual void addTokenToLayer( int, QString );
   virtual QString getAndClearLastErrors() const;
   virtual configureMenuItem getCurrentConfigureMenuItem() const;
@@ -150,11 +157,13 @@ virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual void mouseReleased( int );
   virtual void newStage( QString, int, int );
   virtual void registerClient( Client* );
+  virtual void removeLayer(int);
   virtual void saveStage( QString );
   virtual void setBackgroundToken( QString );
 virtual void setCurrentLayer( int );
   virtual void setEditingTool( Stage::cellType iCt ) {mEditingTool = iCt;}
 virtual void setEditingSpriteToken( QString i ) {mEditingSpriteToken = i;}
+  virtual void setLayerAsVisible( int, bool );
 virtual void setSpriteCatalog( QString );
   virtual QString toString( Stage::cellType );
   virtual void unregisterClient( Client* );

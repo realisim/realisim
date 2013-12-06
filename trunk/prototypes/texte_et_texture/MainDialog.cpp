@@ -55,7 +55,7 @@ void Viewer::initializeGL()
   
   mTex.set( QImage( ":/moto.jpg", "JPG" ) );
   mText.setFont( QFont( "Futura", 20 ) );
-  mText.setFrontColor( QColor( "white" ) );
+  mText.setFrontColor( QColor( "yellow" ) );
   mText.setText( "les pets font prout éàèî`πì¨köù" );
   mText.addDropShadow( true );
 }
@@ -138,7 +138,10 @@ void Viewer::paintGL()
   c.applyProjectionTransformation();
   c.applyModelViewTransformation();
   
+  glPushMatrix();
+  glTranslated( 5, 3*mText.height(), 0.0);
 	mText.draw();
+  glPopMatrix();
     
   glEnable( GL_DEPTH_TEST );
   glMatrixMode( GL_PROJECTION );

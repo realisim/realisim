@@ -17,7 +17,7 @@ namespace
 	const double kDt = 0.015; //temps pour chaque step de l'engin en secondes
 	const int kStageHeader = 0x9ab36ef2;
   
-  const int kStageVersion = 4;
+  const int kStageVersion = 5;
   const int kStageFistCompatibleVersion = 1;
 }
 
@@ -77,6 +77,10 @@ void Engine::Stage::addToken( int iLayer, QString iToken )
 	if( std::find( t.begin(), t.end(), iToken ) == t.end() ) 
 		t.push_back( iToken );
 }
+
+//------------------------------------------------------------------------------
+void Engine::Stage::addLayer()
+{ mLayers.push_back( new Layer( getTerrainSize() ) ); }
 
 //------------------------------------------------------------------------------
 void Engine::Stage::clear()
@@ -158,6 +162,10 @@ void Engine::Stage::fromBinary( QByteArray iBa )
         	in >> token;
           l->mTokens.push_back( token );
         }
+        
+        if( version > 4 )
+        { bool v; in >> v; l->mVisibility = v; }
+        
         mLayers.push_back( l );
       }
     }
@@ -255,6 +263,19 @@ vector<QString> Engine::Stage::getTokens( int iLayer ) const
 }
 
 //------------------------------------------------------------------------------
+bool Engine::Stage::isLayerVisible( int i ) const
+{
+	bool r = false;
+	if( i >= 0 && i < getNumberOfLayers() ) 
+  { r = mLayers[i]->mVisibility; } 
+	return r;
+}
+
+//------------------------------------------------------------------------------
+void Engine::Stage::removeLayer( int i )
+{}
+
+//------------------------------------------------------------------------------
 void Engine::Stage::setBackgroundToken( QString iBt )
 { mBackgroundToken = iBt; }
 
@@ -295,8 +316,9 @@ QByteArray Engine::Stage::toBinary() const
     out << (quint32)pl->mTokens.size();
     for( int j = 0; j < (int)pl->mTokens.size(); ++j )
     {
-    	out << pl->mTokens[j];
+    	out << pl->mTokens[j];      
     }
+    out << pl->mVisibility;
   }
   return r;
 }
@@ -354,9 +376,13 @@ void Engine::addError( QString e ) const
 }
 
 //------------------------------------------------------------------------------
+void Engine::addLayer()
+{ mStage.addLayer(); }
+
+//------------------------------------------------------------------------------
 void Engine::addTokenToLayer( int iLayer, QString iToken )
 {
-	if( iLayer >= 0 )
+	if( iLayer >= 0 && iLayer < mStage.getNumberOfLayers() )
   {
   	mStage.addToken( iLayer, iToken );
   }
@@ -1047,6 +1073,18 @@ void Engine::registerClient( Client* ipC )
 }
 
 //------------------------------------------------------------------------------
+void Engine::removeLayer( int iLayer )
+{
+	if( iLayer >= 0 && iLayer < mStage.getNumberOfLayers() )
+  { mStage.removeLayer( iLayer ); }
+  else {
+  	QString m;
+    m.sprintf( "Impossible d'enlever la couche %d", iLayer );
+    addError( m );
+  }
+}
+
+//------------------------------------------------------------------------------
 void Engine::saveStage( QString iPath )
 {
 	utils::toFile( iPath, getStage().toBinary() );
@@ -1070,6 +1108,13 @@ void Engine::setCurrentLayer( int iL )
 		mCurrentLayer = iL;
   else
   	mCurrentLayer = 0;
+}
+
+//------------------------------------------------------------------------------
+void Engine::setLayerAsVisible( int iIndex, bool iV )
+{ 
+	if( iIndex >= 0 && iIndex < mStage.getNumberOfLayers() ) 
+  { mStage.mLayers[iIndex]->mVisibility = iV; }
 }
 
 //------------------------------------------------------------------------------
