@@ -55,12 +55,15 @@ public:
 public slots:
   
 protected slots:
+	virtual void addLayerClicked();
 	virtual void addSpriteToLayerClicked();
 	virtual void backgroundChanged(int);
 	virtual void cellTypeChanged(int);
-  virtual void layerSelectionChanged(QListWidgetItem*);
+  virtual void layerSelectionChanged(int);
+  virtual void layerVisibilityChanged( QListWidgetItem* );
   virtual void newMapClicked();
   virtual void openMapClicked();
+  virtual void removeLayerClicked();
   virtual void removeSpriteFromLayerClicked();
   virtual void spriteSelectionChanged(int, int);
 

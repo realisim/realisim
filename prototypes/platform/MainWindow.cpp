@@ -24,63 +24,6 @@ namespace
 {
 	const int kSpriteTableWidth = 8;
   
-  const QString kLightFade = "#version 120\n"
-  "uniform sampler2D texture;\n"
-  "uniform vec2 playerPos;\n"
-  "uniform float lightRadius;\n"
-  "void main()\n"
-  "{\n"
-  "  float lightRadiusSquared = lightRadius*lightRadius;\n"
-  "  vec4 color = texture2D(texture, gl_TexCoord[0].xy);\n"
-  "  vec2 d = gl_FragCoord.xy - playerPos;\n"
-  "  float normSquared = d.x*d.x + d.y*d.y;\n"
-  "  float n = 1.0 / ( normSquared/lightRadiusSquared );\n"
-  "  color.a = min( 1.0, n );\n"
-  "  gl_FragColor = color;\n"
-  "}\n";
-  
-  const QString kLightOfSight = "#version 120\n"
-  "uniform sampler2D texture;\n"
-  "uniform vec2 playerPos;\n"
-  "uniform float lightRadius;\n"
-  "void main()\n"
-  "{\n"
-  "  float lightRadiusSquared = lightRadius*lightRadius;\n"
-  "  \n"
-  "  vec2 d = gl_FragCoord.xy - playerPos;\n"
-  "  float norm = sqrt(d.x*d.x + d.y*d.y);\n"
-  "  vec2 n = d / norm;"
-  "  vec4 color;\n"
-  "  float numSample = norm / 8;\n"
-  "  for( int i = 0; i < numSample; ++i )\n"
-  "  {\n"
-  "    vec2 p = playerPos + i * 8 * n; p.x = p.x / 800; p.y = p.y / 600;\n"
-  "    color = texture2D(texture, p);\n"
-  "    if( color.r < 0.5 ) discard;"
-  "    color.a = 0.3;\n"
-  "  }\n"
-  "  gl_FragColor = color;\n"
-  "}\n";
-  
-  
-  const QString kWriteDepthVert = "#version 120\n"
-  "uniform mat4 MVPMatrix;\n"
-  "uniform mat4 BiasMVPMatrix;\n"
-  "varying vec4 windowCoord;\n"
-  "void main()\n"
-  "{\n"
-  "  windowCoord = BiasMVPMatrix * gl_Vertex;\n"
-  "  gl_Position = MVPMatrix * gl_Vertex; \n"
-  "}\n"; 
-  
-  const QString kWriteDepthFrag = "#version 120\n"
-  "varying vec4 windowCoord;\n"
-  "void main()\n"
-  "{\n"
-  "  gl_FragColor = vec4(windowCoord.x / windowCoord.w, 0.0, 0.0, 1.0); \n"
-  "}\n"; 
-  
-  
   const QString kShadowLightVertex = "#version 120\n"
   "uniform mat4 MVPMatrix;\n"
   "uniform mat4 MCToShadowMap;\n"
@@ -176,7 +119,6 @@ void Viewer::drawDataMap()
       drawRectangle2d(toPoint(t), stage.getCellSize() );
     }
   }
-
 }
 
 //-----------------------------------------------------------------------------
@@ -191,7 +133,7 @@ void Viewer::drawGame()
   
   //dessine le background
   {
-  glColor4ub( 255, 255, 255, 255 );
+  glColor4ub( 255, 255, 255, 255 );	
   Texture background = sc.getTexture( stage.getBackgroundToken() );
 	if( background.isValid() )
   {
@@ -226,9 +168,11 @@ void Viewer::drawGame()
   { drawDataMap(); }
 
   vector<int> visibleCells = mEngine.getVisibleCells();  
-  //dessine les layers
-  for( int i = 0; i < stage.getNumberOfLayers(); ++i )
+  //dessine les layers, de la derniere a la premiere
+  for( int i = stage.getNumberOfLayers() - 1; i >= 0 ; --i )
   {
+  	if( !stage.isLayerVisible( i ) ){ continue; }
+    
   	for( size_t j = 0; j < visibleCells.size(); ++j )
 	  {
     	QString st = stage.getToken( i, visibleCells[j] );
@@ -556,9 +500,8 @@ Texture Viewer::renderLight()
   mShadowMapShader.setUniform( "MCToShadowMap", MCToShadowMap * clipToWindow );
   mShadowMapShader.setUniform( "shadowMap", 0 );
   drawRectangle2d( 
-  toPoint( toVector(mEngine.getPlayerPosition()) - c.getProjection().getSize() ), 
+  	toPoint( toVector(mEngine.getPlayerPosition()) - c.getProjection().getSize() ), 
     2 * c.getProjection().getSize() );
-  //drawDataMap();
   popShader();
   popFrameBuffer();
   
@@ -615,7 +558,7 @@ MainWindow::MainWindow() : QMainWindow(),
   mpEditionPanel = new QWidget( this );
   mpEditionPanel->setWindowFlags( mpEditionPanel->windowFlags() | Qt::Tool |
     Qt::WindowStaysOnTopHint );
-	mpEditionPanel->setMinimumSize(400, 600);
+	mpEditionPanel->setMinimumSize(200, 300);
   mpEditionPanel->hide();
   {
   	QVBoxLayout* pLyt = new QVBoxLayout(mpEditionPanel);
@@ -640,10 +583,26 @@ MainWindow::MainWindow() : QMainWindow(),
     {
     	mpLayers = new QListWidget( mpEditionPanel );
       mpLayers->setAlternatingRowColors(true);
+      connect( mpLayers, SIGNAL( currentRowChanged( int ) ),
+      	this, SLOT( layerSelectionChanged( int ) ) );
       connect( mpLayers, SIGNAL( itemChanged( QListWidgetItem* ) ),
-      	this, SLOT( layerSelectionChanged( QListWidgetItem* ) ) );
-      pLayersLyt->addWidget(mpLayers);
+      	this, SLOT( layerVisibilityChanged( QListWidgetItem* ) ) );
       mpLayers->setFixedHeight( 80 );
+      
+      QHBoxLayout* pL1 = new QHBoxLayout();
+      {
+      	QPushButton* pAdd = new QPushButton( "ajouter", mpEditionPanel );
+	      connect( pAdd, SIGNAL( clicked() ), this, SLOT( addLayerClicked() ) );
+  	    QPushButton* pRemove = new QPushButton( "enlever", mpEditionPanel );
+    	  connect( pRemove, SIGNAL( clicked() ), this, SLOT( removeLayerClicked() ) );
+        
+        pL1->addStretch(1);
+        pL1->addWidget( pAdd );
+        pL1->addWidget( pRemove );
+      }
+      
+      pLayersLyt->addWidget(mpLayers);
+      pLayersLyt->addLayout(pL1);
     }
     
     //sprites
@@ -684,6 +643,7 @@ MainWindow::MainWindow() : QMainWindow(),
         	(Engine::Stage::cellType)i ) );
       	
       pL2->addWidget(pL);
+      pL2->addStretch(1);
       pL2->addWidget(mpCellType);
     }
     
@@ -696,13 +656,13 @@ MainWindow::MainWindow() : QMainWindow(),
       	this, SLOT( backgroundChanged(int) ) );
         
       pL3->addWidget(pl);
-      pL3->addWidget(mpBackground);
       pL3->addStretch(1);
+      pL3->addWidget(mpBackground);      
     }
     
     pLyt->addLayout(pNewAndOpen);
     pLyt->addLayout(pLayersLyt);
-    pLyt->addLayout(pL1);
+    pLyt->addLayout(pL1, 2);
     pLyt->addLayout(pL2);
     pLyt->addLayout(pL3);
     pLyt->addStretch(1);
@@ -717,6 +677,14 @@ MainWindow::MainWindow() : QMainWindow(),
   
   mEngine.registerClient( this );
   mEngine.registerClient( mpViewer );
+}
+
+//-----------------------------------------------------------------------------
+void MainWindow::addLayerClicked()
+{
+	mEngine.addLayer();
+  mpLayers->clear();
+  updateUi();
 }
 
 //-----------------------------------------------------------------------------
@@ -761,12 +729,20 @@ void MainWindow::gotEvent( Engine::event iE )
 }
 
 //-----------------------------------------------------------------------------
-void MainWindow::layerSelectionChanged(QListWidgetItem* ipItem)
+void MainWindow::layerSelectionChanged( int iRow )
 {
-	mEngine.setCurrentLayer( mpLayers->currentRow() );
+	mEngine.setCurrentLayer( iRow );
 	//clear les sprites... Ils seront repeuplés par updateUi
   mpSprites->clear(); mpSprites->setRowCount(0);
 	updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainWindow::layerVisibilityChanged( QListWidgetItem* ipItem )
+{
+	int i = mpLayers->row( ipItem );
+  mEngine.setLayerAsVisible( i, ipItem->checkState() == Qt::Checked );
+  updateUi();  
 }
 
 //-----------------------------------------------------------------------------
@@ -905,6 +881,10 @@ void MainWindow::populateSprites()
 }
 
 //-----------------------------------------------------------------------------
+void MainWindow::removeLayerClicked()
+{}
+
+//-----------------------------------------------------------------------------
 void MainWindow::removeSpriteFromLayerClicked()
 {
 }
@@ -926,6 +906,7 @@ void MainWindow::updateUi()
   {
   case Engine::sEditing: 
   	mpEditionPanel->show();
+    mpEditionPanel->move( mapToGlobal( rect().topRight() ) );
     break;
   default:
   	mpEditionPanel->hide();
@@ -937,6 +918,14 @@ void MainWindow::updateUi()
   	populateLayers();
     populateSprites();
   	populateBackground();
+    
+    //ajustement de la visibility de la couche
+    for(int i = 0; i < mpLayers->count(); ++i)
+    {
+    	Qt::CheckState cs = mEngine.getStage().isLayerVisible(i) ? Qt::Checked :
+        Qt::Unchecked;
+    	mpLayers->item( i )->setCheckState( cs );
+    }
     
     //selection du type de cellule
     mpCellType->setCurrentIndex( mEngine.getEditingTool() );
