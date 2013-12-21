@@ -43,10 +43,10 @@ public:
   virtual ~Circle();
   Circle& operator=( const Circle& );
   
-  virtual double area() const;
-  virtual Point2d center() const;
   virtual bool contains( const Point2d& ) const;
-  virtual double radius() const;
+  virtual double getArea() const;
+  virtual Point2d getCenter() const;
+  virtual double getRadius() const;  
   virtual void setCenter( const Point2d& );
   virtual void setRadius( double );
   
@@ -67,7 +67,7 @@ public:
   Rectangle& operator=( const Rectangle& );
   
   virtual double area() const;
-  virtual Point2d center() const;
+  virtual Point2d getCenter() const;
   virtual bool contains( const Point2d& ) const;
 	virtual double bottom() const;
   virtual Point2d bottomLeft() const;
@@ -77,6 +77,7 @@ public:
   virtual double right() const;
   virtual Point2d point(int) const;
   virtual std::vector<Point2d> points() const;
+  virtual void set( const Point2d&, const Vector2d& );
   virtual void setBottom(double);
   virtual void setBottomLeft(const Point2d&);
   virtual void setBottomRight(const Point2d&);

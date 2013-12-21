@@ -23,6 +23,7 @@ using namespace realisim;
 namespace 
 {
 	const int kSpriteTableWidth = 8;
+  bool debugCollisions = true;
   
   const QString kShadowLightVertex = "#version 120\n"
   "uniform mat4 MVPMatrix;\n"
@@ -85,7 +86,7 @@ void Viewer::draw()
       {
 	      glEnable(GL_BLEND);
   			glColor4ub(255, 255, 255, 200);
-        drawRectangle2d( lightMask, 
+        drawRectangle( lightMask, 
         	Point2d( 10 + 2 * mFbo.getSize().x(), 5 ), mFbo.getSize() );
         glDisable(GL_BLEND);
       }
@@ -93,6 +94,67 @@ void Viewer::draw()
     }
     case Engine::sPaused: drawMenu(); break; 
     default: break;
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::drawActor( const Actor& iA )
+{
+  utils::SpriteCatalog& sc = mEngine.getSpriteCatalog();
+  
+  Sprite s = sc.getSprite(iA.getSpriteToken());
+
+  glDisable( GL_BLEND );
+  glPushMatrix();
+  glColor4ub( 255, 255, 255, 255 );
+  glTranslated( iA.getPosition().x(), iA.getPosition().y(), 0.0 );
+  s.draw();
+  glPopMatrix();
+  
+  if( debugCollisions )
+  {
+  	
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //le bounding box
+    glColor3ub( 255, 255, 0 );
+    drawRectangle( iA.getBoundingBox() );
+    //le bounding cricle
+    glColor3ub( 255, 255, 0 );
+    drawCircle( iA.getBoundingCircle().getCenter(), iA.getBoundingCircle().getRadius() );
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    
+    //dessine les intersections entre le joueur et le terrain
+    glColor3ub( 255, 255, 0);
+    glPointSize(2.0);
+    const Intersection2d& intersection = iA.getIntersections();
+    for( int i = 0; i < intersection.getNumberOfPoints(); ++i )
+    {
+      glBegin( GL_POINTS );
+      glVertex2dv( intersection.getPoint(i).getPtr() );
+      glEnd();
+      
+      //normal
+      Point2d n = intersection.getPoint(i) + intersection.getNormal(i) * 10;
+			drawLine( intersection.getPoint(i), n );
+    }
+    
+    //la penetration
+    drawLine( Point2d( iA.getBoundingBox().bottomLeft().x(), 
+      iA.getBoundingBox().bottomLeft().y() - 5 ), 
+      Point2d( iA.getBoundingBox().bottomLeft().x() + iA.getIntersections().getPenetration().x(), 
+      iA.getBoundingBox().bottomLeft().y() - 5 ) );
+    drawLine( Point2d( iA.getBoundingBox().bottomLeft().x() - 5, 
+      iA.getBoundingBox().bottomLeft().y() ), 
+      Point2d( iA.getBoundingBox().bottomLeft().x() - 5, 
+      iA.getBoundingBox().bottomLeft().y() + iA.getIntersections().getPenetration().y() ) );
+    
+    //le vecteur acceleration
+    glColor3ub( 0, 255, 0 );
+    drawLine( iA.getPosition(), iA.getPosition() + iA.getAcceleration() ); 
+  
+    //le vecteur vitesse
+    glColor3ub( 255, 0, 0 );
+    drawLine( iA.getPosition(), iA.getPosition() + iA.getVelocity() );
   }
 }
 
@@ -116,7 +178,7 @@ void Viewer::drawDataMap()
     if( draw )
     {
       Vector2i t = stage.getCellPixelCoordinate( visibleCells[i] );
-      drawRectangle2d(toPoint(t), stage.getCellSize() );
+      drawRectangle(toPoint(t), stage.getCellSize() );
     }
   }
 }
@@ -167,7 +229,8 @@ void Viewer::drawGame()
   if( mEngine.getState() == Engine::sEditing )
   { drawDataMap(); }
 
-  vector<int> visibleCells = mEngine.getVisibleCells();  
+  vector<int> visibleCells = mEngine.getVisibleCells();
+//printf("visible cells %d\n", visibleCells.size() );  
   //dessine les layers, de la derniere a la premiere
   for( int i = stage.getNumberOfLayers() - 1; i >= 0 ; --i )
   {
@@ -202,60 +265,27 @@ void Viewer::drawGame()
   }
   
   //dessine le joueur
-  Sprite* playerSprite;
-  switch (mEngine.getPlayerState()) 
+  drawActor( mEngine.getPlayer() );
+  if( debugCollisions )
   {
-    case Engine::Player::sIdle: 
-      playerSprite = &(sc.getSprite("player idle"));
-      break;
-    case Engine::Player::sWalking:
-      {
-      const Vector2d& v = mEngine.getPlayerVelocity();
-      playerSprite = v.x() > 0.0 ?  &(sc.getSprite("player run right")) :
-        &(sc.getSprite("player run left")) ;
-      }
-      break;
-    default: playerSprite = &(sc.getSprite("player idle")); break;
-  }
-  glDisable( GL_BLEND );
-  glPushMatrix();
-  glColor4ub( 255, 255, 255, 255 );
-  glTranslated(mEngine.getPlayerPosition().x(),
-  	mEngine.getPlayerPosition().y(), 0.0 );
-  playerSprite->draw();
-  glPopMatrix();
-  
-  //dessine les intersections entre le joueur et le terrain
-  glColor3ub( 255, 255, 0);
-  glPointSize(2.0);
-  const Intersection2d& intersection = mEngine.getPlayerIntersection();
-  for( int i = 0; i < intersection.numberOfPoints(); ++i )
-  {
-    glBegin( GL_POINTS );
-    glVertex2dv( intersection.point(i).getPtr() );
-    glEnd();
-    
-    //normal
-    Point2d n = intersection.point(i) + intersection.normal(i) * 10;
-    glBegin( GL_LINES );
-    glVertex2dv( intersection.point(i).getPtr() );
-    glVertex2dv( n.getPtr() );
-    glEnd();
+    //affiche letat du jouer
+    QString playerState;
+    switch ( mEngine.getPlayer().getState() ) 
+    {
+      case Engine::Player::sIdle : playerState = "idle"; break;
+      case Engine::Player::sWalking : playerState = "walking"; break;
+      case Engine::Player::sRunning : playerState = "running"; break;
+      case Engine::Player::sFalling : playerState = "falling"; break;
+      case Engine::Player::sJumping : playerState = "jumping"; break;
+      default: break;
+    }
+    renderText(10, 10, playerState );
   }
   
-  //affiche letat du jouer
-  QString playerState;
-  switch ( mEngine.getPlayerState() ) 
-  {
-    case Engine::Player::sIdle : playerState = "idle"; break;
-    case Engine::Player::sWalking : playerState = "walking"; break;
-    case Engine::Player::sRunning : playerState = "running"; break;
-    case Engine::Player::sFalling : playerState = "falling"; break;
-    case Engine::Player::sJumping : playerState = "jumping"; break;
-    default: break;
-  }
-  renderText(10, 10, playerState );
-  
+  //dessine les autres acteurs
+  for( int i = 0; i < stage.getNumberOfActors(); ++i )
+  { drawActor( stage.getActor(i) ); }
+
 	cam.popMatrices();
 }
 
@@ -320,29 +350,29 @@ void Viewer::drawMenu()
   
 //--------
 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-//usleep(20000);
+
 static int _rx = 30;
 _rx += 2;
 _rx %= 200;
 math::Circle _c( Point2d( 100, 100 ), 60 );
 math::Rectangle _r( Point2d( _rx, 80 ), Vector2d( 200, 200 ) );
-treeD::drawCircle2d( _c.center(), _c.radius() );
-treeD::drawRectangle2d(_r.bottomLeft(), _r.size());
-Intersection2d _i = intersects( _c, _r );
+treeD::drawCircle( _c.getCenter(), _c.getRadius() );
+treeD::drawRectangle(_r.bottomLeft(), _r.size());
+Intersection2d _i = intersect( _c, _r );
 
 glPointSize(2.0);
 glColor3ub( 255, 0, 0);
 
-for( int i = 0; i < _i.numberOfPoints(); ++i )
+for( int i = 0; i < _i.getNumberOfPoints(); ++i )
 {
 	glBegin( GL_POINTS );
-  glVertex2dv( _i.point(i).getPtr() );
+  glVertex2dv( _i.getPoint(i).getPtr() );
   glEnd();
   
   //normal
-  Point2d n = _i.point(i) + _i.normal(i) * 10;
+  Point2d n = _i.getPoint(i) + _i.getNormal(i) * 10;
   glBegin( GL_LINES );
-  glVertex2dv( _i.point(i).getPtr() );
+  glVertex2dv( _i.getPoint(i).getPtr() );
   glVertex2dv( n.getPtr() );
   glEnd();
 }
@@ -355,8 +385,8 @@ _r1x %= 260;
 Rectangle _r1( Point2d( _r1x, 220 ), Vector2d(40, 60) );
 Rectangle _r2( Point2d( 200, 200 ), Vector2d(40, 40) );
 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE );
-treeD::drawRectangle2d(_r1.bottomLeft(), _r1.size());
-treeD::drawRectangle2d(_r2.bottomLeft(), _r2.size());
+treeD::drawRectangle(_r1.bottomLeft(), _r1.size());
+treeD::drawRectangle(_r2.bottomLeft(), _r2.size());
 BoundingBox2d bb;
 glColor3ub(255, 0, 0 );
 for( int i = 0; i < 4; i++ )
@@ -366,7 +396,7 @@ for( int i = 0; i < 4; i++ )
   	bb.add( toPoint(_r1.points()[i] - _r2.points()[j] ) );
   }
 }
-treeD::drawRectangle2d(bb.bottomLeft(), bb.size());
+treeD::drawRectangle(bb.bottomLeft(), bb.size());
 
 glColor3ub( 255, 255, 0 );
 glBegin( GL_POINTS );
@@ -380,11 +410,83 @@ for( int i = 0; i < 4; i++ )
 glEnd();
 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+  
+//intersection avec penetration  
+{
+	glColor3ub( 255, 255, 0);
+	Vector2d rs( 30, 60 );
+  Vector2d rs2( 32, 32 );
+	Point2d mp = mEngine.getMousePos();
+  mp.setY( c.getWindowInfo().getHeight() - mEngine.getMousePos().y() );
+	Rectangle r( mp - rs/2.0, rs );
+  Rectangle r2( Point2d( 600, 250 ) - rs2/2.0, rs2 );
+  Rectangle r3;
+  
+  Intersection2d intersection = intersect( r, r2 );
+  if( intersection.hasIntersections() )
+  {
+  	glColor3ub( 255, 0, 0 );
+  	double px1, px2;
+  	double penx = axisOverLap(r.bottomLeft().x(), r.bottomRight().x(), 
+	    r2.bottomLeft().x(), r2.bottomRight().x(), &px1, &px2 );
+    
+    glLineWidth( 3.0 );
+    glBegin( GL_LINES );
+    glVertex2d( px1, r2.bottomLeft().y() - 5 );
+    glVertex2d( px2, r2.bottomLeft().y() - 5 );
+    glEnd();
+    glLineWidth( 1.0 );
+    
+    double peny = axisOverLap(r.bottomLeft().y(), r.topLeft().y(), 
+	    r2.bottomLeft().y(), r2.topLeft().y(), &px1, &px2 );
+  
+    glLineWidth( 3.0 );
+    glBegin( GL_LINES );
+    glVertex2d( r2.bottomLeft().x() - 5, px1 );
+    glVertex2d( r2.bottomLeft().x() - 5, px2 );
+    glEnd();
+    glLineWidth( 1.0 );
+    
+    Vector2d penetration( penx, peny );
+		if( abs(penetration.x()) <= abs(penetration.y()) )
+    	r3.set( Point2d( 
+      	r.bottomLeft().x() - penetration.x(), r.bottomLeft().y() ),
+        r.size() );
+    else
+      r3.set( Point2d( 
+      	r.bottomLeft().x(), r.bottomLeft().y() - penetration.y() ),
+        r.size() );
+  }
+  
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE );
+  drawRectangle( r );
+  drawRectangle( r2 );
+  glColor3ub( 200, 200, 200 );
+  drawRectangle( r3 );
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}  
 
 glColor3ub( 255, 255, 255);
-//--------
-  
+//--------  
 	c.popMatrices();
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::gotEvent( Engine::event iE )
+{
+	switch (iE) 
+  {
+  	case Engine::eStateChanged:
+    	switch (mEngine.getState()) 
+      {
+        case Engine::sEditing: break;
+        default: break;
+      }
+    break;
+    case Engine::eStageLoaded:
+    case Engine::eFrameDone: update(); break;
+    default: break;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -440,6 +542,7 @@ void Viewer::paintGL()
 Texture Viewer::renderLight()
 {
   const Camera& gc = mEngine.getGameCamera();
+  const Engine::Player& p = mEngine.getPlayer();
   Texture shadowMap;
   Matrix4d lightCamView, lightCamProjection, MCToShadowMap;
   Matrix4d camView, camProjection;
@@ -456,10 +559,8 @@ Texture Viewer::renderLight()
   Camera c;
   c.setWindowSize( offSize );
   c.set(
-    Point3d( mEngine.getPlayerPosition().x(), 
-      mEngine.getPlayerPosition().y(), 0.0),
-    Point3d( mEngine.getPlayerPosition().x() + 100, 
-      mEngine.getPlayerPosition().y(), 0.0),
+    Point3d( p.getPosition().x(), p.getPosition().y(), 0.0),
+    Point3d( p.getPosition().x() + 100, p.getPosition().y(), 0.0),
     Vector3d( 0.0, 1.0, 0.0 ) );
   c.setPerspectiveProjection(90, offSize.y() / offSize.x(), 10, sightDepth, false);
 
@@ -499,8 +600,8 @@ Texture Viewer::renderLight()
   mShadowMapShader.setUniform( "MVPMatrix", camView * camProjection );
   mShadowMapShader.setUniform( "MCToShadowMap", MCToShadowMap * clipToWindow );
   mShadowMapShader.setUniform( "shadowMap", 0 );
-  drawRectangle2d( 
-  	toPoint( toVector(mEngine.getPlayerPosition()) - c.getProjection().getSize() ), 
+  drawRectangle( 
+  	toPoint( toVector(p.getPosition()) - c.getProjection().getSize() ), 
     2 * c.getProjection().getSize() );
   popShader();
   popFrameBuffer();
@@ -517,22 +618,8 @@ void Viewer::resizeGL(int iW, int iH)
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::gotEvent( Engine::event iE )
-{
-	switch (iE) 
-  {
-  	case Engine::eStateChanged:
-    	switch (mEngine.getState()) 
-      {
-        case Engine::sEditing: break;
-        default: break;
-      }
-    break;
-    case Engine::eStageLoaded:
-    case Engine::eFrameDone: update(); break;
-    default: break;
-  }
-}
+void Viewer::wheelEvent( QWheelEvent* ipE )
+{ mEngine.mouseWheelMoved( ipE->delta() / 8.0 ); }
 
 //-----------------------------------------------------------------------------
 // --- MAIN WINDOW
@@ -677,6 +764,13 @@ MainWindow::MainWindow() : QMainWindow(),
   
   mEngine.registerClient( this );
   mEngine.registerClient( mpViewer );
+  
+  mEngine.addActor();
+  mEngine.addActor();
+  mEngine.setActorSpriteName( 0, "monstre bidon1" );
+  mEngine.setActorSpriteName( 1, "monstre bidon2" );
+  mEngine.setActorPosition( 0, Point2d(200, 100) );
+  mEngine.setActorPosition( 1, Point2d(400, 800) );
 }
 
 //-----------------------------------------------------------------------------

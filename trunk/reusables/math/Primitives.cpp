@@ -15,33 +15,33 @@ Circle::Circle() : mCenter(0.0), mRadius(0.0) {}
 Circle::Circle( const Point2d& iC, double iR ) : mCenter( iC ), mRadius( iR )
 {}
 
-Circle::Circle( const Circle& iC ) : mCenter( iC.center() ),
-	mRadius( iC.radius() )
+Circle::Circle( const Circle& iC ) : mCenter( iC.getCenter() ),
+	mRadius( iC.getRadius() )
 {}
 
 Circle::~Circle() {}
 
 Circle& Circle::operator=( const Circle& iC )
 {
-	mRadius = iC.radius();
-  mCenter = iC.center();
+	mRadius = iC.getRadius();
+  mCenter = iC.getCenter();
   return *this;
 }
 
 //------------------------------------------------------------------------------  
-double Circle::area() const
+bool Circle::contains( const Point2d& iP ) const
+{ return ( iP - getCenter() ).norm() <= getRadius(); }
+
+//------------------------------------------------------------------------------  
+double Circle::getArea() const
 { return 0.0; }
 
 //------------------------------------------------------------------------------  
-Point2d Circle::center() const
+Point2d Circle::getCenter() const
 { return mCenter; }
 
 //------------------------------------------------------------------------------  
-bool Circle::contains( const Point2d& iP ) const
-{ return ( iP - center() ).norm() <= radius(); }
-
-//------------------------------------------------------------------------------  
-double Circle::radius() const
+double Circle::getRadius() const
 { return mRadius; }
 
 //------------------------------------------------------------------------------  
@@ -85,7 +85,7 @@ Rectangle& Rectangle::operator=( const Rectangle& iR)
 double Rectangle::area() const
 { return size().x() * size().y(); }
 //------------------------------------------------------------------------------  
-Point2d Rectangle::center() const
+Point2d Rectangle::getCenter() const
 { return toPoint( (mTopRight - mBottomLeft) / 2.0 ); }
 //------------------------------------------------------------------------------  
 bool Rectangle::contains( const Point2d& p ) const
@@ -148,6 +148,9 @@ Point2d Rectangle::topLeft() const
 //------------------------------------------------------------------------------  
 Point2d Rectangle::topRight() const
 { return mTopRight; }
+//------------------------------------------------------------------------------  
+void Rectangle::set( const Point2d& iBl, const Vector2d& iS )
+{ mBottomLeft = iBl; mTopRight = iBl + iS; }
 //------------------------------------------------------------------------------  
 void Rectangle::setBottom(double iV)
 { mBottomLeft.setY( iV ); }
