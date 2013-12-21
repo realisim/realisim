@@ -7,6 +7,7 @@
 #include <cassert>
 #include <QByteArray>
 #include "math/Point.h"
+#include "math/Primitives.h"
 #include "math/Vect.h"
 
 namespace realisim {namespace math {class PlatonicSolid;} }
@@ -44,9 +45,11 @@ namespace treeD
   unsigned int colorToId(const QColor&);
   void draw(const PlatonicSolid&);
   void drawCircle( Vector3d, const Point3d&, double );
-  void drawCircle2d( const Point2d&, double );
-  void drawRectangle2d( const Point2d&, const Vector2d& );
-  void drawRectangle2d( const Texture&, const Point2d&, const Vector2d& );
+  void drawCircle( const Point2d&, double );
+  void drawLine( const Point2d&, const Point2d& );
+  void drawRectangle( const Rectangle& );
+  void drawRectangle( const Point2d&, const Vector2d& );
+  void drawRectangle( const Texture&, const Point2d&, const Vector2d& );
 //Texture get1dNoiseTexture();  
   Texture get2dNoiseTexture(int, int);//const Vector2i&);
   Texture get3dNoiseTexture(const Vector3i&);

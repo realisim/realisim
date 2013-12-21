@@ -81,24 +81,39 @@ void drawCircle( Vector3d iN, const Point3d& iP, double iR )
 
 //------------------------------------------------------------------------------
 /*dessine un cercle de rayon iR centré en iP sur le plan xy*/
-void drawCircle2d( const Point2d& iP, double iR )
+void drawCircle( const Point2d& iP, double iR )
 { drawCircle( Vector3d( 0.0, 0.0, 1.0 ), Point3d( iP.x(), iP.y(), 0.0 ), iR ); }
 
 //------------------------------------------------------------------------------
-/*dessine un rectangle dans le plan xy. origine iO et taille iS*/
-void drawRectangle2d( const Point2d& iO, const Vector2d& iS)
+/*dessine un rectangle dans le plan xy.*/
+void drawLine( const Point2d& ip1, const Point2d& ip2 )
 {
-  glBegin(GL_QUADS);
-  glVertex2d( iO.x(), iO.y() );
-  glVertex2d( iO.x(), iO.y() + iS.y() );
-  glVertex2d( iO.x() + iS.x(), iO.y() + iS.y() );
-  glVertex2d( iO.x() + iS.x(), iO.y() );
+	glBegin( GL_LINES );
+  glVertex2dv( ip1.getPtr() ); glVertex2dv( ip2.getPtr() );
   glEnd();
 }
 
 //------------------------------------------------------------------------------
+/*dessine un rectangle dans le plan xy.*/
+void drawRectangle( const Rectangle& iR )
+{
+  glBegin(GL_QUADS);
+  glVertex2dv( iR.bottomLeft().getPtr() );
+  glVertex2dv( iR.topLeft().getPtr() );
+  glVertex2dv( iR.topRight().getPtr() );
+  glVertex2dv( iR.bottomRight().getPtr() );
+  glEnd();
+}
+
+
+//------------------------------------------------------------------------------
 /*dessine un rectangle dans le plan xy. origine iO et taille iS*/
-void drawRectangle2d( const Texture& iT, const Point2d& iO, const Vector2d& iS )
+void drawRectangle( const Point2d& iO, const Vector2d& iS)
+{ drawRectangle( Rectangle( iO, iS ) ); }
+
+//------------------------------------------------------------------------------
+/*dessine un rectangle dans le plan xy. origine iO et taille iS*/
+void drawRectangle( const Texture& iT, const Point2d& iO, const Vector2d& iS )
 {
 	glEnable( GL_TEXTURE_2D );
   glBindTexture( GL_TEXTURE_2D, iT.getId() );

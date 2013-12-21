@@ -25,6 +25,7 @@ public:
   
 protected:
 	virtual void draw();
+  virtual void drawActor( const Actor& );
   virtual void drawDataMap();
   virtual void drawGame();
   virtual void drawMenu();
@@ -34,10 +35,11 @@ protected:
   virtual void keyReleaseEvent( QKeyEvent* );
   virtual void mouseMoveEvent( QMouseEvent* );
   virtual void mousePressEvent( QMouseEvent* );
-  virtual void mouseReleaseEvent( QMouseEvent* );
+  virtual void mouseReleaseEvent( QMouseEvent* );  
   virtual void paintGL();
   virtual treeD::Texture renderLight();
   virtual void resizeGL(int, int);
+  virtual void wheelEvent( QWheelEvent* );
   
   Engine& mEngine;
 	treeD::FrameBufferObject mFbo;

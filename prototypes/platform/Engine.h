@@ -11,9 +11,57 @@
 #include <QObject>
 #include <QImage>
 #include <QTimerEvent>
+namespace realisim { namespace platform { using namespace math; class Actor; } }
 namespace realisim { namespace platform { using namespace math; class Engine; } }
 #include "utils/SpriteCatalog.h"
 #include <vector>
+
+class realisim::platform::Actor
+{
+public:
+	Actor();
+  Actor( const Actor& );
+  Actor& operator=( const Actor& );
+  virtual ~Actor();
+  
+  enum state{ sIdle, sWalking, sRunning, sFalling, sJumping };
+  
+  virtual const Vector2d& getAcceleration() const;
+  virtual const Rectangle getBoundingBox() const;
+  virtual const Circle getBoundingCircle() const;
+  virtual double getHealth() const;
+  virtual const Intersection2d& getIntersections() const;
+  virtual QString getName() const;
+  virtual const Point2d& getPosition() const;
+  virtual QString getSpriteName() const;
+  virtual QString getSpriteToken() const;
+  virtual state getState() const;
+  virtual const Vector2d& getVelocity() const;
+  virtual void setAcceleration( const Vector2d& );
+  virtual void setBoundingBox( const Rectangle& );
+  virtual void setBoundingCircle( const Circle& );
+  virtual void setHealth( double );
+  virtual void setIntersections( const Intersection2d& );
+  virtual void setName( QString );
+  virtual void setPosition( const Point2d& );
+  virtual void setSpriteName( QString );
+  virtual void setSpriteToken( QString );
+  virtual void setState( state );
+  virtual void setVelocity( const Vector2d& );  
+  
+protected:
+	QString mName;
+  QString mSpriteName;
+  QString mSpriteToken;  
+  Rectangle mBoundingBox;
+  Circle mBoundingCircle;
+  double mHealth;
+  Point2d mPosition;
+  Vector2d mVelocity;
+  Vector2d mAcceleration;
+  state mState;
+  Intersection2d mIntersections;
+};
 
 class realisim::platform::Engine : public QObject
 {
@@ -35,28 +83,18 @@ public:
   	friend class Engine;
   	public:
     	Client(){}
-      virtual ~Client() {}
+      virtual ~Client() {;}
       
     protected:
       virtual void gotEvent( event ) {};
   };
   
   //a mettre public? avec une methode Player& getPlayer() const
-	struct Player
+	class Player : public Actor
   {
-  	Player() : mSize(30, 60), mHealth(100.0), mPosition( 0.0 ), mVelocity(0.0),
-    	mAcceleration(0.0), mState(sIdle){;}
-      
-    enum state{ sIdle, sWalking, sRunning, sFalling, sJumping };
-    Vector2i mSize;
-  	double mHealth;
-    Point2d mPosition;
-    Vector2d mVelocity;
-    Vector2d mAcceleration;
-    state mState;
-    Intersection2d mIntersection;
+  	public:
+  		Player() : Actor() { setName( "Player1" ); setSpriteName("player"); }
   };
-  
   /* expliquer les valeurs possible du terrain */
   class Stage
   {
@@ -69,6 +107,7 @@ public:
       	ctNumberOfCellType };
       
       virtual std::vector<int> find( cellType ) const;      
+      virtual const Actor& getActor( int ) const;
 virtual QString getBackgroundToken() const;
       virtual Vector2i getCellCoordinate( const Point2d& ) const;
       virtual Vector2i getCellCoordinate( int ) const;
@@ -79,6 +118,7 @@ virtual QString getBackgroundToken() const;
       virtual Vector2i getCellPixelCoordinate( int, int ) const;
       virtual Vector2i getCellSize() const {return mCellSize;}
       virtual QString getName() const { return mName; }
+      virtual int getNumberOfActors() const { return mActors.size(); }
       virtual int getNumberOfLayers() const { return mLayers.size(); }
       virtual const QByteArray getTerrain() const { return mTerrain; }
       virtual int getTerrainHeight() const { return mTerrainSize.y(); };
@@ -108,10 +148,13 @@ virtual QString getBackgroundToken() const;
         bool mVisibility;
       };
       
+      virtual void addActor();
       virtual void addLayer();
       virtual void addToken( int, QString );
       virtual void clear();
       virtual void fromBinary( QByteArray );
+      virtual Actor& getActor( int );
+      virtual void removeActor( int );
       virtual void removeLayer(int);
     	virtual void setBackgroundToken( QString );
       
@@ -121,8 +164,11 @@ virtual QString getBackgroundToken() const;
       QByteArray mTerrain;
       std::vector<Layer*> mLayers;
       QString mBackgroundToken; //vector?
+      vector<Actor*> mActors;
+      static Actor mDummyActor;
   };
   
+  virtual void addActor();
   virtual void addLayer();
   virtual void addTokenToLayer( int, QString );
   virtual QString getAndClearLastErrors() const;
@@ -137,15 +183,9 @@ virtual QString getEditingSpriteToken() const { return mEditingSpriteToken; }
   virtual mainMenuItem getCurrentMainMenuItem() const;
   virtual std::vector<QString> getMainMenuItems() const;
   virtual const Point2i& getMousePos() const { return mMousePos; }
+  virtual const Player& getPlayer() const { return mPlayer; }
 virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual const Stage& getStage() const { return mStage; }
-  virtual const Vector2d& getPlayerAcceleration() const { return mPlayer.mAcceleration; }
-  virtual BoundingBox2d getPlayerBoundingBox() const;
-  virtual double getPlayerHealth() const { return mPlayer.mHealth; }
-  virtual const Intersection2d& getPlayerIntersection() const {return mPlayer.mIntersection;}
-  virtual const Point2d& getPlayerPosition() const { return mPlayer.mPosition; }
-  virtual Player::state getPlayerState() const { return mPlayer.mState; }
-  virtual const Vector2d& getPlayerVelocity() const { return mPlayer.mVelocity; }
   virtual state getState() const { return mState; }
   virtual std::vector<int> getVisibleCells() const;
   virtual bool hasError() const;
@@ -155,10 +195,15 @@ virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual void mouseMoved( Point2i );
   virtual void mousePressed( int );
   virtual void mouseReleased( int );
+  virtual void mouseWheelMoved( double );
   virtual void newStage( QString, int, int );
   virtual void registerClient( Client* );
+  virtual void removeActor(int);
   virtual void removeLayer(int);
   virtual void saveStage( QString );
+  virtual void setActorName( int, QString );
+  virtual void setActorPosition( int, const Point2d& );
+  virtual void setActorSpriteName( int, QString );
   virtual void setBackgroundToken( QString );
 virtual void setCurrentLayer( int );
   virtual void setEditingTool( Stage::cellType iCt ) {mEditingTool = iCt;}
@@ -177,6 +222,7 @@ protected:
   pauseMenuItem mPauseMenuItem;
   std::map< int, bool > mKeys;
   std::map< int, bool > mMouseButtons;
+  double mMouseWheelDelta;
   Point2i mMousePos;
   Vector2i mMouseDelta;
   Player mPlayer;
@@ -187,13 +233,19 @@ protected:
   mutable QString mErrors;
   int mCurrentLayer;
   QString mEditingSpriteToken;
+  QString mStageFilePath;
 
 	virtual void addError( QString ) const;
+  virtual void applyPhysics( Actor& );
+  virtual double getMouseWheelDelta(bool = true);
   virtual void goToState( state );
+  virtual void handleActorInput( Actor& );
+  virtual void handleActorCollisions();
   virtual void handleConfigureMenu();
   virtual void handleEditing();
   virtual void handleMainMenu();
   virtual void handleMapCollisions();
+  virtual void handleMapCollisions(Actor&);
   virtual void handlePauseMenu();
   virtual void handlePlaying();
   virtual void handlePlayerInput();
@@ -203,6 +255,7 @@ protected:
   virtual void moveGameCamera();
   virtual void send( event );
   virtual void timerEvent( QTimerEvent* );
+  virtual void updateSpriteToken( Actor& );
 };
 
 #endif
