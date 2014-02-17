@@ -33,16 +33,18 @@ protected:
   virtual void initializeGL();
   virtual void keyPressEvent( QKeyEvent* );
   virtual void keyReleaseEvent( QKeyEvent* );
+  virtual treeD::Camera makeLightCamera(int, const Point2d&, const Vector2d&, double) const;
   virtual void mouseMoveEvent( QMouseEvent* );
   virtual void mousePressEvent( QMouseEvent* );
   virtual void mouseReleaseEvent( QMouseEvent* );  
   virtual void paintGL();
-  virtual treeD::Texture renderLight();
+  virtual treeD::Texture renderLights();
   virtual void resizeGL(int, int);
   virtual void wheelEvent( QWheelEvent* );
   
   Engine& mEngine;
-	treeD::FrameBufferObject mFbo;
+	treeD::FrameBufferObject mFboLightDepth;
+  treeD::FrameBufferObject mFboLightMask;
   treeD::Shader mShadowMapShader;
 };
 

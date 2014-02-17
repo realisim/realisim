@@ -26,11 +26,13 @@ public:
   
   enum state{ sIdle, sWalking, sRunning, sFalling, sJumping };
   
+  virtual void addIntersection( const Intersection2d& );
+  virtual void clearIntersections();
   virtual const Vector2d& getAcceleration() const;
   virtual const Rectangle getBoundingBox() const;
   virtual const Circle getBoundingCircle() const;
   virtual double getHealth() const;
-  virtual const Intersection2d& getIntersections() const;
+  virtual const vector<Intersection2d>& getIntersections() const;
   virtual QString getName() const;
   virtual const Point2d& getPosition() const;
   virtual QString getSpriteName() const;
@@ -41,7 +43,6 @@ public:
   virtual void setBoundingBox( const Rectangle& );
   virtual void setBoundingCircle( const Circle& );
   virtual void setHealth( double );
-  virtual void setIntersections( const Intersection2d& );
   virtual void setName( QString );
   virtual void setPosition( const Point2d& );
   virtual void setSpriteName( QString );
@@ -60,7 +61,7 @@ protected:
   Vector2d mVelocity;
   Vector2d mAcceleration;
   state mState;
-  Intersection2d mIntersections;
+  vector<Intersection2d> mIntersections;
 };
 
 class realisim::platform::Engine : public QObject
@@ -200,6 +201,7 @@ virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual void registerClient( Client* );
   virtual void removeActor(int);
   virtual void removeLayer(int);
+  virtual void resolveCollision( Actor&, Intersection2d& );
   virtual void saveStage( QString );
   virtual void setActorName( int, QString );
   virtual void setActorPosition( int, const Point2d& );
@@ -236,11 +238,13 @@ protected:
   QString mStageFilePath;
 
 	virtual void addError( QString ) const;
+  virtual void afterCollision( Actor& );
   virtual void applyPhysics( Actor& );
   virtual double getMouseWheelDelta(bool = true);
   virtual void goToState( state );
   virtual void handleActorInput( Actor& );
   virtual void handleActorCollisions();
+  virtual void handleActorCollisions( Actor& );
   virtual void handleConfigureMenu();
   virtual void handleEditing();
   virtual void handleMainMenu();

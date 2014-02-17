@@ -186,10 +186,10 @@ void Text::render() const
     c.pushAndApplyMatrices();
     
     int kernelSize = 3;
-    vector< float > f = meanKernel2D<float>( kernelSize );
+    vector< double > f = meanKernel2D( kernelSize );
     vector<int> fs(2, 0); fs[0] = kernelSize; fs[1] = kernelSize;
     Texture filter;
-    filter.set( &f[0], fs, GL_LUMINANCE, GL_FLOAT );
+    filter.set( &f[0], fs, GL_LUMINANCE, GL_DOUBLE );
     filter.setWrapMode( GL_CLAMP );
     
     Shader s;

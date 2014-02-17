@@ -74,7 +74,7 @@ void Intersection2d::clear()
 
 bool intersects( const Circle& iA, const Circle& iB )
 {
-	return Vector2d( iA.getCenter(), iB.getCenter() ).norm() >= 
+	return Vector2d( iA.getCenter(), iB.getCenter() ).norm() <= 
   	( iA.getRadius() + iB.getRadius() );
 }
 
@@ -168,6 +168,7 @@ Intersection2d intersect( const Rectangle& r, const Circle& c )
 Intersection2d intersect( const Rectangle& r1, const Rectangle& r2 )
 {
 	Intersection2d r;
+  
 	//intersection en utilisant minkowski
   BoundingBox2d mink;
   for( int j = 0; j < 4; j++ )
