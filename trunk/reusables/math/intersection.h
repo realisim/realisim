@@ -5,6 +5,7 @@
 #ifndef realisim_math_intersection_hh
 #define realisim_math_intersection_hh
 
+#include <limits>
 #include "math/Primitives.h"
 #include "math/Point.h"
 //#include "Line3d.h"
@@ -20,7 +21,7 @@ namespace math
   {
   public:
   	Intersection2d() : mHasIntersections(false), mPoints(), mNormals(),
-    	mPenetration() {;}
+    	mPenetration( std::numeric_limits<double>::quiet_NaN() ) {;}
     Intersection2d( const Intersection2d& i ) : mHasIntersections(i.hasIntersections()),
     	mPoints( i.mPoints ), mNormals( i.mNormals ),
       mPenetration( i.getPenetration() ) {;}
@@ -41,7 +42,7 @@ namespace math
     virtual Vector2d getNormal(int i) const { return mNormals[i]; }
     virtual void setPenetration( const Vector2d& iV ) { mPenetration = iV; }
     
-  protected:
+  protected:    
   	bool mHasIntersections;
     std::vector< Point2d > mPoints;
     std::vector< Vector2d > mNormals;

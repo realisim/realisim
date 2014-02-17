@@ -70,6 +70,12 @@ Actor& Actor::operator=( const Actor& iA )
 //------------------------------------------------------------------------------
 Actor::~Actor() {}
 //------------------------------------------------------------------------------
+void Actor::addIntersection( const Intersection2d& iV )
+{ mIntersections.push_back(iV); }
+//------------------------------------------------------------------------------
+void Actor::clearIntersections()
+{ mIntersections.clear(); }
+//------------------------------------------------------------------------------
 const Vector2d& Actor::getAcceleration() const
 { return mAcceleration; }
 //------------------------------------------------------------------------------
@@ -85,7 +91,7 @@ const math::Circle Actor::getBoundingCircle() const
 double Actor::getHealth() const
 { return mHealth; }
 //------------------------------------------------------------------------------
-const Intersection2d& Actor::getIntersections() const
+const vector<Intersection2d>& Actor::getIntersections() const
 { return mIntersections; }
 //------------------------------------------------------------------------------
 QString Actor::getName() const
@@ -121,9 +127,6 @@ void Actor::setBoundingCircle( const Circle& iV )
 //------------------------------------------------------------------------------
 void Actor::setHealth( double iV )
 { mHealth = iV; }
-//------------------------------------------------------------------------------
-void Actor::setIntersections( const Intersection2d& iV )
-{ mIntersections = iV; }
 //------------------------------------------------------------------------------
 void Actor::setName( QString iV )
 { mName = iV; }
@@ -565,6 +568,43 @@ void Engine::addTokenToLayer( int iLayer, QString iToken )
 }
 
 //------------------------------------------------------------------------------
+void Engine::afterCollision( Actor& iA )
+{
+	Vector2d accel = iA.getAcceleration();
+  Vector2d vel = iA.getVelocity();
+  Point2d pos = iA.getPosition();
+  
+	if( isEqual( vel.y(), 0.0 ) )
+  { iA.setState( Actor::sWalking ); }
+  
+  //friction en x. seulement si il n'y a pas d'input usagé
+  //ou changment de direciton
+  bool applyFriction = ! ( (isKeyPressed( Qt::Key_A ) || 
+  	isKeyPressed( Qt::Key_D ) ) ) || 
+    accel.x() / fabs(accel.x()) !=  vel.x() / fabs(vel.x());
+  if(applyFriction && iA.getState() == Actor::sWalking )
+		vel.setX( vel.x() * 0.8 );
+
+  if( vel.y() < 0.0 )
+  {
+  	switch (iA.getState()) {
+      case Actor::sIdle:
+      case Actor::sWalking:
+      case Actor::sJumping:
+      	iA.setState( Actor::sFalling );
+        break;
+      default: break;
+    }
+  }
+  
+  if( vel.norm() < 0.1 )
+  { iA.setState( Actor::sIdle ); }
+  
+  iA.setPosition( pos );
+  iA.setVelocity( vel );
+}
+
+//------------------------------------------------------------------------------
 void Engine::applyPhysics( Actor& iA )
 {
 	Point2d p = iA.getPosition();
@@ -785,11 +825,36 @@ bool Engine::hasError() const
 //------------------------------------------------------------------------------
 void Engine::handleActorCollisions()
 {
+	//on test le joueurs par rapport a tous les autres acteurs
+  handleActorCollisions( mPlayer );
+}
+
+//------------------------------------------------------------------------------
+void Engine::handleActorCollisions( Actor& iA )
+{
+	for( int i = 0; i < mStage.getNumberOfActors(); ++i )
+  {
+  	Actor* a = mStage.mActors[i];
+    if( &iA == a ) continue;
+    if( intersects( iA.getBoundingCircle(), a->getBoundingCircle() ) )
+    {
+    	Intersection2d z = intersect( iA.getBoundingBox(), a->getBoundingBox() );
+      if( z.hasIntersections() )
+      {
+				iA.addIntersection( z );
+ 				resolveCollision( iA, z );
+      }
+    }
+  }
+  afterCollision(iA);
 }
 
 //------------------------------------------------------------------------------
 void Engine::handleActorInput( Actor& iA )
 {
+  //on les fait courrir après le joeur
+  
+
 	applyPhysics( iA );
   updateSpriteToken( iA );
 }
@@ -907,16 +972,16 @@ void Engine::handleMapCollisions( Actor& iA )
 {
   //verification des collisions
   //on flush les collisions précedentes de l'acteur
-  iA.setIntersections( Intersection2d() );
+  iA.clearIntersections();
   const Vector2d bbSize = iA.getBoundingBox().size();
   int iKernel = max( bbSize.x(), bbSize.y() ) / 
   	max( mStage.getCellSize().x(), mStage.getCellSize().y() ) * 3;
   vector<int> cells = mStage.getCellIndices( iA.getPosition(), Vector2i(iKernel) );
-  bool isOnGround = false;
+  //bool isOnGround = false;
   
   const Vector2d accel = iA.getAcceleration();
-  Point2d pos = iA.getPosition();
-  Vector2d vel = iA.getVelocity();
+//  Point2d pos = iA.getPosition();
+//  Vector2d vel = iA.getVelocity();
   for( size_t i = 0; i < cells.size(); ++i )
   {
     if( mStage.value( cells[i] ) == Engine::Stage::ctGround )
@@ -928,67 +993,17 @@ void Engine::handleMapCollisions( Actor& iA )
       Intersection2d intersection = intersect( playerRect, cellRect );
       if( intersection.hasIntersections() )
       {
-      	Vector2d penetration = intersection.getPenetration();
-      	Intersection2d previousIntersections = iA.getIntersections() ;
-        previousIntersections.add( toPoint(cellPixelCoordinate) + 
+      	intersection.add( toPoint(cellPixelCoordinate) + 
           getStage().getCellSize() / 2.0 , Vector2d( 0.0, 1.0 ) );
-        
-        previousIntersections.setPenetration( penetration );
-        iA.setIntersections(previousIntersections);
-        
-				//on déplace le joueur si la penetratrion est de plus de 1 pixel
-        Vector2d displacement;
-        if( abs(penetration.x()) <= abs(penetration.y()) )
-        {
-        		if( abs( penetration.y() ) >= 1.0 )
-            {
-          		displacement.set( penetration.x(), 0.0 );
-          		vel.setX( 0.0 );
-            }
-        }
-        else //if( abs( penetration.y() ) >= 0.5 )
-        {
-          displacement.set( 0.0, penetration.y() );
-          isOnGround = true;
-        }        
-        pos = pos - displacement;
-        iA.setPosition( pos );
-			  iA.setVelocity( vel );
+//    printf(" playerRect %f, %f \n", playerRect.bottomLeft().x(), playerRect.bottomLeft().y());
+//    printf(" cellRect %f, %f \n", cellRect.bottomLeft().x(), cellRect.bottomLeft().y());
+//    printf(" intersection %f, %f \n", intersection.getPoint(0).x(), intersection.getPoint(0).y());
+        iA.addIntersection( intersection );      	
+        resolveCollision( iA, intersection );
       }
     }
   }
-  
-  if( isOnGround )
-  {
-    vel.setY( 0.0 );
-    iA.setState( Actor::sWalking );
-  }
-  
-  //friction en x. seulement si il n'y a pas d'input usagé
-  //ou changment de direciton
-  bool applyFriction = ! ( (isKeyPressed( Qt::Key_A ) || 
-  	isKeyPressed( Qt::Key_D ) ) ) || 
-    accel.x() / fabs(accel.x()) !=  vel.x() / fabs(vel.x());
-  if(applyFriction && isOnGround)
-		vel.setX( vel.x() * 0.8 );
-
-  if( vel.y() < 0.0 )
-  {
-  	switch (iA.getState()) {
-      case Actor::sIdle:
-      case Actor::sWalking:
-      case Actor::sJumping:
-      	iA.setState( Actor::sFalling );
-        break;
-      default: break;
-    }
-  }
-  
-  if( vel.norm() < 0.1 )
-  { iA.setState( Actor::sIdle ); }
-  
-  iA.setPosition( pos );
-  iA.setVelocity( vel );
+  afterCollision( iA );
 }
 
 //------------------------------------------------------------------------------
@@ -1296,6 +1311,32 @@ void Engine::removeLayer( int iLayer )
   }
 }
 
+//------------------------------------------------------------------------------
+void Engine::resolveCollision( Actor& iA, Intersection2d& iI )
+{
+  Point2d pos = iA.getPosition();
+  Vector2d vel = iA.getVelocity();
+  //on déplace le joueur si la penetratrion est de plus de 1 pixel
+  Vector2d displacement;
+  Vector2d penetration = iI.getPenetration();
+  
+  if( abs(penetration.x()) <= abs(penetration.y()) )
+  {
+    if( abs( penetration.y() ) >= 1.0 )
+    {
+      displacement.set( penetration.x(), 0.0 );
+      vel.setX( 0.0 );
+    }
+  }
+  else //if( abs( penetration.y() ) >= 0.5 )
+  {
+    displacement.set( 0.0, penetration.y() );
+    vel.setY( 0.0 );
+  }        
+  pos = pos - displacement;
+  iA.setPosition( pos );
+  iA.setVelocity( vel );
+}
 //------------------------------------------------------------------------------
 void Engine::saveStage( QString iPath )
 { utils::toFile( iPath, getStage().toBinary() ); }  

@@ -86,7 +86,7 @@ double Rectangle::area() const
 { return size().x() * size().y(); }
 //------------------------------------------------------------------------------  
 Point2d Rectangle::getCenter() const
-{ return toPoint( (mTopRight - mBottomLeft) / 2.0 ); }
+{ return mBottomLeft + (mTopRight - mBottomLeft) / 2.0; }
 //------------------------------------------------------------------------------  
 bool Rectangle::contains( const Point2d& p ) const
 {

@@ -23,7 +23,8 @@ using namespace realisim;
 namespace 
 {
 	const int kSpriteTableWidth = 8;
-  bool debugCollisions = true;
+  bool kDebugCollisions = true;
+  bool kDebugVisualEffects = true;
   
   const QString kShadowLightVertex = "#version 120\n"
   "uniform mat4 MVPMatrix;\n"
@@ -45,11 +46,13 @@ namespace
   "  vec4 shadowCoord2 = vec4(shadowCoord.xyz / shadowCoord.w, shadowCoord.w);"
   "  bvec2 gtz = greaterThan(shadowCoord2.xy, vec2(0.0, 0.0) );\n"
   "  bvec2 lto = lessThan(shadowCoord2.xy, vec2(1.0, 1.0) );\n"
-  "if( gtz.x && lto.x && gtz.y && lto.y  ) "
+  "  if( gtz.x && lto.x && gtz.y && lto.y  ) "
   "  {\n"
   		 "if( shadowCoord2.z < shadow2D( shadowMap, shadowCoord2.xyz ).z + 0.001 )"
   "      color.rgb = vec3(1.0);\n"
+  "    else { discard; } \n"
   "  }\n"
+  "  else { discard; } \n"
   "  gl_FragColor = color;\n"
   "}\n";
 }
@@ -78,22 +81,40 @@ void Viewer::draw()
       break;
     case Engine::sPlaying:
     {
-      Texture lightMask = renderLight();
+      Texture lightMask = renderLights();
       drawGame();
-      
       const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
-			ScreenSpaceProjection ssp( wi.getSize() );
+      ScreenSpaceProjection ssp( wi.getSize() );
       {
-	      glEnable(GL_BLEND);
-  			glColor4ub(255, 255, 255, 200);
+        glEnable(GL_BLEND);
+        glColor4ub(15, 255, 255, 80);
         drawRectangle( lightMask, 
-        	Point2d( 10 + 2 * mFbo.getSize().x(), 5 ), mFbo.getSize() );
+          Point2d( 0.0 ), wi.getSize() );
         glDisable(GL_BLEND);
       }
+        
+      
+//      if( kDebugVisualEffects )
+//      {
+//        const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
+//        ScreenSpaceProjection ssp( wi.getSize() );
+//        {
+//          glEnable(GL_BLEND);
+//          glColor4ub(255, 255, 255, 200);
+//          drawRectangle( lightMask, 
+//            Point2d( 5, 5 ), Vector2d(lightMask.width(), lightMask.height()) );
+//          glDisable(GL_BLEND);
+//        }
+//      }      
       break;
     }
     case Engine::sPaused: drawMenu(); break; 
     default: break;
+  }
+  
+  if( kDebugVisualEffects )
+  {
+  	showFps();
   }
 }
 
@@ -111,7 +132,7 @@ void Viewer::drawActor( const Actor& iA )
   s.draw();
   glPopMatrix();
   
-  if( debugCollisions )
+  if( kDebugCollisions )
   {
   	
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -126,27 +147,30 @@ void Viewer::drawActor( const Actor& iA )
     //dessine les intersections entre le joueur et le terrain
     glColor3ub( 255, 255, 0);
     glPointSize(2.0);
-    const Intersection2d& intersection = iA.getIntersections();
-    for( int i = 0; i < intersection.getNumberOfPoints(); ++i )
+    const vector<Intersection2d>& intersections = iA.getIntersections();
+    for( size_t i = 0; i < intersections.size(); ++i )
     {
-      glBegin( GL_POINTS );
-      glVertex2dv( intersection.getPoint(i).getPtr() );
-      glEnd();
-      
-      //normal
-      Point2d n = intersection.getPoint(i) + intersection.getNormal(i) * 10;
-			drawLine( intersection.getPoint(i), n );
-    }
-    
-    //la penetration
-    drawLine( Point2d( iA.getBoundingBox().bottomLeft().x(), 
-      iA.getBoundingBox().bottomLeft().y() - 5 ), 
-      Point2d( iA.getBoundingBox().bottomLeft().x() + iA.getIntersections().getPenetration().x(), 
-      iA.getBoundingBox().bottomLeft().y() - 5 ) );
-    drawLine( Point2d( iA.getBoundingBox().bottomLeft().x() - 5, 
-      iA.getBoundingBox().bottomLeft().y() ), 
-      Point2d( iA.getBoundingBox().bottomLeft().x() - 5, 
-      iA.getBoundingBox().bottomLeft().y() + iA.getIntersections().getPenetration().y() ) );
+      for( int j = 0; j < intersections[i].getNumberOfPoints(); ++j )
+      {
+        glBegin( GL_POINTS );
+        glVertex2dv( intersections[i].getPoint(j).getPtr() );
+        glEnd();
+        
+        //normal
+        Point2d n = intersections[i].getPoint(j) + intersections[i].getNormal(j) * 10;
+        drawLine( intersections[i].getPoint(j), n );
+        
+//        //la penetration
+//        drawLine( Point2d( iA.getBoundingBox().bottomLeft().x(), 
+//          iA.getBoundingBox().bottomLeft().y() - 5 ), 
+//          Point2d( iA.getBoundingBox().bottomLeft().x() + iA.getIntersections().getPenetration().x(), 
+//          iA.getBoundingBox().bottomLeft().y() - 5 ) );
+//        drawLine( Point2d( iA.getBoundingBox().bottomLeft().x() - 5, 
+//          iA.getBoundingBox().bottomLeft().y() ), 
+//          Point2d( iA.getBoundingBox().bottomLeft().x() - 5, 
+//          iA.getBoundingBox().bottomLeft().y() + iA.getIntersections().getPenetration().y() ) );
+      }
+    }    
     
     //le vecteur acceleration
     glColor3ub( 0, 255, 0 );
@@ -186,6 +210,7 @@ void Viewer::drawDataMap()
 //-----------------------------------------------------------------------------
 void Viewer::drawGame()
 {
+	glDisable( GL_DEPTH_TEST );
   utils::SpriteCatalog& sc = mEngine.getSpriteCatalog();
   const Engine::Stage& stage = mEngine.getStage();
   
@@ -266,7 +291,7 @@ void Viewer::drawGame()
   
   //dessine le joueur
   drawActor( mEngine.getPlayer() );
-  if( debugCollisions )
+  if( kDebugCollisions )
   {
     //affiche letat du jouer
     QString playerState;
@@ -499,11 +524,11 @@ void Viewer::initializeGL()
   glClearColor(0.0, 0.0, 0.0, 0.0);
 
 	mEngine.setSpriteCatalog( "level1.cat" );
-	mFbo.addColorAttachment(true);
-  mFbo.addColorAttachment(true);
-  mFbo.addDepthAttachment(true);
-  mFbo.getDepthTexture().setFilter( GL_LINEAR );
-  //mFbo.getDepthTexture().setWrapMode( GL_CLAMP );
+	mFboLightDepth.addColorAttachment(true);  
+  mFboLightDepth.addDepthAttachment(true);
+  mFboLightDepth.getDepthTexture().setFilter( GL_LINEAR );
+  
+  mFboLightMask.addColorAttachment(true);
   
   //mShadowMapShader.addFragmentSource( kLightFade );
   //mShadowMapShader.addFragmentSource( kLightOfSight );
@@ -518,6 +543,36 @@ void Viewer::keyPressEvent( QKeyEvent* ipE )
 //-----------------------------------------------------------------------------
 void Viewer::keyReleaseEvent( QKeyEvent* ipE )
 { mEngine.keyReleased( ipE->key() ); }
+
+//-----------------------------------------------------------------------------
+/*0 - est 
+  1 - nord
+  2 - ouest
+  3 - sud*/
+Camera Viewer::makeLightCamera(int i, const Point2d& iPos,
+	const Vector2d& iViewport, double iSightDepth) const
+{
+	Camera r;
+  Point2d look;
+  Vector2d up;
+  switch (i) 
+  {
+    case 0: look.set( iPos.x() + 1, iPos.y() ); up.set(0.0, 1.0); break;
+    case 1: look.set( iPos.x(), iPos.y() + 1 ); up.set(1.0, 0.0); break;
+    case 2: look.set( iPos.x() - 1, iPos.y() ); up.set(0.0, 1.0); break;
+    case 3: look.set( iPos.x(), iPos.y() - 1 ); up.set(1.0, 0.0); break;
+    default: break;
+  }
+  
+  r.setWindowSize( iViewport );
+  r.set(
+    Point3d( iPos.x(), iPos.y(), 0.0),
+    Point3d( look.x(), look.y(), 0.0),
+    Vector3d( up.x(), up.y(), 0.0 ) );
+  r.setPerspectiveProjection(92, iViewport.y() / iViewport.x(), 10, 
+  	iSightDepth, false);
+  return r;
+}
 
 //-----------------------------------------------------------------------------
 void Viewer::mouseMoveEvent( QMouseEvent* ipE )
@@ -539,7 +594,7 @@ void Viewer::paintGL()
 }
 
 //-----------------------------------------------------------------------------
-Texture Viewer::renderLight()
+Texture Viewer::renderLights()
 {
   const Camera& gc = mEngine.getGameCamera();
   const Engine::Player& p = mEngine.getPlayer();
@@ -547,73 +602,78 @@ Texture Viewer::renderLight()
   Matrix4d lightCamView, lightCamProjection, MCToShadowMap;
   Matrix4d camView, camProjection;
 
-  Vector2d offSize( 1, gc.getWindowInfo().getHeight() );
-  //Vector2d offSize( gc.getWindowInfo().getSize() );
   double sightDepth = 400;
-  mFbo.resize( offSize );
-  pushFrameBuffer( mFbo );
-  mFbo.drawTo(0);
-
-  glEnable(GL_DEPTH_TEST);
-  glClear( GL_DEPTH_BUFFER_BIT );
-  Camera c;
-  c.setWindowSize( offSize );
-  c.set(
-    Point3d( p.getPosition().x(), p.getPosition().y(), 0.0),
-    Point3d( p.getPosition().x() + 100, p.getPosition().y(), 0.0),
-    Vector3d( 0.0, 1.0, 0.0 ) );
-  c.setPerspectiveProjection(90, offSize.y() / offSize.x(), 10, sightDepth, false);
-
-  c.pushAndApplyMatrices();
-  lightCamView = c.getViewMatrix();
-  lightCamProjection = c.getProjectionMatrix();
-  MCToShadowMap = lightCamView * lightCamProjection;
-
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  glLineWidth(5.0);
-  drawDataMap();
-  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  glLineWidth(1.0);
-  c.popMatrices();
-  glDisable( GL_DEPTH_TEST );
-  shadowMap = mFbo.getDepthTexture().copy();
-  popFrameBuffer();
+  Vector2i fboSize = mFboLightDepth.getSize();
   
-  c = gc;
-  c.setWindowSize( gc.getWindowInfo().getSize() / 4 );
-  c.pushAndApplyMatrices();
-  c.popMatrices();
-
-  Matrix4d clipToWindow;      
-  clipToWindow.setScaling( Vector3d(0.5) );
-  clipToWindow.setTranslation( Point3d(0.5) );
-  camView = c.getViewMatrix();
-  camProjection = c.getProjectionMatrix();
-  mFbo.resize( c.getWindowInfo().getSize() );
-
-  pushFrameBuffer( mFbo );
-  pushShader( mShadowMapShader );
-  mFbo.drawTo(1);
+  pushFrameBuffer( mFboLightMask );
+  mFboLightMask.drawTo(0);
   glClear( GL_COLOR_BUFFER_BIT );
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, shadowMap.getId() );
-  mShadowMapShader.setUniform( "MVPMatrix", camView * camProjection );
-  mShadowMapShader.setUniform( "MCToShadowMap", MCToShadowMap * clipToWindow );
-  mShadowMapShader.setUniform( "shadowMap", 0 );
-  drawRectangle( 
-  	toPoint( toVector(p.getPosition()) - c.getProjection().getSize() ), 
-    2 * c.getProjection().getSize() );
-  popShader();
   popFrameBuffer();
-  
-  return mFbo.getTexture(1).copy();
+    
+  for( int i = 0; i < 4; ++i )
+  {
+    pushFrameBuffer( mFboLightDepth );
+    mFboLightDepth.drawTo(0);
+    glEnable(GL_DEPTH_TEST);
+    glClear( GL_DEPTH_BUFFER_BIT );
+    Camera c = makeLightCamera( i, p.getPosition(), fboSize, sightDepth );
+
+    c.pushAndApplyMatrices();
+    lightCamView = c.getViewMatrix();
+    lightCamProjection = c.getProjectionMatrix();
+    MCToShadowMap = lightCamView * lightCamProjection;
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glLineWidth(5.0);
+    drawDataMap();
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glLineWidth(1.0);
+    c.popMatrices();
+    glDisable( GL_DEPTH_TEST );
+    shadowMap = mFboLightDepth.getDepthTexture();
+    popFrameBuffer();
+    
+    c = gc;
+    c.setWindowSize( mFboLightMask.getSize() );
+    c.pushAndApplyMatrices();
+    c.popMatrices();
+
+    Matrix4d clipToWindow;      
+    clipToWindow.setScaling( Vector3d(0.5) );
+    clipToWindow.setTranslation( Point3d(0.5) );
+    camView = c.getViewMatrix();
+    camProjection = c.getProjectionMatrix();
+
+    pushFrameBuffer( mFboLightMask );
+    pushShader( mShadowMapShader );
+    mFboLightMask.drawTo(0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, shadowMap.getId() );
+    mShadowMapShader.setUniform( "MVPMatrix", camView * camProjection );
+    mShadowMapShader.setUniform( "MCToShadowMap", MCToShadowMap * clipToWindow );
+    mShadowMapShader.setUniform( "shadowMap", 0 );
+    drawRectangle( 
+      toPoint( toVector(p.getPosition()) - c.getProjection().getSize() ), 
+      2 * c.getProjection().getSize() );
+    popShader();
+  	popFrameBuffer();
+  }
+    
+  return mFboLightMask.getTexture(0);//.copy();
 }
 
 //-----------------------------------------------------------------------------
 void Viewer::resizeGL(int iW, int iH)
 {
   Widget3d::resizeGL( iW, iH );
-  mFbo.resize(iW, iH);
+  
+  const Camera& gc = mEngine.getGameCamera();
+  Vector2d offSize( 1, gc.getWindowInfo().getHeight() );
+  mFboLightDepth.resize( offSize );
+  
+  mFboLightMask.resize( gc.getWindowInfo().getSize() );
+  //mFboLightDepth.resize(iW, iH);
+  //mFboLightMask.resize(iW, iH);
   update();
 }
 
@@ -767,10 +827,17 @@ MainWindow::MainWindow() : QMainWindow(),
   
   mEngine.addActor();
   mEngine.addActor();
+  mEngine.addActor();
+  mEngine.addActor();
   mEngine.setActorSpriteName( 0, "monstre bidon1" );
   mEngine.setActorSpriteName( 1, "monstre bidon2" );
+  mEngine.setActorSpriteName( 2, "monstre bidon1" );
+  mEngine.setActorSpriteName( 3, "monstre bidon2" );
   mEngine.setActorPosition( 0, Point2d(200, 100) );
   mEngine.setActorPosition( 1, Point2d(400, 800) );
+  mEngine.setActorPosition( 2, Point2d(280, 100) );
+  mEngine.setActorPosition( 3, Point2d(800, 800) );
+
 }
 
 //-----------------------------------------------------------------------------
