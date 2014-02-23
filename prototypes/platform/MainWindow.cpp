@@ -212,7 +212,7 @@ void Viewer::drawGame()
 {
 	glDisable( GL_DEPTH_TEST );
   utils::SpriteCatalog& sc = mEngine.getSpriteCatalog();
-  const Engine::Stage& stage = mEngine.getStage();
+  Engine::Stage& stage = mEngine.getStage();
   
 	//projection ortho
   const Camera& cam = mEngine.getGameCamera();
@@ -302,6 +302,7 @@ void Viewer::drawGame()
       case Engine::Player::sRunning : playerState = "running"; break;
       case Engine::Player::sFalling : playerState = "falling"; break;
       case Engine::Player::sJumping : playerState = "jumping"; break;
+      case Engine::Player::sHit : playerState = "hit"; break;
       default: break;
     }
     renderText(10, 10, playerState );
@@ -825,25 +826,29 @@ MainWindow::MainWindow() : QMainWindow(),
   mEngine.registerClient( this );
   mEngine.registerClient( mpViewer );
   
-  mEngine.addActor();
-  mEngine.addActor();
-  mEngine.addActor();
-  mEngine.addActor();
-  mEngine.setActorSpriteName( 0, "monstre bidon1" );
-  mEngine.setActorSpriteName( 1, "monstre bidon2" );
-  mEngine.setActorSpriteName( 2, "monstre bidon1" );
-  mEngine.setActorSpriteName( 3, "monstre bidon2" );
-  mEngine.setActorPosition( 0, Point2d(200, 100) );
-  mEngine.setActorPosition( 1, Point2d(400, 800) );
-  mEngine.setActorPosition( 2, Point2d(280, 100) );
-  mEngine.setActorPosition( 3, Point2d(800, 800) );
-
+  Engine::Stage& s = mEngine.getStage();
+  s.addActor();
+  s.addActor();
+  s.addActor();
+  s.addActor();
+  s.getActor(0).setSpriteName( "monstre bidon1" );
+  s.getActor(1).setSpriteName( "monstre bidon2" );
+  s.getActor(2).setSpriteName( "monstre bidon1" );
+  s.getActor(3).setSpriteName( "monstre bidon2" );
+  s.getActor(0).setPosition( Point2d(200, 100) );
+  s.getActor(1).setPosition( Point2d(400, 800) );
+  s.getActor(2).setPosition( Point2d(280, 100) );
+  s.getActor(3).setPosition( Point2d(800, 800) );
+	s.getActor(0).setMaximumVelocity( Vector2d(0, 1000) );
+  s.getActor(1).setMaximumVelocity( Vector2d(20, 1000) );
+  s.getActor(2).setMaximumVelocity( Vector2d(0, 1000) );
+  s.getActor(3).setMaximumVelocity( Vector2d(20, 1000) );
 }
 
 //-----------------------------------------------------------------------------
 void MainWindow::addLayerClicked()
 {
-	mEngine.addLayer();
+	mEngine.getStage().addLayer();
   mpLayers->clear();
   updateUi();
 }
@@ -854,7 +859,7 @@ void MainWindow::addSpriteToLayerClicked()
   SpriteCatalog& sc = mEngine.getSpriteCatalog();
   int layer = mpLayers->currentRow();
   for( int i = 0; i < (int)sc.getNumberOfSprites(); ++i )
-  	mEngine.addTokenToLayer( layer, sc.getSpriteToken(i) );
+  	mEngine.getStage().addToken( layer, sc.getSpriteToken(i) );
     
   mpSprites->clear(); mpSprites->setRowCount(0);
   updateUi();
@@ -864,7 +869,7 @@ void MainWindow::addSpriteToLayerClicked()
 void MainWindow::backgroundChanged(int iIndex)
 {
 	QString token = mpBackground->currentText();
-  mEngine.setBackgroundToken( token );
+  mEngine.getStage().setBackgroundToken( token );
   updateUi();
 }
 
@@ -902,7 +907,7 @@ void MainWindow::layerSelectionChanged( int iRow )
 void MainWindow::layerVisibilityChanged( QListWidgetItem* ipItem )
 {
 	int i = mpLayers->row( ipItem );
-  mEngine.setLayerAsVisible( i, ipItem->checkState() == Qt::Checked );
+  mEngine.getStage().setLayerAsVisible( i, ipItem->checkState() == Qt::Checked );
   updateUi();  
 }
 
