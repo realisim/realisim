@@ -33,7 +33,9 @@ Actor::Actor() :
  mHealth( 100.0 ),
  mPosition( 0.0 ),
  mVelocity( 0.0 ),
+ mMaximumVelocity( 400, 1000 ),
  mAcceleration( 0.0 ),
+ mMaximumAcceleration( 800, 800 ),
  mState( sIdle ),
  mIntersections()
 {}
@@ -47,7 +49,9 @@ Actor::Actor( const Actor& iA ) :
  mHealth( iA.getHealth() ),
  mPosition( iA.getPosition() ),
  mVelocity( iA.getVelocity() ),
+ mMaximumVelocity( iA.getMaximumVelocity() ),
  mAcceleration( iA.getAcceleration() ),
+ mMaximumAcceleration( iA.getMaximumAcceleration() ),
  mState( iA.getState() ),
  mIntersections( iA.getIntersections() )
 {}
@@ -63,6 +67,8 @@ Actor& Actor::operator=( const Actor& iA )
   mPosition = iA.getPosition();
   mVelocity = iA.getVelocity();
   mAcceleration = iA.getAcceleration();
+  mMaximumVelocity = iA.getMaximumVelocity();
+  mMaximumAcceleration = iA.getMaximumAcceleration();
   mState = iA.getState();
   mIntersections = iA.getIntersections();
   return *this;
@@ -96,6 +102,12 @@ const vector<Intersection2d>& Actor::getIntersections() const
 //------------------------------------------------------------------------------
 QString Actor::getName() const
 { return mName; }
+//------------------------------------------------------------------------------
+const Vector2d& Actor::getMaximumAcceleration() const
+{ return mMaximumAcceleration; }
+//------------------------------------------------------------------------------
+const Vector2d& Actor::getMaximumVelocity() const
+{ return mMaximumVelocity; }
 //------------------------------------------------------------------------------
 const Point2d& Actor::getPosition() const
 { return mPosition; }
@@ -131,6 +143,12 @@ void Actor::setHealth( double iV )
 void Actor::setName( QString iV )
 { mName = iV; }
 //------------------------------------------------------------------------------
+void Actor::setMaximumAcceleration( const Vector2d& iV )
+{ mMaximumAcceleration = iV; }
+//------------------------------------------------------------------------------
+void Actor::setMaximumVelocity( const Vector2d& iV )
+{ mMaximumVelocity = iV; }
+//------------------------------------------------------------------------------
 void Actor::setPosition( const Point2d& iV )
 { mPosition = iV; }
 //------------------------------------------------------------------------------
@@ -141,7 +159,25 @@ void Actor::setSpriteToken( QString iV )
 { mSpriteToken = iV; }
 //------------------------------------------------------------------------------
 void Actor::setState( state iV )
-{ mState = iV; }
+{ 
+	switch (getState()) 
+  {
+    case sHit: 
+    	switch (iV) 
+      {
+        case sHit: break;
+        default: if( mHitTimer.elapsed() > 500 ) {mState = iV;} break;
+      }
+    break;
+    default:
+    	switch (iV) 
+      {
+        case sHit: mHitTimer.start(); mState = iV; break;
+        default: mState = iV; break;
+      } 
+      break;
+  }
+}
 //------------------------------------------------------------------------------
 void Actor::setVelocity( const Vector2d& iV )
 { mVelocity = iV; }
@@ -331,13 +367,6 @@ Actor& Engine::Stage::getActor( int i )
 }
 
 //------------------------------------------------------------------------------
-const Actor& Engine::Stage::getActor( int i ) const
-{
-	Actor* r = &const_cast< Engine::Stage* >(this)->getActor(i);
-  return *(const_cast< const Actor* >(r));
-}
-
-//------------------------------------------------------------------------------
 QString Engine::Stage::getBackgroundToken() const
 { return mBackgroundToken; }
 
@@ -408,7 +437,6 @@ QString Engine::Stage::getToken( int iLayer, int iIndex ) const
   return r;
 }
 
-
 //------------------------------------------------------------------------------
 /*retourne les token de sprites pour le layer iLayer*/
 vector<QString> Engine::Stage::getTokens( int iLayer ) const
@@ -417,6 +445,13 @@ vector<QString> Engine::Stage::getTokens( int iLayer ) const
   if( iLayer >= 0 && iLayer < getNumberOfLayers() )
   	r = mLayers[iLayer]->mTokens;
   return r;
+}
+
+//------------------------------------------------------------------------------
+bool Engine::Stage::hasCell( const Vector2i& iC ) const
+{
+	return iC.x() >= 0 && iC.x() < getTerrainWidth() &&
+  	iC.y() >= 0 && iC.y() < getTerrainHeight();
 }
 
 //------------------------------------------------------------------------------
@@ -445,6 +480,13 @@ void Engine::Stage::removeLayer( int i )
 //------------------------------------------------------------------------------
 void Engine::Stage::setBackgroundToken( QString iBt )
 { mBackgroundToken = iBt; }
+
+//------------------------------------------------------------------------------
+void Engine::Stage::setLayerAsVisible( int iL, bool iV/*=true*/ )
+{
+	if( iL >= 0 && iL < getNumberOfLayers() )
+  { mLayers[iL]->mVisibility = iV; }
+}
 
 //------------------------------------------------------------------------------
 QByteArray Engine::Stage::toBinary() const
@@ -537,34 +579,10 @@ Engine::~Engine()
 }
 
 //------------------------------------------------------------------------------
-void Engine::addActor()
-{ mStage.addActor(); }
-
-//------------------------------------------------------------------------------
 void Engine::addError( QString e ) const
 { 
 	mErrors += mErrors.isEmpty() ? e : "\n" + e;
   const_cast<Engine*>(this)->send( eErrorRaised );
-}
-
-//------------------------------------------------------------------------------
-void Engine::addLayer()
-{ mStage.addLayer(); }
-
-//------------------------------------------------------------------------------
-void Engine::addTokenToLayer( int iLayer, QString iToken )
-{
-	if( iLayer >= 0 && iLayer < mStage.getNumberOfLayers() )
-  {
-  	mStage.addToken( iLayer, iToken );
-  }
-  else
-  {
-  	QString m;
-    m.sprintf( "Impossible d'ajouter le sprite %s à la couche %d.",
-    	iToken.toStdString().c_str(), iLayer );
-  	addError( m );
-  }
 }
 
 //------------------------------------------------------------------------------
@@ -610,6 +628,8 @@ void Engine::applyPhysics( Actor& iA )
 	Point2d p = iA.getPosition();
 	Vector2d v = iA.getVelocity();
 	Vector2d a = iA.getAcceleration();
+  double maxHv = iA.getMaximumVelocity().x();
+  double maxVv = iA.getMaximumVelocity().y();
   
   //application de la gravité
   a += Vector2d(0.0, -980);
@@ -617,9 +637,9 @@ void Engine::applyPhysics( Actor& iA )
 	//déplacement du joueur a la position désiré
   v += a * kDt;
   v.setX( v.x() >= 0.0 ? 
-  	min(400.0, v.x()) : max(-400.0, v.x()) );
+  	min(maxHv, v.x()) : max(-maxHv, v.x()) );
   v.setY( v.y() >= 0.0 ? 
-  	min(1000.0, v.y()) : max(-1000.0, v.y()) );
+  	min(maxVv, v.y()) : max(-maxVv, v.y()) );
   
   iA.setPosition( p + v * kDt );
   iA.setVelocity( v );
@@ -842,18 +862,25 @@ void Engine::handleActorCollisions( Actor& iA )
       if( z.hasIntersections() )
       {
 				iA.addIntersection( z );
- 				resolveCollision( iA, z );
+ 				//resolveCollision( iA, z );
+        iA.setState( Actor::sHit );
       }
     }
   }
-  afterCollision(iA);
+//  afterCollision(iA);
 }
 
 //------------------------------------------------------------------------------
 void Engine::handleActorInput( Actor& iA )
 {
   //on les fait courrir après le joeur
+  Point2d playerPos = getPlayer().getPosition();
+  Point2d pos = iA.getPosition();
+  Vector2d dir = playerPos - pos;
+  if( dir.x() < 0 ) moveLeft( iA );
+  else moveRight( iA );
   
+  if( dir.y() > 0 ) moveUp( iA );
 
 	applyPhysics( iA );
   updateSpriteToken( iA );
@@ -900,26 +927,35 @@ void Engine::handleEditing()
   mPlayer.setPosition( mPlayer.getPosition() + d );
 
   Point3d gl = mGameCamera.pixelToGL( getMousePos().x(), getMousePos().y() );
-  int index = mStage.getCellIndex( Point2d( gl.getX(), gl.getY() ) );
+  Vector2i c = mStage.getCellCoordinate( Point2d( gl.getX(), gl.getY() ) );
   
-  Stage::Layer* l = mStage.mLayers[ getCurrentLayer() ];
-	if( isMousePressed( Qt::LeftButton ) )
+  /*Si l'index courant est dans le terrain, on fait l'édition, sinon, on
+    agrandit le terrain.*/
+  if( mStage.hasCell( c ) )
   {
-    mStage.mTerrain[index] = getEditingTool();    
-    for( int i = 0; i < (int)l->mTokens.size(); ++i )
+    int index = mStage.getCellIndex( c.x(), c.y() );
+  	Stage::Layer* l = mStage.mLayers[ getCurrentLayer() ];
+    if( isMousePressed( Qt::LeftButton ) )
     {
-    	if( l->mTokens[i] == getEditingSpriteToken() )
+      mStage.mTerrain[index] = getEditingTool();    
+      for( int i = 0; i < (int)l->mTokens.size(); ++i )
       {
-      	l->mData[index] = i;
-        break;
+        if( l->mTokens[i] == getEditingSpriteToken() )
+        {
+          l->mData[index] = i;
+          break;
+        }
       }
     }
+    else if( isMousePressed( Qt::RightButton ) )
+    {
+      mStage.mTerrain[index] = Stage::ctEmpty;
+      l->mData[index] = 255;
+    }
   }
-  else if( isMousePressed( Qt::RightButton ) )
-  {
-  	mStage.mTerrain[index] = Stage::ctEmpty;
-    l->mData[index] = 255;
-  }
+  else 
+  { printf( "cell coord: %d, %d\n", c.x(), c.y() ); }
+
 
   //deplacement de la camera pour suivre le joueur
   Matrix4d m = mGameCamera.getTransformationToGlobal();
@@ -1038,58 +1074,13 @@ void Engine::handlePauseMenu()
 //------------------------------------------------------------------------------
 void Engine::handlePlayerInput()
 {
-	Vector2d a = mPlayer.getAcceleration();
-  Vector2d v = mPlayer.getVelocity();
-  Actor::state s = mPlayer.getState();
-
-  const double maxHAccel = 800;
   //input usagé
   if( isKeyPressed( Qt::Key_A ) )
-  {
-    	switch ( s ) {
-    	case Actor::sIdle :
-        a -= Vector2d(maxHAccel, 0);
-        s = Actor::sWalking;
-        break;
-      case Actor::sWalking :
-      case Actor::sFalling :
-      case Actor::sJumping :
-      	a -= Vector2d(maxHAccel, 0);
-        break;
-      default: break;
-    }
-  }
+  { moveLeft( mPlayer ); }
   if( isKeyPressed( Qt::Key_D ) )
-  {
-    	switch ( s ) {
-    	case Actor::sIdle :
-          a += Vector2d(maxHAccel, 0);
-	        s = Actor::sWalking;
-      	break;
-      case Actor::sWalking :
-      case Actor::sFalling :
-      case Actor::sJumping :
-      	a += Vector2d(maxHAccel, 0);
-      	break;
-      default: break;
-    }
-  }
+  { moveRight( mPlayer ); }
   if( isKeyPressed( Qt::Key_W, true ) )
-  {
-  	switch ( s ) {
-    	case Actor::sIdle :
-      case Actor::sWalking :
-    		v += Vector2d(0, 540);
-        s = Actor::sJumping;
-        break;
-      default: break;
-    }
-  }
-
-	mPlayer.setAcceleration( a );
-  mPlayer.setVelocity( v );
-  mPlayer.setState( s );
-  
+  { moveUp( mPlayer ); }
   applyPhysics( mPlayer );
   updateSpriteToken( mPlayer );
 }
@@ -1207,7 +1198,7 @@ void Engine::mouseReleased( int iButton )
 /*iD est l'angle en degré de rotation de la molette*/
 void Engine::mouseWheelMoved( double iD )
 { mMouseWheelDelta = iD; }
-  
+
 //------------------------------------------------------------------------------
 void Engine::moveGameCamera()  
 {
@@ -1270,6 +1261,70 @@ void Engine::moveGameCamera()
 }
 
 //------------------------------------------------------------------------------
+void Engine::moveLeft( Actor& iActor )
+{
+	Vector2d a = iActor.getAcceleration();
+  Actor::state s = iActor.getState();
+  const double maxHAccel = iActor.getMaximumAcceleration().x();
+  
+  switch ( s ) 
+  {
+  case Actor::sIdle :
+    a -= Vector2d(maxHAccel, 0);
+    s = Actor::sWalking;
+    break;
+  case Actor::sWalking :
+  case Actor::sFalling :
+  case Actor::sJumping :
+    a -= Vector2d(maxHAccel, 0);
+    break;
+  default: break;
+  }
+  iActor.setAcceleration( a );
+  iActor.setState( s );
+}
+
+//------------------------------------------------------------------------------
+void Engine::moveRight( Actor& iActor )
+{
+	Vector2d a = iActor.getAcceleration();
+  Actor::state s = iActor.getState();
+  const double maxHAccel = iActor.getMaximumAcceleration().x();
+  
+  switch ( s ) {
+  case Actor::sIdle :
+      a += Vector2d(maxHAccel, 0);
+      s = Actor::sWalking;
+    break;
+  case Actor::sWalking :
+  case Actor::sFalling :
+  case Actor::sJumping :
+    a += Vector2d(maxHAccel, 0);
+    break;
+  default: break;
+  }
+  iActor.setAcceleration( a );
+  iActor.setState( s );
+}
+
+//------------------------------------------------------------------------------
+void Engine::moveUp( Actor& iActor )
+{
+  Vector2d v = iActor.getVelocity();
+  Actor::state s = iActor.getState();
+  switch ( s ) {
+  case Actor::sIdle :
+  case Actor::sWalking :
+    v += Vector2d(0, 540);
+    s = Actor::sJumping;
+    break;
+  default: break;
+  }
+  iActor.setVelocity( v );
+  iActor.setState( s );
+}
+
+//------------------------------------------------------------------------------
 void Engine::newStage( QString iName, int iX, int iY )
 {
 	loadStage( Stage( iName, Vector2i( iX, iY ) ) );
@@ -1284,31 +1339,6 @@ void Engine::registerClient( Client* ipC )
 	vector<Client*>::iterator it = find(mClients.begin(), mClients.end(), ipC);
   if( it == mClients.end() )
   	mClients.push_back( ipC );
-}
-
-//------------------------------------------------------------------------------
-void Engine::removeActor( int i )
-{
-	if( &mStage.getActor(i) != &Stage::mDummyActor )
-  { mStage.removeActor(i); }
-  else 
-  {
-   	QString m;
-    m.sprintf("Impossible d'enlever l'acteur %d", i);
-    addError(m); 
-  }
-}
-
-//------------------------------------------------------------------------------
-void Engine::removeLayer( int iLayer )
-{
-	if( iLayer >= 0 && iLayer < mStage.getNumberOfLayers() )
-  { mStage.removeLayer( iLayer ); }
-  else {
-  	QString m;
-    m.sprintf( "Impossible d'enlever la couche %d", iLayer );
-    addError( m );
-  }
 }
 
 //------------------------------------------------------------------------------
@@ -1349,45 +1379,12 @@ void Engine::send( event iE )
 }
 
 //------------------------------------------------------------------------------
-void Engine::setActorName( int i, QString iV )
-{
-	if( &mStage.getActor(i) != &Stage::mDummyActor )
-  { mStage.getActor(i).setName( iV ); }
-}
-
-//------------------------------------------------------------------------------
-void Engine::setActorPosition( int i, const Point2d& iV )
-{
-	if( &mStage.getActor(i) != &Stage::mDummyActor )
-  { mStage.getActor(i).setPosition( iV ); }
-
-}
-
-//------------------------------------------------------------------------------   
-void Engine::setActorSpriteName( int i, QString iV )
-{
-	if( &mStage.getActor(i) != &Stage::mDummyActor )
-  { mStage.getActor(i).setSpriteName( iV ); }
-}
-
-//------------------------------------------------------------------------------
-void Engine::setBackgroundToken( QString iToken )
-{ mStage.setBackgroundToken( iToken ); }
-
-//------------------------------------------------------------------------------
 void Engine::setCurrentLayer( int iL )
 {
 	if( iL >= 0 && iL < mStage.getNumberOfLayers() ) 
 		mCurrentLayer = iL;
   else
   	mCurrentLayer = 0;
-}
-
-//------------------------------------------------------------------------------
-void Engine::setLayerAsVisible( int iIndex, bool iV )
-{ 
-	if( iIndex >= 0 && iIndex < mStage.getNumberOfLayers() ) 
-  { mStage.mLayers[iIndex]->mVisibility = iV; }
 }
 
 //------------------------------------------------------------------------------

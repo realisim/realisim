@@ -24,7 +24,7 @@ public:
   Actor& operator=( const Actor& );
   virtual ~Actor();
   
-  enum state{ sIdle, sWalking, sRunning, sFalling, sJumping };
+  enum state{ sIdle, sWalking, sRunning, sFalling, sJumping, sHit };
   
   virtual void addIntersection( const Intersection2d& );
   virtual void clearIntersections();
@@ -33,6 +33,8 @@ public:
   virtual const Circle getBoundingCircle() const;
   virtual double getHealth() const;
   virtual const vector<Intersection2d>& getIntersections() const;
+  virtual const Vector2d& getMaximumAcceleration() const;
+  virtual const Vector2d& getMaximumVelocity() const;  
   virtual QString getName() const;
   virtual const Point2d& getPosition() const;
   virtual QString getSpriteName() const;
@@ -43,6 +45,8 @@ public:
   virtual void setBoundingBox( const Rectangle& );
   virtual void setBoundingCircle( const Circle& );
   virtual void setHealth( double );
+  virtual void setMaximumAcceleration( const Vector2d& );
+  virtual void setMaximumVelocity( const Vector2d& );
   virtual void setName( QString );
   virtual void setPosition( const Point2d& );
   virtual void setSpriteName( QString );
@@ -59,9 +63,12 @@ protected:
   double mHealth;
   Point2d mPosition;
   Vector2d mVelocity;
+  Vector2d mMaximumVelocity;
   Vector2d mAcceleration;
+  Vector2d mMaximumAcceleration;
   state mState;
   vector<Intersection2d> mIntersections;
+  QTime mHitTimer;
 };
 
 class realisim::platform::Engine : public QObject
@@ -107,27 +114,36 @@ public:
     	enum cellType{ ctEmpty = 0, ctStart, ctWayPoint, ctGround,
       	ctNumberOfCellType };
       
+      virtual void addActor();
+      virtual void addLayer();
+      virtual void addToken( int, QString );
       virtual std::vector<int> find( cellType ) const;      
-      virtual const Actor& getActor( int ) const;
+		  virtual Actor& getActor( int );
 virtual QString getBackgroundToken() const;
       virtual Vector2i getCellCoordinate( const Point2d& ) const;
       virtual Vector2i getCellCoordinate( int ) const;
       virtual int getCellIndex( const Point2d& ) const;
-      virtual int getCellIndex( int, int ) const;
+      virtual int getCellIndex( int, int ) const; //Devrait etre Vector2i
       virtual std::vector<int> getCellIndices( const Point2d&, const Vector2i& ) const;
       virtual Vector2i getCellPixelCoordinate( int ) const;
-      virtual Vector2i getCellPixelCoordinate( int, int ) const;
+      virtual Vector2i getCellPixelCoordinate( int, int ) const; //devrait etre Vector2i
       virtual Vector2i getCellSize() const {return mCellSize;}
       virtual QString getName() const { return mName; }
       virtual int getNumberOfActors() const { return mActors.size(); }
+      virtual int getNumberOfCells() const { return mTerrain.size(); }
       virtual int getNumberOfLayers() const { return mLayers.size(); }
       virtual const QByteArray getTerrain() const { return mTerrain; }
       virtual int getTerrainHeight() const { return mTerrainSize.y(); };
       virtual Vector2i getTerrainSize() const {return mTerrainSize;}      
       virtual int getTerrainWidth() const { return mTerrainSize.x(); };
       virtual QString getToken( int, int ) const;
-      virtual std::vector<QString> getTokens( int ) const;      
+      virtual std::vector<QString> getTokens( int ) const;
+      virtual bool hasCell( const Vector2i& ) const;
       virtual bool isLayerVisible( int ) const;
+      virtual void removeActor( int );
+      virtual void removeLayer(int);
+    	virtual void setBackgroundToken( QString );
+      virtual void setLayerAsVisible( int, bool = true );
       virtual QByteArray toBinary() const;
       virtual unsigned char value(int, int) const;
       virtual unsigned char value(int) const;
@@ -149,15 +165,8 @@ virtual QString getBackgroundToken() const;
         bool mVisibility;
       };
       
-      virtual void addActor();
-      virtual void addLayer();
-      virtual void addToken( int, QString );
       virtual void clear();
       virtual void fromBinary( QByteArray );
-      virtual Actor& getActor( int );
-      virtual void removeActor( int );
-      virtual void removeLayer(int);
-    	virtual void setBackgroundToken( QString );
       
       QString mName;
       Vector2i mCellSize;
@@ -169,9 +178,6 @@ virtual QString getBackgroundToken() const;
       static Actor mDummyActor;
   };
   
-  virtual void addActor();
-  virtual void addLayer();
-  virtual void addTokenToLayer( int, QString );
   virtual QString getAndClearLastErrors() const;
   virtual configureMenuItem getCurrentConfigureMenuItem() const;
   virtual int getCurrentLayer() const;
@@ -186,7 +192,7 @@ virtual QString getEditingSpriteToken() const { return mEditingSpriteToken; }
   virtual const Point2i& getMousePos() const { return mMousePos; }
   virtual const Player& getPlayer() const { return mPlayer; }
 virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
-  virtual const Stage& getStage() const { return mStage; }
+  virtual Stage& getStage() { return mStage; }
   virtual state getState() const { return mState; }
   virtual std::vector<int> getVisibleCells() const;
   virtual bool hasError() const;
@@ -199,18 +205,11 @@ virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual void mouseWheelMoved( double );
   virtual void newStage( QString, int, int );
   virtual void registerClient( Client* );
-  virtual void removeActor(int);
-  virtual void removeLayer(int);
   virtual void resolveCollision( Actor&, Intersection2d& );
   virtual void saveStage( QString );
-  virtual void setActorName( int, QString );
-  virtual void setActorPosition( int, const Point2d& );
-  virtual void setActorSpriteName( int, QString );
-  virtual void setBackgroundToken( QString );
-virtual void setCurrentLayer( int );
+  virtual void setCurrentLayer( int );
   virtual void setEditingTool( Stage::cellType iCt ) {mEditingTool = iCt;}
 virtual void setEditingSpriteToken( QString i ) {mEditingSpriteToken = i;}
-  virtual void setLayerAsVisible( int, bool );
 virtual void setSpriteCatalog( QString );
   virtual QString toString( Stage::cellType );
   virtual void unregisterClient( Client* );
@@ -257,6 +256,9 @@ protected:
   virtual bool isMousePressed( Qt::MouseButtons, bool =false );
   virtual void loadStage( const Stage& );
   virtual void moveGameCamera();
+  virtual void moveLeft( Actor& );
+  virtual void moveRight( Actor& );
+  virtual void moveUp( Actor& );
   virtual void send( event );
   virtual void timerEvent( QTimerEvent* );
   virtual void updateSpriteToken( Actor& );
