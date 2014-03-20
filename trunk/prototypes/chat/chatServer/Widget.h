@@ -24,6 +24,7 @@ public:
   
 protected slots:
 	virtual void downloadEnded( int, int );
+  virtual void errorRaised();
 	virtual void peerConnected( int );
   virtual void peerDisconnected( int );
   virtual void peerItemClicked( QTreeWidgetItem*, int );
@@ -32,8 +33,9 @@ protected slots:
   virtual void updateUi();
   
 protected:
+	void addToLog( QString ) const;
 	int findPeer( const chatPeer& ) const;
-  virtual void printTransferInfo( const QByteArray& ) const;
+  virtual QString transferInfo( const QByteArray& ) const;
   QLineEdit* mpPort;
   QPushButton* mpStartServer;
   QPushButton* mpStopServer;
@@ -43,7 +45,7 @@ protected:
 
   reusables::network::Server mServer;
   std::vector< chatPeer > mChatPeers;
-  
+  mutable QString mLog;
 private:
   void initUi();
 };
