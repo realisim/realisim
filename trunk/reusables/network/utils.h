@@ -22,6 +22,8 @@ namespace network
   QStringList getLocalIpAddresses();
   QString asString(QAbstractSocket::SocketError);
   
+  enum transferProtocol{ tpRaw, tpRealisim, tpWebSocket };
+   
   class Transfer
   {
   	public:
@@ -30,6 +32,7 @@ namespace network
       
       int getId() const { return mId; }
       bool isValid() const { return mIsValid; }
+      const QByteArray& getPayload() const { return mPayload; }
       void setPayload( const QByteArray&, int );
       
       bool mIsValid;
