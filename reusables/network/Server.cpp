@@ -12,14 +12,16 @@ using namespace std;
 
 int Server::mUploadId = 0;
 
-Server::Server(QObject* ipParent /*=0*/) : QObject(ipParent),
+Server::Server(QObject* ipParent /*=0*/) : 
+QObject(ipParent),
 mErrors(),
 mPort(12345),
 mpTcpServer(new QTcpServer(ipParent)),
 mSockets(),
 mReadBuffers(),
 mMaximumUploadPayloadSize( 64 * 1024 ),
-mUploadIndices()
+mUploadIndices(),
+mProtocol( tpRealisim )
 {
   connect(mpTcpServer, SIGNAL( newConnection() ),
    this, SLOT( handleNewConnection() ) );
@@ -29,15 +31,6 @@ Server::~Server()
 {
   if(mpTcpServer->isListening())
   	mpTcpServer->close();
-
-  for(int i = 0; i < getNumberOfSockets() ; ++i)
-  {
-    getSocket(i)->abort();
-    delete getSocket(i);
-  }
-  mSockets.clear();
-  mReadBuffers.clear();
-  mUploadIndices.clear();
   
   stopServer();
   delete mpTcpServer;
@@ -47,6 +40,7 @@ void Server::addError( QString iE ) const
 {
 	if( !mErrors.isEmpty() ) mErrors += " ";
 	mErrors += iE;
+  emit errorRaised();
 }
 //------------------------------------------------------------------------------
 void Server::broadcast( const QByteArray& iA )
@@ -129,8 +123,10 @@ double Server::getDownloadStatus( int iSocketIndex, int iId ) const
 	double r = 0.0;
   int i = findDownload( iSocketIndex, iId );
   if( i != -1 )
+  {
   	r = mDownloads[ iSocketIndex ][i].mPayload.size() /
     	(double)mDownloads[ iSocketIndex ][i].mTotalSize;
+  }
   return r;
 }
 //------------------------------------------------------------------------------
@@ -225,30 +221,47 @@ void Server::handleNewConnection()
 void Server::handleReadBuffer( int iSocketIndex )
 {
   int downloadId;
-  QByteArray p = readPacket( mReadBuffers[ iSocketIndex ], &downloadId ) ;
-  while( !p.isEmpty() )
+  vector< Transfer >& vt = mDownloads[ iSocketIndex ];
+  
+  switch (getProtocol()) 
   {
-    vector< Transfer >& vt = mDownloads[ iSocketIndex ];
-    int downloadIndex = findDownload( iSocketIndex, downloadId );
-    if( downloadIndex == -1 )
+  	case tpRaw: 
     {
-      Transfer t = readUploadHeader( p );
-      if( t.mIsValid )
+    	Transfer t;
+      t.setPayload(mReadBuffers[ iSocketIndex ], vt.size());
+    	vt.push_back( t );
+      mReadBuffers[ iSocketIndex ].clear();
+      emit downloadEnded( iSocketIndex, t.mId );
+    }
+    break;
+    case tpRealisim:
+    {
+      QByteArray p = readPacket( mReadBuffers[ iSocketIndex ], &downloadId ) ;
+      while( !p.isEmpty() )
       {
-        vt.push_back( t );
-        emit downloadStarted( iSocketIndex, downloadId );
-      }  
-    }
-    else
-    {
-      vt[downloadIndex].mPayload += p;
-      emit gotPacket( iSocketIndex, downloadId );
-    }
-    
-    if( getDownloadStatus( iSocketIndex, downloadId ) >= 1.0 )
-      emit downloadEnded( iSocketIndex, downloadId );
-      
-    p = readPacket(mReadBuffers[ iSocketIndex ], &downloadId);
+        int downloadIndex = findDownload( iSocketIndex, downloadId );
+        if( downloadIndex == -1 )
+        {
+          Transfer t = readUploadHeader( p );
+          if( t.mIsValid )
+          {
+            vt.push_back( t );
+            emit downloadStarted( iSocketIndex, downloadId );
+          }  
+        }
+        else
+        {
+          vt[downloadIndex].mPayload += p;
+          emit gotPacket( iSocketIndex, downloadId );
+        }
+        
+        if( getDownloadStatus( iSocketIndex, downloadId ) >= 1.0 )
+        	emit downloadEnded( iSocketIndex, downloadId );
+          
+        p = readPacket(mReadBuffers[ iSocketIndex ], &downloadId);
+      }
+    }break;
+    default: break;
   }
 }
 //------------------------------------------------------------------------------
@@ -257,29 +270,38 @@ void Server::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
 	int i = findSocketFromSender( sender() );
   if( i != -1 )
   {
-  	QTcpSocket* s = getSocket( i );
+    QTcpSocket* s = getSocket( i );
     if( hasUploads( i ) )
     {
       vector< Transfer >& vt = mUploads[ i ];
       Transfer& t = vt[ mUploadIndices[i] ];
-      if( t.mPayload.size() > 0 && s->bytesToWrite() <= 4 * 
-        getMaximumUploadPayloadSize() )
+      switch (getProtocol()) 
       {
-        QByteArray ba = t.mPayload.mid( t.mCursor, getMaximumUploadPayloadSize() );
-        t.mCursor += getMaximumUploadPayloadSize();
-        s->write( makePacket( ba, t.getId() ) );
-        emit sentPacket( i, t.getId() );
+        case tpRaw:
+        { t.mCursor += t.mPayload.size(); } break;
+        case tpRealisim:
+        {
+          if( t.mPayload.size() > 0 && s->bytesToWrite() <= 4 * 
+            getMaximumUploadPayloadSize() )
+          {
+            QByteArray ba = t.mPayload.mid( t.mCursor, getMaximumUploadPayloadSize() );
+            t.mCursor += min(getMaximumUploadPayloadSize(), ba.size());
+            s->write( makePacket( ba, t.getId() ) );
+            emit sentPacket( i, t.getId() );
+          }
+        } break;
+        default: break;
       }
       
       if( getUploadStatus( i, t.getId() ) >= 1.0 )
       {
-      	vt.erase( vt.begin() + mUploadIndices[i] );
-        emit uploadEnded( i, t.getId() );        
+        vt.erase( vt.begin() + mUploadIndices[i] );
+        emit uploadEnded( i, t.getId() );
       }
-      
+          
       if( getNumberOfUploads( i ) > 0 )
-        { mUploadIndices[i] = (mUploadIndices[i] + 1) % getNumberOfUploads( i ); }
-    }
+      { mUploadIndices[i] = (mUploadIndices[i] + 1) % getNumberOfUploads( i ); }
+		}  	
   }
 }
 //------------------------------------------------------------------------------
@@ -311,7 +333,6 @@ void Server::handleSocketError(QAbstractSocket::SocketError iError)
   int socketId = findSocketFromSender( sender() );
   addError( "Error on socket " +  QString::number( socketId ) + ": " +
   	network::asString(iError) );
-  emit error();
 }
 
 //------------------------------------------------------------------------------
@@ -363,12 +384,27 @@ void Server::send( int iSocketIndex, const QByteArray& iA )
 	QTcpSocket* s = getSocket( iSocketIndex );
 	if( s && s->isValid() )
   {
-  	Transfer t;
-    t.setPayload( iA, mUploadId++ );
-  	mUploads[iSocketIndex].push_back( t );
-    QByteArray header = makeUploadHeader( t );
-    s->write( makePacket( header, t.getId() ) );
-    emit uploadStarted( iSocketIndex, t.getId() );
+  	switch (getProtocol()) 
+    {
+	    case tpRaw:
+      { 
+        Transfer t;
+        t.setPayload( iA, mUploadId++ );
+        mUploads[iSocketIndex].push_back( t );
+      	s->write( iA );
+        emit uploadStarted( iSocketIndex, t.getId() );
+      }break;
+      case tpRealisim:
+      {
+        Transfer t;
+        t.setPayload( iA, mUploadId++ );
+        mUploads[iSocketIndex].push_back( t );
+        QByteArray header = makeUploadHeader( t );
+        s->write( makePacket( header, t.getId() ) );
+        emit uploadStarted( iSocketIndex, t.getId() );
+      }  break;
+      default:break;
+    }
   }
 }
 
@@ -437,4 +473,6 @@ void Server::stopServer()
   mSockets.clear();
   mReadBuffers.clear();
   mUploadIndices.clear();
+  mDownloads.clear();
+  mUploads.clear();
 }

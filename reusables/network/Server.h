@@ -37,6 +37,7 @@ public:
 	virtual int getNumberOfDownloads( int ) const;
   virtual int getNumberOfSockets() const;
 	virtual int getNumberOfUploads( int ) const;
+  virtual transferProtocol getProtocol() const {return mProtocol;}
 	virtual QTcpSocket* getSocket( int );
 	virtual const QTcpSocket* getSocket( int ) const;
   virtual QString getSocketPeerAddress( int ) const;
@@ -50,13 +51,14 @@ public:
 	virtual bool hasUploads( int ) const;
   virtual void setLocalPort(const quint16 iP) {mPort = iP;}
 	virtual void setMaximumUploadPayloadSize( int );
+  virtual void setProtocol( transferProtocol p ) {mProtocol = p;}
   virtual void send( int, const QByteArray& );
   virtual bool startServer();
   virtual bool startServer(quint16);
   virtual void stopServer();  
   
 signals:
-	void error();
+	void errorRaised() const;
 	void downloadStarted( int, int );
 	void downloadEnded( int, int );
 	void gotPacket( int, int );
@@ -96,7 +98,7 @@ protected:
   int mMaximumUploadPayloadSize;
   static int mUploadId;
   std::vector< int > mUploadIndices;
-
+	transferProtocol mProtocol;
 };
 
 }

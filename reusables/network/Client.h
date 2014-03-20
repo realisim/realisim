@@ -40,6 +40,7 @@ public:
   virtual quint16 getLocalPort() const { return mpTcpSocket->localPort(); }
   virtual QString getHostAddress() const { return mTcpHostAddress.toString(); }
   virtual quint16 getHostPort() const { return mTcpHostPort; }
+  virtual transferProtocol getProtocol() const {return mProtocol;}
 	virtual QByteArray getUpload(int) const;  
 	virtual int getUploadId( int ) const;
 	virtual double getUploadStatus( int ) const;
@@ -50,6 +51,7 @@ public:
   virtual void setMaximumUploadPayloadSize( int );
   virtual void setTcpHostAddress(const QString iA) {mTcpHostAddress = iA;}
   virtual void setTcpHostPort(const quint16 iP) {mTcpHostPort = iP;}
+  virtual void setProtocol( transferProtocol p ) { mProtocol = p; }
   virtual void send( const QByteArray& );
 
 signals:
@@ -88,6 +90,7 @@ protected:
   mutable std::vector< Transfer > mDownloads;
   static int mUploadId;
   int mUploadIndex;
+  transferProtocol mProtocol;
 };
 
 }//network
