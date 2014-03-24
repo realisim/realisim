@@ -1,0 +1,2 @@
+ADD_SUBDIRECTORY( echoClient )
+ADD_SUBDIRECTORY( echoServer )
