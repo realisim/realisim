@@ -150,7 +150,7 @@ void Viewer::drawActor( const Actor& iA )
     const vector<Intersection2d>& intersections = iA.getIntersections();
     for( size_t i = 0; i < intersections.size(); ++i )
     {
-      for( int j = 0; j < intersections[i].getNumberOfPoints(); ++j )
+      for( int j = 0; j < intersections[i].getNumberOfIntersections(); ++j )
       {
         glBegin( GL_POINTS );
         glVertex2dv( intersections[i].getPoint(j).getPtr() );
@@ -375,6 +375,7 @@ void Viewer::drawMenu()
   
   
 //--------
+glDisable( GL_DEPTH_TEST );
 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 static int _rx = 30;
@@ -389,7 +390,7 @@ Intersection2d _i = intersect( _c, _r );
 glPointSize(2.0);
 glColor3ub( 255, 0, 0);
 
-for( int i = 0; i < _i.getNumberOfPoints(); ++i )
+for( int i = 0; i < _i.getNumberOfIntersections(); ++i )
 {
 	glBegin( GL_POINTS );
   glVertex2dv( _i.getPoint(i).getPtr() );
@@ -491,6 +492,40 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   drawRectangle( r3 );
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }  
+
+//intersection line2d
+{
+  Point2d mp = mEngine.getMousePos();
+  mp.setY( c.getWindowInfo().getHeight() - mp.y() );
+	Line2d l1( Point2d( 0, 10 ), Vector2d( 120, 27 ) );
+  Line2d l2( Point2d( c.getWindowInfo().getWidth() / 2, 
+  	c.getWindowInfo().getHeight() / 2 ), 
+    Vector2d( mp.x() - l2.getPoint().x(), mp.y() - l2.getPoint().y() ) );
+  
+  glColor3ub( 255, 255, 255 );
+  glLineWidth( 1.0 );
+  glBegin(GL_LINES);
+    glVertex2dv( ( l1.getPoint() - 100.0 * l1.getDirection() ).getPtr() );
+    glVertex2dv( ( l1.getPoint() + 100.0 * l1.getDirection() ).getPtr() );
+  glEnd();
+  
+  glLineWidth( 1.0 );
+  glBegin(GL_LINES);
+    glVertex2dv( ( l2.getPoint() - 100.0 * l2.getDirection() ).getPtr() );
+    glVertex2dv( ( l2.getPoint() + 100.0 * l2.getDirection() ).getPtr() );
+  glEnd();  
+  
+  Intersection2d inter = intersect( l1, l2 );
+  if( inter.hasIntersections() )
+  {
+  	glColor3ub( 255, 0, 0 );
+    glPointSize( 4.0 );
+    glBegin(GL_POINTS);
+    glVertex2dv( inter.getPoint(0).getPtr() );
+    glEnd();
+    glPointSize( 1.0 );
+  }
+}
 
 glColor3ub( 255, 255, 255);
 //--------  
