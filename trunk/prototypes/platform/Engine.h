@@ -24,7 +24,9 @@ public:
   Actor& operator=( const Actor& );
   virtual ~Actor();
   
-  enum state{ sIdle, sWalking, sRunning, sFalling, sJumping, sHit };
+  enum state{ sIdle, sWalking, sRunning, sFalling, sJumping, sHit,
+    sPushingLeft, sPushingRight, sHittingCeiling, sBouncingLeft,
+    sBouncingRight };
   
   virtual void addIntersection( const Intersection2d& );
   virtual void clearIntersections();
@@ -205,7 +207,6 @@ virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual void mouseWheelMoved( double );
   virtual void newStage( QString, int, int );
   virtual void registerClient( Client* );
-  virtual void resolveCollision( Actor&, Intersection2d& );
   virtual void saveStage( QString );
   virtual void setCurrentLayer( int );
   virtual void setEditingTool( Stage::cellType iCt ) {mEditingTool = iCt;}
@@ -239,6 +240,7 @@ protected:
 	virtual void addError( QString ) const;
   virtual void afterCollision( Actor& );
   virtual void applyPhysics( Actor& );
+  virtual vector<Rectangle> getCollisionRectangles( const Actor&, Stage::cellType );
   virtual double getMouseWheelDelta(bool = true);
   virtual void goToState( state );
   virtual void handleActorInput( Actor& );

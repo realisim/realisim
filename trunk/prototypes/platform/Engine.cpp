@@ -657,6 +657,51 @@ QString Engine::getAndClearLastErrors() const
 }
 
 //------------------------------------------------------------------------------
+vector<Rectangle> Engine::getCollisionRectangles( const Actor& iA,
+	Stage::cellType iCt )
+{
+	vector<Rectangle> r;
+  const Vector2d bbSize = iA.getBoundingBox().size();
+  int kernel = max( bbSize.x(), bbSize.y() ) / 
+  	max( mStage.getCellSize().x(), mStage.getCellSize().y() ) * 3;
+  if( kernel % 2 == 0 ) ++kernel; //kernel ne doit pas etre pair
+  vector<int> cells = mStage.getCellIndices( iA.getPosition(), Vector2i(kernel) );
+  
+  //pour chaque lignes
+  for(int j = 0; j < kernel; ++j)
+  {
+  	int lastI = -5;
+    int count = 0;
+    int index;
+  	for(int i = 0; i < kernel; ++i)
+  	{
+    	index = j * kernel + i;
+  		if( index < (int)cells.size() && mStage.value( cells[ index ] ) == iCt )
+      {
+      	if( i == lastI + 1 )
+        {
+          lastI = i;
+        	++count;
+        	r[ r.size() - 1 ].setWidth( count * mStage.getCellSize().x() );
+        }
+        else 
+        {
+          lastI = i;
+          count = 1;
+          Vector2i cellPixelCoordinate = mStage.getCellPixelCoordinate( 
+          	cells[ index ] );
+          Rectangle cellRect( toPoint(cellPixelCoordinate), mStage.getCellSize() );
+          r.push_back( cellRect );
+        }
+      }
+  	}
+  }
+  
+  //pour chaque colonnes
+  return r;
+}
+
+//------------------------------------------------------------------------------
 int Engine::getCurrentLayer() const
 { return mCurrentLayer; }
 
@@ -862,12 +907,10 @@ void Engine::handleActorCollisions( Actor& iA )
       if( z.hasIntersections() )
       {
 				iA.addIntersection( z );
- 				//resolveCollision( iA, z );
         iA.setState( Actor::sHit );
       }
     }
   }
-//  afterCollision(iA);
 }
 
 //------------------------------------------------------------------------------
@@ -920,6 +963,8 @@ void Engine::handleEditing()
   if( isKeyPressed( Qt::Key_D ) ) d += Vector2d(5, 0);
   if( isKeyPressed( Qt::Key_W ) ) d += Vector2d(0, 5);
   if( isKeyPressed( Qt::Key_S ) ) d -= Vector2d(0, 5);
+  
+  //handleMapCollisions();
   
   //application de la gravité
   //d += Vector2d(0.0, -2);
@@ -1009,37 +1054,37 @@ void Engine::handleMapCollisions( Actor& iA )
   //verification des collisions
   //on flush les collisions précedentes de l'acteur
   iA.clearIntersections();
-  const Vector2d bbSize = iA.getBoundingBox().size();
-  int iKernel = max( bbSize.x(), bbSize.y() ) / 
-  	max( mStage.getCellSize().x(), mStage.getCellSize().y() ) * 3;
-  vector<int> cells = mStage.getCellIndices( iA.getPosition(), Vector2i(iKernel) );
-  //bool isOnGround = false;
   
-  const Vector2d accel = iA.getAcceleration();
-//  Point2d pos = iA.getPosition();
-//  Vector2d vel = iA.getVelocity();
-  for( size_t i = 0; i < cells.size(); ++i )
+  vector<Rectangle> agg = getCollisionRectangles( iA, Engine::Stage::ctGround );
+  
+  for( size_t i = 0; i < agg.size(); ++i )
   {
-    if( mStage.value( cells[i] ) == Engine::Stage::ctGround )
-    {
-    	Vector2i cellPixelCoordinate = mStage.getCellPixelCoordinate( cells[i] );
-    	Rectangle cellRect( toPoint(cellPixelCoordinate), mStage.getCellSize() );
-			Rectangle playerRect = iA.getBoundingBox();
+    Rectangle playerRect = iA.getBoundingBox();
 
-      Intersection2d intersection = intersect( playerRect, cellRect );
-      if( intersection.hasIntersections() )
-      {
-      	intersection.add( toPoint(cellPixelCoordinate) + 
-          getStage().getCellSize() / 2.0 , Vector2d( 0.0, 1.0 ) );
-//    printf(" playerRect %f, %f \n", playerRect.bottomLeft().x(), playerRect.bottomLeft().y());
-//    printf(" cellRect %f, %f \n", cellRect.bottomLeft().x(), cellRect.bottomLeft().y());
-//    printf(" intersection %f, %f \n", intersection.getPoint(0).x(), intersection.getPoint(0).y());
-        iA.addIntersection( intersection );      	
-        resolveCollision( iA, intersection );
+    Intersection2d intersection = intersect( playerRect, agg[i] );
+    if( intersection.hasIntersections() )
+    {
+      intersection.add( agg[i].getCenter() );
+      iA.addIntersection( intersection );
+      
+      Point2d pos = iA.getPosition();
+      Vector2d v = iA.getVelocity();
+      Vector2d penetration = intersection.getPenetration();
+      Vector2d displacement;
+      if( fabs(penetration.x()) <= fabs(penetration.y()) ) 
+      { 
+      	displacement.set( penetration.x(), 0.0 );
+        iA.setVelocity( Vector2d( 0.0, v.y() ) );
       }
+      else 
+      { 
+        displacement.set( 0.0, penetration.y() );
+        iA.setVelocity( Vector2d( v.x(), 0.0 ) );
+      }
+      iA.setPosition( pos - displacement );
     }
   }
-  afterCollision( iA );
+  afterCollision(iA);
 }
 
 //------------------------------------------------------------------------------
@@ -1341,32 +1386,6 @@ void Engine::registerClient( Client* ipC )
   	mClients.push_back( ipC );
 }
 
-//------------------------------------------------------------------------------
-void Engine::resolveCollision( Actor& iA, Intersection2d& iI )
-{
-  Point2d pos = iA.getPosition();
-  Vector2d vel = iA.getVelocity();
-  //on déplace le joueur si la penetratrion est de plus de 1 pixel
-  Vector2d displacement;
-  Vector2d penetration = iI.getPenetration();
-  
-  if( abs(penetration.x()) <= abs(penetration.y()) )
-  {
-    if( abs( penetration.y() ) >= 1.0 )
-    {
-      displacement.set( penetration.x(), 0.0 );
-      vel.setX( 0.0 );
-    }
-  }
-  else //if( abs( penetration.y() ) >= 0.5 )
-  {
-    displacement.set( 0.0, penetration.y() );
-    vel.setY( 0.0 );
-  }        
-  pos = pos - displacement;
-  iA.setPosition( pos );
-  iA.setVelocity( vel );
-}
 //------------------------------------------------------------------------------
 void Engine::saveStage( QString iPath )
 { utils::toFile( iPath, getStage().toBinary() ); }  
