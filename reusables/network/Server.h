@@ -59,14 +59,12 @@ public:
   
 signals:
 	void errorRaised() const;
-	void downloadStarted( int, int );
 	void downloadEnded( int, int );
 	void gotPacket( int, int );
 	void sentPacket( int, int );
   void socketConnected( int );
   void socketDisconnected( int );
 	void uploadEnded( int, int );
-	void uploadStarted( int, int );
 
 
 protected slots:

@@ -244,10 +244,7 @@ void Server::handleReadBuffer( int iSocketIndex )
         {
           Transfer t = readUploadHeader( p );
           if( t.mIsValid )
-          {
-            vt.push_back( t );
-            emit downloadStarted( iSocketIndex, downloadId );
-          }  
+          { vt.push_back( t ); }  
         }
         else
         {
@@ -275,6 +272,7 @@ void Server::handleSocketBytesWritten( qint64 iNumberOfBytesWritten )
     {
       vector< Transfer >& vt = mUploads[ i ];
       Transfer& t = vt[ mUploadIndices[i] ];
+      
       switch (getProtocol()) 
       {
         case tpRaw:
@@ -392,7 +390,6 @@ void Server::send( int iSocketIndex, const QByteArray& iA )
         t.setPayload( iA, mUploadId++ );
         mUploads[iSocketIndex].push_back( t );
       	s->write( iA );
-        emit uploadStarted( iSocketIndex, t.getId() );
       }break;
       case tpRealisim:
       {
@@ -401,7 +398,6 @@ void Server::send( int iSocketIndex, const QByteArray& iA )
         mUploads[iSocketIndex].push_back( t );
         QByteArray header = makeUploadHeader( t );
         s->write( makePacket( header, t.getId() ) );
-        emit uploadStarted( iSocketIndex, t.getId() );
       }  break;
       default:break;
     }

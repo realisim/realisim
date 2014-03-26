@@ -209,7 +209,6 @@ void Client::handleReadBuffer()
           if( t.mIsValid )
           {
             mDownloads.push_back( t );
-            emit downloadStarted( downloadId );
           }
         }
         else
@@ -277,7 +276,7 @@ void Client::handleSocketDisconnected()
 void Client::handleSocketError(QAbstractSocket::SocketError iError)
 { 
   addError( "Error on socket: " +	network::asString(iError) );
-	emit gotError();
+	emit errorRaised();
 }
 
 //------------------------------------------------------------------------------
@@ -311,19 +310,17 @@ void Client::send( const QByteArray& iA )
   	Transfer t;
     t.setPayload( iA, mUploadId++ );
     mUploads.push_back( t );
+    mUploadIndex = mUploads.size() - 1;
   	switch (getProtocol()) 
     {
 	    case tpRaw:
       { 
       	mpTcpSocket->write( iA );
-        emit uploadStarted( t.getId() );
       }break;
       case tpRealisim:
       {
-        mUploadIndex = mUploads.size() - 1;
         QByteArray header = makeUploadHeader( t );
         mpTcpSocket->write( makePacket( header, t.getId() ) );
-        emit uploadStarted( t.getId() );
       }  break;
       default:break;
     }  
