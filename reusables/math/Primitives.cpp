@@ -161,11 +161,17 @@ void Rectangle::setBottomLeft(const Point2d& iV)
 void Rectangle::setBottomRight(const Point2d& iV)
 { setBottom( iV.y() ); setRight( iV.x() ); }
 //------------------------------------------------------------------------------  
+void Rectangle::setHeight(double iV)
+{ mTopRight.setY( mBottomLeft.y() + iV ); }
+//------------------------------------------------------------------------------  
 void Rectangle::setLeft(double iV)
 { mBottomLeft.setX( iV ); }
 //------------------------------------------------------------------------------  
 void Rectangle::setRight(double iV)
 { mTopRight.setX( iV ); }
+//------------------------------------------------------------------------------  
+void Rectangle::setSize(const Vector2d& iS )
+{ mTopRight = mBottomLeft + iS; }
 //------------------------------------------------------------------------------  
 void Rectangle::setTop(double iV)
 { mTopRight.setY( iV ); }
@@ -175,6 +181,9 @@ void Rectangle::setTopLeft(const Point2d& iV)
 //------------------------------------------------------------------------------  
 void Rectangle::setTopRight(const Point2d& iV)
 { mTopRight = iV; }
+//------------------------------------------------------------------------------  
+void Rectangle::setWidth(double iV)
+{ mTopRight.setX( mBottomLeft.x() + iV ); }
 //------------------------------------------------------------------------------  
 Vector2d Rectangle::size() const
 { return mTopRight - mBottomLeft; }
