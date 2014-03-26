@@ -55,15 +55,13 @@ public:
   virtual void send( const QByteArray& );
 
 signals:
-	void downloadStarted( int );
 	void downloadEnded( int );
-	void gotError();
+	void errorRaised();
 	void gotPacket( int );
 	void sentPacket( int );
   void socketConnected();
   void socketDisconnected();
 	void uploadEnded( int );
-	void uploadStarted( int );
 
 protected slots:
 	virtual void handleSocketConnected();

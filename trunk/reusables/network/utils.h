@@ -22,7 +22,7 @@ namespace network
   QStringList getLocalIpAddresses();
   QString asString(QAbstractSocket::SocketError);
   
-  enum transferProtocol{ tpRaw, tpRealisim, tpWebSocket };
+  enum transferProtocol{ tpRaw, tpRealisim, tpNumberOfProtocols };
    
   class Transfer
   {
