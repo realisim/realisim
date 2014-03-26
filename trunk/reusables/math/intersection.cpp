@@ -14,8 +14,7 @@ namespace math
 //------------------------------------------------------------------------------
 void Intersection2d::add( const Intersection2d& iI )
 {
-	mHasIntersections = true;
-	for( int i = 0; i < iI.getNumberOfPoints(); ++i )
+	for( int i = 0; i < iI.getNumberOfIntersections(); ++i )
   {
   	mPoints.push_back( iI.getPoint(i) );
     mNormals.push_back( iI.getNormal(i) );
@@ -25,7 +24,6 @@ void Intersection2d::add( const Intersection2d& iI )
 //------------------------------------------------------------------------------
 void Intersection2d::add( const Point2d& p )
 {
-	mHasIntersections = true;
 	mPoints.push_back(p);
   mNormals.push_back( Vector2d(0.0) );
 }
@@ -33,7 +31,6 @@ void Intersection2d::add( const Point2d& p )
 //------------------------------------------------------------------------------
 void Intersection2d::add( const Point2d& p, const Vector2d& n )
 {
-	mHasIntersections = true;
 	mPoints.push_back(p);
   mNormals.push_back(n.getUnit());
 }
@@ -41,7 +38,6 @@ void Intersection2d::add( const Point2d& p, const Vector2d& n )
 //------------------------------------------------------------------------------
 void Intersection2d::clear()
 {
-	mHasIntersections = false;
   mPoints.clear();
   mNormals.clear();
 }
@@ -72,11 +68,41 @@ void Intersection2d::clear()
 //Point3d intersect( const Plane& iP, const Line3d& iL )
 //{ return intersect( iL, iP ); }
 
+//------------------------------------------------------------------------------
 bool intersects( const Circle& iA, const Circle& iB )
 {
 	return Vector2d( iA.getCenter(), iB.getCenter() ).norm() <= 
   	( iA.getRadius() + iB.getRadius() );
 }
+
+//------------------------------------------------------------------------------
+bool intersects( const Rectangle& iA, const Rectangle& iB )
+{
+  //intersection en utilisant minkowski
+  BoundingBox2d mink;
+  for( int j = 0; j < 4; j++ )
+    for( int i = 0; i < 4; i++ )
+    {
+      mink.add( toPoint(iB.point(j) - iA.point(i)) );
+    }
+    
+  return mink.contains(Point2d(0.0), true );
+}
+
+//------------------------------------------------------------------------------
+bool intersects( const Line2d& iL1, const Line2d& iL2 )
+{ return intersect( iL1, iL2 ).hasIntersections(); }
+
+//------------------------------------------------------------------------------
+bool intersects( const LineSegment2d& iL1, const LineSegment2d& iL2 )
+{
+  bool r = false;
+	return r;
+}
+
+//------------------------------------------------------------------------------
+Intersection2d intersect( const Circle& c, const LineSegment2d& l)
+{ return intersect( l, c ); }
 
 //------------------------------------------------------------------------------
 /* Considérons le segment de ligne l (AB) et le cercre centré en C 
@@ -141,9 +167,32 @@ Intersection2d intersect( const LineSegment2d& l, const Circle& c)
 }
 
 //------------------------------------------------------------------------------
-Intersection2d intersect( const Circle& c, const LineSegment2d& l)
-{ return intersect( l, c ); }
+Intersection2d intersect( const Line2d& iL1, const Line2d& iL2)
+{
+	Intersection2d r;
+  Point2d p1 = iL1.getPoint(), p2 = iL2.getPoint();
+  Vector2d v1 = iL1.getDirection(), v2 = iL2.getDirection();
+  
+  double s = ( ( (p2.y() - p1.y())*v1.x() ) / v1.y() - p2.x() + p1.x() ) /
+    ( v2.x() - ( v2.y() * v1.x() / v1.y() ) );
+   
+  double t = (p2.x() - p1.x() + s * v2.x()) / v1.x();
+  
+  Point2d i = p1 + t*v1;
+  /*//pour verification i2 == i
+  Point2d i2 = p2 + s*v2;
+  printf( "%f, %f = %f, %f\n", i.x(), i.y(), i2.x(), i2.y() ); */
+  r.add( i );
+  return r;
+}
 
+//------------------------------------------------------------------------------
+Intersection2d intersect( const LineSegment2d& iL1, const LineSegment2d& iL2)
+{
+	Intersection2d r;
+  
+  return r;
+}
   
 //------------------------------------------------------------------------------
 Intersection2d intersect( const Circle& c, const Rectangle& r)
@@ -169,15 +218,7 @@ Intersection2d intersect( const Rectangle& r1, const Rectangle& r2 )
 {
 	Intersection2d r;
   
-	//intersection en utilisant minkowski
-  BoundingBox2d mink;
-  for( int j = 0; j < 4; j++ )
-    for( int i = 0; i < 4; i++ )
-    {
-      mink.add( toPoint(r2.point(j) - r1.point(i)) );
-    }
-    
-  if( mink.contains(Point2d(0.0), true ) )
+	if( intersects( r1, r2 ) )
   {
   	r.add( r1.getCenter() ); //un point bidon...
     

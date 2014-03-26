@@ -12,6 +12,25 @@ namespace math
 {
 
 //------------------------------------------------------------------------------
+class Line2d
+{
+public:
+	Line2d();
+  Line2d( const Point2d& iP, const Vector2d& iD) : mPoint(iP), mDirection(iD) {}
+  virtual ~Line2d() {;}
+  //constructeur copie et assignement par defaut...
+  
+  const Vector2d& getDirection() const { return mDirection; }
+  const Point2d& getPoint() const { return mPoint; }
+  void setDirection( const Vector2d& iD ) { mDirection = iD; }
+  void setPoint( const Point2d& iP) { mPoint = iP; }
+  
+protected:
+	Point2d mPoint;
+  Vector2d mDirection;
+};
+
+//------------------------------------------------------------------------------
 class LineSegment2d
 {
 public:
@@ -81,11 +100,14 @@ public:
   virtual void setBottom(double);
   virtual void setBottomLeft(const Point2d&);
   virtual void setBottomRight(const Point2d&);
+  virtual void setHeight(double);
   virtual void setLeft(double);
   virtual void setRight(double);
+  virtual void setSize( const Vector2d& );
   virtual void setTop(double);
   virtual void setTopLeft(const Point2d&);
   virtual void setTopRight(const Point2d&);
+  virtual void setWidth( double );
   virtual Vector2d size() const;
   virtual double top() const;
   virtual Point2d topLeft() const;
