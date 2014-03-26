@@ -3,7 +3,6 @@
 #ifndef Realisim_Prototypes_Network_Widget_hh
 #define Realisim_Prototypes_Network_Widget_hh
 
-#include "protocol.h"
 #include "network/Client.h"
 #include <QWidget>
 #include <QtGui>
