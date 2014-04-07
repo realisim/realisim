@@ -46,6 +46,7 @@ namespace math
     // --------------- fonction utiles -----------------------------------------
     virtual double dist(const Point2&) const;
     virtual double distSqr(const Point2&) const;
+    virtual Point2& translate( const U&, const U& );
     virtual void minCoord (const Point2&);
     virtual void maxCoord (const Point2&);
     virtual void print() const;
@@ -163,6 +164,15 @@ namespace math
     double y = p.mData[1] - mData[1];
     return (x*x + y*y);
   }
+
+  //----------------------------------------------------------------------------
+  template<class U>
+  Point2<U>& Point2<U>::translate (const U& ix, const U& iy )
+  {
+    setX( x() + ix );
+    setY( y() + iy );
+    return *this;
+  }
   
   //----------------------------------------------------------------------------
   template<class U>
@@ -194,7 +204,7 @@ namespace math
   }
 	//----------------------------------------------------------------------------
   //strictement egale, pour une comparaison un peu plus permissive, voir
-  //mathUtil equal( const Vect<T> &, const Vect<T> &, double )
+  //mathUtil isEqual( const Vect<T> &, const Vect<T> &, double )
   template<class U>
   bool Point2<U>::operator== (const Point2 &point) const
   {
@@ -578,7 +588,7 @@ namespace math
   }
 	//----------------------------------------------------------------------------
   //strictement egale, pour une comparaison un peu plus permissive, voir
-  //mathUtil equal( const Vect<T> &, const Vect<T> &, double )
+  //mathUtil isEqual( const Vect<T> &, const Vect<T> &, double )
   template<class U>
   inline bool Point3<U>::operator== (const Point3 &point) const
   {

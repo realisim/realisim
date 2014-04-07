@@ -37,7 +37,8 @@ Actor::Actor() :
  mAcceleration( 0.0 ),
  mMaximumAcceleration( 800, 800 ),
  mState( sIdle ),
- mIntersections()
+ mIntersections(),
+ mWeapon()
 {}
 //------------------------------------------------------------------------------
 Actor::Actor( const Actor& iA ) : 
@@ -53,7 +54,8 @@ Actor::Actor( const Actor& iA ) :
  mAcceleration( iA.getAcceleration() ),
  mMaximumAcceleration( iA.getMaximumAcceleration() ),
  mState( iA.getState() ),
- mIntersections( iA.getIntersections() )
+ mIntersections( iA.getIntersections() ),
+ mWeapon( iA.getWeapon() )
 {}
 //------------------------------------------------------------------------------
 Actor& Actor::operator=( const Actor& iA )
@@ -71,6 +73,7 @@ Actor& Actor::operator=( const Actor& iA )
   mMaximumAcceleration = iA.getMaximumAcceleration();
   mState = iA.getState();
   mIntersections = iA.getIntersections();
+  mWeapon = iA.getWeapon();
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -87,7 +90,7 @@ const Vector2d& Actor::getAcceleration() const
 //------------------------------------------------------------------------------
 const math::Rectangle Actor::getBoundingBox() const
 {
-	return Rectangle( getPosition() - mBoundingBox.size() / 2,
+	return Rectangle( getPosition() - mBoundingBox.size() / 2.0,
     mBoundingBox.size() ); 
 }
 //------------------------------------------------------------------------------
@@ -123,6 +126,9 @@ Actor::state Actor::getState() const
 //------------------------------------------------------------------------------
 const Vector2d& Actor::getVelocity() const
 { return mVelocity; }
+//------------------------------------------------------------------------------
+const Weapon& Actor::getWeapon() const
+{ return mWeapon; }
 //------------------------------------------------------------------------------
 void Actor::setAcceleration( const Vector2d& iV )
 { mAcceleration = iV; }
@@ -182,6 +188,39 @@ void Actor::setState( state iV )
 void Actor::setVelocity( const Vector2d& iV )
 { mVelocity = iV; }
 //------------------------------------------------------------------------------
+void Actor::setWeapon( const Weapon& iW )
+{ mWeapon = iW; }
+
+//------------------------------------------------------------------------------
+//---Weapon
+//------------------------------------------------------------------------------
+Weapon::Weapon() : mType( tNone )
+{}
+Weapon::Weapon( const Weapon& iW ) :
+mType( iW.getType() )
+{}
+Weapon& Weapon::operator=( const Weapon& iW)
+{
+	mType = iW.getType();
+  return *this;
+}
+
+Weapon::~Weapon()
+{}
+
+//------------------------------------------------------------------------------
+Weapon::type Weapon::getType() const
+{ return mType; }
+//------------------------------------------------------------------------------
+void Weapon::setType(type t)
+{ 
+	mType = t;
+  switch (getType()) 
+  {
+    case tPellet: break;
+    default: break;
+  }
+}
 
 //------------------------------------------------------------------------------
 //---Engine::Stage
@@ -597,8 +636,8 @@ void Engine::afterCollision( Actor& iA )
   
   //friction en x. seulement si il n'y a pas d'input usagé
   //ou changment de direciton
-  bool applyFriction = ! ( (isKeyPressed( Qt::Key_A ) || 
-  	isKeyPressed( Qt::Key_D ) ) ) || 
+  bool applyFriction = ! ( (isKeyPressed( Qt::Key_Left ) || 
+  	isKeyPressed( Qt::Key_Right ) ) ) || 
     accel.x() / fabs(accel.x()) !=  vel.x() / fabs(vel.x());
   if(applyFriction && iA.getState() == Actor::sWalking )
 		vel.setX( vel.x() * 0.8 );
@@ -649,55 +688,16 @@ void Engine::applyPhysics( Actor& iA )
 }
 
 //------------------------------------------------------------------------------
+void Engine::attack( Actor& iA )
+{
+	Weapon w = iA.getWeapon();
+}
+
+//------------------------------------------------------------------------------
 QString Engine::getAndClearLastErrors() const
 {
   QString r = mErrors;
   mErrors.clear();
-  return r;
-}
-
-//------------------------------------------------------------------------------
-vector<Rectangle> Engine::getCollisionRectangles( const Actor& iA,
-	Stage::cellType iCt )
-{
-	vector<Rectangle> r;
-  const Vector2d bbSize = iA.getBoundingBox().size();
-  int kernel = max( bbSize.x(), bbSize.y() ) / 
-  	max( mStage.getCellSize().x(), mStage.getCellSize().y() ) * 3;
-  if( kernel % 2 == 0 ) ++kernel; //kernel ne doit pas etre pair
-  vector<int> cells = mStage.getCellIndices( iA.getPosition(), Vector2i(kernel) );
-  
-  //pour chaque lignes
-  for(int j = 0; j < kernel; ++j)
-  {
-  	int lastI = -5;
-    int count = 0;
-    int index;
-  	for(int i = 0; i < kernel; ++i)
-  	{
-    	index = j * kernel + i;
-  		if( index < (int)cells.size() && mStage.value( cells[ index ] ) == iCt )
-      {
-      	if( i == lastI + 1 )
-        {
-          lastI = i;
-        	++count;
-        	r[ r.size() - 1 ].setWidth( count * mStage.getCellSize().x() );
-        }
-        else 
-        {
-          lastI = i;
-          count = 1;
-          Vector2i cellPixelCoordinate = mStage.getCellPixelCoordinate( 
-          	cells[ index ] );
-          Rectangle cellRect( toPoint(cellPixelCoordinate), mStage.getCellSize() );
-          r.push_back( cellRect );
-        }
-      }
-  	}
-  }
-  
-  //pour chaque colonnes
   return r;
 }
 
@@ -959,10 +959,10 @@ void Engine::handleEditing()
   
   Vector2d d(0.0);
   //input usagé
-  if( isKeyPressed( Qt::Key_A ) ) d -= Vector2d(5, 0);
-  if( isKeyPressed( Qt::Key_D ) ) d += Vector2d(5, 0);
-  if( isKeyPressed( Qt::Key_W ) ) d += Vector2d(0, 5);
-  if( isKeyPressed( Qt::Key_S ) ) d -= Vector2d(0, 5);
+  if( isKeyPressed( Qt::Key_Left ) ) d -= Vector2d(5, 0);
+  if( isKeyPressed( Qt::Key_Right ) ) d += Vector2d(5, 0);
+  if( isKeyPressed( Qt::Key_Up ) ) d += Vector2d(0, 5);
+  if( isKeyPressed( Qt::Key_Down ) ) d -= Vector2d(0, 5);
   
   //handleMapCollisions();
   
@@ -1055,37 +1055,117 @@ void Engine::handleMapCollisions( Actor& iA )
   //on flush les collisions précedentes de l'acteur
   iA.clearIntersections();
   
-  vector<Rectangle> agg = getCollisionRectangles( iA, Engine::Stage::ctGround );
-  
-  for( size_t i = 0; i < agg.size(); ++i )
-  {
-    Rectangle playerRect = iA.getBoundingBox();
+  const Vector2d bbSize = iA.getBoundingBox().size();
+  int kernel = max( bbSize.x(), bbSize.y() ) / 
+  	max( mStage.getCellSize().x(), mStage.getCellSize().y() ) * 3;
+  if( kernel % 2 == 0 ) ++kernel; //kernel ne doit pas etre pair
+  vector<int> cells = mStage.getCellIndices( iA.getPosition(), Vector2i(kernel) );
+  vector< pair<int,Rectangle> > collidingCells;
 
-    Intersection2d intersection = intersect( playerRect, agg[i] );
-    if( intersection.hasIntersections() )
+  for( uint i = 0; i < cells.size(); ++i )
+  {
+  	if( mStage.value( cells[i] ) == Stage::ctGround )
     {
-      intersection.add( agg[i].getCenter() );
-      iA.addIntersection( intersection );
+      //la coordonnée pixel de la cellule
+      Vector2i cpc = mStage.getCellPixelCoordinate( cells[i] );
+      Rectangle cellRect( toPoint(cpc), mStage.getCellSize() );
+      Rectangle aRect = iA.getBoundingBox();
       
-      Point2d pos = iA.getPosition();
-      Vector2d v = iA.getVelocity();
-      Vector2d penetration = intersection.getPenetration();
-      Vector2d displacement;
-      if( fabs(penetration.x()) <= fabs(penetration.y()) ) 
-      { 
-      	displacement.set( penetration.x(), 0.0 );
-        iA.setVelocity( Vector2d( 0.0, v.y() ) );
-      }
-      else 
-      { 
-        displacement.set( 0.0, penetration.y() );
-        iA.setVelocity( Vector2d( v.x(), 0.0 ) );
-      }
-      iA.setPosition( pos - displacement );
+      Intersection2d x = intersect( aRect, cellRect );
+      if( x.hasIntersections() )
+      { collidingCells.push_back( make_pair(cells[i], cellRect) ); }
     }
+  }
+  
+  /*On commence par reglé les collisions directement sous et sur les
+    coté de l'acteur.*/
+  vector< pair<int,Rectangle> >::iterator it = collidingCells.begin();
+  for( ; it != collidingCells.end(); )
+  {
+  	Rectangle aRect = iA.getBoundingBox();
+    Vector2i cc = mStage.getCellCoordinate( it->first );
+    Vector2i pc = mStage.getCellCoordinate( iA.getPosition() );
+    
+    if( pc.x() == cc.x() || pc.y() == cc.y() )
+    {
+      Intersection2d x = intersect( aRect, it->second );
+      if( x.hasIntersections() )
+      {
+        iA.addIntersection( x );
+        
+        Point2d pos = iA.getPosition();
+        Vector2d v = iA.getVelocity();
+        Vector2d penetration = x.getPenetration();
+        
+        if( pc.y() == cc.y())
+        {
+        	penetration.setY( 0.0 );
+          v.setX( 0.0 );
+        }
+        else if( pc.x() == cc.x() )
+        {
+          penetration.setX( 0.0 );
+          v.setY( 0.0 );
+        }       	
+          
+        iA.setPosition( pos - penetration );
+        iA.setVelocity( v );
+        
+        it = collidingCells.erase(it);
+      }
+    }
+    else 
+    { ++it; }
+  }
+  
+  /*Ensuite pour toutes les cellules en collisions qui restent, on parcour
+    a partir du centre de lacteur vers lextérieur.*/
+  int count = 1;
+  while( !collidingCells.empty() )
+  {
+    it = collidingCells.begin();
+    for( ; it != collidingCells.end(); )
+    {      
+      Vector2i cc = mStage.getCellCoordinate( it->first );
+      Vector2i pc = mStage.getCellCoordinate( iA.getPosition() );
+      
+      if( abs(pc.y() - cc.y()) == count || 
+        abs(pc.x() - cc.x()) == count )
+      {
+      	Rectangle aRect = iA.getBoundingBox();
+        Intersection2d x = intersect( aRect, it->second );
+        if( x.hasIntersections() )
+        {
+          iA.addIntersection( x );
+          
+          Point2d pos = iA.getPosition();
+          Vector2d v = iA.getVelocity();
+          Vector2d penetration = x.getPenetration();
+          
+          if( fabs(penetration.x()) <= fabs(penetration.y()) ) 
+          { 
+            penetration.setY( 0.0 );
+            v.set( 0.0, v.y() );
+          }
+          else 
+          { 
+            penetration.setX( 0.0 );
+            v.set( v.x(), 0.0 );
+          }     	
+            
+          iA.setPosition( pos - penetration );
+          iA.setVelocity( v );
+        }
+      	it = collidingCells.erase(it);
+      }
+      else
+      {++it;}
+    }
+		++count;
   }
   afterCollision(iA);
 }
+      
 
 //------------------------------------------------------------------------------
 void Engine::handlePauseMenu()
@@ -1120,12 +1200,14 @@ void Engine::handlePauseMenu()
 void Engine::handlePlayerInput()
 {
   //input usagé
-  if( isKeyPressed( Qt::Key_A ) )
+  if( isKeyPressed( Qt::Key_Left ) )
   { moveLeft( mPlayer ); }
-  if( isKeyPressed( Qt::Key_D ) )
+  if( isKeyPressed( Qt::Key_Right ) )
   { moveRight( mPlayer ); }
-  if( isKeyPressed( Qt::Key_W, true ) )
+  if( isKeyPressed( Qt::Key_Z ) )
   { moveUp( mPlayer ); }
+  if( isKeyPressed( Qt::Key_X, true ) )
+  { attack( mPlayer ); }
   applyPhysics( mPlayer );
   updateSpriteToken( mPlayer );
 }
@@ -1360,9 +1442,12 @@ void Engine::moveUp( Actor& iActor )
   switch ( s ) {
   case Actor::sIdle :
   case Actor::sWalking :
-    v += Vector2d(0, 540);
+    v += Vector2d(0, 400);
     s = Actor::sJumping;
     break;
+  case Actor::sJumping:
+  	v += Vector2d(0, 8);
+  break;
   default: break;
   }
   iActor.setVelocity( v );

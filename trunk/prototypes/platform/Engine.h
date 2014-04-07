@@ -13,9 +13,30 @@
 #include <QTimerEvent>
 namespace realisim { namespace platform { using namespace math; class Actor; } }
 namespace realisim { namespace platform { using namespace math; class Engine; } }
+namespace realisim { namespace platform { using namespace math; class Weapon; } }
 #include "utils/SpriteCatalog.h"
 #include <vector>
 
+//------------------------------------------------------------------------------
+class realisim::platform::Weapon
+{
+public:
+  Weapon();
+  Weapon( const Weapon& );
+  Weapon& operator=( const Weapon& );
+  virtual ~Weapon();
+  
+  enum type{ tNone, tPellet };
+  
+  virtual type getType() const;
+  virtual void setType(type t);
+  
+protected:
+	type mType;
+};
+
+
+//------------------------------------------------------------------------------
 class realisim::platform::Actor
 {
 public:
@@ -43,6 +64,7 @@ public:
   virtual QString getSpriteToken() const;
   virtual state getState() const;
   virtual const Vector2d& getVelocity() const;
+  virtual const Weapon& getWeapon() const;
   virtual void setAcceleration( const Vector2d& );
   virtual void setBoundingBox( const Rectangle& );
   virtual void setBoundingCircle( const Circle& );
@@ -54,7 +76,8 @@ public:
   virtual void setSpriteName( QString );
   virtual void setSpriteToken( QString );
   virtual void setState( state );
-  virtual void setVelocity( const Vector2d& );  
+  virtual void setVelocity( const Vector2d& );
+  virtual void setWeapon( const Weapon& );
   
 protected:
 	QString mName;
@@ -71,8 +94,10 @@ protected:
   state mState;
   vector<Intersection2d> mIntersections;
   QTime mHitTimer;
+  Weapon mWeapon;
 };
 
+//------------------------------------------------------------------------------
 class realisim::platform::Engine : public QObject
 {
 	Q_OBJECT
@@ -240,7 +265,7 @@ protected:
 	virtual void addError( QString ) const;
   virtual void afterCollision( Actor& );
   virtual void applyPhysics( Actor& );
-  virtual vector<Rectangle> getCollisionRectangles( const Actor&, Stage::cellType );
+	virtual void attack( Actor& );
   virtual double getMouseWheelDelta(bool = true);
   virtual void goToState( state );
   virtual void handleActorInput( Actor& );

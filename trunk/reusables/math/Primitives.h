@@ -34,7 +34,7 @@ protected:
 class LineSegment2d
 {
 public:
-  LineSegment2d();
+  LineSegment2d() {;}
   LineSegment2d( const Point2d& iA, const Point2d& iB ) : mA(iA), mB(iB) {}
   LineSegment2d( const LineSegment2d& l) : mA( l.mA ), mB(l.mB) {}
   LineSegment2d& operator=( const LineSegment2d& iL ) 

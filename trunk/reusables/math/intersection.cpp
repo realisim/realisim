@@ -76,6 +76,18 @@ bool intersects( const Circle& iA, const Circle& iB )
 }
 
 //------------------------------------------------------------------------------
+bool intersects( const Line2d& iL1, const Line2d& iL2 )
+{ return intersect( iL1, iL2 ).hasIntersections(); }
+
+//------------------------------------------------------------------------------
+bool intersects( const LineSegment2d& iL1, const LineSegment2d& iL2 )
+{ return intersect(iL1, iL2).hasIntersections() ; }
+
+//------------------------------------------------------------------------------
+bool intersects( const LineSegment2d& iL, const Rectangle& iR )
+{ return intersect(iL, iR).hasIntersections() ; }
+
+//------------------------------------------------------------------------------
 bool intersects( const Rectangle& iA, const Rectangle& iB )
 {
   //intersection en utilisant minkowski
@@ -86,19 +98,13 @@ bool intersects( const Rectangle& iA, const Rectangle& iB )
       mink.add( toPoint(iB.point(j) - iA.point(i)) );
     }
     
-  return mink.contains(Point2d(0.0), true );
+  return mink.contains(Point2d(0.0), false );
 }
 
 //------------------------------------------------------------------------------
-bool intersects( const Line2d& iL1, const Line2d& iL2 )
-{ return intersect( iL1, iL2 ).hasIntersections(); }
+bool intersects( const Rectangle& iR, const LineSegment2d& iL )
+{ return intersect(iR, iL).hasIntersections() ; }
 
-//------------------------------------------------------------------------------
-bool intersects( const LineSegment2d& iL1, const LineSegment2d& iL2 )
-{
-  bool r = false;
-	return r;
-}
 
 //------------------------------------------------------------------------------
 Intersection2d intersect( const Circle& c, const LineSegment2d& l)
@@ -173,11 +179,37 @@ Intersection2d intersect( const Line2d& iL1, const Line2d& iL2)
   Point2d p1 = iL1.getPoint(), p2 = iL2.getPoint();
   Vector2d v1 = iL1.getDirection(), v2 = iL2.getDirection();
   
-  double s = ( ( (p2.y() - p1.y())*v1.x() ) / v1.y() - p2.x() + p1.x() ) /
-    ( v2.x() - ( v2.y() * v1.x() / v1.y() ) );
-   
-  double t = (p2.x() - p1.x() + s * v2.x()) / v1.x();
+  //TODO quoi faire quand les lignes sont paralleles
   
+  double s = 0.0, t = 0.0;
+  if( isEqual(v1.x(), 0.0) )
+  {
+  	s = -( p2.x() - p1.x() ) / v2.x();
+    t = ( p2.y() - p1.y() + s*v2.y() ) / v1.y();
+  }
+  else if( isEqual( v1.y(), 0.0 ) )
+  {
+    s = -( p2.y() - p1.y() ) / v2.y();
+    t = ( p2.x() - p1.x() + s*v2.x() ) / v1.x();
+  }
+  else if( isEqual( v2.x(), 0.0 ) )
+  {
+    t = ( p2.x() - p1.x() ) / v1.x();
+    s = -( p2.y() - p1.y() - t*v1.y() ) / v2.y();
+  }
+  else if( isEqual( v2.y(), 0.0 ) )
+  {
+    t = ( p2.y() - p1.y() ) / v1.y();
+    s = -( p2.x() - p1.x() - t*v1.x() ) / v2.x();
+  }
+  else 
+  {
+    s = ( ( (p2.y() - p1.y())*v1.x() ) / v1.y() - p2.x() + p1.x() ) /
+    	( v2.x() - ( v2.y() * v1.x() / v1.y() ) );
+  	t = (p2.x() - p1.x() + s * v2.x()) / v1.x();
+  }
+
+
   Point2d i = p1 + t*v1;
   /*//pour verification i2 == i
   Point2d i2 = p2 + s*v2;
@@ -190,6 +222,42 @@ Intersection2d intersect( const Line2d& iL1, const Line2d& iL2)
 Intersection2d intersect( const LineSegment2d& iL1, const LineSegment2d& iL2)
 {
 	Intersection2d r;
+  Line2d l1( iL1.a(), iL1.b() - iL1.a() ), l2( iL2.a(), iL2.b() - iL2.a() );
+  
+  r = intersect( l1, l2 );
+  if( r.hasIntersections() )
+  {
+  	/*on s'assure que le point d'intersection est bien sur les 2 segements.
+      La projection v2 sur v1 doit etre supérieur a 0 et la norme de v1 plus
+      grande que la norme de v2.*/
+    Point2d i = r.getPoint(0);
+
+		Vector2d v1( iL1.a(), iL1.b() ), v2( iL1.a(), i );
+    double pv1 = v2 * v1;
+    bool n1 = v1.norm() >= v2.norm();
+    v1.set( iL2.a(), iL2.b() );
+    v2.set( iL2.a(), i );
+    double pv2 = v2 * v1;
+    bool n2 = v1.norm() >= v2.norm(); 
+    if( !( pv1 >= 0 && pv2 >= 0 && n1 && n2 ) ) { r.clear() ; }
+  }
+  return r;
+}
+
+//------------------------------------------------------------------------------
+Intersection2d intersect( const LineSegment2d& iL, const Rectangle& iR)
+{
+	Intersection2d r, x;
+  LineSegment2d ls0, ls1, ls2, ls3;
+  ls0.set( iR.bottomLeft(), iR.bottomRight() );
+  ls1.set( iR.bottomRight(), iR.topRight() );
+  ls2.set( iR.topRight(), iR.topLeft() );
+  ls3.set( iR.topLeft(), iR.bottomLeft() );
+  
+  r.add( intersect(iL, ls0) );
+  r.add( intersect(iL, ls1) );
+  r.add( intersect(iL, ls2) );
+  r.add( intersect(iL, ls3) );
   
   return r;
 }
@@ -214,6 +282,10 @@ Intersection2d intersect( const Rectangle& r, const Circle& c )
 { return intersect( c, r ); }
 
 //------------------------------------------------------------------------------
+Intersection2d intersect( const Rectangle& r, const LineSegment2d& l )
+{ return intersect( l, r ); }
+
+//------------------------------------------------------------------------------
 Intersection2d intersect( const Rectangle& r1, const Rectangle& r2 )
 {
 	Intersection2d r;
@@ -221,6 +293,7 @@ Intersection2d intersect( const Rectangle& r1, const Rectangle& r2 )
 	if( intersects( r1, r2 ) )
   {
   	r.add( r1.getCenter() ); //un point bidon...
+    r.add( r2.getCenter() ); //point intersection bidon.
     
     double olx = axisOverLap( r1.bottomLeft().x(), r1.bottomRight().x(),
      r2.bottomLeft().x(), r2.bottomRight().x() );

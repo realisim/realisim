@@ -53,14 +53,18 @@ namespace math
 	bool intersects( const Circle&, const Circle& );
   bool intersects( const Line2d&, const Line2d& );
   bool intersects( const LineSegment2d&, const LineSegment2d& );
+  bool intersects( const LineSegment2d&, const Rectangle& );
   bool intersects( const Rectangle&, const Rectangle& );
+  bool intersects( const Rectangle&, const LineSegment2d& );
 
 	Intersection2d intersect( const Circle&, const LineSegment2d& );
-  Intersection2d intersect( const LineSegment2d&, const Circle& );
   Intersection2d intersect( const Line2d&, const Line2d& );
+  Intersection2d intersect( const LineSegment2d&, const Circle& );
   Intersection2d intersect( const LineSegment2d&, const LineSegment2d& );
+  Intersection2d intersect( const LineSegment2d&, const Rectangle& );
   Intersection2d intersect( const Circle&, const Rectangle& );
   Intersection2d intersect( const Rectangle&, const Circle& );
+  Intersection2d intersect( const Rectangle&, const LineSegment2d& );
   Intersection2d intersect( const Rectangle&, const Rectangle& );
   double axisOverLap( double, double, double, double, double* = 0, double* = 0 );
 } //math

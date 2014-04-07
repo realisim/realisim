@@ -94,6 +94,15 @@ void drawLine( const Point2d& ip1, const Point2d& ip2 )
 }
 
 //------------------------------------------------------------------------------
+void drawPoint(const Point2d& iP, double iPointSize /*= 1.0*/)
+{
+	glPointSize( iPointSize );
+  glBegin(GL_POINTS);
+  glVertex2dv( iP.getPtr() );
+  glEnd();
+}
+  
+//------------------------------------------------------------------------------
 /*dessine un rectangle dans le plan xy.*/
 void drawRectangle( const Rectangle& iR )
 {
