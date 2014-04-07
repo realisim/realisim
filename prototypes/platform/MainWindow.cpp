@@ -145,16 +145,14 @@ void Viewer::drawActor( const Actor& iA )
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     
     //dessine les intersections entre le joueur et le terrain
-    glColor3ub( 255, 255, 0);
+    glColor3ub( 255, 0, 0);
     glPointSize(2.0);
     const vector<Intersection2d>& intersections = iA.getIntersections();
     for( size_t i = 0; i < intersections.size(); ++i )
     {
       for( int j = 0; j < intersections[i].getNumberOfIntersections(); ++j )
       {
-        glBegin( GL_POINTS );
-        glVertex2dv( intersections[i].getPoint(j).getPtr() );
-        glEnd();
+      	drawPoint( intersections[i].getPoint(j), 4 );
         
         //normal
         Point2d n = intersections[i].getPoint(j) + intersections[i].getNormal(j) * 10;
@@ -524,6 +522,49 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glVertex2dv( inter.getPoint(0).getPtr() );
     glEnd();
     glPointSize( 1.0 );
+  }
+}
+
+//intersection segment 2d
+{
+	static int t=0;
+  t++;
+	Point2d mp = mEngine.getMousePos();
+  mp.setY( c.getWindowInfo().getHeight() - mp.y() );
+  Point3d a(200, 400, 0), b(200,500,0), c( 200, 450,0);
+  Point3d ra = rotatePoint( t%360 * kDegreeToRadian, a, Vector3d(0.0, 0.0, 1.0),
+  	c );
+  Point3d rb = rotatePoint( t%360 * kDegreeToRadian, b, Vector3d(0.0, 0.0, 1.0),
+  	c );
+	LineSegment2d ls1( Point2d(ra.getX(), ra.getY()), Point2d(rb.getX(), rb.getY()) );
+  Rectangle r( Point2d(50, 400), Vector2d(100, 200) );
+  LineSegment2d lsUser1( mp, toPoint(mp + Point2d( 0, 100 )) );
+  LineSegment2d lsUser2( mp, toPoint(mp + Point2d( 100, 0 )) );
+  
+  
+  glColor3ub(10, 255, 10);
+  drawLine( ls1.a(), ls1.b() );
+  drawLine( lsUser1.a(), lsUser1.b() );
+  drawLine( lsUser2.a(), lsUser2.b() );
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  drawRectangle( r );
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  
+  Intersection2d x = intersect( lsUser1, ls1 );
+  x.add( intersect( lsUser2, ls1 ) );
+  if( x.hasIntersections() )
+  {
+  	glColor3ub( 255, 0, 0 );
+    drawPoint( x.getPoint(0), 4 );
+  }
+  
+  x = intersect(lsUser1, r);
+  x.add( intersect( lsUser2, r ) );
+  if( x.hasIntersections() )
+  {
+  	glColor3ub( 255, 0, 0 );
+    for( int i = 0; i < x.getNumberOfIntersections(); ++i)
+    	drawPoint( x.getPoint(i), 4 );
   }
 }
 
