@@ -4,97 +4,161 @@
 #define realisim_platform_engine_hh
 
 #include "3d/Camera.h"
+#include "3d/Sprite.h"
 #include "Math/BoundingBox.h"
 #include "Math/intersection.h"
 #include "Math/Vect.h"
+#include "Math/Point.h"
 #include <map>
 #include <QObject>
 #include <QImage>
 #include <QTimerEvent>
 namespace realisim { namespace platform { using namespace math; class Actor; } }
-namespace realisim { namespace platform { using namespace math; class Engine; } }
-namespace realisim { namespace platform { using namespace math; class Weapon; } }
+namespace realisim { namespace platform { using namespace treeD; class Animation; } }
+namespace realisim { namespace platform { class BaseActor; } }
+namespace realisim { namespace platform { class Engine; } }
+namespace realisim { namespace platform { class Projectile; } }
+namespace realisim { namespace platform { class Weapon; } }
 #include "utils/SpriteCatalog.h"
 #include <vector>
+
+class realisim::platform::Animation
+{
+public:
+	Animation() {;}
+  virtual ~Animation() {;}
+  
+  Point2d getPosition() const {return mPosition;}
+  Sprite getSprite() const {return mSprite;}
+  bool isDone() const { return mSprite.isAnimationDone(); }
+  void setPosition( const Point2d& p) {mPosition = p;}
+  void setSprite( const Sprite& s ) {mSprite = s;} 
+protected:
+	Point2d mPosition;
+  Sprite mSprite;
+};
+
+//------------------------------------------------------------------------------
+class realisim::platform::BaseActor
+{
+public:
+	BaseActor();
+  virtual ~BaseActor() = 0;
+  
+  virtual void addIntersection( const Intersection2d& );
+  virtual void applyGravity(bool i) {mIsGravityApplied = i;}
+  virtual void clearIntersections();
+  virtual const Vector2d& getAcceleration() const;
+  virtual const Rectangle getBoundingBox() const;
+  virtual const Circle getBoundingCircle() const;
+  virtual Intersection2d getIntersection(int i) const {return mIntersections[i];}
+//  virtual const vector<Intersection2d>& getIntersections() const;
+  virtual const Vector2d& getMaximumAcceleration() const;
+  virtual const Vector2d& getMaximumVelocity() const;  
+  virtual int getNumberOfIntersections() const {return mIntersections.size();}
+  virtual const Point2d& getPosition() const;
+  virtual QString getSpriteName() const;
+  virtual QString getSpriteToken() const;
+  virtual const Vector2d& getVelocity() const;
+  virtual bool hasIntersections() const;
+  virtual bool isGravityApplied() const {return mIsGravityApplied;}
+  virtual void setAcceleration( const Vector2d& );
+  virtual void setBoundingBox( const Rectangle& );
+  virtual void setBoundingCircle( const Circle& );
+  virtual void setMaximumAcceleration( const Vector2d& );
+  virtual void setMaximumVelocity( const Vector2d& );
+  virtual void setPosition( const Point2d& );
+  virtual void setSpriteName( QString );
+  virtual void setSpriteToken( QString );
+  virtual void setVelocity( const Vector2d& );
+  
+protected:
+  QString mSpriteName;
+  QString mSpriteToken;
+  Rectangle mBoundingBox;
+  Circle mBoundingCircle;
+  Point2d mPosition;
+  Vector2d mVelocity;
+  Vector2d mMaximumVelocity;
+  Vector2d mAcceleration;
+  Vector2d mMaximumAcceleration;
+  vector<Intersection2d> mIntersections;
+  bool mIsGravityApplied;
+};
 
 //------------------------------------------------------------------------------
 class realisim::platform::Weapon
 {
 public:
   Weapon();
-  Weapon( const Weapon& );
-  Weapon& operator=( const Weapon& );
   virtual ~Weapon();
   
   enum type{ tNone, tPellet };
   
+  virtual bool canFire() const;
+  virtual Projectile fire( const Vector2d& );
+  virtual double getFireRate() const;
   virtual type getType() const;
+  virtual void setFireRate( double );
   virtual void setType(type t);
   
 protected:
 	type mType;
+  QTime mLastFire;
+  double mFireRate;
 };
 
+//------------------------------------------------------------------------------
+class realisim::platform::Projectile : public realisim::platform::BaseActor
+{
+public:
+  Projectile();
+  virtual ~Projectile();
+  
+  virtual double getDamage() const { return mDamage; }
+  virtual QString getExplosionToken() const;
+  virtual Weapon::type getType() const {return mType;}
+  virtual void setDamage( double d ) { mDamage = d; }
+  virtual void setType( Weapon::type t);
+//  virtual int getRemainingLife() const;
+//  virtual void getLifeSpan() const;
+//  virtual void setLifeSpan( int );
+  
+protected:
+	Weapon::type mType;
+  double mDamage;
+//	QTime mStart;
+//  int mLifeSpan; //ms
+};
 
 //------------------------------------------------------------------------------
-class realisim::platform::Actor
+class realisim::platform::Actor : public BaseActor
 {
 public:
 	Actor();
-  Actor( const Actor& );
-  Actor& operator=( const Actor& );
   virtual ~Actor();
   
   enum state{ sIdle, sWalking, sRunning, sFalling, sJumping, sHit,
-    sPushingLeft, sPushingRight, sHittingCeiling, sBouncingLeft,
-    sBouncingRight };
+    sPushingLeft, sPushingRight, sHittingCeiling };
   
-  virtual void addIntersection( const Intersection2d& );
-  virtual void clearIntersections();
-  virtual const Vector2d& getAcceleration() const;
-  virtual const Rectangle getBoundingBox() const;
-  virtual const Circle getBoundingCircle() const;
+  virtual Vector2d getAimingDirection() const {return mAimingDirection;}
   virtual double getHealth() const;
-  virtual const vector<Intersection2d>& getIntersections() const;
-  virtual const Vector2d& getMaximumAcceleration() const;
-  virtual const Vector2d& getMaximumVelocity() const;  
   virtual QString getName() const;
-  virtual const Point2d& getPosition() const;
-  virtual QString getSpriteName() const;
-  virtual QString getSpriteToken() const;
   virtual state getState() const;
-  virtual const Vector2d& getVelocity() const;
   virtual const Weapon& getWeapon() const;
-  virtual void setAcceleration( const Vector2d& );
-  virtual void setBoundingBox( const Rectangle& );
-  virtual void setBoundingCircle( const Circle& );
+  virtual void setAimingDirection( const Vector2d& d ) {mAimingDirection = d;}
   virtual void setHealth( double );
-  virtual void setMaximumAcceleration( const Vector2d& );
-  virtual void setMaximumVelocity( const Vector2d& );
   virtual void setName( QString );
-  virtual void setPosition( const Point2d& );
-  virtual void setSpriteName( QString );
-  virtual void setSpriteToken( QString );
   virtual void setState( state );
-  virtual void setVelocity( const Vector2d& );
   virtual void setWeapon( const Weapon& );
   
 protected:
 	QString mName;
-  QString mSpriteName;
-  QString mSpriteToken;  
-  Rectangle mBoundingBox;
-  Circle mBoundingCircle;
   double mHealth;
-  Point2d mPosition;
-  Vector2d mVelocity;
-  Vector2d mMaximumVelocity;
-  Vector2d mAcceleration;
-  Vector2d mMaximumAcceleration;
   state mState;
-  vector<Intersection2d> mIntersections;
   QTime mHitTimer;
   Weapon mWeapon;
+  Vector2d mAimingDirection;
 };
 
 //------------------------------------------------------------------------------
@@ -205,6 +269,7 @@ virtual QString getBackgroundToken() const;
       static Actor mDummyActor;
   };
   
+  virtual const vector<Animation>& getAnimations() const {return mAnimations;}
   virtual QString getAndClearLastErrors() const;
   virtual configureMenuItem getCurrentConfigureMenuItem() const;
   virtual int getCurrentLayer() const;
@@ -217,12 +282,15 @@ virtual QString getEditingSpriteToken() const { return mEditingSpriteToken; }
   virtual mainMenuItem getCurrentMainMenuItem() const;
   virtual std::vector<QString> getMainMenuItems() const;
   virtual const Point2i& getMousePos() const { return mMousePos; }
+  virtual int getNumberOfProjectiles() const { return mProjectiles.size(); }
   virtual const Player& getPlayer() const { return mPlayer; }
+  virtual const Projectile& getProjectile(int i) const{ return mProjectiles[i]; }
 virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual Stage& getStage() { return mStage; }
   virtual state getState() const { return mState; }
-  virtual std::vector<int> getVisibleCells() const;
+  virtual const std::vector<int>& getVisibleCells() const;
   virtual bool hasError() const;
+  virtual bool isVisible( const BaseActor& ) const;
   virtual void keyPressed( int );
   virtual void keyReleased( int );
   virtual void loadStage( QString );
@@ -261,21 +329,27 @@ protected:
   int mCurrentLayer;
   QString mEditingSpriteToken;
   QString mStageFilePath;
+  std::vector<Projectile> mProjectiles;
+  std::vector<Animation> mAnimations;
+  std::vector<int> mVisibleCells;
 
 	virtual void addError( QString ) const;
   virtual void afterCollision( Actor& );
-  virtual void applyPhysics( Actor& );
-	virtual void attack( Actor& );
+  virtual void applyPhysics( BaseActor& );
+  virtual void attack( Actor& );
+  virtual void computeVisibleCells();
   virtual double getMouseWheelDelta(bool = true);
   virtual void goToState( state );
   virtual void handleActorInput( Actor& );
   virtual void handleActorCollisions();
   virtual void handleActorCollisions( Actor& );
+  virtual void handleActorCollisions( Projectile& );
   virtual void handleConfigureMenu();
   virtual void handleEditing();
   virtual void handleMainMenu();
   virtual void handleMapCollisions();
   virtual void handleMapCollisions(Actor&);
+  virtual void handleMapCollisions(Projectile&);
   virtual void handlePauseMenu();
   virtual void handlePlaying();
   virtual void handlePlayerInput();

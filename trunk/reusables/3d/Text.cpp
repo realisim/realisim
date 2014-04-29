@@ -50,7 +50,7 @@ Text::Text( QString iT /* = "" */ ) : mText( iT ),
   mFrontColor( "white" ),
   mBackgroundColor( 0, 0, 0, 0 ),
   mHasDropShadow( false )
-{}
+{render();}
 
 Text::Text(const Text& iT) : mText( iT.getText() ),
 	mTexture( iT.getTexture() ),
@@ -58,7 +58,7 @@ Text::Text(const Text& iT) : mText( iT.getText() ),
   mFrontColor( iT.getFrontColor() ),
   mBackgroundColor( iT.getBackgroundColor() ),
   mHasDropShadow( iT.hasDropShadow() )
-{}
+{render();}
 
 Text::~Text()
 { }

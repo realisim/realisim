@@ -34,8 +34,8 @@ namespace math
     virtual void add( const Point2d& );
     virtual void add( const Point2d&, const Vector2d& );
     virtual void clear();
-    virtual bool hasIntersections() const { return !mPoints.empty(); }
-    virtual int getNumberOfIntersections() const { return (int)mPoints.size(); }
+    virtual bool hasContacts() const { return !mPoints.empty(); }
+    virtual int getNumberOfContacts() const { return (int)mPoints.size(); }
     virtual Vector2d getPenetration() const { return mPenetration; }
     virtual Point2d getPoint(int i) const { return mPoints[i]; }
     virtual Vector2d getNormal(int i) const { return mNormals[i]; }
