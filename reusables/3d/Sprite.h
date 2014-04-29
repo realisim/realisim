@@ -59,7 +59,9 @@ public:
   virtual const math::Vector2i& getFrameSize() const {return mFrameSize;}
   virtual Texture getTexture() const {return mTexture;}
   virtual math::Vector2d getTranslation() const;
+  virtual bool isAnimationDone() const;
   virtual bool isLooping() const {return mIsLooping;}
+  virtual bool isValid() const;
   virtual void setAnchorPoint(anchor a) { mAnchor = a; }
   virtual void setAnimationDuration(double d) {mAnimationDuration = d;}
   virtual void setAsLooping(bool l) {mIsLooping = l;}

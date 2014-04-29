@@ -14,7 +14,7 @@ namespace math
 //------------------------------------------------------------------------------
 void Intersection2d::add( const Intersection2d& iI )
 {
-	for( int i = 0; i < iI.getNumberOfIntersections(); ++i )
+	for( int i = 0; i < iI.getNumberOfContacts(); ++i )
   {
   	mPoints.push_back( iI.getPoint(i) );
     mNormals.push_back( iI.getNormal(i) );
@@ -77,15 +77,15 @@ bool intersects( const Circle& iA, const Circle& iB )
 
 //------------------------------------------------------------------------------
 bool intersects( const Line2d& iL1, const Line2d& iL2 )
-{ return intersect( iL1, iL2 ).hasIntersections(); }
+{ return intersect( iL1, iL2 ).hasContacts(); }
 
 //------------------------------------------------------------------------------
 bool intersects( const LineSegment2d& iL1, const LineSegment2d& iL2 )
-{ return intersect(iL1, iL2).hasIntersections() ; }
+{ return intersect(iL1, iL2).hasContacts() ; }
 
 //------------------------------------------------------------------------------
 bool intersects( const LineSegment2d& iL, const Rectangle& iR )
-{ return intersect(iL, iR).hasIntersections() ; }
+{ return intersect(iL, iR).hasContacts() ; }
 
 //------------------------------------------------------------------------------
 bool intersects( const Rectangle& iA, const Rectangle& iB )
@@ -103,7 +103,7 @@ bool intersects( const Rectangle& iA, const Rectangle& iB )
 
 //------------------------------------------------------------------------------
 bool intersects( const Rectangle& iR, const LineSegment2d& iL )
-{ return intersect(iR, iL).hasIntersections() ; }
+{ return intersect(iR, iL).hasContacts() ; }
 
 
 //------------------------------------------------------------------------------
@@ -225,7 +225,7 @@ Intersection2d intersect( const LineSegment2d& iL1, const LineSegment2d& iL2)
   Line2d l1( iL1.a(), iL1.b() - iL1.a() ), l2( iL2.a(), iL2.b() - iL2.a() );
   
   r = intersect( l1, l2 );
-  if( r.hasIntersections() )
+  if( r.hasContacts() )
   {
   	/*on s'assure que le point d'intersection est bien sur les 2 segements.
       La projection v2 sur v1 doit etre supérieur a 0 et la norme de v1 plus

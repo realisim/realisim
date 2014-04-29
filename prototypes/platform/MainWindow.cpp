@@ -81,17 +81,17 @@ void Viewer::draw()
       break;
     case Engine::sPlaying:
     {
-      Texture lightMask = renderLights();
+//      Texture lightMask = renderLights();
       drawGame();
-      const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
-      ScreenSpaceProjection ssp( wi.getSize() );
-      {
-        glEnable(GL_BLEND);
-        glColor4ub(15, 255, 255, 80);
-        drawRectangle( lightMask, 
-          Point2d( 0.0 ), wi.getSize() );
-        glDisable(GL_BLEND);
-      }
+//      const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
+//      ScreenSpaceProjection ssp( wi.getSize() );
+//      {
+//        glEnable(GL_BLEND);
+//        glColor4ub(15, 255, 255, 80);
+//        drawRectangle( lightMask, 
+//          Point2d( 0.0 ), wi.getSize() );
+//        glDisable(GL_BLEND);
+//      }
         
       
 //      if( kDebugVisualEffects )
@@ -119,11 +119,11 @@ void Viewer::draw()
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::drawActor( const Actor& iA )
+void Viewer::draw( const BaseActor& iA )
 {
   utils::SpriteCatalog& sc = mEngine.getSpriteCatalog();
   
-  Sprite s = sc.getSprite(iA.getSpriteToken());
+  Sprite s = sc.getSprite( iA.getSpriteToken() );
 
   glDisable( GL_BLEND );
   glPushMatrix();
@@ -147,16 +147,17 @@ void Viewer::drawActor( const Actor& iA )
     //dessine les intersections entre le joueur et le terrain
     glColor3ub( 255, 0, 0);
     glPointSize(2.0);
-    const vector<Intersection2d>& intersections = iA.getIntersections();
-    for( size_t i = 0; i < intersections.size(); ++i )
+    //const vector<Intersection2d>& intersections = iA.getIntersections();
+    for( int i = 0; i < iA.getNumberOfIntersections(); ++i )
     {
-      for( int j = 0; j < intersections[i].getNumberOfIntersections(); ++j )
+    	Intersection2d x = iA.getIntersection(i);
+      for( int j = 0; j < x.getNumberOfContacts(); ++j )
       {
-      	drawPoint( intersections[i].getPoint(j), 4 );
+      	drawPoint( x.getPoint(j), 4 );
         
         //normal
-        Point2d n = intersections[i].getPoint(j) + intersections[i].getNormal(j) * 10;
-        drawLine( intersections[i].getPoint(j), n );
+        Point2d n = x.getPoint(j) + x.getNormal(j) * 10;
+        drawLine( x.getPoint(j), n );
         
 //        //la penetration
 //        drawLine( Point2d( iA.getBoundingBox().bottomLeft().x(), 
@@ -180,6 +181,16 @@ void Viewer::drawActor( const Actor& iA )
   }
 }
 
+//-----------------------------------------------------------------------------
+void Viewer::draw( const Animation& iA )
+{
+  glDisable( GL_BLEND );
+  glPushMatrix();
+  glColor4ub( 255, 255, 255, 255 );
+  glTranslated( iA.getPosition().x(), iA.getPosition().y(), 0.0 );
+  iA.getSprite().draw();
+  glPopMatrix();
+}
 //-----------------------------------------------------------------------------
 void Viewer::drawDataMap()
 {
@@ -288,7 +299,7 @@ void Viewer::drawGame()
   }
   
   //dessine le joueur
-  drawActor( mEngine.getPlayer() );
+  draw( mEngine.getPlayer() );
   if( kDebugCollisions )
   {
     //affiche letat du jouer
@@ -308,8 +319,25 @@ void Viewer::drawGame()
   
   //dessine les autres acteurs
   for( int i = 0; i < stage.getNumberOfActors(); ++i )
-  { drawActor( stage.getActor(i) ); }
+  { 
+  	const Actor& a = stage.getActor(i);
+    if( mEngine.isVisible( a ) )
+    { draw( a ); }
+  }
 
+	//dessine les projectiles
+  for( int i = 0; i < mEngine.getNumberOfProjectiles(); ++i )
+  {
+  	draw( mEngine.getProjectile(i) );
+  }
+	
+  //les animations diverses
+  const vector<Animation>& anims = mEngine.getAnimations();
+  for( int i = 0; i < (int)anims.size(); ++i )
+  {
+  	draw( anims[i] );
+  }
+  
 	cam.popMatrices();
 }
 
@@ -388,7 +416,7 @@ Intersection2d _i = intersect( _c, _r );
 glPointSize(2.0);
 glColor3ub( 255, 0, 0);
 
-for( int i = 0; i < _i.getNumberOfIntersections(); ++i )
+for( int i = 0; i < _i.getNumberOfContacts(); ++i )
 {
 	glBegin( GL_POINTS );
   glVertex2dv( _i.getPoint(i).getPtr() );
@@ -448,7 +476,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   Rectangle r3;
   
   Intersection2d intersection = intersect( r, r2 );
-  if( intersection.hasIntersections() )
+  if( intersection.hasContacts() )
   {
   	glColor3ub( 255, 0, 0 );
   	double px1, px2;
@@ -514,7 +542,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glEnd();  
   
   Intersection2d inter = intersect( l1, l2 );
-  if( inter.hasIntersections() )
+  if( inter.hasContacts() )
   {
   	glColor3ub( 255, 0, 0 );
     glPointSize( 4.0 );
@@ -552,7 +580,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   
   Intersection2d x = intersect( lsUser1, ls1 );
   x.add( intersect( lsUser2, ls1 ) );
-  if( x.hasIntersections() )
+  if( x.hasContacts() )
   {
   	glColor3ub( 255, 0, 0 );
     drawPoint( x.getPoint(0), 4 );
@@ -560,10 +588,10 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   
   x = intersect(lsUser1, r);
   x.add( intersect( lsUser2, r ) );
-  if( x.hasIntersections() )
+  if( x.hasContacts() )
   {
   	glColor3ub( 255, 0, 0 );
-    for( int i = 0; i < x.getNumberOfIntersections(); ++i)
+    for( int i = 0; i < x.getNumberOfContacts(); ++i)
     	drawPoint( x.getPoint(i), 4 );
   }
 }
@@ -774,9 +802,9 @@ MainWindow::MainWindow() : QMainWindow(),
   
   QHBoxLayout* pLyt = new QHBoxLayout(pMainWidget);
   pLyt->setMargin(0);
-  pLyt->setMargin( 0 );
-    
+  pLyt->setMargin( 0 );    
   mpViewer = new Viewer( mEngine, pMainWidget);
+  pLyt->addWidget( mpViewer );
   
   //--- paneau pour l'édition
   mpEditionPanel = new QWidget( this );
@@ -784,17 +812,26 @@ MainWindow::MainWindow() : QMainWindow(),
     Qt::WindowStaysOnTopHint );
 	mpEditionPanel->setMinimumSize(200, 300);
   mpEditionPanel->hide();
+  
+  QVBoxLayout* pEditionLyt = new QVBoxLayout( mpEditionPanel );
+  pEditionLyt->setMargin(0);
+  pEditionLyt->setMargin( 0 );
+  QTabWidget* pTabs = new QTabWidget( mpEditionPanel );
+  pEditionLyt->addWidget( pTabs );
+
+  //--- Edition de la map
   {
-  	QVBoxLayout* pLyt = new QVBoxLayout(mpEditionPanel);
+    QWidget* pPage = new QWidget();
+    QVBoxLayout* pLyt = new QVBoxLayout(pPage);
     pLyt->setSpacing( 2 );
     pLyt->setMargin( 2 );
     
     //ouvrir et nouveau
     QHBoxLayout* pNewAndOpen = new QHBoxLayout();
     {
-    	QPushButton* pNew = new QPushButton( "Nouveau...", mpEditionPanel );
+      QPushButton* pNew = new QPushButton( "Nouveau...", pPage );
       connect( pNew, SIGNAL( clicked() ), this, SLOT( newMapClicked() ) );
-      QPushButton* pOpen = new QPushButton( "Ouvrir...", mpEditionPanel );
+      QPushButton* pOpen = new QPushButton( "Ouvrir...", pPage );
       connect( pOpen, SIGNAL( clicked() ), this, SLOT( openMapClicked() ) );
       
       pNewAndOpen->addWidget( pNew );
@@ -805,20 +842,20 @@ MainWindow::MainWindow() : QMainWindow(),
     //Layers
     QVBoxLayout* pLayersLyt = new QVBoxLayout();
     {
-    	mpLayers = new QListWidget( mpEditionPanel );
+      mpLayers = new QListWidget( pPage );
       mpLayers->setAlternatingRowColors(true);
       connect( mpLayers, SIGNAL( currentRowChanged( int ) ),
-      	this, SLOT( layerSelectionChanged( int ) ) );
+        this, SLOT( layerSelectionChanged( int ) ) );
       connect( mpLayers, SIGNAL( itemChanged( QListWidgetItem* ) ),
-      	this, SLOT( layerVisibilityChanged( QListWidgetItem* ) ) );
+        this, SLOT( layerVisibilityChanged( QListWidgetItem* ) ) );
       mpLayers->setFixedHeight( 80 );
       
       QHBoxLayout* pL1 = new QHBoxLayout();
       {
-      	QPushButton* pAdd = new QPushButton( "ajouter", mpEditionPanel );
-	      connect( pAdd, SIGNAL( clicked() ), this, SLOT( addLayerClicked() ) );
-  	    QPushButton* pRemove = new QPushButton( "enlever", mpEditionPanel );
-    	  connect( pRemove, SIGNAL( clicked() ), this, SLOT( removeLayerClicked() ) );
+        QPushButton* pAdd = new QPushButton( "ajouter", pPage );
+        connect( pAdd, SIGNAL( clicked() ), this, SLOT( addLayerClicked() ) );
+        QPushButton* pRemove = new QPushButton( "enlever", pPage );
+        connect( pRemove, SIGNAL( clicked() ), this, SLOT( removeLayerClicked() ) );
         
         pL1->addStretch(1);
         pL1->addWidget( pAdd );
@@ -832,18 +869,18 @@ MainWindow::MainWindow() : QMainWindow(),
     //sprites
     QVBoxLayout* pL1 = new QVBoxLayout();
     {
-    	mpSprites = new QTableWidget( mpEditionPanel );
+      mpSprites = new QTableWidget( pPage );
       connect( mpSprites, SIGNAL( cellClicked(int, int) ),
-	      this, SLOT( spriteSelectionChanged(int, int) ) );
+        this, SLOT( spriteSelectionChanged(int, int) ) );
           
       QHBoxLayout* pAddRemoveLyt = new QHBoxLayout();
       {
-      	QPushButton* pAdd = new QPushButton( "ajouter", mpEditionPanel );
+        QPushButton* pAdd = new QPushButton( "ajouter", pPage );
         connect( pAdd, SIGNAL( clicked() ), 
-        	this, SLOT( addSpriteToLayerClicked() ) );
-        QPushButton* pRemove = new QPushButton( "enlever", mpEditionPanel );
+          this, SLOT( addSpriteToLayerClicked() ) );
+        QPushButton* pRemove = new QPushButton( "enlever", pPage );
         connect( pRemove, SIGNAL( clicked() ), 
-        	this, SLOT( removeSpriteFromLayerClicked() ) );
+          this, SLOT( removeSpriteFromLayerClicked() ) );
         
         pAddRemoveLyt->addStretch(1);
         pAddRemoveLyt->addWidget(pAdd);
@@ -855,44 +892,61 @@ MainWindow::MainWindow() : QMainWindow(),
     }
     
     //type de cellule
-  	QHBoxLayout* pL2 = new QHBoxLayout();
+    QHBoxLayout* pL2 = new QHBoxLayout();
     {
-    	QLabel* pL = new QLabel("Cellule", mpEditionPanel);
-      mpCellType = new QComboBox( mpEditionPanel );
+      QLabel* pL = new QLabel("Cellule", pPage);
+      mpCellType = new QComboBox( pPage );
       connect( mpCellType, SIGNAL(activated(int)), 
-      	this, SLOT(cellTypeChanged( int ) ) );
+        this, SLOT(cellTypeChanged( int ) ) );
       
       for( int i = 0; i < Engine::Stage::ctNumberOfCellType; ++i )
-      	mpCellType->insertItem( i, mEngine.toString( 
-        	(Engine::Stage::cellType)i ) );
-      	
+        mpCellType->insertItem( i, mEngine.toString( 
+          (Engine::Stage::cellType)i ) );
+        
       pL2->addWidget(pL);
       pL2->addStretch(1);
       pL2->addWidget(mpCellType);
     }
-    
-    //background
-    QHBoxLayout* pL3 = new QHBoxLayout();
-    {
-    	QLabel* pl = new QLabel( "Backg.", mpEditionPanel );
-      mpBackground = new QComboBox( mpEditionPanel );
-      connect( mpBackground, SIGNAL( activated(int) ),
-      	this, SLOT( backgroundChanged(int) ) );
-        
-      pL3->addWidget(pl);
-      pL3->addStretch(1);
-      pL3->addWidget(mpBackground);      
-    }
-    
+            
     pLyt->addLayout(pNewAndOpen);
     pLyt->addLayout(pLayersLyt);
     pLyt->addLayout(pL1, 2);
-    pLyt->addLayout(pL2);
-    pLyt->addLayout(pL3);
+    pLyt->addLayout(pL2);    
     pLyt->addStretch(1);
+    
+    pTabs->insertTab( tMap, pPage, "Map" );
   }
   
-  pLyt->addWidget( mpViewer );
+  //--- edition background
+  {
+  	QWidget* pPage = new QWidget();
+    QVBoxLayout* pLyt = new QVBoxLayout(pPage);
+    
+    //background
+    QHBoxLayout* pL1 = new QHBoxLayout();
+    {
+      QLabel* pl = new QLabel( "Backg.", pPage );
+      mpBackground = new QComboBox( pPage );
+      connect( mpBackground, SIGNAL( activated(int) ),
+        this, SLOT( backgroundChanged(int) ) );
+        
+      pL1->addWidget(pl);
+      pL1->addStretch(1);
+      pL1->addWidget(mpBackground);      
+    }
+
+    pLyt->addLayout(pL1);
+    pLyt->addStretch(1);
+    pTabs->insertTab( tBackground, pPage, "Back" );
+  }
+  
+  //--- edition actor
+  {
+  	QWidget* pPage = new QWidget();
+    QVBoxLayout* pLyt = new QVBoxLayout(pPage);
+    
+    pTabs->insertTab( tActor, pPage, "Actor" );
+  }
   
   mpViewer->setCameraOrientation(Camera::XY);
   Camera c = mpViewer->getCamera();
@@ -903,14 +957,28 @@ MainWindow::MainWindow() : QMainWindow(),
   mEngine.registerClient( mpViewer );
   
   Engine::Stage& s = mEngine.getStage();
+  
+//  for( int i = 0; i < 250; ++i)
+//  {
+//  	s.addActor();
+//    s.getActor(i).setSpriteName( "monstre bidon1" );
+//    s.getActor(i).setHealth( 30 );
+//    s.getActor(i).setPosition( Point2d(200 + i * 50, 100) );
+//    s.getActor(i).setMaximumVelocity( Vector2d(0, 1000) );
+//  }
+  
   s.addActor();
   s.addActor();
   s.addActor();
   s.addActor();
-  s.getActor(0).setSpriteName( "monstre bidon1" );
-  s.getActor(1).setSpriteName( "monstre bidon2" );
-  s.getActor(2).setSpriteName( "monstre bidon1" );
-  s.getActor(3).setSpriteName( "monstre bidon2" );
+//  s.getActor(0).setSpriteName( "monstre bidon1" );
+//  s.getActor(1).setSpriteName( "monstre bidon2" );
+//  s.getActor(2).setSpriteName( "monstre bidon1" );
+//  s.getActor(3).setSpriteName( "monstre bidon2" );
+  s.getActor(0).setHealth( 30 );
+  s.getActor(1).setHealth( 50 );
+  s.getActor(2).setHealth( 30 );
+  s.getActor(3).setHealth( 50 );
   s.getActor(0).setPosition( Point2d(200, 100) );
   s.getActor(1).setPosition( Point2d(400, 800) );
   s.getActor(2).setPosition( Point2d(280, 100) );

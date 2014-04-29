@@ -166,6 +166,14 @@ Vector2d Sprite::getTranslation() const
 }
 
 //-----------------------------------------------------------------------------
+bool Sprite::isAnimationDone() const
+{ return mTimer.elapsed() > getAnimationDuration(); }
+
+//-----------------------------------------------------------------------------
+bool Sprite::isValid() const
+{ return getTexture().isValid() && getRect().isValid(); }
+
+//-----------------------------------------------------------------------------
 void Sprite::set(const Texture& t)
 { set(t, QRect(0, 0, t.width(), t.height() ));}
 

@@ -25,7 +25,8 @@ public:
   
 protected:
 	virtual void draw();
-  virtual void drawActor( const Actor& );
+  virtual void draw( const BaseActor& );
+  virtual void draw( const Animation& );
   virtual void drawDataMap();
   virtual void drawGame();
   virtual void drawMenu();
@@ -72,6 +73,8 @@ protected slots:
   virtual void spriteSelectionChanged(int, int);
 
 protected:
+	enum tabs{ tMap, tBackground, tActor };
+
 	virtual void gotEvent( realisim::platform::Engine::event );
   virtual void populateBackground();
   virtual void populateLayers();
