@@ -119,11 +119,11 @@ void Viewer::draw()
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::draw( const BaseActor& iA )
+void Viewer::draw( const GameEntity& iA )
 {
-  utils::SpriteCatalog& sc = mEngine.getSpriteCatalog();
+  //utils::SpriteCatalog& sc = mEngine.getSpriteCatalog();
   
-  Sprite s = sc.getSprite( iA.getSpriteToken() );
+  const Sprite& s = iA.getSprite();
 
   glDisable( GL_BLEND );
   glPushMatrix();
@@ -194,7 +194,7 @@ void Viewer::draw( const Animation& iA )
 //-----------------------------------------------------------------------------
 void Viewer::drawDataMap()
 {
-	const Engine::Stage& stage = mEngine.getStage();
+	const Stage& stage = mEngine.getStage();
   vector<int> visibleCells = mEngine.getVisibleCells();
 
   bool draw = false;
@@ -202,9 +202,9 @@ void Viewer::drawDataMap()
   {  	
     switch ( stage.value( visibleCells[i] ) )
     {
-      case Engine::Stage::ctGround: draw = true; 
+      case Stage::ctGround: draw = true; 
         glColor3ub( 255, 255, 255 ); break;
-      case Engine::Stage::ctStart: draw = true;
+      case Stage::ctStart: draw = true;
         glColor3ub( 12, 12, 255 ); break;
       default: draw = false; break;
     }
@@ -221,7 +221,7 @@ void Viewer::drawGame()
 {
 	glDisable( GL_DEPTH_TEST );
   utils::SpriteCatalog& sc = mEngine.getSpriteCatalog();
-  Engine::Stage& stage = mEngine.getStage();
+  Stage& stage = mEngine.getStage();
   
 	//projection ortho
   const Camera& cam = mEngine.getGameCamera();
@@ -302,19 +302,20 @@ void Viewer::drawGame()
   draw( mEngine.getPlayer() );
   if( kDebugCollisions )
   {
+  	glColor3ub( 255, 255, 255 );
     //affiche letat du jouer
     QString playerState;
     switch ( mEngine.getPlayer().getState() ) 
     {
-      case Engine::Player::sIdle : playerState = "idle"; break;
-      case Engine::Player::sWalking : playerState = "walking"; break;
-      case Engine::Player::sRunning : playerState = "running"; break;
-      case Engine::Player::sFalling : playerState = "falling"; break;
-      case Engine::Player::sJumping : playerState = "jumping"; break;
-      case Engine::Player::sHit : playerState = "hit"; break;
+      case Player::sIdle : playerState = "idle"; break;
+      case Player::sRunningLeft : playerState = "running left"; break;
+      case Player::sRunningRight : playerState = "running right"; break;
+      case Player::sFalling : playerState = "falling"; break;
+      case Player::sJumping : playerState = "jumping"; break;
+      case Player::sHit : playerState = "hit"; break;
       default: break;
     }
-    renderText(10, 10, playerState );
+    renderText(10, 30, playerState );
   }
   
   //dessine les autres acteurs
@@ -332,10 +333,9 @@ void Viewer::drawGame()
   }
 	
   //les animations diverses
-  const vector<Animation>& anims = mEngine.getAnimations();
-  for( int i = 0; i < (int)anims.size(); ++i )
+  for( int i = 0; i < mEngine.getNumberOfAnimations(); ++i )
   {
-  	draw( anims[i] );
+  	draw( mEngine.getAnimation(i) );
   }
   
 	cam.popMatrices();
@@ -628,7 +628,7 @@ void Viewer::initializeGL()
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glClearColor(0.0, 0.0, 0.0, 0.0);
 
-	mEngine.setSpriteCatalog( "level1.cat" );
+	mEngine.graphicsAreReady();
 	mFboLightDepth.addColorAttachment(true);  
   mFboLightDepth.addDepthAttachment(true);
   mFboLightDepth.getDepthTexture().setFilter( GL_LINEAR );
@@ -702,7 +702,7 @@ void Viewer::paintGL()
 Texture Viewer::renderLights()
 {
   const Camera& gc = mEngine.getGameCamera();
-  const Engine::Player& p = mEngine.getPlayer();
+  const Player& p = mEngine.getPlayer();
   Texture shadowMap;
   Matrix4d lightCamView, lightCamProjection, MCToShadowMap;
   Matrix4d camView, camProjection;
@@ -899,9 +899,9 @@ MainWindow::MainWindow() : QMainWindow(),
       connect( mpCellType, SIGNAL(activated(int)), 
         this, SLOT(cellTypeChanged( int ) ) );
       
-      for( int i = 0; i < Engine::Stage::ctNumberOfCellType; ++i )
+      for( int i = 0; i < Stage::ctNumberOfCellType; ++i )
         mpCellType->insertItem( i, mEngine.toString( 
-          (Engine::Stage::cellType)i ) );
+          (Stage::cellType)i ) );
         
       pL2->addWidget(pL);
       pL2->addStretch(1);
@@ -955,38 +955,6 @@ MainWindow::MainWindow() : QMainWindow(),
   
   mEngine.registerClient( this );
   mEngine.registerClient( mpViewer );
-  
-  Engine::Stage& s = mEngine.getStage();
-  
-//  for( int i = 0; i < 250; ++i)
-//  {
-//  	s.addActor();
-//    s.getActor(i).setSpriteName( "monstre bidon1" );
-//    s.getActor(i).setHealth( 30 );
-//    s.getActor(i).setPosition( Point2d(200 + i * 50, 100) );
-//    s.getActor(i).setMaximumVelocity( Vector2d(0, 1000) );
-//  }
-  
-  s.addActor();
-  s.addActor();
-  s.addActor();
-  s.addActor();
-//  s.getActor(0).setSpriteName( "monstre bidon1" );
-//  s.getActor(1).setSpriteName( "monstre bidon2" );
-//  s.getActor(2).setSpriteName( "monstre bidon1" );
-//  s.getActor(3).setSpriteName( "monstre bidon2" );
-  s.getActor(0).setHealth( 30 );
-  s.getActor(1).setHealth( 50 );
-  s.getActor(2).setHealth( 30 );
-  s.getActor(3).setHealth( 50 );
-  s.getActor(0).setPosition( Point2d(200, 100) );
-  s.getActor(1).setPosition( Point2d(400, 800) );
-  s.getActor(2).setPosition( Point2d(280, 100) );
-  s.getActor(3).setPosition( Point2d(800, 800) );
-	s.getActor(0).setMaximumVelocity( Vector2d(0, 1000) );
-  s.getActor(1).setMaximumVelocity( Vector2d(20, 1000) );
-  s.getActor(2).setMaximumVelocity( Vector2d(0, 1000) );
-  s.getActor(3).setMaximumVelocity( Vector2d(20, 1000) );
 }
 
 //-----------------------------------------------------------------------------
@@ -1019,7 +987,7 @@ void MainWindow::backgroundChanged(int iIndex)
 
 //-----------------------------------------------------------------------------
 void MainWindow::cellTypeChanged( int iCt )
-{ mEngine.setEditingTool( (Engine::Stage::cellType)iCt ); }
+{ mEngine.setEditingTool( (Stage::cellType)iCt ); }
 
 //-----------------------------------------------------------------------------
 void MainWindow::gotEvent( Engine::event iE )
@@ -1147,7 +1115,7 @@ void MainWindow::populateBackground()
 //-----------------------------------------------------------------------------
 void MainWindow::populateLayers()
 {
-	const Engine::Stage& s = mEngine.getStage();
+	const Stage& s = mEngine.getStage();
 	if( mpLayers->count() == 0 )
   {
     for( int i = 0; i < s.getNumberOfLayers(); ++i )

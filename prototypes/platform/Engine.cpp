@@ -22,11 +22,11 @@ namespace
 }
 
 //------------------------------------------------------------------------------
-//--- BaseActor
+//--- GameEntity
 //------------------------------------------------------------------------------
-BaseActor::BaseActor() : 
- mSpriteName( "no sprite name" ),
- mSpriteToken( "no sprite token" ),
+GameEntity::GameEntity() : 
+ mSpriteTokens(),
+ mCurrentSpriteToken(),
  mBoundingBox( Point2d(0.0), Vector2d( 5, 5 ) ),
  mBoundingCircle( Point2d(0.0), 5 ),
  mPosition( 0.0 ),
@@ -35,51 +35,54 @@ BaseActor::BaseActor() :
  mAcceleration( 0.0 ),
  mMaximumAcceleration( 800, 800 ),
  mIntersections(),
- mIsGravityApplied(true)
+ mIsGravityApplied(true),
+ mpEngine(0),
+ mSprite(),
+ mMarkedForDeletion(false)
 {}
 //------------------------------------------------------------------------------
-BaseActor::~BaseActor() {}
+GameEntity::~GameEntity() {}
 //------------------------------------------------------------------------------
-void BaseActor::addIntersection( const Intersection2d& iV )
+void GameEntity::addIntersection( const Intersection2d& iV )
 { mIntersections.push_back(iV); }
 //------------------------------------------------------------------------------
-void BaseActor::clearIntersections()
+void GameEntity::clearIntersections()
 { mIntersections.clear(); }
 //------------------------------------------------------------------------------
-const Vector2d& BaseActor::getAcceleration() const
+const Vector2d& GameEntity::getAcceleration() const
 { return mAcceleration; }
 //------------------------------------------------------------------------------
-const math::Rectangle BaseActor::getBoundingBox() const
+const math::Rectangle GameEntity::getBoundingBox() const
 {
 	return Rectangle( getPosition() - mBoundingBox.size() / 2.0,
     mBoundingBox.size() ); 
 }
 //------------------------------------------------------------------------------
-const math::Circle BaseActor::getBoundingCircle() const
+const math::Circle GameEntity::getBoundingCircle() const
 { return Circle( getPosition(), mBoundingCircle.getRadius() );  }
 //------------------------------------------------------------------------------
-//const vector<Intersection2d>& BaseActor::getIntersections() const
+//const vector<Intersection2d>& GameEntity::getIntersections() const
 //{ return mIntersections; }
 //------------------------------------------------------------------------------
-const Vector2d& BaseActor::getMaximumAcceleration() const
+const Vector2d& GameEntity::getMaximumAcceleration() const
 { return mMaximumAcceleration; }
 //------------------------------------------------------------------------------
-const Vector2d& BaseActor::getMaximumVelocity() const
+const Vector2d& GameEntity::getMaximumVelocity() const
 { return mMaximumVelocity; }
 //------------------------------------------------------------------------------
-const Point2d& BaseActor::getPosition() const
+const Point2d& GameEntity::getPosition() const
 { return mPosition; }
 //------------------------------------------------------------------------------
-QString BaseActor::getSpriteName() const
-{ return mSpriteName; }
+QString GameEntity::getSpriteToken(int i) const
+{
+  map<int, QString>::const_iterator it = mSpriteTokens.find(i);
+  return it != mSpriteTokens.end() ? it->second : QString();
+}
 //------------------------------------------------------------------------------
-QString BaseActor::getSpriteToken() const
-{ return mSpriteToken; }
-//------------------------------------------------------------------------------
-const Vector2d& BaseActor::getVelocity() const
+const Vector2d& GameEntity::getVelocity() const
 { return mVelocity; }
 //------------------------------------------------------------------------------
-bool BaseActor::hasIntersections() const
+bool GameEntity::hasIntersections() const
 {
 	bool r = false;
 	for( int i = 0; i < getNumberOfIntersections(); ++i )
@@ -87,41 +90,50 @@ bool BaseActor::hasIntersections() const
   return r;
 }
 //------------------------------------------------------------------------------
-void BaseActor::setAcceleration( const Vector2d& iV )
+void GameEntity::setAcceleration( const Vector2d& iV )
 { mAcceleration = iV; }
 //------------------------------------------------------------------------------
-void BaseActor::setBoundingBox( const Rectangle& iV )
+void GameEntity::setBoundingBox( const Rectangle& iV )
 { 
 	mBoundingBox = iV;
   mBoundingCircle.setRadius( sqrt( pow(iV.width()/2.0, 2) + 
   	pow( iV.height() / 2.0, 2 ) ) );
 }
 //------------------------------------------------------------------------------
-void BaseActor::setBoundingCircle( const Circle& iV )
+void GameEntity::setBoundingCircle( const Circle& iV )
 { mBoundingCircle = iV; }
 //------------------------------------------------------------------------------
-void BaseActor::setMaximumAcceleration( const Vector2d& iV )
+void GameEntity::setMaximumAcceleration( const Vector2d& iV )
 { mMaximumAcceleration = iV; }
 //------------------------------------------------------------------------------
-void BaseActor::setMaximumVelocity( const Vector2d& iV )
+void GameEntity::setMaximumVelocity( const Vector2d& iV )
 { mMaximumVelocity = iV; }
 //------------------------------------------------------------------------------
-void BaseActor::setPosition( const Point2d& iV )
+void GameEntity::setPosition( const Point2d& iV )
 { mPosition = iV; }
 //------------------------------------------------------------------------------
-void BaseActor::setSpriteName( QString iV )
-{ mSpriteName = iV; }
+void GameEntity::setSprite( QString iV )
+{ 
+	mCurrentSpriteToken = iV;
+  if( mpEngine )
+  { 
+  	mSprite = mpEngine->getSpriteCatalog().getSprite( getCurrentSpriteToken() );
+    mSprite.startAnimation();
+  }
+  Vector2i frameSize = mSprite.isValid() ? mSprite.getFrameSize() : Vector2i(40, 40);
+  setBoundingBox( Rectangle(Point2d( 0.0 ), frameSize) );
+}
 //------------------------------------------------------------------------------
-void BaseActor::setSpriteToken( QString iV )
-{ mSpriteToken = iV; }
+void GameEntity::setSpriteToken( int i, QString iV )
+{ mSpriteTokens[i] = iV; }
 //------------------------------------------------------------------------------
-void BaseActor::setVelocity( const Vector2d& iV )
+void GameEntity::setVelocity( const Vector2d& iV )
 { mVelocity = iV; }
 
 //------------------------------------------------------------------------------
 //--- Actor
 //------------------------------------------------------------------------------
-Actor::Actor() : BaseActor(),
+Actor::Actor() : GameEntity(),
  mName("no name"),
  mHealth( 100.0 ),
  mState( sIdle ),
@@ -130,6 +142,19 @@ Actor::Actor() : BaseActor(),
 {}
 //------------------------------------------------------------------------------
 Actor::~Actor() {}
+//------------------------------------------------------------------------------
+void Actor::attack()
+{
+	Weapon w = getWeapon();
+  if( w.canFire() )
+  {
+    Projectile* p = w.fire( getAimingDirection() ); 
+    p->setPosition( getPosition() );
+    mpEngine->addProjectile( p );
+    
+    setWeapon( w );
+  }
+}
 //------------------------------------------------------------------------------
 double Actor::getHealth() const
 { return mHealth; }
@@ -143,6 +168,75 @@ Actor::state Actor::getState() const
 const Weapon& Actor::getWeapon() const
 { return mWeapon; }
 //------------------------------------------------------------------------------
+void Actor::moveLeft()
+{
+	Vector2d a = getAcceleration();
+  state s = getState();
+  const double maxHAccel = getMaximumAcceleration().x();
+  
+  switch ( s ) 
+  {
+  case sIdle :
+    a -= Vector2d(maxHAccel, 0);
+    s = sRunningLeft;
+    break;
+  case sRunningLeft :
+  case sRunningRight :
+  case sFalling :
+  case sJumping :
+    a -= Vector2d(maxHAccel, 0);
+    break;
+  default: break;
+  }
+  setAcceleration( a );
+  setState( s );
+}
+
+//------------------------------------------------------------------------------
+void Actor::moveRight()
+{
+	Vector2d a = getAcceleration();
+  Actor::state s = getState();
+  const double maxHAccel = getMaximumAcceleration().x();
+  
+  switch ( s ) {
+  case sIdle :
+      a += Vector2d(maxHAccel, 0);
+      s = sRunningRight;
+    break;
+  case sRunningLeft :
+  case sRunningRight :
+  case sFalling :
+  case sJumping :
+    a += Vector2d(maxHAccel, 0);
+    break;
+  default: break;
+  }
+  setAcceleration( a );
+  setState( s );
+}
+
+//------------------------------------------------------------------------------
+void Actor::moveUp()
+{
+  Vector2d v = getVelocity();
+  Actor::state s = getState();
+  switch ( s ) {
+  case sIdle :
+  case sRunningLeft :
+  case sRunningRight :
+    v += Vector2d(0, 400);
+    s = sJumping;
+    break;
+  case sJumping:
+  	v += Vector2d(0, 8);
+  break;
+  default: break;
+  }
+  setVelocity( v );
+  setState( s );
+}
+//------------------------------------------------------------------------------
 void Actor::setHealth( double iV )
 { mHealth = iV; }
 //------------------------------------------------------------------------------
@@ -151,50 +245,227 @@ void Actor::setName( QString iV )
 //------------------------------------------------------------------------------
 void Actor::setState( state iV )
 { 
-	switch (getState()) 
+	if( mState != iV )
   {
-    case sHit: 
-    	switch (iV) 
-      {
-        case sHit: break;
-        default: if( mHitTimer.elapsed() > 500 ) {mState = iV;} break;
-      }
-    break;
-    default:
-    	switch (iV) 
-      {
-        case sHit: mHitTimer.start(); mState = iV; break;
-        default: mState = iV; break;
-      } 
+    switch (getState()) 
+    {
+      case sHit: 
+        switch (iV) 
+        {
+          case sHit: break;
+          default: if( mHitTimer.elapsed() > 500 ) {mState = iV;} break;
+        }
       break;
+      default:
+        switch (iV) 
+        {
+          case sHit: mHitTimer.start(); mState = iV; break;
+          default: mState = iV; break;
+        } 
+        break;
+    }
+    setSprite( getSpriteToken( mState ) );
   }
 }
 //------------------------------------------------------------------------------
 void Actor::setWeapon( const Weapon& iW )
 { mWeapon = iW; }
+//------------------------------------------------------------------------------
+void Actor::update()
+{
+	Vector2d accel = getAcceleration();
+  Vector2d vel = getVelocity();
+  Point2d pos = getPosition();
+  
+	if( isEqual( vel.y(), 0.0 ) && hasIntersections() &&
+  	getIntersection(0).getPoint(0).y() < getPosition().y() )
+  { 
+  	vel.x() > 0 ? setState( Actor::sRunningRight ) : 
+      setState( Actor::sRunningLeft );
+  }
+  
+  //friction en x. seulement si il n'y a pas d'input usagé
+  //ou changment de direciton
+  bool applyFriction = ! ( (mpEngine->isKeyPressed( Qt::Key_Left ) || 
+  	mpEngine->isKeyPressed( Qt::Key_Right ) ) ) || 
+    accel.x() / fabs(accel.x()) !=  vel.x() / fabs(vel.x());
+  if(applyFriction && 
+  	(getState() == Actor::sRunningLeft ||
+     getState() == Actor::sRunningRight) )
+		vel.setX( vel.x() * 0.8 );
 
+  if( vel.y() < 0.0 )
+  {
+  	switch (getState()) {
+      case Actor::sIdle:
+      case Actor::sRunningLeft:
+      case Actor::sRunningRight:
+      case Actor::sJumping:
+      	setState( Actor::sFalling );
+        break;
+      default: break;
+    }
+  }
+  
+  if( vel.norm() < 0.01 )
+  { setState( Actor::sIdle ); }
+  
+  setPosition( pos );
+  setVelocity( vel );
+}
+//------------------------------------------------------------------------------
+void Actor::updateAi()
+{}
+
+//------------------------------------------------------------------------------
+//--- Player
+//------------------------------------------------------------------------------
+Player::Player() : Actor()
+{ 
+  setName( "Player1" );
+  setSpriteToken( Actor::sIdle, "player idle");
+  setSpriteToken( Actor::sRunningLeft, "player run left");
+  setSpriteToken( Actor::sRunningRight, "player run right");
+  setSpriteToken( Actor::sFalling, "player idle");
+  setSpriteToken( Actor::sJumping, "player idle");
+  setSpriteToken( Actor::sHit, "player idle");
+  
+Weapon we = getWeapon();
+we.setType( Weapon::tPellet );
+setWeapon( we );
+}
+
+//------------------------------------------------------------------------------
+void Player::update()
+{ Actor::update(); }
+
+//------------------------------------------------------------------------------
+void Player::updateAi()
+{
+	assert( mpEngine );
+  
+  Vector2d aimingDir = getAimingDirection();
+  //input usagé
+  if( mpEngine->isKeyPressed( Qt::Key_Left ) )
+  { 
+  	moveLeft();
+    aimingDir.set( -1.0, 0.0 );
+  }
+  if( mpEngine->isKeyPressed( Qt::Key_Right ) )
+  {
+  	moveRight();
+    aimingDir.set( 1.0, 0.0 );
+  }
+  if( mpEngine->isKeyPressed( Qt::Key_Up ) )
+  {
+    aimingDir.set( 0.0, 1.0 );
+  }
+  if( mpEngine->isKeyPressed( Qt::Key_Down ) )
+  {
+    aimingDir.set( 0.0, -1.0 );
+  }
+  if( mpEngine->isKeyPressed( Qt::Key_Z ) )
+  { moveUp(); }
+  if( mpEngine->isKeyPressed( Qt::Key_X, true ) )
+  { attack(); }
+  
+  setAimingDirection( aimingDir );
+}
+
+//------------------------------------------------------------------------------
+//--- Monster
+//------------------------------------------------------------------------------
+Monster::Monster() : Actor()
+{ setType(mtBrownSlime); }
+
+Monster::Monster(monsterType iT) : Actor()
+{ setType(iT); }
+
+//------------------------------------------------------------------------------
+void Monster::setType( monsterType iType )
+{
+	mType = iType;
+  switch (mType) 
+  {
+    case mtBrownSlime:
+      setName( "Brown Slime" );
+      setSpriteToken( Actor::sIdle, "monstre bidon1 idle");
+      setSpriteToken( Actor::sRunningLeft, "monstre bidon1 run left");
+      setSpriteToken( Actor::sRunningRight, "monstre bidon1 run right");
+      setSpriteToken( Actor::sFalling, "monstre bidon1 idle");
+      setSpriteToken( Actor::sJumping, "monstre bidon1 idle");
+      setSpriteToken( Actor::sHit, "monstre bidon1 idle");
+      setSpriteToken( Actor::sDead, "explosion");
+      setHealth(20);
+      setMaximumVelocity( Vector2d(0, 1000) );
+      break;
+    case mtBigGreen:
+      setName( "Big Green" );
+      setSpriteToken( Actor::sIdle, "monstre bidon2 idle");
+      setSpriteToken( Actor::sRunningLeft, "monstre bidon2 run left");
+      setSpriteToken( Actor::sRunningRight, "monstre bidon2 run right");
+      setSpriteToken( Actor::sFalling, "monstre bidon2 idle");
+      setSpriteToken( Actor::sJumping, "monstre bidon2 idle");
+      setSpriteToken( Actor::sHit, "monstre bidon2 idle");
+      setSpriteToken( Actor::sDead, "explosion");
+      setHealth(50);
+      setMaximumVelocity( Vector2d(20, 1000) );
+      break;
+    default: break;
+  }
+}
+
+//------------------------------------------------------------------------------
+void Monster::update()
+{ 
+	Actor::update();
+  
+  if( getHealth() <= 0.0 )
+  {
+  	setState( sDead );
+    //ajout d'une animation d'éclatement de l'acteur.
+    Animation* ani = new Animation();
+    ani->setPosition( getPosition() );
+    ani->setSprite( getSprite() );
+    mpEngine->addAnimation( ani );
+		markForDeletion( true );  
+  }
+}
+
+//------------------------------------------------------------------------------
+void Monster::updateAi()
+{
+	assert(mpEngine);
+  //on les fait courrir après le joeur
+  Point2d playerPos = mpEngine->getPlayer().getPosition();
+  Point2d pos = getPosition();
+  Vector2d dir = playerPos - pos;
+  if( dir.x() < 0 ) moveLeft();
+  else moveRight();
+  
+  if( dir.y() > 0 ) moveUp();
+}
 
 //------------------------------------------------------------------------------
 //--- Projectile
 //------------------------------------------------------------------------------
-Projectile::Projectile() : BaseActor(),
+Projectile::Projectile() : GameEntity(),
   mType( Weapon::tNone ),
-  mDamage( 1.0 )
+  mDamage( 1.0 ),
+  mState( sIdle )
 {}
 
 Projectile::~Projectile()
 {}
 
 //------------------------------------------------------------------------------
-QString Projectile::getExplosionToken() const
+void Projectile::setState( state iS )
 {
-	QString r;
-	switch (getType()) 
+	if( mState != iS )
   {
-    case Weapon::tPellet : r = getSpriteName() + " explode"; break;
-    default: break;
+  	mState = iS;
+    setSprite( getSpriteToken( mState ) );
   }
-  return r;
 }
 
 //------------------------------------------------------------------------------
@@ -204,7 +475,9 @@ void Projectile::setType( Weapon::type iT )
   switch ( getType() ) 
   {
     case Weapon::tPellet:
-      setSpriteName("pellet bullet");
+      setSpriteToken( sHorizontal, "pellet bullet horizontal");
+      setSpriteToken( sVertical, "pellet bullet vertical");
+      setSpriteToken( sExploding, "pellet bullet explode");
       setDamage( 10.0 );
       setMaximumVelocity( Vector2d( 400, 400 ) );
       setMaximumAcceleration( Vector2d( 400, 400 ) );
@@ -212,6 +485,31 @@ void Projectile::setType( Weapon::type iT )
     break;
     default: break;
   }
+}
+
+//------------------------------------------------------------------------------
+void Projectile::update()
+{
+  if( hasIntersections() )
+  {
+  	setState( sExploding );
+    //ajout d'une animation d'éclatement du projectile.
+    Animation* ani = new Animation();
+    ani->setPosition( getIntersection(0).getPoint(0) );
+    ani->setSprite( getSprite() );
+    mpEngine->addAnimation( ani );
+    markForDeletion( true );
+  }
+}
+
+//------------------------------------------------------------------------------
+void Projectile::updateAi()
+{
+	Vector2d v = getVelocity();
+  if( isEqual( v.x(), 0.0 ) )
+  	setState( sVertical );
+  else
+    setState( sHorizontal );
 }
 
 //------------------------------------------------------------------------------
@@ -229,20 +527,20 @@ Weapon::~Weapon()
 bool Weapon::canFire() const
 {	return mLastFire.elapsed() > (1.0 / getFireRate() * 1000);}
 //------------------------------------------------------------------------------
-Projectile Weapon::fire( const Vector2d& iDir )
+Projectile* Weapon::fire( const Vector2d& iDir )
 {
-	Projectile p;
+	Projectile* p = new Projectile();
   mLastFire.start();
   switch (getType()) 
   {
     case tPellet:
     {
-    	p.setType( tPellet );
-      p.setSpriteToken( p.getSpriteName() + " horizontal");
-    	if( isEqual( iDir.x(), 0.0 )  )
-    		p.setSpriteToken( p.getSpriteName() + " vertical");
-      Vector2d v = p.getMaximumVelocity();
-      p.setVelocity( Vector2d( v.x() * iDir.x(), v.y() * iDir.y() ) );
+    	p->setType( tPellet );
+      //p.setSpriteToken( p.getSpriteName() + " horizontal");
+//    	if( isEqual( iDir.x(), 0.0 )  )
+//    		p.setSpriteToken( p.getSpriteName() + " vertical");
+      Vector2d v = p->getMaximumVelocity();
+      p->setVelocity( Vector2d( v.x() * iDir.x(), v.y() * iDir.y() ) );
     }break;
     default: break;
   }
@@ -271,11 +569,10 @@ void Weapon::setType(type t)
 }
 
 //------------------------------------------------------------------------------
-//---Engine::Stage
+//---Stage
 //------------------------------------------------------------------------------
-realisim::platform::Actor Engine::Stage::mDummyActor;
-
-Engine::Stage::Stage() :
+Stage::Stage() :
+  mpEngine(0),
 	mName( "stage" ),
   mCellSize( 32, 32 ), 
 	mTerrainSize( 30, 40 ),
@@ -284,7 +581,8 @@ Engine::Stage::Stage() :
   mActors()
 { mLayers.push_back( new Layer( getTerrainSize() ) ); }
 
-Engine::Stage::Stage( QString iName, Vector2i iSize ) : 
+Stage::Stage( QString iName, Vector2i iSize ) : 
+  mpEngine(0),
 	mName( iName ),
 	mCellSize( 32, 32 ), 
 	mTerrainSize( iSize ),
@@ -294,7 +592,8 @@ Engine::Stage::Stage( QString iName, Vector2i iSize ) :
   mActors()
 { mLayers.push_back( new Layer( getTerrainSize() ) ); }
 
-Engine::Stage::Stage( const Stage& iS) :
+Stage::Stage( const Stage& iS) :
+  mpEngine( iS.mpEngine ),
 	mName( iS.getName() ),
   mCellSize( iS.getCellSize() ), 
 	mTerrainSize( iS.getTerrainSize() ),
@@ -306,12 +605,15 @@ Engine::Stage::Stage( const Stage& iS) :
 	for( int i = 0; i < iS.getNumberOfLayers(); ++i )
   { mLayers.push_back( new Layer( *iS.mLayers[i] ) ); }
     
-  for( int i = 0; i < iS.getNumberOfActors(); ++i )
-  { mActors.push_back( new Actor( *iS.mActors[i] ) ); }
+//  for( int i = 0; i < iS.getNumberOfActors(); ++i )
+//  { mActors.push_back( new Actor( *iS.mActors[i] ) ); }
+	for( int i = 0; i < iS.getNumberOfMonsters(); ++i )
+  { add( new Monster( *iS.mMonsters[i] ) ); }
 }
 
-Engine::Stage& Engine::Stage::operator=( const Stage& iS )
+Stage& Stage::operator=( const Stage& iS )
 {
+	mpEngine = iS.mpEngine;
 	mName = iS.getName();
   mCellSize = iS.getCellSize();
   mTerrainSize = iS.getTerrainSize();
@@ -322,24 +624,31 @@ Engine::Stage& Engine::Stage::operator=( const Stage& iS )
     
   mBackgroundToken = iS.getBackgroundToken();
   
-  for( int i = 0; i < iS.getNumberOfActors(); ++i )
-  { mActors.push_back( new Actor( *iS.mActors[i] ) ); }
+//  for( int i = 0; i < iS.getNumberOfActors(); ++i )
+//  { mActors.push_back( new Actor( *iS.mActors[i] ) ); }
+	for( int i = 0; i < iS.getNumberOfMonsters(); ++i )
+  { add( new Monster( *(iS.mMonsters[i]) ) ); }
+  
 	return *this;
 }
 
-Engine::Stage::~Stage()
+Stage::~Stage()
 { clear(); }
 
 //------------------------------------------------------------------------------
-void Engine::Stage::addActor()
-{ mActors.push_back( new Actor() ); }
+void Stage::add( Monster* a )
+{ 
+  a->setEngine(mpEngine);
+	mActors.push_back( a );
+  mMonsters.push_back( a );
+}
 
 //------------------------------------------------------------------------------
-void Engine::Stage::addLayer()
+void Stage::addLayer()
 { mLayers.push_back( new Layer( getTerrainSize() ) ); }
 
 //------------------------------------------------------------------------------
-void Engine::Stage::addToken( int iLayer, QString iToken )
+void Stage::addToken( int iLayer, QString iToken )
 {
 	vector<QString>& t = mLayers[iLayer]->mTokens;	
 	if( std::find( t.begin(), t.end(), iToken ) == t.end() ) 
@@ -347,7 +656,7 @@ void Engine::Stage::addToken( int iLayer, QString iToken )
 }
 
 //------------------------------------------------------------------------------
-void Engine::Stage::clear()
+void Stage::clear()
 {
 	mName = QString();
 	mCellSize.set(0, 0);
@@ -360,11 +669,12 @@ void Engine::Stage::clear()
   for( int i = 0; i < getNumberOfActors(); ++i )
   { delete mActors[i]; }
   mActors.clear();
+  mMonsters.clear();
 }
 
 //------------------------------------------------------------------------------
 /*retourne tous les indices de le map qui ont la valeure iCt*/
-std::vector<int> Engine::Stage::find( cellType iCt ) const
+std::vector<int> Stage::find( cellType iCt ) const
 {
 	vector<int> r;
   for(int i = 0; i < mTerrain.size(); ++i)
@@ -373,7 +683,7 @@ std::vector<int> Engine::Stage::find( cellType iCt ) const
 }
 
 //------------------------------------------------------------------------------
-void Engine::Stage::fromBinary( QByteArray iBa )
+void Stage::fromBinary( QByteArray iBa )
 {
 	clear();
   QDataStream in(&iBa, QIODevice::ReadOnly);
@@ -445,29 +755,24 @@ void Engine::Stage::fromBinary( QByteArray iBa )
 }
 
 //------------------------------------------------------------------------------
-Actor& Engine::Stage::getActor( int i )
-{
-	Actor* r = &mDummyActor; 
-	if( i >= 0 && i < getNumberOfActors() )
-  { r = mActors[i]; }
-  return *r;
-}
+Actor& Stage::getActor( int i )
+{ return *mActors[i]; }
 
 //------------------------------------------------------------------------------
-QString Engine::Stage::getBackgroundToken() const
+QString Stage::getBackgroundToken() const
 { return mBackgroundToken; }
 
 //------------------------------------------------------------------------------
-Vector2i Engine::Stage::getCellCoordinate( const Point2d& p ) const
+Vector2i Stage::getCellCoordinate( const Point2d& p ) const
 { return Vector2i( (int)p.x() / getCellSize().x(), p.y() / getCellSize().y() ); }
 
 //------------------------------------------------------------------------------
-Vector2i Engine::Stage::getCellCoordinate( int index ) const
+Vector2i Stage::getCellCoordinate( int index ) const
 { return Vector2i(  index % getTerrainSize().x(), index / getTerrainSize().x() ); }
 
 //------------------------------------------------------------------------------
 /*Retourne l'index de la cellule au pixel p*/
-int Engine::Stage::getCellIndex( const Point2d& p ) const
+int Stage::getCellIndex( const Point2d& p ) const
 { 
 	Vector2i c = getCellCoordinate( p );
   return getCellIndex( c.x(), c.y() );
@@ -475,11 +780,11 @@ int Engine::Stage::getCellIndex( const Point2d& p ) const
 
 //------------------------------------------------------------------------------
 //retourn l'index de la cellule x, y
-int Engine::Stage::getCellIndex( int x, int y ) const
+int Stage::getCellIndex( int x, int y ) const
 { return y * getTerrainSize().x() + x; }
 
 //------------------------------------------------------------------------------
-vector<int> Engine::Stage::getCellIndices( const Point2d& iP, const Vector2i& iK ) const
+vector<int> Stage::getCellIndices( const Point2d& iP, const Vector2i& iK ) const
 {
 	vector<int> r;
   //on trouve la coordonnée de la cellule pour la poisition iP
@@ -500,19 +805,31 @@ vector<int> Engine::Stage::getCellIndices( const Point2d& iP, const Vector2i& iK
 }
 
 //------------------------------------------------------------------------------
-Vector2i Engine::Stage::getCellPixelCoordinate( int iIndex ) const
+Vector2i Stage::getCellPixelCoordinate( int iIndex ) const
 {
 	Vector2i r = getCellCoordinate( iIndex );
   return getCellPixelCoordinate( r.x(), r.y() );
 }
 
 //------------------------------------------------------------------------------
-Vector2i Engine::Stage::getCellPixelCoordinate( int iX, int iY ) const
+Vector2i Stage::getCellPixelCoordinate( int iX, int iY ) const
 {  return Vector2i( iX * getCellSize().x(), iY * getCellSize().y() ); }
 
 //------------------------------------------------------------------------------
+Monster& Stage::getMonster( int i )
+{ return *mMonsters[i]; }
+
+//------------------------------------------------------------------------------
+int Stage::getNumberOfActors() const
+{ return mActors.size(); }
+
+//------------------------------------------------------------------------------
+int Stage::getNumberOfMonsters() const
+{ return mMonsters.size(); }
+
+//------------------------------------------------------------------------------
 /*retourne le token de sprite pour le layer iLayer de la cellule iIndex*/
-QString Engine::Stage::getToken( int iLayer, int iIndex ) const
+QString Stage::getToken( int iLayer, int iIndex ) const
 {
 	QString r;
   if( iLayer >= 0 && iLayer < getNumberOfLayers() )
@@ -526,7 +843,7 @@ QString Engine::Stage::getToken( int iLayer, int iIndex ) const
 
 //------------------------------------------------------------------------------
 /*retourne les token de sprites pour le layer iLayer*/
-vector<QString> Engine::Stage::getTokens( int iLayer ) const
+vector<QString> Stage::getTokens( int iLayer ) const
 {
 	vector<QString> r;
   if( iLayer >= 0 && iLayer < getNumberOfLayers() )
@@ -535,14 +852,14 @@ vector<QString> Engine::Stage::getTokens( int iLayer ) const
 }
 
 //------------------------------------------------------------------------------
-bool Engine::Stage::hasCell( const Vector2i& iC ) const
+bool Stage::hasCell( const Vector2i& iC ) const
 {
 	return iC.x() >= 0 && iC.x() < getTerrainWidth() &&
   	iC.y() >= 0 && iC.y() < getTerrainHeight();
 }
 
 //------------------------------------------------------------------------------
-bool Engine::Stage::isLayerVisible( int i ) const
+bool Stage::isLayerVisible( int i ) const
 {
 	bool r = false;
 	if( i >= 0 && i < getNumberOfLayers() ) 
@@ -551,32 +868,44 @@ bool Engine::Stage::isLayerVisible( int i ) const
 }
 
 //------------------------------------------------------------------------------
-void Engine::Stage::removeActor( int i )
+void Stage::removeActor( int i )
 {
-	if( &getActor(i) != &mDummyActor )
-  {
-  	delete mActors[i];
-    mActors.erase( mActors.begin() + i );
+  Actor* a = mActors[i];
+	{
+  	Monster* dc = dynamic_cast<Monster*> (a);
+    if(dc)
+    { mMonsters.erase( std::find( mMonsters.begin(), mMonsters.end(), dc ) ); }
   }
+
+  delete a;
+  mActors.erase( mActors.begin() + i );
 }
 
 //------------------------------------------------------------------------------
-void Engine::Stage::removeLayer( int i )
+void Stage::removeLayer( int i )
 {}
 
 //------------------------------------------------------------------------------
-void Engine::Stage::setBackgroundToken( QString iBt )
+void Stage::removeMonster( int i )
+{
+	Monster* m = mMonsters[i];
+  removeActor( distance( mActors.begin(), 
+  	std::find( mActors.begin(), mActors.end(), m ) ) );
+}
+
+//------------------------------------------------------------------------------
+void Stage::setBackgroundToken( QString iBt )
 { mBackgroundToken = iBt; }
 
 //------------------------------------------------------------------------------
-void Engine::Stage::setLayerAsVisible( int iL, bool iV/*=true*/ )
+void Stage::setLayerAsVisible( int iL, bool iV/*=true*/ )
 {
 	if( iL >= 0 && iL < getNumberOfLayers() )
   { mLayers[iL]->mVisibility = iV; }
 }
 
 //------------------------------------------------------------------------------
-QByteArray Engine::Stage::toBinary() const
+QByteArray Stage::toBinary() const
 {
   QByteArray r;
   QDataStream out(&r, QIODevice::WriteOnly);
@@ -620,18 +949,200 @@ QByteArray Engine::Stage::toBinary() const
 }
 
 //------------------------------------------------------------------------------
-unsigned char Engine::Stage::value(int iX, int iY) const
+unsigned char Stage::value(int iX, int iY) const
 { return value( iY * getTerrainSize().x() + iX ); }
 
 //------------------------------------------------------------------------------
-unsigned char Engine::Stage::value(int iIndex) const
+unsigned char Stage::value(int iIndex) const
 { return (unsigned char)getTerrain()[iIndex]; }
 
+//------------------------------------------------------------------------------
+//---Physics
+//------------------------------------------------------------------------------
+Physics::Physics()
+{}
+Physics::~Physics()
+{}
+
+//------------------------------------------------------------------------------
+void Physics::resolveCollisions( GameEntity& iGe, Stage& iStage )
+{
+  //verification des collisions
+  //on flush les collisions précedentes de l'acteur
+  iGe.clearIntersections();
+  
+  const Vector2d bbSize = iGe.getBoundingBox().size();
+  int kernel = max( bbSize.x(), bbSize.y() ) / 
+  	max( iStage.getCellSize().x(), iStage.getCellSize().y() ) * 3;
+  if( kernel % 2 == 0 ) ++kernel; //kernel ne doit pas etre pair
+  vector<int> cells = iStage.getCellIndices( iGe.getPosition(), Vector2i(kernel) );
+  vector< pair<int,Rectangle> > collidingCells;
+
+  for( uint i = 0; i < cells.size(); ++i )
+  {
+  	if( iStage.value( cells[i] ) == Stage::ctGround )
+    {
+      //la coordonnée pixel de la cellule
+      Vector2i cpc = iStage.getCellPixelCoordinate( cells[i] );
+      Rectangle cellRect( toPoint(cpc), iStage.getCellSize() );
+      Rectangle aRect = iGe.getBoundingBox();
+      
+      Intersection2d x = intersect( aRect, cellRect );
+      if( x.hasContacts() )
+      { collidingCells.push_back( make_pair(cells[i], cellRect) ); }
+    }
+  }
+  
+  /*On commence par reglé les collisions directement sous et sur les
+    coté de l'acteur.*/
+  vector< pair<int,Rectangle> >::iterator it = collidingCells.begin();
+  for( ; it != collidingCells.end(); )
+  {
+  	Rectangle aRect = iGe.getBoundingBox();
+    Vector2i cc = iStage.getCellCoordinate( it->first );
+    Vector2i pc = iStage.getCellCoordinate( iGe.getPosition() );
+    
+    if( pc.x() == cc.x() || pc.y() == cc.y() )
+    {
+      Intersection2d x = intersect( aRect, it->second );
+      if( x.hasContacts() )
+      {
+        iGe.addIntersection( x );
+        
+        Point2d pos = iGe.getPosition();
+        Vector2d v = iGe.getVelocity();
+        Vector2d penetration = x.getPenetration();
+        
+        if( pc.y() == cc.y())
+        {
+        	penetration.setY( 0.0 );          
+          v.setX( 0.0 );
+        }
+        else if( pc.x() == cc.x() )
+        {
+          penetration.setX( 0.0 );
+          v.setY( 0.0 );
+        }       	
+          
+        iGe.setPosition( pos - penetration );
+        iGe.setVelocity( v );
+        
+        it = collidingCells.erase(it);
+      }
+      else {++it;}
+    }
+    else 
+    { ++it; }
+  }
+  
+  /*Ensuite pour toutes les cellules en collisions qui restent, on parcour
+    a partir du centre de lacteur vers lextérieur.*/
+  int count = 1;
+  while( !collidingCells.empty() )
+  {
+    it = collidingCells.begin();
+    for( ; it != collidingCells.end(); )
+    {      
+      Vector2i cc = iStage.getCellCoordinate( it->first );
+      Vector2i pc = iStage.getCellCoordinate( iGe.getPosition() );
+      
+      if( abs(pc.y() - cc.y()) == count || 
+        abs(pc.x() - cc.x()) == count )
+      {
+      	Rectangle aRect = iGe.getBoundingBox();
+        Intersection2d x = intersect( aRect, it->second );
+        if( x.hasContacts() )
+        {
+          iGe.addIntersection( x );
+          
+          Point2d pos = iGe.getPosition();
+          Vector2d v = iGe.getVelocity();
+          Vector2d penetration = x.getPenetration();
+          
+          if( fabs(penetration.x()) <= fabs(penetration.y()) ) 
+          { 
+            penetration.setY( 0.0 );
+            v.setX( 0.0 );
+          }
+          else 
+          { 
+            penetration.setX( 0.0 );
+            v.setY(0.0);
+          }     	
+            
+          iGe.setPosition( pos - penetration );
+          iGe.setVelocity( v );
+        }
+      	it = collidingCells.erase(it);
+      }
+      else
+      {++it;}
+    }
+		++count;
+  }
+}
+
+//------------------------------------------------------------------------------
+void Physics::resolveCollisions( Player& p, Monster& m)
+{
+  if( intersects( p.getBoundingCircle(), m.getBoundingCircle() ) )
+  {
+    Intersection2d z = intersect( p.getBoundingBox(), m.getBoundingBox() );
+    if( z.hasContacts() )
+    {
+      p.addIntersection( z );
+      p.setState( Actor::sHit );
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
+void Physics::resolveCollisions( Projectile& p, Actor& a)
+{
+  if( intersects( p.getBoundingCircle(), a.getBoundingCircle() ) )
+  {
+    Intersection2d z = intersect( p.getBoundingBox(), a.getBoundingBox() );
+    if( z.hasContacts() )
+    { 
+      p.addIntersection( z );
+      
+      //gestion du dommage pour l'acteur.
+      a.setHealth( a.getHealth() - p.getDamage() );
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
+void Physics::update( GameEntity& iGe )
+{
+  Point2d p = iGe.getPosition();
+	Vector2d v = iGe.getVelocity();
+	Vector2d a = iGe.getAcceleration();
+  double maxHv = iGe.getMaximumVelocity().x();
+  double maxVv = iGe.getMaximumVelocity().y();
+  
+  //application de la gravité
+  if( iGe.isGravityApplied() )
+  { a += Vector2d(0.0, -980); }
+
+	//déplacement du joueur a la position désiré
+  v += a * kDt;
+  v.setX( v.x() >= 0.0 ? 
+  	min(maxHv, v.x()) : max(-maxHv, v.x()) );
+  v.setY( v.y() >= 0.0 ? 
+  	min(maxVv, v.y()) : max(-maxVv, v.y()) );
+  
+  iGe.setPosition( p + v * kDt );
+  iGe.setVelocity( v );
+  iGe.setAcceleration( a );
+}
 
 //------------------------------------------------------------------------------
 //---Engine
 //------------------------------------------------------------------------------
-Engine::Engine() : QObject(), mState( sIdle ),
+Engine::Engine() : QObject(), 
+  mPhysics(),
+  mState( sIdle ),
 	mClients(),
   mTimerId(0),
   mMainMenuItem( mmiStart ),
@@ -654,11 +1165,6 @@ Engine::Engine() : QObject(), mState( sIdle ),
   mGameCamera.set( Point3d( 0.0, 0.0, 5.0 ),
   	Point3d( 0.0, 0.0, 0.0 ),
     Vector3d( 0.0, 1.0, 0.0 ) );
-
-	loadStage("stage.bin");
-  Weapon we = mPlayer.getWeapon();
-  we.setType( Weapon::tPellet );
-  mPlayer.setWeapon( we );
   
 	goToState( sMainMenu );
 }
@@ -666,6 +1172,9 @@ Engine::Engine() : QObject(), mState( sIdle ),
 Engine::~Engine()
 {
 	mClients.clear();
+  
+  for( int i = 0; i < getNumberOfProjectiles(); ++i )
+  { delete mProjectiles[i]; mProjectiles.clear(); }
 }
 
 //------------------------------------------------------------------------------
@@ -676,87 +1185,15 @@ void Engine::addError( QString e ) const
 }
 
 //------------------------------------------------------------------------------
-void Engine::afterCollision( Actor& iA )
+void Engine::addProjectile( Projectile* p )
 {
-	Vector2d accel = iA.getAcceleration();
-  Vector2d vel = iA.getVelocity();
-  Point2d pos = iA.getPosition();
-  
-	if( isEqual( vel.y(), 0.0 ) && iA.hasIntersections() &&
-  	iA.getIntersection(0).getPoint(0).y() < iA.getPosition().y() )
-  { iA.setState( Actor::sWalking ); }
-  
-  //friction en x. seulement si il n'y a pas d'input usagé
-  //ou changment de direciton
-  bool applyFriction = ! ( (isKeyPressed( Qt::Key_Left ) || 
-  	isKeyPressed( Qt::Key_Right ) ) ) || 
-    accel.x() / fabs(accel.x()) !=  vel.x() / fabs(vel.x());
-  if(applyFriction && iA.getState() == Actor::sWalking )
-		vel.setX( vel.x() * 0.8 );
-
-  if( vel.y() < 0.0 )
-  {
-  	switch (iA.getState()) {
-      case Actor::sIdle:
-      case Actor::sWalking:
-      case Actor::sJumping:
-      	iA.setState( Actor::sFalling );
-        break;
-      default: break;
-    }
-  }
-  
-  if( vel.norm() < 0.01 )
-  { iA.setState( Actor::sIdle ); }
-  
-  iA.setPosition( pos );
-  iA.setVelocity( vel );
+	p->setEngine(this);
+	mProjectiles.push_back(p);
 }
 
 //------------------------------------------------------------------------------
-void Engine::applyPhysics( BaseActor& iA )
-{
-	Point2d p = iA.getPosition();
-	Vector2d v = iA.getVelocity();
-	Vector2d a = iA.getAcceleration();
-  double maxHv = iA.getMaximumVelocity().x();
-  double maxVv = iA.getMaximumVelocity().y();
-  
-  //application de la gravité
-  if( iA.isGravityApplied() )
-  { a += Vector2d(0.0, -980); }
-
-	//déplacement du joueur a la position désiré
-  v += a * kDt;
-  v.setX( v.x() >= 0.0 ? 
-  	min(maxHv, v.x()) : max(-maxHv, v.x()) );
-  v.setY( v.y() >= 0.0 ? 
-  	min(maxVv, v.y()) : max(-maxVv, v.y()) );
-  
-  iA.setPosition( p + v * kDt );
-  iA.setVelocity( v );
-  iA.setAcceleration( a );
-//printf("velocity %f, %f acceleration %f, %f\n", mPlayer.mVelocity.x(),
-//	mPlayer.mVelocity.y(), mPlayer.mAcceleration.x(), mPlayer.mAcceleration.y() );
-}
-
-//------------------------------------------------------------------------------
-void Engine::attack( Actor& iA )
-{
-	Weapon w = iA.getWeapon();
-  if( w.canFire() )
-  {
-    Projectile p = w.fire( iA.getAimingDirection() ); 
-    p.setPosition( iA.getPosition() );
-  	utils::SpriteCatalog& sp = getSpriteCatalog();
-    Sprite* s;
-  	s = &sp.getSprite( p.getSpriteToken() );  
-    p.setBoundingBox( Rectangle( Point2d(0.0, 0.0), s->getFrameSize() ) );
-    mProjectiles.push_back( p );
-    
-    iA.setWeapon( w );
-  }
-}
+void Engine::addAnimation( Animation* a )
+{ mAnimations.push_back(a); }
 
 //------------------------------------------------------------------------------
 void Engine::computeVisibleCells()
@@ -955,74 +1392,12 @@ void Engine::goToState( state iS )
 }
 
 //------------------------------------------------------------------------------
+void Engine::graphicsAreReady()
+{ loadStage("stage.bin"); }
+
+//------------------------------------------------------------------------------
 bool Engine::hasError() const
 { return mErrors.isEmpty(); }
-
-//------------------------------------------------------------------------------
-void Engine::handleActorCollisions()
-{
-	//on test le joueurs par rapport a tous les autres acteurs
-  handleActorCollisions( mPlayer );
-  
-  //on test les projectiles amis avec tous les acteurs
-  for(int i = 0; i < getNumberOfProjectiles(); ++i)
-  { handleActorCollisions( mProjectiles[i] ); }
-}
-
-//------------------------------------------------------------------------------
-void Engine::handleActorCollisions( Actor& iA )
-{
-	for( int i = 0; i < mStage.getNumberOfActors(); ++i )
-  {
-  	Actor* a = mStage.mActors[i];
-    if( &iA == a ) continue;
-    if( intersects( iA.getBoundingCircle(), a->getBoundingCircle() ) )
-    {
-    	Intersection2d z = intersect( iA.getBoundingBox(), a->getBoundingBox() );
-      if( z.hasContacts() )
-      {
-				iA.addIntersection( z );
-        iA.setState( Actor::sHit );
-      }
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
-void Engine::handleActorCollisions( Projectile& iP )
-{
-	for( int i = 0; i < mStage.getNumberOfActors(); ++i )
-  {
-  	Actor* a = mStage.mActors[i];
-    if( intersects( iP.getBoundingCircle(), a->getBoundingCircle() ) )
-    {
-    	Intersection2d z = intersect( iP.getBoundingBox(), a->getBoundingBox() );
-    	if( z.hasContacts() )
-      { 
-      	iP.addIntersection( z );
-        
-        //gestion du dommage pour l'acteur.
-        a->setHealth( a->getHealth() - iP.getDamage() );
-      }
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
-void Engine::handleActorInput( Actor& iA )
-{
-  //on les fait courrir après le joeur
-  Point2d playerPos = getPlayer().getPosition();
-  Point2d pos = iA.getPosition();
-  Vector2d dir = playerPos - pos;
-  if( dir.x() < 0 ) moveLeft( iA );
-  else moveRight( iA );
-  
-  if( dir.y() > 0 ) moveUp( iA );
-
-	applyPhysics( iA );
-  updateSpriteToken( iA );
-}
 
 //------------------------------------------------------------------------------
 void Engine::handleConfigureMenu()
@@ -1133,177 +1508,6 @@ void Engine::handleMainMenu()
 }
 
 //------------------------------------------------------------------------------
-/*Cette méthode gère toutes les collisions avec la map*/
-void Engine::handleMapCollisions()
-{
-	//le joueur
-  handleMapCollisions( mPlayer );
-  
-	//les enemies
-  for( int i = 0; i < mStage.getNumberOfActors(); ++i )
-  { handleMapCollisions( mStage.getActor( i ) ); }
-  
-  //les projectiles
-  for(int i = 0; i < getNumberOfProjectiles(); ++i)
-  { handleMapCollisions( mProjectiles[i] ); }
-}
-
-//------------------------------------------------------------------------------
-void Engine::handleMapCollisions( Actor& iA )
-{
-  //verification des collisions
-  //on flush les collisions précedentes de l'acteur
-  iA.clearIntersections();
-  
-  const Vector2d bbSize = iA.getBoundingBox().size();
-  int kernel = max( bbSize.x(), bbSize.y() ) / 
-  	max( mStage.getCellSize().x(), mStage.getCellSize().y() ) * 3;
-  if( kernel % 2 == 0 ) ++kernel; //kernel ne doit pas etre pair
-  vector<int> cells = mStage.getCellIndices( iA.getPosition(), Vector2i(kernel) );
-  vector< pair<int,Rectangle> > collidingCells;
-
-  for( uint i = 0; i < cells.size(); ++i )
-  {
-  	if( mStage.value( cells[i] ) == Stage::ctGround )
-    {
-      //la coordonnée pixel de la cellule
-      Vector2i cpc = mStage.getCellPixelCoordinate( cells[i] );
-      Rectangle cellRect( toPoint(cpc), mStage.getCellSize() );
-      Rectangle aRect = iA.getBoundingBox();
-      
-      Intersection2d x = intersect( aRect, cellRect );
-      if( x.hasContacts() )
-      { collidingCells.push_back( make_pair(cells[i], cellRect) ); }
-    }
-  }
-  
-  /*On commence par reglé les collisions directement sous et sur les
-    coté de l'acteur.*/
-  vector< pair<int,Rectangle> >::iterator it = collidingCells.begin();
-  for( ; it != collidingCells.end(); )
-  {
-  	Rectangle aRect = iA.getBoundingBox();
-    Vector2i cc = mStage.getCellCoordinate( it->first );
-    Vector2i pc = mStage.getCellCoordinate( iA.getPosition() );
-    
-    if( pc.x() == cc.x() || pc.y() == cc.y() )
-    {
-      Intersection2d x = intersect( aRect, it->second );
-      if( x.hasContacts() )
-      {
-        iA.addIntersection( x );
-        
-        Point2d pos = iA.getPosition();
-        Vector2d v = iA.getVelocity();
-        Vector2d penetration = x.getPenetration();
-        
-        if( pc.y() == cc.y())
-        {
-        	penetration.setY( 0.0 );          
-          v.setX( 0.0 );
-        }
-        else if( pc.x() == cc.x() )
-        {
-          penetration.setX( 0.0 );
-          v.setY( 0.0 );
-        }       	
-          
-        iA.setPosition( pos - penetration );
-        iA.setVelocity( v );
-        
-        it = collidingCells.erase(it);
-      }
-      else {++it;}
-    }
-    else 
-    { ++it; }
-  }
-  
-  /*Ensuite pour toutes les cellules en collisions qui restent, on parcour
-    a partir du centre de lacteur vers lextérieur.*/
-  int count = 1;
-  while( !collidingCells.empty() )
-  {
-    it = collidingCells.begin();
-    for( ; it != collidingCells.end(); )
-    {      
-      Vector2i cc = mStage.getCellCoordinate( it->first );
-      Vector2i pc = mStage.getCellCoordinate( iA.getPosition() );
-      
-      if( abs(pc.y() - cc.y()) == count || 
-        abs(pc.x() - cc.x()) == count )
-      {
-      	Rectangle aRect = iA.getBoundingBox();
-        Intersection2d x = intersect( aRect, it->second );
-        if( x.hasContacts() )
-        {
-          iA.addIntersection( x );
-          
-          Point2d pos = iA.getPosition();
-          Vector2d v = iA.getVelocity();
-          Vector2d penetration = x.getPenetration();
-          
-          if( fabs(penetration.x()) <= fabs(penetration.y()) ) 
-          { 
-            penetration.setY( 0.0 );
-            v.setX( 0.0 );
-          }
-          else 
-          { 
-            penetration.setX( 0.0 );
-            v.setY(0.0);
-          }     	
-            
-          iA.setPosition( pos - penetration );
-          iA.setVelocity( v );
-        }
-      	it = collidingCells.erase(it);
-      }
-      else
-      {++it;}
-    }
-		++count;
-  }
-  afterCollision(iA);
-}
-
-//------------------------------------------------------------------------------
-void Engine::handleMapCollisions( Projectile& iP )
-{
-  const Vector2d bbSize = iP.getBoundingBox().size();
-  int kernel = max( bbSize.x(), bbSize.y() ) / 
-  	max( mStage.getCellSize().x(), mStage.getCellSize().y() ) * 3;
-  if( kernel % 2 == 0 ) ++kernel; //kernel ne doit pas etre pair
-  vector<int> cells = mStage.getCellIndices( iP.getPosition(), Vector2i(kernel) );
-
-  for( uint i = 0; i < cells.size(); ++i )
-  {
-  	if( mStage.value( cells[i] ) == Stage::ctGround )
-    {
-      //la coordonnée pixel de la cellule
-      Vector2i cpc = mStage.getCellPixelCoordinate( cells[i] );
-      Rectangle cellRect( toPoint(cpc), mStage.getCellSize() );
-      Rectangle aRect = iP.getBoundingBox();
-      
-      Intersection2d x = intersect( aRect, cellRect );
-      if( x.hasContacts() )
-      {
-      	//on trouve le point precis d'intersetion avec la map
-        Vector2d v = iP.getVelocity();
-        v.normalise();
-        Point2d p1 = iP.getPosition() - v * 15;
-        Point2d p2 = iP.getPosition() + v * 15;
-        LineSegment2d l( p1, p2 );
-        x = intersect(l, cellRect);
-        iP.addIntersection(x);
-        break;
-      }
-    }
-  }
-}
-      
-
-//------------------------------------------------------------------------------
 void Engine::handlePauseMenu()
 {
 	//on commence par regarder l'input usager
@@ -1333,38 +1537,6 @@ void Engine::handlePauseMenu()
 }
 
 //------------------------------------------------------------------------------
-void Engine::handlePlayerInput()
-{
-	Vector2d aimingDir = mPlayer.getAimingDirection();
-  //input usagé
-  if( isKeyPressed( Qt::Key_Left ) )
-  { 
-  	moveLeft( mPlayer );
-    aimingDir.set( -1.0, 0.0 );
-  }
-  if( isKeyPressed( Qt::Key_Right ) )
-  {
-  	moveRight( mPlayer );
-    aimingDir.set( 1.0, 0.0 );
-  }
-  if( isKeyPressed( Qt::Key_Up ) )
-  {
-    aimingDir.set( 0.0, 1.0 );
-  }
-  if( isKeyPressed( Qt::Key_Down ) )
-  {
-    aimingDir.set( 0.0, -1.0 );
-  }
-  if( isKeyPressed( Qt::Key_Z ) )
-  { moveUp( mPlayer ); }
-  if( isKeyPressed( Qt::Key_X, true ) )
-  { attack( mPlayer ); }
-  
-  mPlayer.setAimingDirection( aimingDir );
-  applyPhysics( mPlayer );
-  updateSpriteToken( mPlayer );
-}
-//------------------------------------------------------------------------------
 void Engine::handlePlaying()
 {	
 	//--- debuggage --
@@ -1373,82 +1545,33 @@ void Engine::handlePlaying()
   if( debug && !iterate ) return;
   //--- fin debuggage
   
-//---------- refactorer comme suit  
-//--- gestion des inputs
-//--- updateAI
-//--- updatePhysic
-//--- nettoyage
-//--------------------------------
-  
   if( isKeyPressed( Qt::Key_Escape ) ) goToState( sPaused );
   
-  //reset les forces sur les acteurs
-  mPlayer.setAcceleration( Vector2d( 0.0 ) );
-  for( int i = 0; i < getStage().getNumberOfActors(); ++i)
-  { mStage.getActor( i ).setAcceleration( Vector2d( 0.0 ) ) ; }
+  for( int i = 0; i < (int)mEntities.size(); ++i )
+  {
+  	/*remise des force à zero sur tout les acteurs en debut d'iteration.*/
+    mEntities[i]->setAcceleration( Vector2d(0.0) );
+  	mEntities[i]->updateAi();
+    mPhysics.update( *mEntities[i] );
+    mPhysics.resolveCollisions( *mEntities[i], getStage() );
+  }
   
-  //le joueur
-  handlePlayerInput();
-  //les acteurs
-  for( int i = 0; i < getStage().getNumberOfActors(); ++i)
-  { handleActorInput( mStage.getActor(i) );  }
+  //gestions des collisions acteur et monstre
+  for( int i = 0; i < getStage().getNumberOfMonsters(); ++i)
+  { 
+  	mPhysics.resolveCollisions( mPlayer, getStage().getMonster(i) );
+    //gestion des collisions projectiles et monstre
+    for( int j = 0; j < getNumberOfProjectiles(); ++j )
+    { mPhysics.resolveCollisions( getProjectile(j), getStage().getMonster(i) ); }
+  }
   
-  //les projectiles
-  for( int i = 0; i < getNumberOfProjectiles(); ++i )
-  { applyPhysics( mProjectiles[i] );}
-  
-  handleActorCollisions();
-  handleMapCollisions();
+  for( int i = 0; i < (int)mEntities.size(); ++i )
+  { mEntities[i]->update(); }
 
   //deplacement de la camera pour suivre le joueur
   moveGameCamera();
   
-  //--- nettoyage
-  vector<Projectile>::iterator itProjectile = mProjectiles.begin();
-  while( itProjectile != mProjectiles.end() )
-  {
-  	if( itProjectile->hasIntersections() )
-    {
-      //ajout d'une animation d'éclatement du projectile.
-      Animation ani;
-      ani.setPosition( itProjectile->getIntersection(0).getPoint(0) );
-      Sprite sp = getSpriteCatalog().getSprite( 
-      	itProjectile->getExplosionToken() );
-      sp.startAnimation();
-      ani.setSprite( sp );
-      mAnimations.push_back( ani );
-      
-      itProjectile = mProjectiles.erase( itProjectile );
-    }
-    else {++itProjectile;}
-  }
-  
-  vector<Actor*>::iterator itActor = mStage.mActors.begin();
-  while( itActor != mStage.mActors.end() )
-  {
-  	if( (*itActor)->getHealth() <= 0.0 )
-    {
-      //ajout d'une animation d'éclatement de l'acteur.
-      Animation ani;
-      ani.setPosition( (*itActor)->getPosition() );
-      Sprite sp = getSpriteCatalog().getSprite( "explosion" );
-      sp.startAnimation();
-      ani.setSprite( sp );
-      mAnimations.push_back( ani );
-    
-    	delete *itActor;
-    	itActor = mStage.mActors.erase( itActor );
-    }
-    else{ itActor++; }
-  }
-  
-  vector<Animation>::iterator itAnims = mAnimations.begin();
-  while( itAnims != mAnimations.end() )
-  {
-  	if( itAnims->isDone() )
-    { itAnims = mAnimations.erase( itAnims ); }
-    else{ ++itAnims; }
-  }
+  refreshGameEntityList();
 }
 
 //------------------------------------------------------------------------------
@@ -1478,7 +1601,7 @@ bool Engine::isMousePressed( Qt::MouseButtons iB, bool iReset /*=false*/ )
 }
 
 //------------------------------------------------------------------------------
-bool Engine::isVisible( const BaseActor& iA ) const
+bool Engine::isVisible( const GameEntity& iA ) const
 {
 	bool r = false;
 	const vector<int>& vc = getVisibleCells();
@@ -1506,10 +1629,30 @@ void Engine::keyReleased( int iKey )
 //------------------------------------------------------------------------------  
 void Engine::loadStage( const Stage& iS )
 {
+	setSpriteCatalog("level1.cat"); //faudrait le lire du stage
 	mStage.clear();
   mStage = iS;
+  
+//  for( int i = 0; i < 250; ++i)
+//  {
+//  	s.addActor( new Monster( Monster::mtBrownSlime ) );
+//    s.getActor(i).setPosition( Point2d(200 + i * 50, 100) );
+//  }
 
-  //init de la position du joueur
+mStage.add( new Monster( Monster::mtBrownSlime ) );
+mStage.add( new Monster( Monster::mtBigGreen ) );
+mStage.add( new Monster( Monster::mtBrownSlime ) );
+mStage.add( new Monster( Monster::mtBigGreen ) );
+mStage.getActor(0).setPosition( Point2d(200, 100) );
+mStage.getActor(1).setPosition( Point2d(400, 800) );
+mStage.getActor(2).setPosition( Point2d(280, 100) );
+mStage.getActor(3).setPosition( Point2d(800, 800) );
+
+
+  //init du joeur de la position du joueur
+  mPlayer = Player();
+  mPlayer.setEngine( this );
+  mPlayer.setSprite( mPlayer.getSpriteToken( mPlayer.getState() ) );
   vector<int> start = getStage().find( Stage::ctStart );
   if( !start.empty() )
   	mPlayer.setPosition( toPoint(
@@ -1531,6 +1674,7 @@ void Engine::loadStage( QString iPath )
 {
 	Stage s;
   s.fromBinary( utils::fromFile( iPath ) );
+  s.setEngine(this);
   loadStage(s);
   mStageFilePath = iPath;
 }  
@@ -1618,79 +1762,70 @@ void Engine::moveGameCamera()
 }
 
 //------------------------------------------------------------------------------
-void Engine::moveLeft( Actor& iActor )
-{
-	Vector2d a = iActor.getAcceleration();
-  Actor::state s = iActor.getState();
-  const double maxHAccel = iActor.getMaximumAcceleration().x();
-  
-  switch ( s ) 
-  {
-  case Actor::sIdle :
-    a -= Vector2d(maxHAccel, 0);
-    s = Actor::sWalking;
-    break;
-  case Actor::sWalking :
-  case Actor::sFalling :
-  case Actor::sJumping :
-    a -= Vector2d(maxHAccel, 0);
-    break;
-  default: break;
-  }
-  iActor.setAcceleration( a );
-  iActor.setState( s );
-}
-
-//------------------------------------------------------------------------------
-void Engine::moveRight( Actor& iActor )
-{
-	Vector2d a = iActor.getAcceleration();
-  Actor::state s = iActor.getState();
-  const double maxHAccel = iActor.getMaximumAcceleration().x();
-  
-  switch ( s ) {
-  case Actor::sIdle :
-      a += Vector2d(maxHAccel, 0);
-      s = Actor::sWalking;
-    break;
-  case Actor::sWalking :
-  case Actor::sFalling :
-  case Actor::sJumping :
-    a += Vector2d(maxHAccel, 0);
-    break;
-  default: break;
-  }
-  iActor.setAcceleration( a );
-  iActor.setState( s );
-}
-
-//------------------------------------------------------------------------------
-void Engine::moveUp( Actor& iActor )
-{
-  Vector2d v = iActor.getVelocity();
-  Actor::state s = iActor.getState();
-  switch ( s ) {
-  case Actor::sIdle :
-  case Actor::sWalking :
-    v += Vector2d(0, 400);
-    s = Actor::sJumping;
-    break;
-  case Actor::sJumping:
-  	v += Vector2d(0, 8);
-  break;
-  default: break;
-  }
-  iActor.setVelocity( v );
-  iActor.setState( s );
-}
-
-//------------------------------------------------------------------------------
 void Engine::newStage( QString iName, int iX, int iY )
 {
 	loadStage( Stage( iName, Vector2i( iX, iY ) ) );
   mStageFilePath = QString();
-	//mStage.clear();
-  //mStage = Stage( iName, Vector2i( iX, iY ) );
+}
+
+//------------------------------------------------------------------------------
+/*Cette méthode sert a faire quelques opérations de maintenance en début 
+  d'itération de simulation de jeu. Elle met à jour la liste des entités de jeu
+  et fait aussi le nettoyage des entités mortes.*/
+void Engine::refreshGameEntityList()
+{
+  mEntities.clear();
+  mEntities.push_back( &mPlayer );
+
+  //ajout des acteurs et retrait des morts
+  vector<Actor*>::iterator itActor = mStage.mActors.begin();
+  while( itActor != mStage.mActors.end() )
+  {
+  	if( (*itActor)->isMarkedForDeletion() )
+    {
+    	{
+      	Monster* dc = dynamic_cast<Monster*> (*itActor);
+        if( dc )
+        { mStage.mMonsters.erase( find( mStage.mMonsters.begin(),
+        	mStage.mMonsters.end(), dc) ); }
+      }
+    	delete *itActor;
+    	itActor = mStage.mActors.erase( itActor );
+    }
+    else
+    {
+      mEntities.push_back(*itActor);
+    	itActor++;
+    }
+  }
+
+	//on enleve le projectiles mort
+	vector<Projectile*>::iterator itProjectile = mProjectiles.begin();
+  while( itProjectile != mProjectiles.end() )
+  {
+  	if( (*itProjectile)->isMarkedForDeletion() )
+    {
+      delete *itProjectile;
+      itProjectile = mProjectiles.erase( itProjectile );
+    }
+    else
+    {
+    	mEntities.push_back( *itProjectile );
+    	++itProjectile;
+    }
+  }
+  
+  //on enleve les animations terminées
+  vector<Animation*>::iterator itAnims = mAnimations.begin();
+  while( itAnims != mAnimations.end() )
+  {
+  	if( (*itAnims)->isDone() )
+    { 
+    	delete *itAnims;
+    	itAnims = mAnimations.erase( itAnims );
+    }
+    else{ ++itAnims; }
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -1770,31 +1905,4 @@ void Engine::unregisterClient( Client* ipC )
 	vector<Client*>::iterator it = find(mClients.begin(), mClients.end(), ipC);
   if( it != mClients.end() )
   	mClients.erase( it );
-}
-
-//------------------------------------------------------------------------------
-void Engine::updateSpriteToken( Actor& iA )
-{
-	utils::SpriteCatalog& sc = mSpriteCatalog;
-  Sprite* s;
-  QString st;
-  switch (iA.getState()) 
-  {
-    case Actor::sIdle: st = iA.getSpriteName() + " idle"; break;
-    case Actor::sWalking:
-      {
-      const Vector2d& v = iA.getVelocity();
-      st = v.x() > 0.0 ? iA.getSpriteName() + " run right" :
-        iA.getSpriteName() +  " run left";
-      }
-      break;
-    case Actor::sJumping: st = iA.getSpriteName() + " jump";  break;
-    case Actor::sFalling: st = iA.getSpriteName() + " fall";  break;
-    default: st = iA.getSpriteName() + " idle"; break;
-  }
-  
-  s = &(sc.getSprite( st) );
-  iA.setSpriteToken( st );
-  Vector2i frameSize = s->isValid() ? s->getFrameSize() : Vector2i(40, 40);
-  iA.setBoundingBox( Rectangle(Point2d( 0.0 ), frameSize) );
 }
