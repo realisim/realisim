@@ -25,7 +25,7 @@ public:
   
 protected:
 	virtual void draw();
-  virtual void draw( const BaseActor& );
+  virtual void draw( const GameEntity& );
   virtual void draw( const Animation& );
   virtual void drawDataMap();
   virtual void drawGame();
