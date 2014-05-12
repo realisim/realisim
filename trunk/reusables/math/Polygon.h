@@ -28,7 +28,7 @@ public:
   virtual const Point3d& getVertex( int ) const;
   virtual bool isConvex() const;
   virtual bool isCoplanar() const;
-  virtual void invalidate();
+  virtual void invalidate();  // => protégée 
   virtual bool operator== ( const Polygon& ) const;
   virtual Polygon& operator= ( const Polygon& );
 

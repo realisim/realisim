@@ -136,6 +136,19 @@ void Viewer::draw( const GameEntity& iA )
   {
   	
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //dessine le searchGrid
+    {
+    vector<int> cells = mEngine.getStage().getCellIndices( iA.getPosition(),
+	  	iA.getCollisionSearchGrid() );
+    Rectangle r;
+    glColor3ub( 255, 255, 255 );
+    for( int i = 0; i < (int)cells.size(); ++i )
+    {
+      Point2d p = toPoint(mEngine.getStage().getCellPixelCoordinate( cells[i] ));
+      r.set( p, mEngine.getStage().getCellSize() );
+    	drawRectangle(r);
+    }
+    }
     //le bounding box
     glColor3ub( 255, 255, 0 );
     drawRectangle( iA.getBoundingBox() );
@@ -153,11 +166,11 @@ void Viewer::draw( const GameEntity& iA )
     	Intersection2d x = iA.getIntersection(i);
       for( int j = 0; j < x.getNumberOfContacts(); ++j )
       {
-      	drawPoint( x.getPoint(j), 4 );
+      	drawPoint( x.getContact(j), 4 );
         
         //normal
-        Point2d n = x.getPoint(j) + x.getNormal(j) * 10;
-        drawLine( x.getPoint(j), n );
+        Point2d n = x.getContact(j) + x.getNormal(j) * 10;
+        drawLine( x.getContact(j), n );
         
 //        //la penetration
 //        drawLine( Point2d( iA.getBoundingBox().bottomLeft().x(), 
@@ -418,14 +431,11 @@ glColor3ub( 255, 0, 0);
 
 for( int i = 0; i < _i.getNumberOfContacts(); ++i )
 {
-	glBegin( GL_POINTS );
-  glVertex2dv( _i.getPoint(i).getPtr() );
-  glEnd();
-  
+	drawPoint(_i.getContact(i), 4.0);  
   //normal
-  Point2d n = _i.getPoint(i) + _i.getNormal(i) * 10;
+  Point2d n = _i.getContact(i) + _i.getNormal(i) * 10;
   glBegin( GL_LINES );
-  glVertex2dv( _i.getPoint(i).getPtr() );
+  glVertex2dv( _i.getContact(i).getPtr() );
   glVertex2dv( n.getPtr() );
   glEnd();
 }
@@ -463,6 +473,33 @@ for( int i = 0; i < 4; i++ )
 glEnd();
 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+
+//intersection rectangle
+{
+	glColor3ub( 255, 255, 0);
+	Vector2d rs( 30, 60 );
+  Vector2d rs2( 32, 32 );
+	Point2d mp = mEngine.getMousePos();
+  mp.setY( c.getWindowInfo().getHeight() - mEngine.getMousePos().y() );
+	Rectangle r( mp - rs/2.0, rs );
+  Rectangle r2( Point2d( 600, 450 ) - rs2/2.0, rs2 );
+
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE );
+  drawRectangle( r );
+  drawRectangle( r2 );
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  
+  Intersection2d x = intersect( r2, r );
+  if( x.hasContacts() )
+  {
+  	glColor3ub( 255, 0, 0 );
+    for( int i = 0; i < x.getNumberOfContacts(); ++i)
+    {
+    	drawPoint( x.getContact(i), 4 );
+      drawLine( x.getContact(i), x.getContact(i) + 10*x.getNormal(i) );
+    }
+  }
+}
   
 //intersection avec penetration  
 {
@@ -547,7 +584,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   	glColor3ub( 255, 0, 0 );
     glPointSize( 4.0 );
     glBegin(GL_POINTS);
-    glVertex2dv( inter.getPoint(0).getPtr() );
+    glVertex2dv( inter.getContact(0).getPtr() );
     glEnd();
     glPointSize( 1.0 );
   }
@@ -583,7 +620,8 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   if( x.hasContacts() )
   {
   	glColor3ub( 255, 0, 0 );
-    drawPoint( x.getPoint(0), 4 );
+    drawPoint( x.getContact(0), 4 );
+    drawLine( x.getContact(0), x.getContact(0) + 10*x.getNormal(0) );
   }
   
   x = intersect(lsUser1, r);
@@ -592,7 +630,10 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   {
   	glColor3ub( 255, 0, 0 );
     for( int i = 0; i < x.getNumberOfContacts(); ++i)
-    	drawPoint( x.getPoint(i), 4 );
+    {
+    	drawPoint( x.getContact(i), 4 );
+      drawLine( x.getContact(i), x.getContact(i) + 10*x.getNormal(i) );
+    }
   }
 }
 
