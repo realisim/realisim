@@ -145,6 +145,7 @@ void Polygon::checkIfCoplanar() const
   if( getNumberOfVertices() > 3 )
 	{
   	mIsCoplanar = math::isCoplanar( mVertices, 0.0001 );
+    //on dirait que le code qui suit est redondant... a tester et enlever.
     if( !mIsCoplanar )
     	math::isCoplanar( mVertices, 0.0001 );
   }

@@ -5,22 +5,15 @@
 
 #include "3d/Camera.h"
 #include "3d/Sprite.h"
-#include "Math/BoundingBox.h"
-#include "Math/intersection.h"
+#include "GameEntity.h"
 #include "Math/Vect.h"
 #include "Math/Point.h"
 #include <map>
+#include "Physics.h"
 #include <QObject>
-#include <QImage>
 #include <QTimerEvent>
-namespace realisim { namespace platform { using namespace math; class Actor; } }
 namespace realisim { namespace platform { using namespace treeD; class Animation; } }
-namespace realisim { namespace platform { class GameEntity; } }
-namespace realisim { namespace platform { class Engine; } }
-namespace realisim { namespace platform { class Physics; } }
-namespace realisim { namespace platform { class Projectile; } }
 namespace realisim { namespace platform { class Stage; } }
-namespace realisim { namespace platform { class Weapon; } }
 #include "utils/SpriteCatalog.h"
 #include <vector>
 
@@ -38,183 +31,6 @@ public:
 protected:
 	Point2d mPosition;
   Sprite mSprite;
-};
-  
-//------------------------------------------------------------------------------
-class realisim::platform::GameEntity
-{
-public:
-	GameEntity();
-  virtual ~GameEntity() = 0;
-  
-  void addIntersection( const Intersection2d& );
-  void applyGravity(bool i) {mIsGravityApplied = i;}
-  void clearIntersections();
-  const Vector2d& getAcceleration() const;
-  const Rectangle getBoundingBox() const;
-  const Circle getBoundingCircle() const;
-  QString getCurrentSpriteToken() const {return mCurrentSpriteToken;}
-  Intersection2d getIntersection(int i) const {return mIntersections[i];}
-  const Vector2d& getMaximumAcceleration() const;
-  const Vector2d& getMaximumVelocity() const;  
-  int getNumberOfIntersections() const {return mIntersections.size();}
-  const Point2d& getPosition() const;
-  const Sprite& getSprite() const { return mSprite; }
-  QString getSpriteToken( int ) const;
-  const Vector2d& getVelocity() const;
-  bool hasIntersections() const;
-  bool isGravityApplied() const {return mIsGravityApplied;}
-  bool isMarkedForDeletion() const { return mMarkedForDeletion; }
-  void markForDeletion( bool iD ) { mMarkedForDeletion = iD; }
-  void setAcceleration( const Vector2d& );
-  void setBoundingBox( const Rectangle& );
-  void setBoundingCircle( const Circle& );
-  void setEngine( realisim::platform::Engine* iE ) {mpEngine = iE;}
-  void setMaximumAcceleration( const Vector2d& );
-  void setMaximumVelocity( const Vector2d& );
-  void setPosition( const Point2d& );
-  void setSprite( QString );
-  void setSpriteToken( int, QString );
-  void setVelocity( const Vector2d& );
-  virtual void update() = 0;
-  virtual void updateAi() = 0;
-  
-protected:
-  std::map<int, QString> mSpriteTokens;
-  QString mCurrentSpriteToken;
-  Rectangle mBoundingBox;
-  Circle mBoundingCircle;
-  Point2d mPosition;
-  Vector2d mVelocity;
-  Vector2d mMaximumVelocity;
-  Vector2d mAcceleration;
-  Vector2d mMaximumAcceleration;
-  vector<Intersection2d> mIntersections;
-  bool mIsGravityApplied;
-  realisim::platform::Engine* mpEngine;
-  Sprite mSprite;
-  bool mMarkedForDeletion;
-};
-
-//------------------------------------------------------------------------------
-class realisim::platform::Weapon
-{
-public:
-  Weapon();
-  virtual ~Weapon();
-  
-  enum type{ tNone, tPellet };
-  
-  bool canFire() const;
-  Projectile* fire( const Vector2d& );
-  double getFireRate() const;
-  type getType() const;
-  void setFireRate( double );
-  void setType(type t);
-  
-protected:
-	type mType;
-  QTime mLastFire;
-  double mFireRate;
-};
-
-//------------------------------------------------------------------------------
-class realisim::platform::Projectile : public realisim::platform::GameEntity
-{
-public:
-  Projectile();
-  virtual ~Projectile();
-  
-  enum state{ sIdle, sHorizontal, sVertical, sExploding };
-  
-  double getDamage() const { return mDamage; }
-  Weapon::type getType() const {return mType;}
-  void setDamage( double d ) { mDamage = d; }
-  void setType( Weapon::type t);
-  virtual void update();
-  virtual void updateAi();
-// int getRemainingLife() const;
-// void getLifeSpan() const;
-// void setLifeSpan( int );
-  
-protected:
-	void setState( state );
-  
-	Weapon::type mType;
-  double mDamage;
-  state mState;
-//	QTime mStart;
-//  int mLifeSpan; //ms
-};
-
-//------------------------------------------------------------------------------
-class realisim::platform::Actor : public GameEntity
-{
-public:
-	Actor();
-  virtual ~Actor() = 0;
-  
-  enum state{ sIdle, sRunningLeft, sRunningRight, sFalling,
-    sJumping, sHit, sPushingLeft, sPushingRight, sHittingCeiling,
-    sDead };
-  
-  void attack();
-  Vector2d getAimingDirection() const {return mAimingDirection;}
-  double getHealth() const;
-  QString getName() const;
-  state getState() const;
-  const Weapon& getWeapon() const;
-  void moveLeft();
-  void moveRight();
-  void moveUp();
-  void setAimingDirection( const Vector2d& d ) {mAimingDirection = d;}
-  void setHealth( double );
-  void setName( QString );
-  void setState( state );
-  void setWeapon( const Weapon& );
-  virtual void update();
-  virtual void updateAi();
-  
-protected:
-	QString mName;
-  double mHealth;
-  state mState;
-  QTime mHitTimer;
-  Weapon mWeapon;
-  Vector2d mAimingDirection;
-};
-
-//------------------------------------------------------------------------------
-//--- Monster
-//------------------------------------------------------------------------------
-class Player : public realisim::platform::Actor
-{
-  public:
-    Player();
-    virtual ~Player() {}
-    virtual void update();
-    virtual void updateAi();
-};
-
-//------------------------------------------------------------------------------
-//--- Monster
-//------------------------------------------------------------------------------
-class Monster : public realisim::platform::Actor
-{
-  public:
-    enum monsterType{ mtBrownSlime, mtBigGreen };
-    
-    Monster();
-    Monster(monsterType);
-    virtual ~Monster() {}
-    
-    monsterType getType() const {return mType;}
-    void setType(monsterType);
-    virtual void update();
-    virtual void updateAi();
-    
-  protected:
-  	monsterType mType;
 };
 
 //------------------------------------------------------------------------------
@@ -303,24 +119,6 @@ QString getBackgroundToken() const;
 };
 
 //------------------------------------------------------------------------------
-//--- Physics
-//------------------------------------------------------------------------------
-class realisim::platform::Physics
-{
-public:
-	Physics();
-  virtual ~Physics();
-  
-  void resolveCollisions( GameEntity&, Stage& );
-  void resolveCollisions( Player&, Monster& );
-  void resolveCollisions( Projectile&, Actor& );
-  void update( GameEntity& );
-  
-protected:
-  //Vector2d mGravity;
-};
-
-//------------------------------------------------------------------------------
 class realisim::platform::Engine : public QObject
 {
 	Q_OBJECT
@@ -349,6 +147,7 @@ public:
   
   virtual void addProjectile( Projectile* );
   virtual void addAnimation( Animation* );
+  virtual void addAnimation( const Sprite&, const Point2d& );
   virtual QString getAndClearLastErrors() const;
   virtual const Animation& getAnimation(int i) const {return *mAnimations[i];}
   virtual configureMenuItem getCurrentConfigureMenuItem() const;
@@ -364,6 +163,7 @@ virtual QString getEditingSpriteToken() const { return mEditingSpriteToken; }
   virtual const Point2i& getMousePos() const { return mMousePos; }
   virtual int getNumberOfAnimations() const { return mAnimations.size(); }
   virtual int getNumberOfProjectiles() const { return mProjectiles.size(); }
+  virtual Physics& getPhysics() {return mPhysics;}
   virtual const Player& getPlayer() const { return mPlayer; }
   virtual Projectile& getProjectile(int i) { return *mProjectiles[i]; }
 virtual realisim::utils::SpriteCatalog& getSpriteCatalog();

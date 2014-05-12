@@ -16,20 +16,13 @@ void Intersection2d::add( const Intersection2d& iI )
 {
 	for( int i = 0; i < iI.getNumberOfContacts(); ++i )
   {
-  	mPoints.push_back( iI.getPoint(i) );
+  	mPoints.push_back( iI.getContact(i) );
     mNormals.push_back( iI.getNormal(i) );
   }
 }
 
 //------------------------------------------------------------------------------
-void Intersection2d::add( const Point2d& p )
-{
-	mPoints.push_back(p);
-  mNormals.push_back( Vector2d(0.0) );
-}
-
-//------------------------------------------------------------------------------
-void Intersection2d::add( const Point2d& p, const Vector2d& n )
+void Intersection2d::add( const Point2d& p, const Vector2d& n /*=0.0*/ )
 {
 	mPoints.push_back(p);
   mNormals.push_back(n.getUnit());
@@ -98,7 +91,7 @@ bool intersects( const Rectangle& iA, const Rectangle& iB )
       mink.add( toPoint(iB.point(j) - iA.point(i)) );
     }
     
-  return mink.contains(Point2d(0.0), false );
+  return mink.contains(Point2d(0.0), true );
 }
 
 //------------------------------------------------------------------------------
@@ -148,25 +141,28 @@ Intersection2d intersect( const LineSegment2d& l, const Circle& c)
   Vector2d dc( l.a() + ad, c.getCenter() );
   double dcNorm = dc.norm();
   if( dcNorm <= c.getRadius() )
-  {
+  {  	
   	if( isEqual( dcNorm, c.getRadius(), 1.0e-5 ) ) //l'intersection est tangente
     { 
     	Point2d e = l.a() + ad;
     	Vector2d ae(l.a(), e);
+      Vector2d ec( c.getCenter(), e );
       if( ab.normSquare() >= ae.normSquare() && ab * ae >= 0.0 )
-      	r.add( e, dc );
+      	r.add( e, ec );
     }
     else
     {
     	double edNorm = sqrt( std::abs( dc.normSquare() - c.getRadius() * c.getRadius() ) );
       Point2d e = l.a() + (adNorm - edNorm) * abUnit;
       Vector2d ae(l.a(), e);
+      Vector2d ec( c.getCenter(), e );
       if( ab.normSquare() >= ae.normSquare() && ab * ae >= 0.0 )
-      	r.add( e, dc );
+      	r.add( e, ec );
       e = l.a() + (adNorm +edNorm) * abUnit;
       ae = Vector2d(l.a(), e);
+      ec = Vector2d( c.getCenter(), e );
       if( ab.normSquare() >= ae.normSquare() && ab * ae >= 0.0 )
-      	r.add( e, dc );
+      	r.add( e, ec );
     }
   }
   return r;
@@ -214,7 +210,10 @@ Intersection2d intersect( const Line2d& iL1, const Line2d& iL2)
   /*//pour verification i2 == i
   Point2d i2 = p2 + s*v2;
   printf( "%f, %f = %f, %f\n", i.x(), i.y(), i2.x(), i2.y() ); */
-  r.add( i );
+  Vector3d n3d = Vector3d( v2.x(), v2.y(), 0.0 ) ^ Vector3d( 0.0, 0.0, -1.0 );
+  Vector2d n( n3d.getX(), n3d.getY() );
+  n.normalise();
+  r.add( i, n );
   return r;
 }
 
@@ -228,17 +227,17 @@ Intersection2d intersect( const LineSegment2d& iL1, const LineSegment2d& iL2)
   if( r.hasContacts() )
   {
   	/*on s'assure que le point d'intersection est bien sur les 2 segements.
-      La projection v2 sur v1 doit etre supérieur a 0 et la norme de v1 plus
+      La projection v2 sur v1 doit etre supérieur= a 0 et la norme de v1 plus
       grande que la norme de v2.*/
-    Point2d i = r.getPoint(0);
+    Point2d i = r.getContact(0);
 
 		Vector2d v1( iL1.a(), iL1.b() ), v2( iL1.a(), i );
     double pv1 = v2 * v1;
-    bool n1 = v1.norm() >= v2.norm();
+    bool n1 = v1.normSquare() >= v2.normSquare();
     v1.set( iL2.a(), iL2.b() );
     v2.set( iL2.a(), i );
     double pv2 = v2 * v1;
-    bool n2 = v1.norm() >= v2.norm(); 
+    bool n2 = v1.normSquare() >= v2.normSquare(); 
     if( !( pv1 >= 0 && pv2 >= 0 && n1 && n2 ) ) { r.clear() ; }
   }
   return r;
@@ -249,10 +248,10 @@ Intersection2d intersect( const LineSegment2d& iL, const Rectangle& iR)
 {
 	Intersection2d r, x;
   LineSegment2d ls0, ls1, ls2, ls3;
-  ls0.set( iR.bottomLeft(), iR.bottomRight() );
-  ls1.set( iR.bottomRight(), iR.topRight() );
-  ls2.set( iR.topRight(), iR.topLeft() );
-  ls3.set( iR.topLeft(), iR.bottomLeft() );
+  ls0.set( iR.bottomLeft(), iR.topLeft() );
+  ls1.set( iR.topLeft(), iR.topRight() );
+  ls2.set( iR.topRight(), iR.bottomRight() );
+  ls3.set( iR.bottomRight(), iR.bottomLeft() );
   
   r.add( intersect(iL, ls0) );
   r.add( intersect(iL, ls1) );
@@ -292,15 +291,10 @@ Intersection2d intersect( const Rectangle& r1, const Rectangle& r2 )
   
 	if( intersects( r1, r2 ) )
   {
-  	r.add( r1.getCenter() ); //un point bidon...
-    r.add( r2.getCenter() ); //point intersection bidon.
-    
-    double olx = axisOverLap( r1.bottomLeft().x(), r1.bottomRight().x(),
-     r2.bottomLeft().x(), r2.bottomRight().x() );
-    double oly = axisOverLap( r1.bottomLeft().y(), r1.topLeft().y(),
-     r2.bottomLeft().y(), r2.topLeft().y() );
-    Vector2d p( olx, oly );
-    r.setPenetration( p );
+  	r.add( intersect( LineSegment2d( r1.bottomLeft(), r1.topLeft() ), r2 ) );
+    r.add( intersect( LineSegment2d( r1.topLeft(), r1.topRight() ), r2 ) );
+    r.add( intersect( LineSegment2d( r1.topRight(), r1.bottomRight() ), r2 ) );
+    r.add( intersect( LineSegment2d( r1.bottomRight(), r1.bottomLeft() ), r2 ) );
   }  
   return r;
 }
