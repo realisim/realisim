@@ -18,6 +18,7 @@ GameEntity::GameEntity() :
  mAcceleration( 0.0 ),
  mMaximumAcceleration( 800, 800 ),
  mCollisionElasticity( 0.0 ),
+ mFrictionCoefficient( 0.2 ),
  mCollisionSearchGrid(0.0, 0.0),
  mIntersections(),
  mIsGravityApplied(true),
@@ -263,28 +264,16 @@ void Actor::setWeapon( const Weapon& iW )
 //------------------------------------------------------------------------------
 void Actor::updateState()
 {
-	Vector2d accel = getAcceleration();
-  Vector2d vel = getVelocity();
-  Point2d pos = getPosition();
+  const Vector2d& v = getVelocity();
   
-	if( isEqual( vel.y(), 0.0 ) && hasIntersections() &&
+	if( isEqual( v.y(), 0.0 ) && hasIntersections() &&
   	getIntersection(0).getContact(0).y() < getPosition().y() )
   { 
-  	vel.x() > 0 ? setState( Actor::sRunningRight ) : 
+  	v.x() > 0 ? setState( Actor::sRunningRight ) : 
       setState( Actor::sRunningLeft );
   }
   
-  //friction en x. seulement si il n'y a pas d'input usagé
-  //ou changment de direciton
-  bool applyFriction = ! ( (mpEngine->isKeyPressed( Qt::Key_Left ) || 
-  	mpEngine->isKeyPressed( Qt::Key_Right ) ) ) || 
-    accel.x() / fabs(accel.x()) !=  vel.x() / fabs(vel.x());
-  if(applyFriction && 
-  	(getState() == Actor::sRunningLeft ||
-     getState() == Actor::sRunningRight) )
-		vel.setX( vel.x() * 0.8 );
-
-  if( vel.y() < 0.0 )
+  if( v.y() < 0.0 )
   {
   	switch (getState()) {
       case Actor::sIdle:
@@ -297,11 +286,8 @@ void Actor::updateState()
     }
   }
   
-  if( vel.norm() < 0.01 )
+  if( v.normSquare() < 0.01 )
   { setState( Actor::sIdle ); }
-  
-  setPosition( pos );
-  setVelocity( vel );
 }
 
 //------------------------------------------------------------------------------
@@ -316,6 +302,7 @@ Player::Player() : Actor()
   setSpriteToken( Actor::sFalling, "player idle");
   setSpriteToken( Actor::sJumping, "player idle");
   setSpriteToken( Actor::sHit, "player idle");
+  setFrictionCoefficient( 0.2 );
   
 Weapon we = getWeapon();
 we.setType( Weapon::tGrenade );
@@ -353,6 +340,12 @@ void Player::handleUserInput()
   { attack(); }
   
   setAimingDirection( aimingDir );
+  
+  double frictionCoefficient = 0.2;
+  if( mpEngine->isKeyPressed( Qt::Key_Left ) || 
+  	mpEngine->isKeyPressed( Qt::Key_Right ) )
+  {frictionCoefficient = 0.0;}
+	setFrictionCoefficient( frictionCoefficient );
 }
 
 
@@ -463,7 +456,7 @@ Projectile::~Projectile()
 
 //------------------------------------------------------------------------------
 int Projectile::getRemainingLife() const
-{ return getLifeSpan() - mStart.elapsed(); }
+{ return getLifeSpan() < 0 ? 1 : getLifeSpan() - mStart.elapsed(); }
 
 //------------------------------------------------------------------------------
 void Projectile::setState( state iS )
@@ -494,14 +487,15 @@ void Projectile::setType( Weapon::type iT )
       setCollisionElasticity( 0.0 );
     break;
     case Weapon::tGrenade:
-      setSpriteToken( sHorizontal, "pellet bullet horizontal");
-      setSpriteToken( sVertical, "pellet bullet vertical");
+      setSpriteToken( sHorizontal, "weapon grenade");
+      setSpriteToken( sVertical, "weapon grenade");
       setSpriteToken( sExploding, "explosion");
       setDamage( 5.0 );
       setVelocity( Vector2d(600, 400) );
-      setLifeSpan(2000);
+      setLifeSpan(3000);
       applyGravity(true);
       setCollisionElasticity( 0.4 );
+      setFrictionCoefficient( 0.5 );
     break;
     default: break;
   }
@@ -518,9 +512,18 @@ void Projectile::update()
   
   for( int i = 0; i < s.getNumberOfMonsters(); ++i )
   { p.resolveCollisions( *this, s.getMonster(i) ); }
-  
 	updateState();
+}
 
+//------------------------------------------------------------------------------
+void Projectile::updateState()
+{
+  Vector2d v = getVelocity();
+  if( isEqual( v.x(), 0.0 ) )
+    setState( sVertical );
+  else
+    setState( sHorizontal );
+  
   switch( getType() )
   {
   case Weapon::tPellet:
@@ -550,17 +553,6 @@ void Projectile::update()
   }break;
   default: break;
   }
-
-}
-
-//------------------------------------------------------------------------------
-void Projectile::updateState()
-{
-  Vector2d v = getVelocity();
-  if( isEqual( v.x(), 0.0 ) )
-    setState( sVertical );
-  else
-    setState( sHorizontal );
 }
 
 //------------------------------------------------------------------------------

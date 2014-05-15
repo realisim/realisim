@@ -23,6 +23,7 @@ namespace math
   	Intersection2d() : mPoints(), mNormals() {;}
     Intersection2d( const Intersection2d& i ) :
     	mPoints( i.mPoints ), mNormals( i.mNormals ) {;}
+    Intersection2d( const Point2d&, const Vector2d& = Vector2d(0.0) );
     Intersection2d& operator=(const Intersection2d& i)
     { mPoints = i.mPoints; mNormals = i.mNormals; return *this; }
     virtual ~Intersection2d() {;}
@@ -45,6 +46,7 @@ namespace math
 //Point3d intersect( const Plane&, const Line3d& );
 	bool intersects( const Circle&, const Circle& );
   bool intersects( const Line2d&, const Line2d& );
+  bool intersects( const Line2d&, const Rectangle& );  
   bool intersects( const LineSegment2d&, const LineSegment2d& );
   bool intersects( const LineSegment2d&, const Rectangle& );
   bool intersects( const Rectangle&, const Rectangle& );
@@ -53,6 +55,8 @@ namespace math
 	Intersection2d intersect( const Circle&, const LineSegment2d& );
   Intersection2d intersect( const Circle&, const Rectangle& );
   Intersection2d intersect( const Line2d&, const Line2d& );
+  Intersection2d intersect( const Line2d&, const LineSegment2d& );
+  Intersection2d intersect( const Line2d&, const Rectangle& );
   Intersection2d intersect( const LineSegment2d&, const Circle& );
   Intersection2d intersect( const LineSegment2d&, const LineSegment2d& );
   Intersection2d intersect( const LineSegment2d&, const Rectangle& );

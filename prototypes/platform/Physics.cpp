@@ -17,6 +17,35 @@ Physics::~Physics()
 {}
 
 //------------------------------------------------------------------------------
+void Physics::applyFriction( GameEntity& iGe )
+{
+  Vector2d v = iGe.getVelocity();
+  Vector2d a = iGe.getAcceleration();
+  /*On applique la friction si l'entité à une collision avec le sol.
+    
+  */
+  bool touchesGround = false;
+  if( iGe.hasIntersections() )
+  {
+  	for(int i = 0; i < iGe.getNumberOfIntersections(); ++i && !touchesGround )
+    {
+    	Intersection2d x = iGe.getIntersection(i);
+    	for( int j = 0; j < x.getNumberOfContacts(); ++j && !touchesGround )
+      {
+      	if(x.getNormal(j) * Vector2d(0.0, 1.0) > 0)
+        { touchesGround = true; }
+      }
+    }
+  }
+  bool applyFriction = touchesGround;
+    
+  if(applyFriction )
+		v.setX( v.x() * ( 1.0 - iGe.getFrictionCoefficient() ) );
+    
+  iGe.setVelocity( v );
+}
+
+//------------------------------------------------------------------------------
 /*retourne la penetration de r1 dans r2.*/
 Vector2d Physics::penetration( const Rectangle& r1, const Rectangle& r2 )
 {
@@ -40,7 +69,7 @@ Vector2d Physics::reflect( const Vector2d& iI, const Vector2d& iN,
 
 //------------------------------------------------------------------------------
 void Physics::resolveCollisions( GameEntity& iGe, Stage& iStage )
-{
+{  
   //verification des collisions
   //on flush les collisions précedentes de l'acteur
   iGe.clearIntersections();  
@@ -158,6 +187,8 @@ void Physics::resolveCollisions( GameEntity& iGe, Stage& iStage )
     }
 		++count;
   }
+  
+  applyFriction(iGe);
 }
 
 //------------------------------------------------------------------------------
@@ -175,32 +206,45 @@ void Physics::resolveCollisions( Player& p, Monster& m)
 }
 
 //------------------------------------------------------------------------------
+/* Cette méthode sert à gérer la collision des projectiles avec le stage. Elle
+  est particulière parce que les projectiles peuvent aller tres vite et la
+  collision générique resolveCollisions( GameEntity& p, Stage& s) gère mal ce
+  cas.*/
 void Physics::resolveCollisions( Projectile& p, Stage& s)
 {
+	p.clearIntersections();
   vector<int> cells = s.getCellIndices( p.getPosition(),
   	p.getCollisionSearchGrid() );
 
 	Vector2d v = p.getVelocity();
+  Rectangle bBox = p.getBoundingBox();
   Point2d previousPos = p.getPosition() - v * getTimeIncrement();
 	Intersection2d x;
+  bool hasIntersection = false;
   for( uint i = 0; i < cells.size(); ++i )
   {
   	if( s.value( cells[i] ) == Stage::ctGround )
     {
       //la coordonnée pixel de la cellule
       Vector2i cpc = s.getCellPixelCoordinate( cells[i] );
-      Rectangle cellRect( toPoint(cpc), s.getCellSize() );
-      Rectangle aRect = p.getBoundingBox();
-            
-      if( intersects( aRect, cellRect ) )
+      Rectangle cellRect( toPoint(cpc), s.getCellSize() );      
+      if( intersects( bBox, cellRect ) )
       {
         //on trouve le point precis d'intersetion avec la map
-        LineSegment2d l( previousPos, p.getPosition() + v * getTimeIncrement() );
+        Line2d l( previousPos, v );
         x.add(intersect(l, cellRect));
+        hasIntersection = true;
       }
     }
   }
-  
+
+	/*si il y a au moins une intersection entre la ligne de direction du
+    projectile et la map, on vient trouver le point d'intersection le plus
+    près du projectile. Si ce dernier est contenu par le bbox du projectile,
+    on corrige la velocité/position du projectile. Lorsqu'il n'y a pas
+    d'intersection entre la ligne de direction du projectile et la map, mais que
+    hasIntersection est vrai, on applique la resolution de collisiion générique.
+    Ce cas est utilisé lorsque le projectile est relativement gros.*/
   if( x.hasContacts() )
   {
     int closestIndex = std::numeric_limits<int>::max();
@@ -212,17 +256,32 @@ void Physics::resolveCollisions( Projectile& p, Stage& s)
       { closestIndex = i; closestDistance = d; }
     }
     
-    Vector2d v = p.getVelocity();
-    Vector2d n = x.getNormal( closestIndex );
-    v = reflect(v, n, p.getCollisionElasticity());
-    p.setVelocity(v);
-    p.setPosition( x.getContact( closestIndex ) + Vector2d( 
-      p.getBoundingBox().size().x() / 2.0 * n.x(),
-      p.getBoundingBox().size().y() / 2.0 * n.y() ) );
-    p.addIntersection(x);
+    Point2d c = x.getContact( closestIndex );
+    if( bBox.contains(c) )
+    {
+      Vector2d v = p.getVelocity();
+      Vector2d n = x.getNormal( closestIndex );
+      
+      v = reflect(v, n, p.getCollisionElasticity());
+      p.setVelocity(v);    
+      Vector2d pProjn = fabs(toVector(p.getPosition()) * n) * n;
+      Vector2d cProjn = fabs(toVector(c) * n) * n;
+      Vector2d bbProjn = fabs((p.getBoundingBox().size() * n)) * n /2.0;
+      Vector2d d = bbProjn - (pProjn - cProjn);
+      p.setPosition( p.getPosition() + d );
+      Intersection2d interFinal;
+      p.addIntersection( Intersection2d( c, n ) );
+    }
   }
+  else if( hasIntersection )
+  { resolveCollisions((GameEntity&)p, s); }
+  
+  if( hasIntersection )
+  {
+  	applyFriction(p);
+  }
+  //p.addIntersection(x); //pour debogage
 }
-
 
 //------------------------------------------------------------------------------
 void Physics::resolveCollisions( Projectile& p, Actor& a)
@@ -241,7 +300,7 @@ void Physics::resolveCollisions( Projectile& p, Actor& a)
 
 //------------------------------------------------------------------------------
 void Physics::update( GameEntity& iGe )
-{
+{ 
   Point2d p = iGe.getPosition();
 	Vector2d v = iGe.getVelocity();
 	Vector2d a = iGe.getAcceleration();
