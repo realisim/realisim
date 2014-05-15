@@ -11,6 +11,9 @@ namespace realisim
 namespace math
 {
 
+Intersection2d::Intersection2d(const Point2d& p, const Vector2d& n /*=0.0*/)
+{ add( p, n ); }
+
 //------------------------------------------------------------------------------
 void Intersection2d::add( const Intersection2d& iI )
 {
@@ -71,6 +74,10 @@ bool intersects( const Circle& iA, const Circle& iB )
 //------------------------------------------------------------------------------
 bool intersects( const Line2d& iL1, const Line2d& iL2 )
 { return intersect( iL1, iL2 ).hasContacts(); }
+
+//------------------------------------------------------------------------------
+bool intersects( const Line2d& l, const Rectangle& r )
+{ return intersect( l, r ).hasContacts(); }
 
 //------------------------------------------------------------------------------
 bool intersects( const LineSegment2d& iL1, const LineSegment2d& iL2 )
@@ -218,6 +225,48 @@ Intersection2d intersect( const Line2d& iL1, const Line2d& iL2)
 }
 
 //------------------------------------------------------------------------------
+Intersection2d intersect( const Line2d& l, const LineSegment2d& ls)
+{
+	Intersection2d r;
+  Line2d l1( ls.a(), ls.b() - ls.a() );
+  
+  r = intersect( l, l1 );
+  if( r.hasContacts() )
+  {
+    /*on s'assure que le point d'intersection est bien sur le segement ls.
+      La projection v2 sur v1 doit etre supérieur= a 0 et la norme de v1 plus
+      grande que la norme de v2.*/
+    Point2d i = r.getContact(0);
+
+		Vector2d v1( ls.a(), ls.b() ), v2( ls.a(), i );
+    double pv1 = v2 * v1;
+    bool n1 = v1.normSquare() >= v2.normSquare();
+    if( !( pv1 >= 0 && n1 ) ) { r.clear() ; }
+  }
+  
+  return r;
+}
+
+
+//------------------------------------------------------------------------------
+Intersection2d intersect( const Line2d& iL, const Rectangle& iR )
+{
+	Intersection2d r;
+  LineSegment2d ls0, ls1, ls2, ls3;
+  ls0.set( iR.bottomLeft(), iR.topLeft() );
+  ls1.set( iR.topLeft(), iR.topRight() );
+  ls2.set( iR.topRight(), iR.bottomRight() );
+  ls3.set( iR.bottomRight(), iR.bottomLeft() );
+  
+  r.add( intersect( iL, ls0 ) );
+  r.add( intersect( iL, ls1 ) );
+  r.add( intersect( iL, ls2 ) );
+  r.add( intersect( iL, ls3 ) );
+  
+  return r;
+}
+
+//------------------------------------------------------------------------------
 Intersection2d intersect( const LineSegment2d& iL1, const LineSegment2d& iL2)
 {
 	Intersection2d r;
@@ -246,7 +295,7 @@ Intersection2d intersect( const LineSegment2d& iL1, const LineSegment2d& iL2)
 //------------------------------------------------------------------------------
 Intersection2d intersect( const LineSegment2d& iL, const Rectangle& iR)
 {
-	Intersection2d r, x;
+	Intersection2d r;
   LineSegment2d ls0, ls1, ls2, ls3;
   ls0.set( iR.bottomLeft(), iR.topLeft() );
   ls1.set( iR.topLeft(), iR.topRight() );

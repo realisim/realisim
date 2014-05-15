@@ -153,7 +153,6 @@ void Viewer::draw( const GameEntity& iA )
     glColor3ub( 255, 255, 0 );
     drawRectangle( iA.getBoundingBox() );
     //le bounding cricle
-    glColor3ub( 255, 255, 0 );
     drawCircle( iA.getBoundingCircle().getCenter(), iA.getBoundingCircle().getRadius() );
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     
@@ -474,7 +473,7 @@ glEnd();
 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 
-//intersection rectangle
+//intersection rectangle a rectangle avec lineSegment
 {
 	glColor3ub( 255, 255, 0);
 	Vector2d rs( 30, 60 );
@@ -501,7 +500,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
 }
   
-//intersection avec penetration  
+//intersection avec penetration (axis overlap)
 {
 	glColor3ub( 255, 255, 0);
 	Vector2d rs( 30, 60 );
@@ -556,37 +555,45 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }  
 
-//intersection line2d
+//intersection line2d/line2d et line2d/segment2d
 {
   Point2d mp = mEngine.getMousePos();
   mp.setY( c.getWindowInfo().getHeight() - mp.y() );
-	Line2d l1( Point2d( 0, 10 ), Vector2d( 120, 27 ) );
-  Line2d l2( Point2d( c.getWindowInfo().getWidth() / 2, 
-  	c.getWindowInfo().getHeight() / 2 ), 
-    Vector2d( mp.x() - l2.getPoint().x(), mp.y() - l2.getPoint().y() ) );
+	Line2d l2( Point2d( 0, 10 ), Vector2d( 120, 27 ) );
+  Point2d m(c.getWindowInfo().getWidth() / 2, 
+  	c.getWindowInfo().getHeight() / 2);
+  Line2d l1( m, mp - m); 
+  Rectangle rect( Point2d(100, 100), Vector2d( 200, 400 ) );
   
-  glColor3ub( 255, 255, 255 );
+  glColor3ub( 20, 200, 153 );
   glLineWidth( 1.0 );
-  glBegin(GL_LINES);
-    glVertex2dv( ( l1.getPoint() - 100.0 * l1.getDirection() ).getPtr() );
-    glVertex2dv( ( l1.getPoint() + 100.0 * l1.getDirection() ).getPtr() );
-  glEnd();
+  drawLine( l1.getPoint() - 100.0 * l1.getDirection(),
+  	l1.getPoint() + 100.0 * l1.getDirection() );
+  drawLine( l2.getPoint() - 100.0 * l2.getDirection(),
+  	l2.getPoint() + 100.0 * l2.getDirection() );
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  drawRectangle( rect );
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   
-  glLineWidth( 1.0 );
-  glBegin(GL_LINES);
-    glVertex2dv( ( l2.getPoint() - 100.0 * l2.getDirection() ).getPtr() );
-    glVertex2dv( ( l2.getPoint() + 100.0 * l2.getDirection() ).getPtr() );
-  glEnd();  
-  
-  Intersection2d inter = intersect( l1, l2 );
-  if( inter.hasContacts() )
+  Intersection2d interLine = intersect( l1, l2 );
+  if( interLine.hasContacts() )
   {
   	glColor3ub( 255, 0, 0 );
-    glPointSize( 4.0 );
-    glBegin(GL_POINTS);
-    glVertex2dv( inter.getContact(0).getPtr() );
-    glEnd();
-    glPointSize( 1.0 );
+    drawPoint(interLine.getContact(0), 4.0 );
+		drawLine( interLine.getContact(0),
+    	interLine.getContact(0) + 10 * interLine.getNormal(0) );
+  }
+  
+  Intersection2d interRect = intersect( l1, rect );
+  if( interRect.hasContacts() )
+  {
+  	glColor3ub( 255, 0, 0 );
+  	for( int i = 0; i < interRect.getNumberOfContacts(); ++i )
+    {
+      drawPoint(interRect.getContact(i), 4.0 );
+  		drawLine( interRect.getContact(i),
+      	interRect.getContact(i) + 10 * interRect.getNormal(i) );
+    }  	
   }
 }
 

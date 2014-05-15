@@ -37,6 +37,7 @@ public:
   double getCollisionElasticity() const {return mCollisionElasticity;}
   const Vector2d& getCollisionSearchGrid() const { return mCollisionSearchGrid; }
   QString getCurrentSpriteToken() const {return mCurrentSpriteToken;}
+  double getFrictionCoefficient() const {return mFrictionCoefficient;}
   Intersection2d getIntersection(int i) const {return mIntersections[i];}
   const Vector2d& getMaximumAcceleration() const;
   const Vector2d& getMaximumVelocity() const;  
@@ -54,6 +55,7 @@ public:
   void setBoundingCircle( const Circle& );
   void setCollisionElasticity(double iE) {mCollisionElasticity = iE;}
   void setEngine( realisim::platform::Engine* iE ) {mpEngine = iE;}
+  void setFrictionCoefficient( double iC ) {mFrictionCoefficient = iC;}
   void setMaximumAcceleration( const Vector2d& );
   void setMaximumVelocity( const Vector2d& );
   void setPosition( const Point2d& );
@@ -73,6 +75,7 @@ protected:
   Vector2d mAcceleration;
   Vector2d mMaximumAcceleration;
   double mCollisionElasticity;
+  double mFrictionCoefficient;
   Vector2d mCollisionSearchGrid;
   vector<Intersection2d> mIntersections;
   bool mIsGravityApplied;
@@ -129,7 +132,7 @@ public:
 protected:
   int getRemainingLife() const;
 	void setState( state );
-  void updateState(); // a enlever...
+  void updateState();
   
 	Weapon::type mType;
   double mDamage;

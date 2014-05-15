@@ -28,6 +28,7 @@ public:
   void update( GameEntity& );
   
 protected:
+	void applyFriction( GameEntity& );
 	Vector2d penetration( const Rectangle&, const Rectangle& );
 	Vector2d reflect( const Vector2d&, const Vector2d&, double );
   //Vector2d mGravity;
