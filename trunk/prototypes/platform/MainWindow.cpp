@@ -183,9 +183,14 @@ void Viewer::draw( const GameEntity& iA )
       }
     }    
     
+    //les vecteurs forces
+    glColor3ub( 0, 0, 255 );
+    for( int i = 0; i < iA.getNumberOfForces(); ++i )
+    { drawLine( iA.getPosition(), iA.getPosition() + iA.getForce(i) ); }
+    
     //le vecteur acceleration
     glColor3ub( 0, 255, 0 );
-    drawLine( iA.getPosition(), iA.getPosition() + iA.getAcceleration() ); 
+    drawLine( iA.getPosition(), iA.getPosition() + iA.getAcceleration() );
   
     //le vecteur vitesse
     glColor3ub( 255, 0, 0 );
@@ -343,6 +348,10 @@ void Viewer::drawGame()
   {
   	draw( mEngine.getProjectile(i) );
   }
+  
+  //dessine les armes (items)
+  for( int i = 0; i < stage.getNumberOfWeapons(); ++i )
+  { draw( stage.getWeapon(i) ); }
 	
   //les animations diverses
   for( int i = 0; i < mEngine.getNumberOfAnimations(); ++i )
@@ -661,8 +670,8 @@ void Viewer::gotEvent( Engine::event iE )
         default: break;
       }
     break;
-    case Engine::eStageLoaded:
-    case Engine::eFrameDone: update(); break;
+    case Engine::eStageLoaded: update(); break;
+    case Engine::eFrameDone: updateGL(); break;
     default: break;
   }
 }
@@ -676,7 +685,6 @@ void Viewer::initializeGL()
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glClearColor(0.0, 0.0, 0.0, 0.0);
 
-	mEngine.graphicsAreReady();
 	mFboLightDepth.addColorAttachment(true);  
   mFboLightDepth.addDepthAttachment(true);
   mFboLightDepth.getDepthTexture().setFilter( GL_LINEAR );
@@ -687,6 +695,8 @@ void Viewer::initializeGL()
   //mShadowMapShader.addFragmentSource( kLightOfSight );
   mShadowMapShader.addVertexSource( kShadowLightVertex );
   mShadowMapShader.addFragmentSource( kShadowLightFrag );
+  
+  mEngine.graphicsAreReady();
 }
 
 //-----------------------------------------------------------------------------

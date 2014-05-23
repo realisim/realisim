@@ -15,13 +15,14 @@ namespace math
 class Line2d
 {
 public:
-	Line2d();
+	Line2d() : mPoint(0.0), mDirection(0.0) {};
   Line2d( const Point2d& iP, const Vector2d& iD) : mPoint(iP), mDirection(iD) {}
   virtual ~Line2d() {;}
   //constructeur copie et assignement par defaut...
   
   const Vector2d& getDirection() const { return mDirection; }
   const Point2d& getPoint() const { return mPoint; }
+  void set( const Point2d& iP, const Vector2d& iD) { mPoint = iP; mDirection = iD; }
   void setDirection( const Vector2d& iD ) { mDirection = iD; }
   void setPoint( const Point2d& iP) { mPoint = iP; }
   

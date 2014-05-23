@@ -290,6 +290,7 @@ namespace math
   }
   
   //---------------------------------------------------------------------------
+  //l'angle est en radian
   template<class T>
   inline Point3<T> rotatePoint(const T &angle, const Point3<T> &point,
                               Vector3<T> axis)
@@ -315,6 +316,7 @@ namespace math
   }
   
   //---------------------------------------------------------------------------
+  //l'angle est en radian
   template<class T>
   inline Point3<T> rotatePoint(const T &angle, const Point3<T> &point,
                               Vector3<T> axis, const Point3<T> &axisPos)

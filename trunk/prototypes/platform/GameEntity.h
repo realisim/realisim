@@ -28,19 +28,22 @@ public:
 	GameEntity();
   virtual ~GameEntity() = 0;
   
+  void addForce( const Vector2d& );
   void addIntersection( const Intersection2d& );
   void applyGravity(bool i) {mIsGravityApplied = i;}
   void clearIntersections();
-  const Vector2d& getAcceleration() const;
+  Vector2d getAcceleration() const;
   const Rectangle getBoundingBox() const;
   const Circle getBoundingCircle() const;
   double getCollisionElasticity() const {return mCollisionElasticity;}
   const Vector2d& getCollisionSearchGrid() const { return mCollisionSearchGrid; }
   QString getCurrentSpriteToken() const {return mCurrentSpriteToken;}
+  Vector2d getForce(int i) const;
   double getFrictionCoefficient() const {return mFrictionCoefficient;}
   Intersection2d getIntersection(int i) const {return mIntersections[i];}
   const Vector2d& getMaximumAcceleration() const;
   const Vector2d& getMaximumVelocity() const;  
+  int getNumberOfForces() const { return mForces.size(); }
   int getNumberOfIntersections() const {return mIntersections.size();}
   const Point2d& getPosition() const;
   const treeD::Sprite& getSprite() const { return mSprite; }
@@ -50,7 +53,8 @@ public:
   bool isGravityApplied() const {return mIsGravityApplied;}
   bool isMarkedForDeletion() const { return mMarkedForDeletion; }
   void markForDeletion( bool iD ) { mMarkedForDeletion = iD; }
-  void setAcceleration( const Vector2d& );
+  //void setAcceleration( const Vector2d& );
+  void resetForces();
   void setBoundingBox( const Rectangle& );
   void setBoundingCircle( const Circle& );
   void setCollisionElasticity(double iE) {mCollisionElasticity = iE;}
@@ -72,7 +76,8 @@ protected:
   Point2d mPosition;
   Vector2d mVelocity;
   Vector2d mMaximumVelocity;
-  Vector2d mAcceleration;
+//  Vector2d mAcceleration;
+  std::vector<Vector2d> mForces;
   Vector2d mMaximumAcceleration;
   double mCollisionElasticity;
   double mFrictionCoefficient;
@@ -88,7 +93,7 @@ protected:
 //------------------------------------------------------------------------------
 // --- Weapon
 //------------------------------------------------------------------------------
-class Weapon
+class Weapon : public GameEntity
 {
 public:
   Weapon();
@@ -102,6 +107,7 @@ public:
   type getType() const;
   void setFireRate( double );
   void setType(type t);
+  virtual void update();
   
 protected:
 	type mType;
@@ -122,8 +128,10 @@ public:
   enum state{ sIdle, sHorizontal, sVertical, sExploding };
   
   double getDamage() const { return mDamage; }
+  double getExplosionDamage() const { return mExplosionDamage; }
   Weapon::type getType() const {return mType;}
   void setDamage( double d ) { mDamage = d; }
+  void setExplosionDamage( double d ) { mExplosionDamage = d; }
   void setType( Weapon::type t);
   virtual void update();
  	int getLifeSpan() const {return mLifeSpan;}
@@ -136,6 +144,7 @@ protected:
   
 	Weapon::type mType;
   double mDamage;
+  double mExplosionDamage;
   state mState;
 	QTime mStart;
   int mLifeSpan; //ms
@@ -162,12 +171,12 @@ public:
   const Weapon& getWeapon() const;
   void moveLeft();
   void moveRight();
-  void moveUp();
+  void jump();
   void setAimingDirection( const Vector2d& d ) {mAimingDirection = d;}
   void setHealth( double );
   void setName( QString );
   void setState( state );
-  void setWeapon( const Weapon& );
+  virtual void setWeapon( const Weapon& );
   
 protected:
   void updateState();
@@ -185,13 +194,24 @@ protected:
 //------------------------------------------------------------------------------
 class Player : public Actor
 {
-  public:
-    Player();
-    virtual ~Player() {}
-    virtual void update();
+public:
+  Player();
+  virtual ~Player() {}
+  virtual void update();
+  
+  void addWeaponToBag( const Weapon& );
+  int getNumberOfWeaponsInBag() const {return mWeaponBag.size();}
+  Weapon getWeaponFromBag(int i) const { return mWeaponBag[i]; }
+  Weapon getWeaponFromBag( Weapon::type ) const;
+  bool hasWeaponInBag( Weapon::type t) const { return getWeaponIndex(t) != -1; }
+	virtual void setWeapon( const Weapon& );
+  
+protected:
+	int getWeaponIndex( Weapon::type ) const;
+  void handleUserInput();
     
-  protected:
-    void handleUserInput();
+  std::vector<Weapon> mWeaponBag;
+  QTime mDeathTimer;
 };
 
 //------------------------------------------------------------------------------

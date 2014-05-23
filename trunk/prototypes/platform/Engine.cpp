@@ -90,6 +90,13 @@ void Stage::add( Monster* a )
 }
 
 //------------------------------------------------------------------------------
+void Stage::add( Weapon* a )
+{ 
+  a->setEngine(mpEngine);
+	mWeapons.push_back( a );
+}
+
+//------------------------------------------------------------------------------
 void Stage::addLayer()
 { mLayers.push_back( new Layer( getTerrainSize() ) ); }
 
@@ -266,12 +273,20 @@ Monster& Stage::getMonster( int i )
 { return *mMonsters[i]; }
 
 //------------------------------------------------------------------------------
+Weapon& Stage::getWeapon( int i )
+{ return *mWeapons[i]; }
+
+//------------------------------------------------------------------------------
 int Stage::getNumberOfActors() const
 { return mActors.size(); }
 
 //------------------------------------------------------------------------------
 int Stage::getNumberOfMonsters() const
 { return mMonsters.size(); }
+
+//------------------------------------------------------------------------------
+int Stage::getNumberOfWeapons() const
+{ return mWeapons.size(); }
 
 //------------------------------------------------------------------------------
 /*retourne le token de sprite pour le layer iLayer de la cellule iIndex*/
@@ -337,6 +352,14 @@ void Stage::removeMonster( int i )
 	Monster* m = mMonsters[i];
   removeActor( distance( mActors.begin(), 
   	std::find( mActors.begin(), mActors.end(), m ) ) );
+}
+
+//------------------------------------------------------------------------------
+void Stage::removeWeapon( int i )
+{
+	Weapon* m = mWeapons[i];
+	mWeapons.erase( std::find( mWeapons.begin(), mWeapons.end(), m ) );
+  delete m;
 }
 
 //------------------------------------------------------------------------------
@@ -430,8 +453,6 @@ Engine::Engine() : QObject(),
   mGameCamera.set( Point3d( 0.0, 0.0, 5.0 ),
   	Point3d( 0.0, 0.0, 0.0 ),
     Vector3d( 0.0, 1.0, 0.0 ) );
-  
-	goToState( sMainMenu );
 }
 
 Engine::~Engine()
@@ -667,7 +688,10 @@ void Engine::goToState( state iS )
 
 //------------------------------------------------------------------------------
 void Engine::graphicsAreReady()
-{ loadStage("stage.bin"); }
+{ 
+	goToState(sMainMenu);
+	loadStage("stage.bin");
+}
 
 //------------------------------------------------------------------------------
 bool Engine::hasError() const
@@ -812,29 +836,14 @@ void Engine::handlePauseMenu()
 
 //------------------------------------------------------------------------------
 void Engine::handlePlaying()
-{	
-	//--- debuggage --
-  #ifndef NDEBUG
-	bool debug = false; bool iterate = false;  
-  if( isKeyPressed( Qt::Key_D ) ) debug = !debug;
-  if( debug && isKeyPressed( Qt::Key_Plus, true ) ) iterate = true;
-  if( debug && !iterate ) return;
-  #endif
-  //--- fin debuggage
-  
+{
   if( isKeyPressed( Qt::Key_Escape ) ) goToState( sPaused );
   
   for( int i = 0; i < (int)mEntities.size(); ++i )
-  {
-  	/*remise des force à zero sur tout les acteurs en debut d'iteration.*/
-    mEntities[i]->setAcceleration( Vector2d(0.0) );
-    mEntities[i]->update();
-  }
+  { mEntities[i]->update(); }
 
   //deplacement de la camera pour suivre le joueur
   moveGameCamera();
-  
-  refreshGameEntityList();
 }
 
 //------------------------------------------------------------------------------
@@ -916,24 +925,17 @@ mStage.getActor(1).setPosition( Point2d(400, 800) );
 mStage.getActor(2).setPosition( Point2d(280, 100) );
 mStage.getActor(3).setPosition( Point2d(800, 800) );
 
+Weapon* w = new Weapon();
+w->setType(Weapon::tPellet);
+mStage.add( w );
+w = new Weapon();
+w->setType(Weapon::tGrenade);
+mStage.add( w );
 
-  //init du joeur de la position du joueur
-  mPlayer = Player();
-  mPlayer.setEngine( this );
-  mPlayer.setSprite( mPlayer.getSpriteToken( mPlayer.getState() ) );
-  vector<int> start = getStage().find( Stage::ctStart );
-  if( !start.empty() )
-  	mPlayer.setPosition( toPoint(
-    	getStage().getCellPixelCoordinate( start[0] ) + 
-      getStage().getCellSize() / 2 ) );
-  else
-	  mPlayer.setPosition( Point2d( 10, 10 ) );
-  
-	//on met le joueur et la camera dans la premiere case
-  Matrix4d m = mGameCamera.getTransformationToGlobal();
-  m.setTranslation( Point3d( mPlayer.getPosition().x(), 
-  	mPlayer.getPosition().y(), 0.0 ) );
-  mGameCamera.setTransformationToGlobal( m );
+mStage.getWeapon(0).setPosition( Point2d(100, 100) );
+mStage.getWeapon(1).setPosition( Point2d(200, 100) );
+
+	startLevel();
   
   send( eStageLoaded );
   goToState(previousState);
@@ -1044,7 +1046,11 @@ void Engine::newStage( QString iName, int iX, int iY )
 void Engine::refreshGameEntityList()
 {
   mEntities.clear();
-  mEntities.push_back( &mPlayer );
+  /*On enleve le joueur de la liste quand il est marqué pour etre effacé (
+    typiquement quand le joueur meurt...) ainsi les collisions et tout le 
+    tralala, fonctionne comme si le joueur n'était pas présent.*/
+  if( !mPlayer.isMarkedForDeletion() )
+  	mEntities.push_back( &mPlayer );
 
   //ajout des acteurs et retrait des morts
   vector<Actor*>::iterator itActor = mStage.mActors.begin();
@@ -1067,7 +1073,22 @@ void Engine::refreshGameEntityList()
     	itActor++;
     }
   }
-
+  //ajout/retrait des armes
+  vector<Weapon*>::iterator itWeapons = mStage.mWeapons.begin();
+  while( itWeapons != mStage.mWeapons.end() )
+  {
+    if( (*itWeapons)->isMarkedForDeletion() )
+    {
+      delete *itWeapons;
+      itWeapons = mStage.mWeapons.erase( itWeapons );
+    }
+    else
+    {
+    	mEntities.push_back( *itWeapons );
+    	++itWeapons;
+    }
+  }
+  
 	//on enleve le projectiles mort
 	vector<Projectile*>::iterator itProjectile = mProjectiles.begin();
   while( itProjectile != mProjectiles.end() )
@@ -1095,6 +1116,7 @@ void Engine::refreshGameEntityList()
     }
     else{ ++itAnims; }
   }
+  printf( "num animation %d\n", mAnimations.size() );
 }
 
 //------------------------------------------------------------------------------
@@ -1133,6 +1155,37 @@ void Engine::setSpriteCatalog( QString iPath )
 }
 
 //------------------------------------------------------------------------------
+void Engine::startLevel( int iDelay )
+{
+	mStartLevelDelay = iDelay;
+	mStartLevelTimer.start();
+}
+
+//------------------------------------------------------------------------------
+void Engine::startLevel()
+{
+	mStartLevelTimer = QTime();
+  
+  //init du joeur de la position du joueur
+  mPlayer = Player();
+  mPlayer.setEngine( this );
+  mPlayer.setSprite( mPlayer.getSpriteToken( mPlayer.getState() ) );
+  vector<int> start = getStage().find( Stage::ctStart );
+  if( !start.empty() )
+  	mPlayer.setPosition( toPoint(
+    	getStage().getCellPixelCoordinate( start[0] ) + 
+      getStage().getCellSize() / 2 ) );
+  else
+	  mPlayer.setPosition( Point2d( 10, 10 ) );
+  
+	//on met le joueur et la camera dans la premiere case
+  Matrix4d m = mGameCamera.getTransformationToGlobal();
+  m.setTranslation( Point3d( mPlayer.getPosition().x(), 
+  	mPlayer.getPosition().y(), 0.0 ) );
+  mGameCamera.setTransformationToGlobal( m );
+}
+
+//------------------------------------------------------------------------------
 QString Engine::toString( Stage::cellType iCt )
 {
 	QString r("indéfini");
@@ -1152,12 +1205,26 @@ void Engine::timerEvent( QTimerEvent* ipE )
 {
 	if( ipE->timerId() == mTimerId )
   {
+  	//--- debuggage --
+    #ifndef NDEBUG
+    bool debug = false; bool iterate = false;  
+    if( isKeyPressed( Qt::Key_D ) ) debug = !debug;
+    if( debug && isKeyPressed( Qt::Key_Plus, true ) ) iterate = true;
+    if( debug && !iterate ) return;
+    #endif
+    //--- fin debuggage
+
   	switch (getState()) 
     {
     	case sIdle: break;
       case sMainMenu: handleMainMenu(); break;
       case sConfigureMenu: handleConfigureMenu(); break;
-      case sPlaying: handlePlaying(); break;
+      case sPlaying: 
+        if( !mStartLevelTimer.isNull() && 
+        	mStartLevelTimer.elapsed() > mStartLevelDelay )
+        { startLevel(); }
+      	handlePlaying();
+        break;
       case sEditing: handleEditing(); break;
       case sPaused: handlePauseMenu(); break;
       default: break;
@@ -1165,6 +1232,13 @@ void Engine::timerEvent( QTimerEvent* ipE )
     
     computeVisibleCells();
   	send( eFrameDone );
+    refreshGameEntityList();
+    
+//    /*Le reset des forces devrait etre dans le update des entity, mais pour
+//    faciliter le deboggage (affichage des forces) on le fait ici, apres le
+//    message eFrameDone.*/
+//    for( int i = 0; i < (int)mEntities.size(); ++i )
+//	  { mEntities[i]->resetForces(); }
   }
 }
 
