@@ -8,6 +8,7 @@ namespace realisim
 namespace platform 
 {
 class Actor;
+class Engine;
 class GameEntity;
 class Monster;
 class Player;
@@ -20,11 +21,11 @@ public:
 	Physics();
   virtual ~Physics();
   
+  void explode( const Point2d&, double, double, Engine& );
   double getTimeIncrement() const { return 0.015; }
+  Intersection2d checkCollisions( GameEntity&, GameEntity& );
   void resolveCollisions( GameEntity&, Stage& );
-  void resolveCollisions( Player&, Monster& );
   void resolveCollisions( Projectile&, Stage& );
-  void resolveCollisions( Projectile&, Actor& );
   void update( GameEntity& );
   
 protected:

@@ -15,7 +15,8 @@ GameEntity::GameEntity() :
  mPosition( 0.0 ),
  mVelocity( 0.0 ),
  mMaximumVelocity( 400, 1000 ),
- mAcceleration( 0.0 ),
+// mAcceleration( 0.0 ),
+ mForces(),
  mMaximumAcceleration( 800, 800 ),
  mCollisionElasticity( 0.0 ),
  mFrictionCoefficient( 0.2 ),
@@ -29,14 +30,21 @@ GameEntity::GameEntity() :
 //------------------------------------------------------------------------------
 GameEntity::~GameEntity() {}
 //------------------------------------------------------------------------------
+void GameEntity::addForce( const Vector2d& iF )
+{ mForces.push_back(iF); }
+//------------------------------------------------------------------------------
 void GameEntity::addIntersection( const Intersection2d& iV )
 { mIntersections.push_back(iV); }
 //------------------------------------------------------------------------------
 void GameEntity::clearIntersections()
 { mIntersections.clear(); }
 //------------------------------------------------------------------------------
-const Vector2d& GameEntity::getAcceleration() const
-{ return mAcceleration; }
+Vector2d GameEntity::getAcceleration() const
+{ 
+	Vector2d r;
+  for( int i = 0; i < getNumberOfForces(); ++i) {r+=mForces[i];}
+	return r; 
+}
 //------------------------------------------------------------------------------
 const math::Rectangle GameEntity::getBoundingBox() const
 {
@@ -46,6 +54,9 @@ const math::Rectangle GameEntity::getBoundingBox() const
 //------------------------------------------------------------------------------
 const math::Circle GameEntity::getBoundingCircle() const
 { return Circle( getPosition(), mBoundingCircle.getRadius() );  }
+//------------------------------------------------------------------------------
+Vector2d GameEntity::getForce(int i) const 
+{return mForces[i]; } 
 //------------------------------------------------------------------------------
 const Vector2d& GameEntity::getMaximumAcceleration() const
 { return mMaximumAcceleration; }
@@ -73,8 +84,11 @@ bool GameEntity::hasIntersections() const
   return r;
 }
 //------------------------------------------------------------------------------
-void GameEntity::setAcceleration( const Vector2d& iV )
-{ mAcceleration = iV; }
+void GameEntity::resetForces()
+{ mForces.clear(); }
+//------------------------------------------------------------------------------
+//void GameEntity::setAcceleration( const Vector2d& iV )
+//{ mAcceleration = iV; }
 //------------------------------------------------------------------------------
 void GameEntity::setBoundingBox( const Rectangle& iV )
 { 
@@ -161,54 +175,54 @@ const Weapon& Actor::getWeapon() const
 //------------------------------------------------------------------------------
 void Actor::moveLeft()
 {
-	Vector2d a = getAcceleration();
+	Vector2d f;
   state s = getState();
   const double maxHAccel = getMaximumAcceleration().x();
   
   switch ( s ) 
   {
   case sIdle :
-    a -= Vector2d(maxHAccel, 0);
+    f = -Vector2d(maxHAccel, 0);
     s = sRunningLeft;
     break;
   case sRunningLeft :
   case sRunningRight :
   case sFalling :
   case sJumping :
-    a -= Vector2d(maxHAccel, 0);
+    f = -Vector2d(maxHAccel, 0);
     break;
   default: break;
   }
-  setAcceleration( a );
+  addForce( f );
   setState( s );
 }
 
 //------------------------------------------------------------------------------
 void Actor::moveRight()
 {
-	Vector2d a = getAcceleration();
+	Vector2d f;
   Actor::state s = getState();
   const double maxHAccel = getMaximumAcceleration().x();
   
   switch ( s ) {
   case sIdle :
-      a += Vector2d(maxHAccel, 0);
+      f = Vector2d(maxHAccel, 0);
       s = sRunningRight;
     break;
   case sRunningLeft :
   case sRunningRight :
   case sFalling :
   case sJumping :
-    a += Vector2d(maxHAccel, 0);
+    f = Vector2d(maxHAccel, 0);
     break;
   default: break;
   }
-  setAcceleration( a );
+  addForce( f );
   setState( s );
 }
 
 //------------------------------------------------------------------------------
-void Actor::moveUp()
+void Actor::jump()
 {
   Vector2d v = getVelocity();
   Actor::state s = getState();
@@ -235,27 +249,42 @@ void Actor::setName( QString iV )
 { mName = iV; }
 //------------------------------------------------------------------------------
 void Actor::setState( state iV )
-{ 
+{
+
+printf("ps %d, ns %d\n", getState(), iV);
+	bool addAnimation = false;
 	if( mState != iV )
   {
     switch (getState()) 
-    {
+    {    
+    	case sDead: break; // on ne sort pas de sDead	
       case sHit: 
         switch (iV) 
         {
           case sHit: break;
+          case sDead: 
+          	mState = sDead;
+            addAnimation = true;
+						markForDeletion( true );
+            break;
           default: if( mHitTimer.elapsed() > 500 ) {mState = iV;} break;
         }
       break;
       default:
         switch (iV) 
         {
+        	case sDead:
+            mState = sDead;
+            addAnimation = true;
+						markForDeletion( true );
+            break;
           case sHit: mHitTimer.start(); mState = iV; break;
           default: mState = iV; break;
         } 
         break;
     }
     setSprite( getSpriteToken( mState ) );
+    if( addAnimation ) { printf("add anim mstate = %d\n", mState);mpEngine->addAnimation( getSprite(), getPosition() ); }
   }
 }
 //------------------------------------------------------------------------------
@@ -288,12 +317,16 @@ void Actor::updateState()
   
   if( v.normSquare() < 0.01 )
   { setState( Actor::sIdle ); }
+  
+  if( getHealth() <= 0.0 )
+  { setState( sDead ); }
 }
 
 //------------------------------------------------------------------------------
 //--- Player
 //------------------------------------------------------------------------------
-Player::Player() : Actor()
+Player::Player() : Actor(),
+	mDeathTimer( QTime() )
 { 
   setName( "Player1" );
   setSpriteToken( Actor::sIdle, "player idle");
@@ -302,11 +335,49 @@ Player::Player() : Actor()
   setSpriteToken( Actor::sFalling, "player idle");
   setSpriteToken( Actor::sJumping, "player idle");
   setSpriteToken( Actor::sHit, "player idle");
+  setSpriteToken( Actor::sDead, "explosion");
   setFrictionCoefficient( 0.2 );
   
-Weapon we = getWeapon();
-we.setType( Weapon::tGrenade );
-setWeapon( we );
+  //Weapon w; w.setType(Weapon::tPellet);
+  //addWeapon( w );
+  //setWeapon(w);
+  //w.setType(Weapon::tGrenade);
+  //addWeapon( w );
+  //setWeapon(w);
+  //setWeapon( getWeapon(Weapon::tGrenade) );
+}
+
+//------------------------------------------------------------------------------
+void Player::addWeaponToBag( const Weapon& iW)
+{
+	int i = getWeaponIndex( iW.getType() );
+	if( i != -1 )
+  {
+//  	mWeaponBag[i].setNumberOfAmmo = mWeaponBag[i].getNumberOfAmmo() + 
+//    	iW.getNumberOfAmmo();
+  }
+  else{ mWeaponBag.push_back( iW ); }
+}
+
+//------------------------------------------------------------------------------
+Weapon Player::getWeaponFromBag( Weapon::type iT ) const
+{
+	Weapon r;
+  int i = getWeaponIndex( iT);
+  if( i != -1 ) r = getWeaponFromBag( i );
+  return r;
+}
+
+//------------------------------------------------------------------------------
+int Player::getWeaponIndex( Weapon::type iT ) const
+{
+	int r = -1;
+  for(int i = 0; i < getNumberOfWeaponsInBag(); ++i)
+  { 
+  	if( mWeaponBag[i].getType() == iT )
+    { r = i; break; }
+  }
+  return r;
 }
 
 //------------------------------------------------------------------------------
@@ -315,7 +386,7 @@ void Player::handleUserInput()
 	assert( mpEngine );
   
   Vector2d aimingDir = getAimingDirection();
-  //input usagé
+  //input usager pour déplacement
   if( mpEngine->isKeyPressed( Qt::Key_Left ) )
   { 
   	moveLeft();
@@ -326,20 +397,30 @@ void Player::handleUserInput()
   	moveRight();
     aimingDir.set( 1.0, 0.0 );
   }
+  
   if( mpEngine->isKeyPressed( Qt::Key_Up ) )
-  {
-    aimingDir.set( 0.0, 1.0 );
-  }
+  { aimingDir.set( 0.0, 1.0 );}
   if( mpEngine->isKeyPressed( Qt::Key_Down ) )
-  {
-    aimingDir.set( 0.0, -1.0 );
-  }
+  { aimingDir.set( 0.0, -1.0 ); }
+
   if( mpEngine->isKeyPressed( Qt::Key_Z ) )
-  { moveUp(); }
+  { jump(); }
   if( mpEngine->isKeyPressed( Qt::Key_X, true ) )
   { attack(); }
   
   setAimingDirection( aimingDir );
+  
+  //input usager pour changement d'arme
+  if( mpEngine->isKeyPressed( Qt::Key_1 ) )
+  { 
+  	if( hasWeaponInBag( Weapon::tPellet ) )
+    { setWeapon( getWeaponFromBag( Weapon::tPellet ) ); }
+  }
+  if( mpEngine->isKeyPressed( Qt::Key_2 ) )
+  {
+  	if( hasWeaponInBag( Weapon::tGrenade ) )
+    { setWeapon( getWeaponFromBag( Weapon::tGrenade ) ); }
+  }
   
   double frictionCoefficient = 0.2;
   if( mpEngine->isKeyPressed( Qt::Key_Left ) || 
@@ -348,6 +429,16 @@ void Player::handleUserInput()
 	setFrictionCoefficient( frictionCoefficient );
 }
 
+//------------------------------------------------------------------------------
+void Player::setWeapon( const Weapon& iW )
+{
+	int i = getWeaponIndex( iW.getType() );
+	if( i != -1 )
+  { mWeaponBag[i] = iW; }
+  else
+  { mWeaponBag.push_back(iW); }
+  mWeapon = iW;
+}
 
 //------------------------------------------------------------------------------
 void Player::update()
@@ -358,10 +449,47 @@ void Player::update()
   p.update( *this );
   p.resolveCollisions( *this, s );
   
+  //intersection avec les monstres
   for( int i = 0; i < s.getNumberOfMonsters(); ++i )
-  { p.resolveCollisions( *this, s.getMonster(i) ); }
+  {
+  	Monster& m = s.getMonster(i);
+    Intersection2d x = p.checkCollisions( *this, m );
+  	if( x.hasContacts() )
+    {
+    	addIntersection(x);
+      for( int i = 0; i < x.getNumberOfContacts(); ++i )
+      { addForce( x.getNormal(i) * 4000 ); }
+      
+      if( getState() != Actor::sHit )
+      { setHealth( getHealth() - 20 ); }
+    	setState( Actor::sHit );      
+    }
+  }
   
-	Actor::updateState();
+  //intersection avec les armes
+  for( int i = 0; i < s.getNumberOfWeapons(); ++i )
+  {
+  	Weapon& w = s.getWeapon(i);
+  	if( p.checkCollisions( *this, w ).hasContacts() )
+    {
+    	setWeapon(w);
+    	w.markForDeletion(true);
+    }
+  }
+  
+  Actor::updateState();  
+  if( getState() == sDead )
+  {
+    for( int i = 0; i < getNumberOfWeaponsInBag(); ++i )
+    {
+      Weapon* w = new Weapon( getWeaponFromBag(i) );
+      w->setPosition( getPosition() );
+      w->setVelocity( Vector2d( 1000 * i, 400 ) );
+      mpEngine->getStage().add( w );
+    }
+    mWeaponBag.clear();
+    mpEngine->startLevel( 2000 );
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -389,7 +517,7 @@ void Monster::setType( monsterType iType )
       setSpriteToken( Actor::sHit, "monstre bidon1 idle");
       setSpriteToken( Actor::sDead, "explosion");
       setHealth(20);
-      setMaximumVelocity( Vector2d(0, 1000) );
+      setMaximumAcceleration( Vector2d(0, 1000) );
       break;
     case mtBigGreen:
       setName( "Big Green" );
@@ -401,7 +529,7 @@ void Monster::setType( monsterType iType )
       setSpriteToken( Actor::sHit, "monstre bidon2 idle");
       setSpriteToken( Actor::sDead, "explosion");
       setHealth(50);
-      setMaximumVelocity( Vector2d(20, 1000) );
+      setMaximumAcceleration( Vector2d(20, 1000) );
       break;
     default: break;
   }
@@ -417,13 +545,6 @@ void Monster::update()
   p.resolveCollisions( *this, s );
   
   Actor::updateState();
-  if( getHealth() <= 0.0 )
-  {
-  	setState( sDead );
-    //ajout d'une animation d'éclatement de l'acteur.
-    mpEngine->addAnimation( getSprite(), getPosition() );
-		markForDeletion( true );  
-  }
 }
 
 //------------------------------------------------------------------------------
@@ -437,7 +558,7 @@ void Monster::updateAi()
   if( dir.x() < 0 ) moveLeft();
   else moveRight();
   
-  if( dir.y() > 0 ) moveUp();
+  if( dir.y() > 0 ) jump();
 }
 
 //------------------------------------------------------------------------------
@@ -446,6 +567,7 @@ void Monster::updateAi()
 Projectile::Projectile() : GameEntity(),
   mType( Weapon::tNone ),
   mDamage( 1.0 ),
+  mExplosionDamage(0.0),
   mState( sIdle ),
   mStart(),
   mLifeSpan(1000)
@@ -465,6 +587,16 @@ void Projectile::setState( state iS )
   {
   	mState = iS;
     setSprite( getSpriteToken( mState ) );
+    
+    switch (mState) 
+    {
+      case sExploding:
+        //ajout d'une animation d'éclatement du projectile.
+        mpEngine->addAnimation( getSprite(), getPosition() );
+        markForDeletion( true );
+        break;
+      default: break;
+    }
   }
 }
 
@@ -481,7 +613,6 @@ void Projectile::setType( Weapon::type iT )
       setSpriteToken( sVertical, "pellet bullet vertical");
       setSpriteToken( sExploding, "pellet bullet explode");
       setDamage( 10.0 );
-      setVelocity( Vector2d(800, 800) );
       setLifeSpan(400);
       applyGravity(false);
       setCollisionElasticity( 0.0 );
@@ -490,8 +621,8 @@ void Projectile::setType( Weapon::type iT )
       setSpriteToken( sHorizontal, "weapon grenade");
       setSpriteToken( sVertical, "weapon grenade");
       setSpriteToken( sExploding, "explosion");
-      setDamage( 5.0 );
-      setVelocity( Vector2d(600, 400) );
+      setDamage( 0.0 );
+      setExplosionDamage( 200 );
       setLifeSpan(3000);
       applyGravity(true);
       setCollisionElasticity( 0.4 );
@@ -511,7 +642,15 @@ void Projectile::update()
   p.resolveCollisions( *this, s );
   
   for( int i = 0; i < s.getNumberOfMonsters(); ++i )
-  { p.resolveCollisions( *this, s.getMonster(i) ); }
+  { 
+  	Monster& m = s.getMonster(i);
+    Intersection2d x = p.checkCollisions( *this, m );
+  	if( x.hasContacts() )
+    {
+    	addIntersection(x);
+    	m.setHealth( m.getHealth() - getDamage() );
+    }
+  }
 	updateState();
 }
 
@@ -529,26 +668,16 @@ void Projectile::updateState()
   case Weapon::tPellet:
   {
     if( hasIntersections() || getRemainingLife() <= 0)
-  	{
-      setState( sExploding );
-      markForDeletion( true );
-      
-      Point2d pos = hasIntersections() ? getIntersection(0).getContact(0) :
-       getPosition();
-      //ajout d'une animation d'éclatement du projectile.
-      mpEngine->addAnimation( getSprite(), pos );
-    }
+  	{ setState( sExploding ); }
   }
   break;
   case Weapon::tGrenade:
   {
   	if( getRemainingLife() <= 0 )
     {
-      setState( sExploding );
-      //p.explode( getIntersection(0).getContact(0) )
-      //ajout d'une animation d'éclatement du projectile.
-      mpEngine->addAnimation( getSprite(), getPosition() );
-      markForDeletion( true );
+      setState( sExploding );      
+      Physics& p = mpEngine->getPhysics();
+      p.explode( getPosition(), 32 * 8, getExplosionDamage(), *mpEngine );
     }
   }break;
   default: break;
@@ -560,7 +689,7 @@ void Projectile::updateState()
 //------------------------------------------------------------------------------
 Weapon::Weapon() : mType( tNone ),
 mLastFire(),
-mFireRate( 1.0 )
+mFireRate( 0.0 )
 { mLastFire.start(); }
 
 Weapon::~Weapon()
@@ -568,7 +697,7 @@ Weapon::~Weapon()
 
 //------------------------------------------------------------------------------
 bool Weapon::canFire() const
-{	return mLastFire.elapsed() > (1.0 / getFireRate() * 1000);}
+{	return getFireRate() > 0 && mLastFire.elapsed() > (1.0 / getFireRate() * 1000);}
 //------------------------------------------------------------------------------
 Projectile* Weapon::fire( const Vector2d& iDir )
 {
@@ -579,14 +708,13 @@ Projectile* Weapon::fire( const Vector2d& iDir )
     case tPellet:
     {
     	p->setType( tPellet );
-      Vector2d v = p->getVelocity();
-      p->setVelocity( Vector2d( v.x() * iDir.x(), v.y() * iDir.y() ) );
+      Vector2d v = 800 * iDir;
+      p->setVelocity( v );
     }break;
     case tGrenade:
     {
       p->setType( tGrenade );
-      Vector2d v = p->getVelocity();
-    	v.setX( v.x() * iDir.x() );
+      Vector2d v( 600 * iDir.x(), 200 );
       p->setVelocity(v);
     }break;
     default: break;
@@ -609,11 +737,25 @@ void Weapon::setType(type t)
   switch (getType()) 
   {
     case tPellet:
+    	setSpriteToken( 0, "icon weapon pellet" );
     	setFireRate( 8.0 );
     break;
     case tGrenade:
-    	setFireRate( 12.0 );
+    	setSpriteToken( 0, "icon weapon grenade" );
+    	setFireRate( 2.0 );
     break;
     default: break;
   }
+}
+//------------------------------------------------------------------------------
+void Weapon::update()
+{
+	if( !getSprite().isValid() )
+  { setSprite( getSpriteToken(0) ); }
+  
+  Physics& p = mpEngine->getPhysics();
+  Stage& s = mpEngine->getStage();
+  
+  p.update( *this );
+  p.resolveCollisions( *this, s );
 }

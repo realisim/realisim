@@ -2,6 +2,7 @@
 #include "Engine.h"
 #include "GameEntity.h"
 #include "Math/MathUtils.h"
+#include "Math/Primitives.h"
 #include "Physics.h"
 
 using namespace realisim;
@@ -43,6 +44,64 @@ void Physics::applyFriction( GameEntity& iGe )
 		v.setX( v.x() * ( 1.0 - iGe.getFrictionCoefficient() ) );
     
   iGe.setVelocity( v );
+}
+
+//------------------------------------------------------------------------------
+Intersection2d Physics::checkCollisions( GameEntity& iA, GameEntity& iB)
+{
+	Intersection2d r;
+	if( intersects( iA.getBoundingCircle(), iB.getBoundingCircle() ) )
+  { r = intersect( iA.getBoundingBox(), iB.getBoundingBox() ); }
+  return r;
+}
+
+//------------------------------------------------------------------------------
+void Physics::explode( const Point2d& iPos, double iRadius, double iDamage, 
+	Engine& iE  )
+{
+	Stage& s = iE.getStage();
+	vector<Actor*> actors;
+  Actor* a = 0;
+	double radiusSquare = iRadius * iRadius;
+  
+  //les joueurs
+  if( (iE.getPlayer().getPosition() - iPos).normSquare() <= radiusSquare )
+  { actors.push_back( &iE.getPlayer() ); }
+  
+  //les acteurs du stage
+	for( int i = 0; i < s.getNumberOfActors(); ++i )	
+  {
+  	a = &s.getActor(i);
+  	if( (a->getPosition() - iPos).normSquare() <= radiusSquare )
+    { actors.push_back(a); }
+  }
+  
+  //les props...
+  
+	//l'Explosion lance numIterations rayons de collisions sur 360 deg.
+  LineSegment2d ray;
+  Vector2d dir;
+  const int numIterations = 128;
+  double inc = DEUX_PI / (double)numIterations;
+  for( int i = 0; i < numIterations; ++i )
+  {
+  	dir.set( cos( i * inc ), sin( i * inc ) );
+  	ray.set( iPos, iPos + iRadius * dir );
+    
+    Intersection2d x;
+    for( int j = 0; j < (int)actors.size(); ++j )
+    {
+    	a = actors[j];
+    	x = intersect( ray, a->getBoundingBox() );
+      if( x.hasContacts() )
+      {
+      	a->addIntersection( x );
+        a->addForce( dir * 2500 );
+        a->setHealth( a->getHealth() - iDamage / (double)numIterations );
+      }
+    }
+  }
+  
 }
 
 //------------------------------------------------------------------------------
@@ -192,20 +251,6 @@ void Physics::resolveCollisions( GameEntity& iGe, Stage& iStage )
 }
 
 //------------------------------------------------------------------------------
-void Physics::resolveCollisions( Player& p, Monster& m)
-{
-  if( intersects( p.getBoundingCircle(), m.getBoundingCircle() ) )
-  {
-    Intersection2d z = intersect( p.getBoundingBox(), m.getBoundingBox() );
-    if( z.hasContacts() )
-    {
-      p.addIntersection( z );
-      p.setState( Actor::sHit );
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
 /* Cette méthode sert à gérer la collision des projectiles avec le stage. Elle
   est particulière parce que les projectiles peuvent aller tres vite et la
   collision générique resolveCollisions( GameEntity& p, Stage& s) gère mal ce
@@ -284,33 +329,18 @@ void Physics::resolveCollisions( Projectile& p, Stage& s)
 }
 
 //------------------------------------------------------------------------------
-void Physics::resolveCollisions( Projectile& p, Actor& a)
-{
-  if( intersects( p.getBoundingCircle(), a.getBoundingCircle() ) )
-  {
-    Intersection2d z = intersect( p.getBoundingBox(), a.getBoundingBox() );
-    if( z.hasContacts() )
-    { 
-    	p.addIntersection( z );
-      //gestion des dommages
-      a.setHealth( a.getHealth() - p.getDamage() );
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
 void Physics::update( GameEntity& iGe )
 { 
   Point2d p = iGe.getPosition();
-	Vector2d v = iGe.getVelocity();
-	Vector2d a = iGe.getAcceleration();
+	Vector2d v = iGe.getVelocity();	
   double maxHv = iGe.getMaximumVelocity().x();
   double maxVv = iGe.getMaximumVelocity().y();
   
   //application de la gravité
   if( iGe.isGravityApplied() )
-  { a += Vector2d(0.0, -980); }
+  { iGe.addForce( Vector2d(0.0, -980) ); }
 
+	Vector2d a = iGe.getAcceleration();
 	//déplacement du joueur a la position désiré
   v += a * getTimeIncrement();
   v.setX( v.x() >= 0.0 ? 
@@ -320,5 +350,5 @@ void Physics::update( GameEntity& iGe )
   
   iGe.setPosition( p + v * getTimeIncrement() );
   iGe.setVelocity( v );
-  iGe.setAcceleration( a );
+  iGe.resetForces();
 }

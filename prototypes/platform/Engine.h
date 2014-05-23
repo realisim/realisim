@@ -50,6 +50,7 @@ class realisim::platform::Stage
     void addLayer();
 //    void addActor();
     void add( Monster* );
+    void add( Weapon* );
     void addToken( int, QString );
     std::vector<int> find( cellType ) const;      
     Actor& getActor( int );
@@ -63,11 +64,13 @@ QString getBackgroundToken() const;
     Vector2i getCellPixelCoordinate( int, int ) const; //devrait etre Vector2i
     Vector2i getCellSize() const {return mCellSize;}
     Monster& getMonster(int);
+    Weapon& getWeapon(int);
     QString getName() const { return mName; }
     int getNumberOfActors() const;
     int getNumberOfCells() const { return mTerrain.size(); }
     int getNumberOfLayers() const { return mLayers.size(); }
     int getNumberOfMonsters() const;
+    int getNumberOfWeapons() const;
     const QByteArray getTerrain() const { return mTerrain; }
     int getTerrainHeight() const { return mTerrainSize.y(); };
     Vector2i getTerrainSize() const {return mTerrainSize;}      
@@ -79,6 +82,7 @@ QString getBackgroundToken() const;
     void removeActor( int );
     void removeLayer(int);
     void removeMonster( int );
+    void removeWeapon( int );
     void setBackgroundToken( QString );
     void setEngine( Engine* ipE ) {mpEngine = ipE;}
     void setLayerAsVisible( int, bool = true );
@@ -115,6 +119,7 @@ QString getBackgroundToken() const;
     QString mBackgroundToken; //vector?
     vector<Actor*> mActors;
     vector<Monster*> mMonsters;
+    vector<Weapon*> mWeapons;
     //vector<NonPlayingCaracter> mNpcs;
 };
 
@@ -164,7 +169,7 @@ virtual QString getEditingSpriteToken() const { return mEditingSpriteToken; }
   virtual int getNumberOfAnimations() const { return mAnimations.size(); }
   virtual int getNumberOfProjectiles() const { return mProjectiles.size(); }
   virtual Physics& getPhysics() {return mPhysics;}
-  virtual const Player& getPlayer() const { return mPlayer; }
+  virtual Player& getPlayer() { return mPlayer; }
   virtual Projectile& getProjectile(int i) { return *mProjectiles[i]; }
 virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual Stage& getStage() { return mStage; }
@@ -183,11 +188,13 @@ virtual bool isVisible( const GameEntity& ) const; // a renommer pour isWithinCa
   virtual void mouseReleased( int );
   virtual void mouseWheelMoved( double );
   virtual void newStage( QString, int, int );
-  virtual void registerClient( Client* );
+  virtual void registerClient( Client* );  
   virtual void saveStage( QString );
   virtual void setCurrentLayer( int );
   virtual void setEditingTool( Stage::cellType iCt ) {mEditingTool = iCt;}
 virtual void setEditingSpriteToken( QString i ) {mEditingSpriteToken = i;}
+  virtual void startLevel();
+  virtual void startLevel(int);
   virtual QString toString( Stage::cellType );
   virtual void unregisterClient( Client* );
   
@@ -217,6 +224,8 @@ protected:
   std::vector<Animation*> mAnimations;
   std::vector<int> mVisibleCells;
   std::vector<GameEntity*> mEntities;
+  QTime mStartLevelTimer;
+  int mStartLevelDelay;
 
 	virtual void addError( QString ) const;
   virtual void computeVisibleCells();
