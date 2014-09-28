@@ -250,8 +250,6 @@ void Actor::setName( QString iV )
 //------------------------------------------------------------------------------
 void Actor::setState( state iV )
 {
-
-printf("ps %d, ns %d\n", getState(), iV);
 	bool addAnimation = false;
 	if( mState != iV )
   {
@@ -565,7 +563,7 @@ void Monster::updateAi()
 //--- Projectile
 //------------------------------------------------------------------------------
 Projectile::Projectile() : GameEntity(),
-  mType( Weapon::tNone ),
+  mType( ptBasic ),
   mDamage( 1.0 ),
   mExplosionDamage(0.0),
   mState( sIdle ),
@@ -601,14 +599,21 @@ void Projectile::setState( state iS )
 }
 
 //------------------------------------------------------------------------------
-void Projectile::setType( Weapon::type iT )
+void Projectile::setType( projectileType iT )
 {
 	mType = iT;
   setMaximumVelocity( Vector2d( 2000, 2000 ) );
   setMaximumAcceleration( Vector2d( 2000, 2000 ) );
   switch ( getType() ) 
   {
-    case Weapon::tPellet:
+	  case ptBasic:
+      setDamage( 0.0 );
+      setLifeSpan(1000);
+      applyGravity(true);
+      setCollisionElasticity( 0.7 );
+      setFrictionCoefficient( 0.3 );
+      break;
+    case ptBullet:
       setSpriteToken( sHorizontal, "pellet bullet horizontal");
       setSpriteToken( sVertical, "pellet bullet vertical");
       setSpriteToken( sExploding, "pellet bullet explode");
@@ -617,7 +622,7 @@ void Projectile::setType( Weapon::type iT )
       applyGravity(false);
       setCollisionElasticity( 0.0 );
     break;
-    case Weapon::tGrenade:
+    case ptGrenade:
       setSpriteToken( sHorizontal, "weapon grenade");
       setSpriteToken( sVertical, "weapon grenade");
       setSpriteToken( sExploding, "explosion");
@@ -625,8 +630,8 @@ void Projectile::setType( Weapon::type iT )
       setExplosionDamage( 200 );
       setLifeSpan(3000);
       applyGravity(true);
-      setCollisionElasticity( 0.4 );
-      setFrictionCoefficient( 0.5 );
+      setCollisionElasticity( 0.3 );
+      setFrictionCoefficient( 0.6 );
     break;
     default: break;
   }
@@ -665,19 +670,23 @@ void Projectile::updateState()
   
   switch( getType() )
   {
-  case Weapon::tPellet:
+  case ptBasic:
+  	if( getRemainingLife() <= 0 )
+  	{ setState( sExploding ); }
+  break;
+  case ptBullet:
   {
     if( hasIntersections() || getRemainingLife() <= 0)
   	{ setState( sExploding ); }
   }
   break;
-  case Weapon::tGrenade:
+  case ptGrenade:
   {
   	if( getRemainingLife() <= 0 )
     {
       setState( sExploding );      
       Physics& p = mpEngine->getPhysics();
-      p.explode( getPosition(), 32 * 8, getExplosionDamage(), *mpEngine );
+      p.explode( getPosition(), 4 * 32, getExplosionDamage(), *mpEngine );
     }
   }break;
   default: break;
@@ -707,13 +716,13 @@ Projectile* Weapon::fire( const Vector2d& iDir )
   {
     case tPellet:
     {
-    	p->setType( tPellet );
+    	p->setType( Projectile::ptBullet );
       Vector2d v = 800 * iDir;
       p->setVelocity( v );
     }break;
     case tGrenade:
     {
-      p->setType( tGrenade );
+      p->setType( Projectile::ptGrenade );
       Vector2d v( 600 * iDir.x(), 200 );
       p->setVelocity(v);
     }break;

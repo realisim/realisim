@@ -14,6 +14,7 @@
 #include <QTimerEvent>
 namespace realisim { namespace platform { using namespace treeD; class Animation; } }
 namespace realisim { namespace platform { class Stage; } }
+#include "utils/CommandStack.h"
 #include "utils/SpriteCatalog.h"
 #include <vector>
 
@@ -40,13 +41,29 @@ protected:
 class realisim::platform::Stage
 {
   friend class Engine;
+  friend class CommandCellEdition;
   public:
     Stage();
     ~Stage();
   
     enum cellType{ ctEmpty = 0, ctStart, ctWayPoint, ctGround,
-      ctNumberOfCellType };
+    	ctDestructibleGround, ctNumberOfCellType };
+      
+    struct Layer
+    {
+      Layer( Vector2i iDataSize ) : 
+        mData( iDataSize.x() * iDataSize.y(), 255 ),
+        mTokens(), mVisibility(true), mName() {;}
+      Layer( const Layer& iL ) : mData( iL.mData ), mTokens( iL.mTokens ),
+        mVisibility( iL.mVisibility ), mName(iL.mName) {;} //a enlever?
+      QByteArray mData;
+      std::vector< QString > mTokens;
+      bool mVisibility;
+      QString mName;
+    };
+
     
+    bool actsAsGround( cellType ) const;
     void addLayer();
 //    void addActor();
     void add( Monster* );
@@ -63,6 +80,8 @@ QString getBackgroundToken() const;
     Vector2i getCellPixelCoordinate( int ) const;
     Vector2i getCellPixelCoordinate( int, int ) const; //devrait etre Vector2i
     Vector2i getCellSize() const {return mCellSize;}
+    Layer* getLayer(int i) {return mLayers[i];}
+    QString getLayerName(int) const;
     Monster& getMonster(int);
     Weapon& getWeapon(int);
     QString getName() const { return mName; }
@@ -73,6 +92,7 @@ QString getBackgroundToken() const;
     int getNumberOfWeapons() const;
     const QByteArray getTerrain() const { return mTerrain; }
     int getTerrainHeight() const { return mTerrainSize.y(); };
+    int getTerrainLayerIndex() const { return 0; } // a changer des que possible...
     Vector2i getTerrainSize() const {return mTerrainSize;}      
     int getTerrainWidth() const { return mTerrainSize.x(); };
     QString getToken( int, int ) const;
@@ -84,29 +104,19 @@ QString getBackgroundToken() const;
     void removeMonster( int );
     void removeWeapon( int );
     void setBackgroundToken( QString );
+    void setCellValue( int, cellType );
     void setEngine( Engine* ipE ) {mpEngine = ipE;}
     void setLayerAsVisible( int, bool = true );
+    void setLayerName( int, QString );
     QByteArray toBinary() const;
-    unsigned char value(int, int) const;
-    unsigned char value(int) const;
+    cellType value(int, int) const;
+    cellType value(int) const;
     
   protected:
     Stage( QString, Vector2i );
     Stage (const Stage&);
     Stage& operator=( const Stage& );
-  
-    struct Layer
-    {
-      Layer( Vector2i iDataSize ) : 
-        mData( iDataSize.x() * iDataSize.y(), 255 ),
-        mTokens(), mVisibility(true) {;}
-      Layer( const Layer& iL ) : mData( iL.mData ), mTokens( iL.mTokens ),
-        mVisibility( iL.mVisibility ) {;} //a enlever?
-      QByteArray mData;
-      std::vector< QString > mTokens;
-      bool mVisibility;
-    };
-    
+      
     void clear();
     void fromBinary( QByteArray );
     
@@ -124,6 +134,8 @@ QString getBackgroundToken() const;
 };
 
 //------------------------------------------------------------------------------
+
+namespace realisim { namespace platform { class CommandCellEdition ;} } 
 class realisim::platform::Engine : public QObject
 {
 	Q_OBJECT
@@ -137,7 +149,7 @@ public:
   enum configureMenuItem{ cmiDifficulty, cmiBack, cmiCount };
   enum pauseMenuItem{ pmiBack, pmiEdit, pmiQuit, pmiCount };
   enum event{ eStageLoaded, eStateChanged, eFrameDone, eQuit,
-    eErrorRaised };
+    eErrorRaised, eEditorUiChanged };
   
   class Client
   {
@@ -148,6 +160,25 @@ public:
       
     protected:
       virtual void gotEvent( event ) {};
+  };
+  
+  class Mouse
+  {
+  public:
+  	Mouse() : mButtons(), mWheelDelta(0), mPosition(-1, -1), mDelta(0) {}
+    ~Mouse() {}
+    friend class Engine;
+    
+    const Vector2i& getDelta() const {return mDelta;}
+    const Point2i& getPosition() const {return mPosition;}
+    const double getWheelDelta() const {return mWheelDelta;}
+    bool isButtonPressed( Qt::MouseButtons, bool = false ) const;
+    
+  protected:
+    mutable std::map< int, bool > mButtons;
+    double mWheelDelta;
+    Point2i mPosition;
+    Vector2i mDelta;
   };
   
   virtual void addProjectile( Projectile* );
@@ -165,7 +196,7 @@ virtual QString getEditingSpriteToken() const { return mEditingSpriteToken; }
   virtual std::vector<QString> getPauseMenuItems() const;
   virtual mainMenuItem getCurrentMainMenuItem() const;
   virtual std::vector<QString> getMainMenuItems() const;
-  virtual const Point2i& getMousePos() const { return mMousePos; }
+  const Mouse& getMouse() const {return mMouse;}
   virtual int getNumberOfAnimations() const { return mAnimations.size(); }
   virtual int getNumberOfProjectiles() const { return mProjectiles.size(); }
   virtual Physics& getPhysics() {return mPhysics;}
@@ -178,7 +209,6 @@ virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
   virtual void graphicsAreReady();
   virtual bool hasError() const;
   virtual bool isKeyPressed( Qt::Key, bool = false );
-  virtual bool isMousePressed( Qt::MouseButtons, bool =false );
 virtual bool isVisible( const GameEntity& ) const; // a renommer pour isWithinCameraSight?
   virtual void keyPressed( int );
   virtual void keyReleased( int );
@@ -187,16 +217,24 @@ virtual bool isVisible( const GameEntity& ) const; // a renommer pour isWithinCa
   virtual void mousePressed( int );
   virtual void mouseReleased( int );
   virtual void mouseWheelMoved( double );
+  virtual void moveGameCameraTo( const Point2d& );
   virtual void newStage( QString, int, int );
-  virtual void registerClient( Client* );  
+  double random() const { return qrand() / (double)RAND_MAX; }
+  virtual void registerClient( Client* );
   virtual void saveStage( QString );
   virtual void setCurrentLayer( int );
   virtual void setEditingTool( Stage::cellType iCt ) {mEditingTool = iCt;}
 virtual void setEditingSpriteToken( QString i ) {mEditingSpriteToken = i;}
+	virtual void setGameCamera( const Camera& iC ) {mGameCamera = iC;}
   virtual void startLevel();
   virtual void startLevel(int);
   virtual QString toString( Stage::cellType );
   virtual void unregisterClient( Client* );
+  
+  
+  //fonctions de l'éditeur
+  void addLayer();
+  void removeLayer( int );
   
 protected:
 	Physics mPhysics;
@@ -207,10 +245,7 @@ protected:
   configureMenuItem mConfigureMenuItem;
   pauseMenuItem mPauseMenuItem;
   std::map< int, bool > mKeys;
-  std::map< int, bool > mMouseButtons;
-  double mMouseWheelDelta;
-  Point2i mMousePos;
-  Vector2i mMouseDelta;
+  Mouse mMouse;
   Player mPlayer;
   realisim::treeD::Camera mGameCamera;
   Stage mStage;
@@ -226,10 +261,12 @@ protected:
   std::vector<GameEntity*> mEntities;
   QTime mStartLevelTimer;
   int mStartLevelDelay;
+  utils::CommandStack mEditorCommands;
+  CommandCellEdition* mCommandCellEdition;
+  QTime mMainLoopTimer;
 
 	virtual void addError( QString ) const;
   virtual void computeVisibleCells();
-  virtual double getMouseWheelDelta(bool = true);
   virtual void goToState( state );
   virtual void handleConfigureMenu();
   virtual void handleEditing();
@@ -242,6 +279,7 @@ protected:
   virtual void send( event );
   virtual void setSpriteCatalog( QString );
   virtual void timerEvent( QTimerEvent* );
+  virtual void updateLogic();
 };
 
 #endif

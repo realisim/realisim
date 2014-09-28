@@ -64,6 +64,41 @@ void Physics::explode( const Point2d& iPos, double iRadius, double iDamage,
   Actor* a = 0;
 	double radiusSquare = iRadius * iRadius;
   
+  //-- collecte des cellules de terrain touchées par l'explosion
+  Vector2i kernel( iRadius / s.getCellSize().x() );
+  vector<int> cells = s.getCellIndices( iPos, kernel );
+  for(int i = 0; i < (int)cells.size(); ++i )
+  {
+  	if( s.value( cells[i] ) == Stage::ctDestructibleGround )
+    {
+    	s.setCellValue( cells[i], Stage::ctEmpty );
+      int terrainLayerIndex = s.getTerrainLayerIndex();
+    	Stage::Layer* l = s.getLayer( terrainLayerIndex );
+      QString spriteToken = s.getToken( terrainLayerIndex, cells[i]);    	
+      l->mData[ cells[i] ] = 255;
+      
+      const int kNumPieces = 2;
+      double rand = iE.random();
+      for( int j = 0; j < kNumPieces; ++j )
+      for( int k = 0; k < kNumPieces; ++k )
+      {
+        Projectile* p = new Projectile();
+        p->setType(Projectile::ptBasic);
+        Point2d cellCoord = toPoint(s.getCellPixelCoordinate( cells[i] ));
+        cellCoord.set( cellCoord.x() + k * s.getCellSize().x() / kNumPieces,
+         cellCoord.y() + j * s.getCellSize().y() / kNumPieces );
+        p->setPosition( cellCoord );
+        p->setVelocity( Vector2d( iPos, p->getPosition() ).normalise() * 400 );
+        p->setSpriteToken( Projectile::sHorizontal, spriteToken + " fragment" );
+        p->setSpriteToken( Projectile::sVertical, spriteToken + " fragment" );
+        p->setSpriteToken( Projectile::sExploding, "pellet bullet explode" );
+        p->setLifeSpan( rand * 2000 + 200 );
+        iE.addProjectile(p);
+      }      
+    }
+  }
+  
+  //--- collecte des entités touchées par l'Explosion.
   //les joueurs
   if( (iE.getPlayer().getPosition() - iPos).normSquare() <= radiusSquare )
   { actors.push_back( &iE.getPlayer() ); }
@@ -78,7 +113,8 @@ void Physics::explode( const Point2d& iPos, double iRadius, double iDamage,
   
   //les props...
   
-	//l'Explosion lance numIterations rayons de collisions sur 360 deg.
+	/*l'Explosion lance numIterations rayons de collisions sur 360 deg sur les 
+  	entités. */
   LineSegment2d ray;
   Vector2d dir;
   const int numIterations = 128;
@@ -138,7 +174,7 @@ void Physics::resolveCollisions( GameEntity& iGe, Stage& iStage )
 
   for( uint i = 0; i < cells.size(); ++i )
   {
-  	if( iStage.value( cells[i] ) == Stage::ctGround )
+  	if( iStage.actsAsGround( iStage.value( cells[i] ) ) )
     {
       //la coordonnée pixel de la cellule
       Vector2i cpc = iStage.getCellPixelCoordinate( cells[i] );
@@ -268,7 +304,7 @@ void Physics::resolveCollisions( Projectile& p, Stage& s)
   bool hasIntersection = false;
   for( uint i = 0; i < cells.size(); ++i )
   {
-  	if( s.value( cells[i] ) == Stage::ctGround )
+  	if( s.actsAsGround( s.value( cells[i] ) ) )
     {
       //la coordonnée pixel de la cellule
       Vector2i cpc = s.getCellPixelCoordinate( cells[i] );
