@@ -313,13 +313,13 @@ void Server::handleSocketDisconnected()
     int i = findSocketFromSender( sender() );
     if( i != -1 )
     {
+    	emit socketDisconnected( i );
     	mDownloads.erase( i ); //efface tout les downloads
       mUploads.erase( i ); //efface tout les uploads
       getSocket( i )->deleteLater();
       mSockets.erase( mSockets.begin() + i );
       mReadBuffers.erase( mReadBuffers.begin() + i );
-      mUploadIndices.erase( mUploadIndices.begin() + i );
-      emit socketDisconnected( i );
+      mUploadIndices.erase( mUploadIndices.begin() + i );            
     }
     else
       addError( "handleSocketDisconnected is called for unknown peer..." );
