@@ -86,6 +86,7 @@ protected:
   QString mEditionPath;
   
   QWidget* mpEditionPanel;
+  QWidget* mpCellTypeFrame;
   QComboBox* mpCellType;
   QComboBox* mpBackground;
   QListWidget* mpLayers;

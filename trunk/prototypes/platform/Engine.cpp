@@ -1,5 +1,6 @@
 
 #include <algorithm>
+#include "EditorCommands.h"
 #include "Engine.h"
 #include "Math/MathUtils.h"
 #include "Math/Primitives.h"
@@ -10,12 +11,14 @@ using namespace realisim;
 	using namespace math;
 	using namespace treeD;
 	using namespace platform;
+  using namespace utils;
 
 namespace 
 {
 	const int kStageHeader = 0x9ab36ef2;
-  const int kStageVersion = 5;
+  const int kStageVersion = 6;
   const int kStageFistCompatibleVersion = 1;
+  const QString kDataLayerName = "data";
 }
 
 //------------------------------------------------------------------------------
@@ -29,7 +32,7 @@ Stage::Stage() :
 	mTerrain( mTerrainSize.x() * mTerrainSize.y(), Stage::ctEmpty ),
   mLayers(),
   mActors()
-{ mLayers.push_back( new Layer( getTerrainSize() ) ); }
+{ addLayer(); }
 
 Stage::Stage( QString iName, Vector2i iSize ) : 
   mpEngine(0),
@@ -40,7 +43,7 @@ Stage::Stage( QString iName, Vector2i iSize ) :
   mLayers(),
   mBackgroundToken(),
   mActors()
-{ mLayers.push_back( new Layer( getTerrainSize() ) ); }
+{ addLayer(); }
 
 Stage::Stage( const Stage& iS) :
   mpEngine( iS.mpEngine ),
@@ -82,6 +85,10 @@ Stage::~Stage()
 { clear(); }
 
 //------------------------------------------------------------------------------
+bool Stage::actsAsGround( cellType iCt ) const
+{ return ( iCt == ctGround || iCt == ctDestructibleGround ); }
+
+//------------------------------------------------------------------------------
 void Stage::add( Monster* a )
 { 
   a->setEngine(mpEngine);
@@ -98,7 +105,14 @@ void Stage::add( Weapon* a )
 
 //------------------------------------------------------------------------------
 void Stage::addLayer()
-{ mLayers.push_back( new Layer( getTerrainSize() ) ); }
+{
+	Layer* l = new Layer( getTerrainSize() ) ;
+  mLayers.push_back( l );
+  QString defaultName = kDataLayerName;
+  int s = mLayers.size();
+  if( s > 1 ) { defaultName = "decorative " + QString::number(s-1); }	
+  l->mName = defaultName;
+}
 
 //------------------------------------------------------------------------------
 void Stage::addToken( int iLayer, QString iToken )
@@ -196,6 +210,17 @@ void Stage::fromBinary( QByteArray iBa )
         if( version > 4 )
         { bool v; in >> v; l->mVisibility = v; }
         
+        if( version > 5 )
+        {
+        	QString n;
+          in >> n;
+          l->mName = n;
+        }
+        else
+        {
+          l->mName = i > 0 ? "decorative " + QString::number(i) : kDataLayerName;
+        }
+        
         mLayers.push_back( l );
       }
     }
@@ -267,6 +292,15 @@ Vector2i Stage::getCellPixelCoordinate( int iIndex ) const
 //------------------------------------------------------------------------------
 Vector2i Stage::getCellPixelCoordinate( int iX, int iY ) const
 {  return Vector2i( iX * getCellSize().x(), iY * getCellSize().y() ); }
+
+//------------------------------------------------------------------------------
+QString Stage::getLayerName(int iIndex) const
+{
+	QString r("outOfBound");
+  if( iIndex >= 0 && iIndex < getNumberOfLayers() )
+  { r = mLayers[iIndex]->mName; } 
+  return r;
+}
 
 //------------------------------------------------------------------------------
 Monster& Stage::getMonster( int i )
@@ -344,7 +378,11 @@ void Stage::removeActor( int i )
 
 //------------------------------------------------------------------------------
 void Stage::removeLayer( int i )
-{}
+{
+	Layer* l = mLayers[i];
+  mLayers.erase( std::find( mLayers.begin(), mLayers.end(), l ) );
+  delete l;
+}
 
 //------------------------------------------------------------------------------
 void Stage::removeMonster( int i )
@@ -367,10 +405,30 @@ void Stage::setBackgroundToken( QString iBt )
 { mBackgroundToken = iBt; }
 
 //------------------------------------------------------------------------------
+void Stage::setCellValue( int iIndex, cellType iCt )
+{ mTerrain[iIndex] = iCt; }
+
+//------------------------------------------------------------------------------
 void Stage::setLayerAsVisible( int iL, bool iV/*=true*/ )
 {
 	if( iL >= 0 && iL < getNumberOfLayers() )
   { mLayers[iL]->mVisibility = iV; }
+}
+
+//------------------------------------------------------------------------------
+/*On ne peut pas changer le nom du layer data parce que certaines opérations en
+  dépendent. Voir Engine::handleEditing()*/
+void Stage::setLayerName( int iIndex, QString iN )
+{
+//	if( iN == kDataLayerName )
+//  { addError( "A layer cannot be name 'data'." ); }
+  
+	if( iN != kDataLayerName && iIndex >= 0 && iIndex < getNumberOfLayers() )
+  { 
+  	if( mLayers[iIndex]->mName != kDataLayerName )
+  	{ mLayers[iIndex]->mName = iN; }
+//    else{ addError( "Layer 'data' name cannot be changed." ); }
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -413,17 +471,34 @@ QByteArray Stage::toBinary() const
     	out << pl->mTokens[j];      
     }
     out << pl->mVisibility;
+    out << pl->mName;
   }
   return r;
 }
 
 //------------------------------------------------------------------------------
-unsigned char Stage::value(int iX, int iY) const
+Stage::cellType Stage::value(int iX, int iY) const
 { return value( iY * getTerrainSize().x() + iX ); }
 
 //------------------------------------------------------------------------------
-unsigned char Stage::value(int iIndex) const
-{ return (unsigned char)getTerrain()[iIndex]; }
+Stage::cellType Stage::value(int iIndex) const
+{ return (cellType)getTerrain()[iIndex]; }
+
+//------------------------------------------------------------------------------
+//--- Engine::Mouse
+//------------------------------------------------------------------------------
+bool Engine::Mouse::isButtonPressed( Qt::MouseButtons iB, bool iReset /*= false*/ ) const
+{
+	bool r = false;
+  map<int, bool>::iterator it;
+  if( (it = mButtons.find( iB )) != mButtons.end() )
+  { 
+  	r = it->second;
+    if( iReset ) mButtons[iB] = false;
+  }
+  return r;
+
+}
 
 //------------------------------------------------------------------------------
 //---Engine
@@ -437,13 +512,14 @@ Engine::Engine() : QObject(),
   mConfigureMenuItem( cmiDifficulty ),
   mPauseMenuItem( pmiBack ),
   mKeys(),
-  mMouseButtons(),
-  mMouseWheelDelta(0.0),
-  mMousePos( -1, -1 ),
-  mMouseDelta(0, 0),
+	mMouse(),
   mEditingTool( Stage::ctGround ),
-  mCurrentLayer(0)
+  mCurrentLayer(0),
+  mCommandCellEdition(0)
 {
+	//intialization de random...
+	qsrand( QTime().msecsTo( QTime::currentTime() ) );
+  
 	int w = 800, h = 600;
   //mGameCamera.setProjection(-w / 2.0, w / 2.0,
 //   -h/2.0, h/2.0, 0.0, 200, Camera::Projection::tOrthogonal, true);
@@ -468,6 +544,14 @@ void Engine::addError( QString e ) const
 { 
 	mErrors += mErrors.isEmpty() ? e : "\n" + e;
   const_cast<Engine*>(this)->send( eErrorRaised );
+}
+
+//------------------------------------------------------------------------------
+void Engine::addLayer()
+{
+	Command* c = new CommandAddLayer( getStage() );
+  c->execute();
+	mEditorCommands.add( c );
 }
 
 //------------------------------------------------------------------------------
@@ -562,14 +646,6 @@ vector<QString> Engine::getMainMenuItems() const
 }
 
 //------------------------------------------------------------------------------
-double Engine::getMouseWheelDelta(bool iConsume/*=true*/)
-{ 
-	double r = mMouseWheelDelta;
-	if( iConsume ) {mMouseWheelDelta = 0.0;}
-  return r;
-}
-
-//------------------------------------------------------------------------------
 vector<QString> Engine::getPauseMenuItems() const
 {
 	vector<QString> r( pmiCount, "" );
@@ -607,6 +683,7 @@ void Engine::goToState( state iS )
       {
         case sMainMenu:
         	mTimerId = startTimer( getPhysics().getTimeIncrement() * 1000.0 );
+					mMainLoopTimer = QTime::currentTime();
           mState = sMainMenu;
           break;
         default: break;
@@ -657,6 +734,9 @@ void Engine::goToState( state iS )
           mState = sPlaying;
           break;
         case sEditing:
+          /*On load le stage avant daller en edition afin de travailler sur 
+          le stage original.*/
+          loadStage(mStageFilePath);          
           mState = sEditing;
           break;
         case sQuitting:
@@ -690,7 +770,8 @@ void Engine::goToState( state iS )
 void Engine::graphicsAreReady()
 { 
 	goToState(sMainMenu);
-	loadStage("stage.bin");
+	loadStage("stages/stage.bin");
+  startLevel();
 }
 
 //------------------------------------------------------------------------------
@@ -725,50 +806,44 @@ void Engine::handleEditing()
 {	
   if( isKeyPressed( Qt::Key_Escape ) ) goToState( sPaused );
   
-  Vector2d d(0.0);
   //input usagé
-  if( isKeyPressed( Qt::Key_Left ) ) d -= Vector2d(5, 0);
-  if( isKeyPressed( Qt::Key_Right ) ) d += Vector2d(5, 0);
-  if( isKeyPressed( Qt::Key_Up ) ) d += Vector2d(0, 5);
-  if( isKeyPressed( Qt::Key_Down ) ) d -= Vector2d(0, 5);
-  
-  //handleMapCollisions();
-  
-  //application de la gravité
-  //d += Vector2d(0.0, -2);
+  Vector2d d(0.0);
+  if( isKeyPressed( Qt::Key_Left ) ) { d -= Vector2d(5, 0); }
+  if( isKeyPressed( Qt::Key_Right ) ) { d += Vector2d(5, 0); }
+  if( isKeyPressed( Qt::Key_Up ) ) { d += Vector2d(0, 5); }
+  if( isKeyPressed( Qt::Key_Down ) ) { d -= Vector2d(0, 5); }
   //déplacement du joueur
   mPlayer.setPosition( mPlayer.getPosition() + d );
-
-  Point3d gl = mGameCamera.pixelToGL( getMousePos().x(), getMousePos().y() );
-  Vector2i c = mStage.getCellCoordinate( Point2d( gl.getX(), gl.getY() ) );
   
-  /*Si l'index courant est dans le terrain, on fait l'édition, sinon, on
-    agrandit le terrain.*/
-  if( mStage.hasCell( c ) )
+  //undo
+  if( isKeyPressed( Qt::Key_Control ) && !isKeyPressed( Qt::Key_Shift ) && 
+  	isKeyPressed( Qt::Key_Z, true ) ) 
+  { 
+  	mEditorCommands.undo();
+    send( eEditorUiChanged );
+  }
+  //redo
+  if( isKeyPressed( Qt::Key_Control ) && isKeyPressed( Qt::Key_Shift ) && 
+  	isKeyPressed( Qt::Key_Z, true ) ) 
+  { 
+  	mEditorCommands.redo();
+    send( eEditorUiChanged );
+  }    
+  
+  if( getMouse().isButtonPressed( Qt::LeftButton ) )
   {
-    int index = mStage.getCellIndex( c.x(), c.y() );
-  	Stage::Layer* l = mStage.mLayers[ getCurrentLayer() ];
-    if( isMousePressed( Qt::LeftButton ) )
+  	if( !mCommandCellEdition ) 
+    { mCommandCellEdition = new CommandCellEdition( *this ); }
+    mCommandCellEdition->update();
+  }
+  if( !getMouse().isButtonPressed( Qt::LeftButton ) )
+  {
+  	if( mCommandCellEdition )
     {
-      mStage.mTerrain[index] = getEditingTool();    
-      for( int i = 0; i < (int)l->mTokens.size(); ++i )
-      {
-        if( l->mTokens[i] == getEditingSpriteToken() )
-        {
-          l->mData[index] = i;
-          break;
-        }
-      }
-    }
-    else if( isMousePressed( Qt::RightButton ) )
-    {
-      mStage.mTerrain[index] = Stage::ctEmpty;
-      l->mData[index] = 255;
+    	mEditorCommands.add( mCommandCellEdition );
+      mCommandCellEdition = 0;
     }
   }
-  else 
-  { printf( "cell coord: %d, %d\n", c.x(), c.y() ); }
-
 
   //deplacement de la camera pour suivre le joueur
   Matrix4d m = mGameCamera.getTransformationToGlobal();
@@ -860,19 +935,6 @@ bool Engine::isKeyPressed( Qt::Key iK, bool iReset /*=false*/ )
 }
 
 //------------------------------------------------------------------------------
-bool Engine::isMousePressed( Qt::MouseButtons iB, bool iReset /*=false*/ )
-{
-	bool r = false;
-  map<int, bool>::iterator it;
-  if( (it = mMouseButtons.find( iB )) != mMouseButtons.end() )
-  { 
-  	r = it->second;
-    if( iReset ) mMouseButtons[iB] = false;
-  }
-  return r;
-}
-
-//------------------------------------------------------------------------------
 bool Engine::isVisible( const GameEntity& iA ) const
 {
 	bool r = false;
@@ -907,6 +969,7 @@ void Engine::loadStage( const Stage& iS )
 	setSpriteCatalog("level1.cat"); //faudrait le lire du stage
 	mStage.clear();
   mStage = iS;
+  mStage.setEngine(this);
   refreshGameEntityList();
   mVisibleCells.clear();
   
@@ -934,8 +997,6 @@ mStage.add( w );
 
 mStage.getWeapon(0).setPosition( Point2d(100, 100) );
 mStage.getWeapon(1).setPosition( Point2d(200, 100) );
-
-	startLevel();
   
   send( eStageLoaded );
   goToState(previousState);
@@ -944,32 +1005,31 @@ mStage.getWeapon(1).setPosition( Point2d(200, 100) );
 void Engine::loadStage( QString iPath )
 {
 	Stage s;
-  s.fromBinary( utils::fromFile( iPath ) );
-  s.setEngine(this);
+  s.fromBinary( utils::fromFile( iPath ) );  
   loadStage(s);
   mStageFilePath = iPath;
 }  
   
 //------------------------------------------------------------------------------
 void Engine::mouseMoved( Point2i iPos )
-{	
-  if( mMousePos.x() != -1 && mMousePos.y() != -1 )
-		mMouseDelta = iPos - mMousePos;
-  mMousePos = iPos;
+{
+  if( mMouse.getPosition().x() != -1 && mMouse.getPosition().y() != -1 )
+		mMouse.mDelta = iPos - mMouse.getPosition();
+  mMouse.mPosition = iPos;
 }
 
 //------------------------------------------------------------------------------
 void Engine::mousePressed( int iButton )
-{ mMouseButtons[iButton] = true; }
+{ mMouse.mButtons[iButton] = true; }
 
 //------------------------------------------------------------------------------
 void Engine::mouseReleased( int iButton )
-{ mMouseButtons[iButton] = false; }
+{ mMouse.mButtons[iButton] = false; }
 
 //------------------------------------------------------------------------------
 /*iD est l'angle en degré de rotation de la molette*/
 void Engine::mouseWheelMoved( double iD )
-{ mMouseWheelDelta = iD; }
+{ mMouse.mWheelDelta = iD; }
 
 //------------------------------------------------------------------------------
 void Engine::moveGameCamera()  
@@ -1033,10 +1093,19 @@ void Engine::moveGameCamera()
 }
 
 //------------------------------------------------------------------------------
+void Engine::moveGameCameraTo( const Point2d& iPos )
+{
+  Matrix4d m = mGameCamera.getTransformationToGlobal();
+  m.setTranslation( Point3d( iPos.x(), iPos.y(), 0.0 ) );
+  mGameCamera.setTransformationToGlobal( m );
+}
+
+//------------------------------------------------------------------------------
 void Engine::newStage( QString iName, int iX, int iY )
 {
 	loadStage( Stage( iName, Vector2i( iX, iY ) ) );
-  mStageFilePath = QString();
+  mStageFilePath = "stages/" + iName;
+  startLevel();
 }
 
 //------------------------------------------------------------------------------
@@ -1116,7 +1185,6 @@ void Engine::refreshGameEntityList()
     }
     else{ ++itAnims; }
   }
-  printf( "num animation %d\n", mAnimations.size() );
 }
 
 //------------------------------------------------------------------------------
@@ -1125,6 +1193,14 @@ void Engine::registerClient( Client* ipC )
 	vector<Client*>::iterator it = find(mClients.begin(), mClients.end(), ipC);
   if( it == mClients.end() )
   	mClients.push_back( ipC );
+}
+
+//------------------------------------------------------------------------------
+void Engine::removeLayer( int i )
+{
+	Command* c = new CommandRemoveLayer( getStage(), i );
+  c->execute();
+	mEditorCommands.add( c );
 }
 
 //------------------------------------------------------------------------------
@@ -1195,6 +1271,8 @@ QString Engine::toString( Stage::cellType iCt )
     case Stage::ctStart: r = "départ"; break;
     case Stage::ctWayPoint: r = "waypoint"; break;
     case Stage::ctGround: r = "sol"; break;
+    case Stage::ctDestructibleGround: r = "sol destructible"; break;
+    
     default: break;
   }
   return r;
@@ -1214,25 +1292,20 @@ void Engine::timerEvent( QTimerEvent* ipE )
     #endif
     //--- fin debuggage
 
-  	switch (getState()) 
+		const int timeIncrementInMsecs = getPhysics().getTimeIncrement() * 1000.0;
+    int elapsed = mMainLoopTimer.elapsed();
+    updateLogic();    
+		while( elapsed > timeIncrementInMsecs )
     {
-    	case sIdle: break;
-      case sMainMenu: handleMainMenu(); break;
-      case sConfigureMenu: handleConfigureMenu(); break;
-      case sPlaying: 
-        if( !mStartLevelTimer.isNull() && 
-        	mStartLevelTimer.elapsed() > mStartLevelDelay )
-        { startLevel(); }
-      	handlePlaying();
-        break;
-      case sEditing: handleEditing(); break;
-      case sPaused: handlePauseMenu(); break;
-      default: break;
+    	updateLogic();
+      elapsed -= timeIncrementInMsecs;
     }
+    mMainLoopTimer = QTime::currentTime();
     
     computeVisibleCells();
   	send( eFrameDone );
     refreshGameEntityList();
+    
     
 //    /*Le reset des forces devrait etre dans le update des entity, mais pour
 //    faciliter le deboggage (affichage des forces) on le fait ici, apres le
@@ -1241,7 +1314,25 @@ void Engine::timerEvent( QTimerEvent* ipE )
 //	  { mEntities[i]->resetForces(); }
   }
 }
-
+//------------------------------------------------------------------------------
+void Engine::updateLogic()
+{
+  switch (getState()) 
+  {
+    case sIdle: break;
+    case sMainMenu: handleMainMenu(); break;
+    case sConfigureMenu: handleConfigureMenu(); break;
+    case sPlaying: 
+      if( !mStartLevelTimer.isNull() && 
+        mStartLevelTimer.elapsed() > mStartLevelDelay )
+      { startLevel(); }
+      handlePlaying();
+      break;
+    case sEditing: handleEditing(); break;
+    case sPaused: handlePauseMenu(); break;
+    default: break;
+  }
+}
 //------------------------------------------------------------------------------
 void Engine::unregisterClient( Client* ipC )
 {

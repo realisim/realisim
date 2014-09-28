@@ -221,6 +221,8 @@ void Viewer::drawDataMap()
     {
       case Stage::ctGround: draw = true; 
         glColor3ub( 255, 255, 255 ); break;
+      case Stage::ctDestructibleGround: draw = true; 
+        glColor3ub( 200, 200, 200 ); break;
       case Stage::ctStart: draw = true;
         glColor3ub( 12, 12, 255 ); break;
       default: draw = false; break;
@@ -487,8 +489,8 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glColor3ub( 255, 255, 0);
 	Vector2d rs( 30, 60 );
   Vector2d rs2( 32, 32 );
-	Point2d mp = mEngine.getMousePos();
-  mp.setY( c.getWindowInfo().getHeight() - mEngine.getMousePos().y() );
+	Point2d mp = mEngine.getMouse().getPosition();
+  mp.setY( c.getWindowInfo().getHeight() - mEngine.getMouse().getPosition().y() );
 	Rectangle r( mp - rs/2.0, rs );
   Rectangle r2( Point2d( 600, 450 ) - rs2/2.0, rs2 );
 
@@ -514,8 +516,8 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glColor3ub( 255, 255, 0);
 	Vector2d rs( 30, 60 );
   Vector2d rs2( 32, 32 );
-	Point2d mp = mEngine.getMousePos();
-  mp.setY( c.getWindowInfo().getHeight() - mEngine.getMousePos().y() );
+	Point2d mp = mEngine.getMouse().getPosition();
+  mp.setY( c.getWindowInfo().getHeight() - mEngine.getMouse().getPosition().y() );
 	Rectangle r( mp - rs/2.0, rs );
   Rectangle r2( Point2d( 600, 250 ) - rs2/2.0, rs2 );
   Rectangle r3;
@@ -566,7 +568,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 //intersection line2d/line2d et line2d/segment2d
 {
-  Point2d mp = mEngine.getMousePos();
+  Point2d mp = mEngine.getMouse().getPosition();
   mp.setY( c.getWindowInfo().getHeight() - mp.y() );
 	Line2d l2( Point2d( 0, 10 ), Vector2d( 120, 27 ) );
   Point2d m(c.getWindowInfo().getWidth() / 2, 
@@ -610,7 +612,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 {
 	static int t=0;
   t++;
-	Point2d mp = mEngine.getMousePos();
+	Point2d mp = mEngine.getMouse().getPosition();
   mp.setY( c.getWindowInfo().getHeight() - mp.y() );
   Point3d a(200, 400, 0), b(200,500,0), c( 200, 450,0);
   Point3d ra = rotatePoint( t%360 * kDegreeToRadian, a, Vector3d(0.0, 0.0, 1.0),
@@ -950,10 +952,11 @@ MainWindow::MainWindow() : QMainWindow(),
     }
     
     //type de cellule
-    QHBoxLayout* pL2 = new QHBoxLayout();
+    mpCellTypeFrame = new QWidget(pPage);
+    QHBoxLayout* pL2 = new QHBoxLayout(mpCellTypeFrame);
     {
-      QLabel* pL = new QLabel("Cellule", pPage);
-      mpCellType = new QComboBox( pPage );
+      QLabel* pL = new QLabel("Cellule", mpCellTypeFrame);
+      mpCellType = new QComboBox( mpCellTypeFrame );
       connect( mpCellType, SIGNAL(activated(int)), 
         this, SLOT(cellTypeChanged( int ) ) );
       
@@ -969,7 +972,7 @@ MainWindow::MainWindow() : QMainWindow(),
     pLyt->addLayout(pNewAndOpen);
     pLyt->addLayout(pLayersLyt);
     pLyt->addLayout(pL1, 2);
-    pLyt->addLayout(pL2);    
+    pLyt->addWidget(mpCellTypeFrame);    
     pLyt->addStretch(1);
     
     pTabs->insertTab( tMap, pPage, "Map" );
@@ -1018,8 +1021,10 @@ MainWindow::MainWindow() : QMainWindow(),
 //-----------------------------------------------------------------------------
 void MainWindow::addLayerClicked()
 {
-	mEngine.getStage().addLayer();
+	mEngine.addLayer();
+  mpLayers->blockSignals(true);
   mpLayers->clear();
+  mpLayers->blockSignals(false);
   updateUi();
 }
 
@@ -1060,6 +1065,13 @@ void MainWindow::gotEvent( Engine::event iE )
     break;
   	case Engine::eStateChanged: updateUi(); break;
     case Engine::eQuit: qApp->quit(); break;
+    case Engine::eEditorUiChanged:
+      mpLayers->blockSignals(true);
+      mpLayers->clear();
+      mpLayers->blockSignals(false);
+      updateUi();
+    break;
+
     default: break;
   }
 }
@@ -1173,20 +1185,23 @@ void MainWindow::populateBackground()
 //-----------------------------------------------------------------------------
 void MainWindow::populateLayers()
 {
+	mpLayers->blockSignals(true);
 	const Stage& s = mEngine.getStage();
+
 	if( mpLayers->count() == 0 )
   {
+  	QString name;
     for( int i = 0; i < s.getNumberOfLayers(); ++i )
     {
-    	QListWidgetItem* pItem = new QListWidgetItem( "Layer " + 
-      	QString::number(i), mpLayers );
+    	QListWidgetItem* pItem = new QListWidgetItem( s.getLayerName(i), mpLayers );
       pItem->setFlags( pItem->flags() | Qt::ItemIsUserCheckable );
       pItem->setCheckState( Qt::Checked );
     	mpLayers->addItem( pItem );
     }
     
-    mpLayers->setCurrentRow(0);
+    mpLayers->setCurrentRow( mEngine.getCurrentLayer() );
   }	
+  mpLayers->blockSignals(false);
 }
 
 //-----------------------------------------------------------------------------
@@ -1218,7 +1233,16 @@ void MainWindow::populateSprites()
 
 //-----------------------------------------------------------------------------
 void MainWindow::removeLayerClicked()
-{}
+{
+	if( mpLayers->count() > 0 && mpLayers->currentItem()->isSelected() )
+  {
+  	mEngine.removeLayer( mpLayers->currentRow() );
+    mpLayers->blockSignals(true);
+    mpLayers->clear();
+    mpLayers->blockSignals(false);
+    updateUi();
+  }
+}
 
 //-----------------------------------------------------------------------------
 void MainWindow::removeSpriteFromLayerClicked()
@@ -1230,10 +1254,11 @@ void MainWindow::spriteSelectionChanged(int i, int j)
 { 
 	int currentLayer = mpLayers->currentRow();
 	vector<QString> tokens = mEngine.getStage().getTokens( currentLayer );
-  
-	mEngine.setEditingSpriteToken( tokens[ i * kSpriteTableWidth + j ] );
+  int index = i * kSpriteTableWidth + j;
+  QString t;
+  if( index >= 0 && index < (int)tokens.size() ) { t = tokens[index]; }
+	mEngine.setEditingSpriteToken( t );
 }
-
 
 //-----------------------------------------------------------------------------
 void MainWindow::updateUi()
@@ -1251,10 +1276,8 @@ void MainWindow::updateUi()
   
   if( mpEditionPanel->isVisible() )
   {
+  	//--- layers tab
   	populateLayers();
-    populateSprites();
-  	populateBackground();
-    
     //ajustement de la visibility de la couche
     for(int i = 0; i < mpLayers->count(); ++i)
     {
@@ -1263,8 +1286,16 @@ void MainWindow::updateUi()
     	mpLayers->item( i )->setCheckState( cs );
     }
     
-    //selection du type de cellule
+    mpCellTypeFrame->setShown( mpLayers->item( mEngine.getCurrentLayer() )->text() == "data" );
     mpCellType->setCurrentIndex( mEngine.getEditingTool() );
+    
+    //sprites
+    populateSprites();
+
+		//--- Actor tab
+    
+    //--- background tab
+  	populateBackground();
     
     //selection du backgound
     int index = mpBackground->findText( mEngine.getStage().getBackgroundToken() );

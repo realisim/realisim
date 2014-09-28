@@ -125,14 +125,15 @@ public:
   Projectile();
   virtual ~Projectile();
   
+  enum projectileType{ ptBasic ,ptBullet, ptGrenade };
   enum state{ sIdle, sHorizontal, sVertical, sExploding };
   
   double getDamage() const { return mDamage; }
   double getExplosionDamage() const { return mExplosionDamage; }
-  Weapon::type getType() const {return mType;}
+  projectileType getType() const {return mType;}
   void setDamage( double d ) { mDamage = d; }
   void setExplosionDamage( double d ) { mExplosionDamage = d; }
-  void setType( Weapon::type t);
+  void setType( projectileType t);
   virtual void update();
  	int getLifeSpan() const {return mLifeSpan;}
  	void setLifeSpan( int i ) { mLifeSpan = i; }
@@ -142,7 +143,7 @@ protected:
 	void setState( state );
   void updateState();
   
-	Weapon::type mType;
+	projectileType mType;
   double mDamage;
   double mExplosionDamage;
   state mState;
