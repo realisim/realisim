@@ -34,6 +34,8 @@ namespace realisim
 namespace utils 
 {
 
+//ajouter le necessaire pour mode verbose...
+
 class Log
 {
 public:
@@ -44,7 +46,7 @@ public:
 	virtual QString getLogPath() const;
   virtual int getNumberOfEntries() const;
   virtual QString getEntry( int ) const;
-  void log( const char *, ... ); //support printf
+  void log( const char *, ... ) const; //support printf
 	virtual void logToConsole( bool );
   virtual void logTimestamp( bool );
   virtual void logToFile( bool, QString = "" );
@@ -57,11 +59,11 @@ public:
 protected:
 	Log( const Log& ); //pas de constructeur copie
   Log& operator=( const Log& ); //pas doperateur egal
-	void doLog( QString );  
+	void doLog( QString ) const;  
 
-	std::vector<QString> mEntries;
+	mutable std::vector<QString> mEntries;
   QFile mFile;
-  QTextStream mStream;
+  mutable QTextStream mStream;
   bool mLogsToConsole;
   bool mLogsToFile;
   bool mLogsTimestamp;
