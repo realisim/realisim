@@ -30,7 +30,7 @@ void Log::clear()
   mFile.close();
 }
 //-----------------------------------------------------------------------------
-void Log::doLog( QString iS )
+void Log::doLog( QString iS ) const
 {
 	QString toLog;
 	if( logsTimestamp() )
@@ -55,7 +55,7 @@ int Log::getNumberOfEntries() const
 QString Log::getEntry(int i) const
 { return mEntries[i]; }
 //-----------------------------------------------------------------------------
-void Log::log( const char *ipFormat, ... ) //support printf
+void Log::log( const char *ipFormat, ... ) const //support printf
 {
 	va_list args;
   va_start( args, ipFormat );
