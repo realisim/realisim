@@ -8,6 +8,7 @@
 using namespace realisim;
 using namespace reusables;
 using namespace network;
+using namespace utils;
 using namespace std;
 
 int Server::mUploadId = 0;
@@ -21,8 +22,10 @@ mSockets(),
 mReadBuffers(),
 mMaximumUploadPayloadSize( 64 * 1024 ),
 mUploadIndices(),
-mProtocol( tpRealisim )
+mProtocol( tpRealisim ),
+mpLog()
 {
+	mpLog = &mDefaultLog;
   connect(mpTcpServer, SIGNAL( newConnection() ),
    this, SLOT( handleNewConnection() ) );
 }
@@ -402,6 +405,17 @@ void Server::send( int iSocketIndex, const QByteArray& iA )
       default:break;
     }
   }
+}
+
+//------------------------------------------------------------------------------
+void Server::setLog( Log* ipLog )
+{
+	if(ipLog) 
+  { 
+  	ipLog->takeEntriesFrom( *mpLog );
+    mpLog = ipLog;
+  }
+  else{ mpLog = &mDefaultLog; }
 }
 
 //------------------------------------------------------------------------------

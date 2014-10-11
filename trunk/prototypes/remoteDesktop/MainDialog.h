@@ -17,14 +17,18 @@ class protocol
 {
 public:
   protocol();
-  enum message{ mRequestDesktopInfo, mGiveDesktopInfo, mMouseMoved,
-    mMousePressed, mMouseReleased, mNewFrame };
+  enum message{ mRequestDesktopInfo, mGiveDesktopInfo, mKeyPressed,
+  	mKeyReleased, mKeyRepeated, mMouseMoved, mMousePressed, mMouseReleased,
+    mNewFrame };
                     
   static QByteArray makeMessageGiveDesktopInfo( QByteArray );
+  static QByteArray makeMessageKeyPressed( QString, quint32 );
+  static QByteArray makeMessageKeyReleased( QString, quint32 );
+  static QByteArray makeMessageKeyRepeated( QString, quint32 );
   static QByteArray makeMessageMouseMoved( QPointF );
   static QByteArray makeMessageMousePressed( QPointF );
   static QByteArray makeMessageMouseReleased( QPointF );
-  static QByteArray makeMessageNewFrame( QPixmap );
+  static QByteArray makeMessageNewFrame( QPixmap, QRect );
   static QByteArray makeMessageRequestDesktopInfo();
   static QString toString( message );
   static int mVersion;
@@ -57,6 +61,9 @@ public:
   virtual ~graphicsView();
   
 signals:
+	void keyPressed( QKeyEvent* );
+  void keyReleased( QKeyEvent* );
+  void keyRepeated( QKeyEvent* );
 	void mouseMoved( QPoint );
 	void mousePressed( QPoint );
   void mouseReleased( QPoint );
@@ -83,12 +90,16 @@ protected slots:
   void clientSocketConnected();
   void clientSocketDisconnected();
 	void connectClicked();
+  void keyPressedInView( QKeyEvent* );
+  void keyReleasedInView( QKeyEvent* );
+  void keyRepeatedInView( QKeyEvent* );
   void mouseMovedInView( QPoint );
   void mousePressedInView( QPoint );
   void mouseReleasedInView( QPoint );
   void serverDownloadEnded( int, int );
   void serverSocketConnected( int );
 	void serverSocketDisconnected( int );
+  void serverUploadEnded( int, int );
 	void updateUi();
                 
 protected:
@@ -98,23 +109,24 @@ protected:
 
 	void createUi();
   clientMode getClientMode() const { return mClientMode; }
+  QRect getModifiedRegion( QPixmap, QPixmap ) const;
   serverMode getServerMode() const {return mServerMode; }
+  void handleKeyboardInputFromClient( protocol::message, QString, quint32 );
   void handleMessageFromClient( int, QByteArray );
   void handleMessageFromServer( QByteArray );
   void handleMouseInputFromClient( protocol::message, QPointF );
   void setClientMode( clientMode );
   void setServerMode( serverMode );
-  void timerEvent( QTimerEvent* );
   
   clientMode mClientMode;
   serverMode mServerMode;
   reusables::network::Client mClient;
   reusables::network::Server mServer;
-  int mServerTimerId;
   utils::Log mClientLog;
   utils::Log mServerLog;
   desktopInfo mDesktopInfo;
   desktopInfo mRemoteDesktopInfo;
+  int mCurrentFrameId;
   
   //--- pour le client
   QFrame* mpClientConnectionFrame;
@@ -124,8 +136,11 @@ protected:
   graphicsView* mpView;
   QGraphicsScene* mpScene;
   QLabel* mpLabel;
+  QGraphicsPixmapItem* mpRemoteDesktopItem;
   
   QPixmap mDesktopPixmap;
+  QPixmap mRemoteDesktopPixmap;
+  QRect mRemoteDesktopPixmapRect;
   
   //--- pour le server
   QFrame* mpServerFrame;
