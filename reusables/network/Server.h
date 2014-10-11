@@ -9,6 +9,7 @@
 class QTcpServer;
 class QTcpSocket;
 #include "network/utils.h"
+#include "utils/log.h"
 #include <vector>
 
 namespace realisim
@@ -18,6 +19,14 @@ namespace reusables
 namespace network
 {
 
+/*
+	Le signal socketDisconnected est emit juste avant d'effacer les informations
+  reliées au socket. La connexion tcp est terminée à ce moment. Par contre, Il
+  est encore possible aux clients connectés à ce signal d'interroger les
+  méthodes consernants le socket ( par exemple: getSocketPeerAddress, 
+  getDownload, getDownloadStatus etc... ). La méthode getNumberOfSockets ne
+  réflète que le socket est toujours présent.
+*/
 class Server : public QObject
 {
   Q_OBJECT;
@@ -33,6 +42,7 @@ public:
 	virtual double getDownloadStatus( int, int ) const;
   virtual QString getLocalAddress() const;
   virtual quint16 getLocalPort() const {return mPort;}
+  virtual const utils::Log& getLog() const {return *mpLog;}
 	virtual int getMaximumUploadPayloadSize() const;
 	virtual int getNumberOfDownloads( int ) const;
   virtual int getNumberOfSockets() const;
@@ -50,6 +60,7 @@ public:
   virtual bool hasError() const;
 	virtual bool hasUploads( int ) const;
   virtual void setLocalPort(const quint16 iP) {mPort = iP;}
+  virtual void setLog( utils::Log* );
 	virtual void setMaximumUploadPayloadSize( int );
   virtual void setProtocol( transferProtocol p ) {mProtocol = p;}
   virtual void send( int, const QByteArray& );
@@ -97,6 +108,8 @@ protected:
   static int mUploadId;
   std::vector< int > mUploadIndices;
 	transferProtocol mProtocol;
+  mutable utils::Log* mpLog;
+  mutable utils::Log mDefaultLog;
 };
 
 }
