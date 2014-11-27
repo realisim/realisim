@@ -15,7 +15,7 @@
 namespace realisim { namespace platform { using namespace treeD; class Animation; } }
 namespace realisim { namespace platform { class Stage; } }
 #include "utils/CommandStack.h"
-#include "utils/SpriteCatalog.h"
+#include "3d/SpriteCatalog.h"
 #include <vector>
 
 class realisim::platform::Animation
@@ -202,7 +202,7 @@ virtual QString getEditingSpriteToken() const { return mEditingSpriteToken; }
   virtual Physics& getPhysics() {return mPhysics;}
   virtual Player& getPlayer() { return mPlayer; }
   virtual Projectile& getProjectile(int i) { return *mProjectiles[i]; }
-virtual realisim::utils::SpriteCatalog& getSpriteCatalog();
+virtual realisim::treeD::SpriteCatalog& getSpriteCatalog();
   virtual Stage& getStage() { return mStage; }
   virtual state getState() const { return mState; }
   virtual const std::vector<int>& getVisibleCells() const;
@@ -250,7 +250,7 @@ protected:
   realisim::treeD::Camera mGameCamera;
   Stage mStage;
   Stage::cellType mEditingTool;
-  realisim::utils::SpriteCatalog mSpriteCatalog;
+  realisim::treeD::SpriteCatalog mSpriteCatalog;
   mutable QString mErrors;
   int mCurrentLayer;
   QString mEditingSpriteToken;
