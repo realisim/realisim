@@ -663,7 +663,7 @@ vector<QString> Engine::getPauseMenuItems() const
 }
 
 //------------------------------------------------------------------------------
-realisim::utils::SpriteCatalog& Engine::getSpriteCatalog()
+realisim::treeD::SpriteCatalog& Engine::getSpriteCatalog()
 { return mSpriteCatalog; }
 
 //------------------------------------------------------------------------------
@@ -963,8 +963,8 @@ void Engine::keyReleased( int iKey )
 //------------------------------------------------------------------------------  
 void Engine::loadStage( const Stage& iS )
 {
-	state previousState = getState();
-  goToState(sPaused);
+	//state previousState = getState();
+  //goToState(sPaused);
   
 	setSpriteCatalog("level1.cat"); //faudrait le lire du stage
 	mStage.clear();
@@ -999,15 +999,16 @@ mStage.getWeapon(0).setPosition( Point2d(100, 100) );
 mStage.getWeapon(1).setPosition( Point2d(200, 100) );
   
   send( eStageLoaded );
-  goToState(previousState);
+  //goToState(previousState);
 }
 //------------------------------------------------------------------------------
 void Engine::loadStage( QString iPath )
 {
+//printf("load stage: %s\n", iPath.toStdString().c_str());
 	Stage s;
   s.fromBinary( utils::fromFile( iPath ) );  
-  loadStage(s);
   mStageFilePath = iPath;
+  loadStage(s);
 }  
   
 //------------------------------------------------------------------------------
@@ -1103,8 +1104,8 @@ void Engine::moveGameCameraTo( const Point2d& iPos )
 //------------------------------------------------------------------------------
 void Engine::newStage( QString iName, int iX, int iY )
 {
-	loadStage( Stage( iName, Vector2i( iX, iY ) ) );
-  mStageFilePath = "stages/" + iName;
+	mStageFilePath = "stages/" + iName + ".bin";
+	loadStage( Stage( iName, Vector2i( iX, iY ) ) );  
   startLevel();
 }
 

@@ -12,7 +12,7 @@
 #include <QKeyEvent>
 #include <qlayout.h>
 #include <QFile.h>
-#include "utils/SpriteCatalog.h"
+#include "3d/SpriteCatalog.h"
 
 using namespace realisim;
 	using namespace platform;
@@ -239,7 +239,7 @@ void Viewer::drawDataMap()
 void Viewer::drawGame()
 {
 	glDisable( GL_DEPTH_TEST );
-  utils::SpriteCatalog& sc = mEngine.getSpriteCatalog();
+  treeD::SpriteCatalog& sc = mEngine.getSpriteCatalog();
   Stage& stage = mEngine.getStage();
   
 	//projection ortho
@@ -1171,7 +1171,7 @@ void MainWindow::openMapClicked()
 //-----------------------------------------------------------------------------
 void MainWindow::populateBackground()
 {
-	utils::SpriteCatalog& sp = mEngine.getSpriteCatalog();
+	treeD::SpriteCatalog& sp = mEngine.getSpriteCatalog();
 	if( mpBackground->count() == 0 )
   {
   	mpBackground->addItem( "aucun" );
