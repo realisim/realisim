@@ -1,7 +1,7 @@
 /* SpriteCatalog.cpp */
 
 #include <QFile>
-#include "utils/SpriteCatalog.h"
+#include "3d/SpriteCatalog.h"
 #include "utils/utilities.h"
 
 using namespace realisim;

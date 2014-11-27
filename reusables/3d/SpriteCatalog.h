@@ -10,7 +10,7 @@
 
 namespace realisim
 {
-namespace utils
+namespace treeD
 {
 
 class SpriteCatalog
