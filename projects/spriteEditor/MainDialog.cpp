@@ -126,7 +126,7 @@ void Viewer::drawSprites( bool iPicking /*=false*/ ) const
         //conversion de qt vers gl
         Point2d p( r.bottomLeft().x(), t.height() - r.bottomLeft().y() );
         Vector2d size( r.width(), r.height() );
-        drawRectangle2d(p, size);        
+        drawRectangle(p, size);        
         
         //--- les rectangles qui définissent les frames
         Point2d p2;
@@ -135,7 +135,7 @@ void Viewer::drawSprites( bool iPicking /*=false*/ ) const
           {
           	p2.setX( p.x() + (c * s.getFrameSize().x() ) );
             p2.setY( p.y() + (r * s.getFrameSize().y() ) );
-            drawRectangle2d(p2, s.getFrameSize() );
+            drawRectangle(p2, s.getFrameSize() );
           }
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
       }

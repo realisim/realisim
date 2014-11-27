@@ -11,7 +11,7 @@
 #include <QGraphicsScene>
 #include <QMainWindow>
 #include <QtGui>
-#include "utils/SpriteCatalog.h"
+#include "3d/SpriteCatalog.h"
 
 class MainDialog;
 
@@ -102,7 +102,7 @@ protected:
   virtual void updateUi();
   
   //--- data
-	realisim::utils::SpriteCatalog mSpriteCatalog;
+	realisim::treeD::SpriteCatalog mSpriteCatalog;
   QString mTextureToken;
   QString mSpriteToken;
   QString mSaveFileName;
