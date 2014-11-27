@@ -6,7 +6,6 @@
 #include <QTcpSocket>
 
 using namespace realisim;
-using namespace reusables;
 using namespace network;
 using namespace utils;
 using namespace std;
@@ -316,13 +315,14 @@ void Server::handleSocketDisconnected()
     int i = findSocketFromSender( sender() );
     if( i != -1 )
     {
-    	emit socketDisconnected( i );
+    	emit socketAboutToDisconnect( i );
     	mDownloads.erase( i ); //efface tout les downloads
       mUploads.erase( i ); //efface tout les uploads
       getSocket( i )->deleteLater();
       mSockets.erase( mSockets.begin() + i );
       mReadBuffers.erase( mReadBuffers.begin() + i );
-      mUploadIndices.erase( mUploadIndices.begin() + i );            
+      mUploadIndices.erase( mUploadIndices.begin() + i );
+      emit socketDisconnected( i );
     }
     else
       addError( "handleSocketDisconnected is called for unknown peer..." );

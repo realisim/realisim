@@ -10,8 +10,6 @@ using namespace std;
 
 namespace realisim 
 {
-namespace reusables 
-{
 namespace network
 {
 
@@ -191,5 +189,4 @@ void Transfer::setPayload( const QByteArray& iA, int iId )
 }
 
 } //network
-} //reusables
 } //realisim
