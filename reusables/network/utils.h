@@ -15,8 +15,6 @@ class QTcpSocket;
 */
 namespace realisim 
 {
-namespace reusables 
-{
 namespace network
 {
   QStringList getLocalIpAddresses();
@@ -50,7 +48,6 @@ void printAsHex( const QByteArray& );
   Transfer readUploadHeader( const QByteArray& );
   
 }//network
-}//reusable
 }//realisim
 
 #endif

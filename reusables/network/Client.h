@@ -15,8 +15,6 @@ membres:
 */
 namespace realisim 
 {
-namespace reusables 
-{
 namespace network
 {
 
@@ -92,7 +90,6 @@ protected:
 };
 
 }//network
-}//reusable
 }//realisim
 
 #endif

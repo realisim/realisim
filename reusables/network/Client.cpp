@@ -7,7 +7,6 @@
 #include <QTcpSocket>
 
 using namespace realisim;
-using namespace reusables;
 using namespace network;
 using namespace std;
 

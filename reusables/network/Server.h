@@ -14,18 +14,18 @@ class QTcpSocket;
 
 namespace realisim
 {
-namespace reusables
-{
 namespace network
 {
 
 /*
-	Le signal socketDisconnected est emit juste avant d'effacer les informations
+	Le signal socketAboutToDisconnect() est emit juste avant d'effacer les informations
   reliées au socket. La connexion tcp est terminée à ce moment. Par contre, Il
   est encore possible aux clients connectés à ce signal d'interroger les
   méthodes consernants le socket ( par exemple: getSocketPeerAddress, 
   getDownload, getDownloadStatus etc... ). La méthode getNumberOfSockets ne
   réflète que le socket est toujours présent.
+  Le signal socketDisconnect() est emit lorsque le socket est completement
+  enlevé du serveur.
 */
 class Server : public QObject
 {
@@ -73,6 +73,7 @@ signals:
 	void downloadEnded( int, int );
 	void gotPacket( int, int );
 	void sentPacket( int, int );
+  void socketAboutToDisconnect( int );
   void socketConnected( int );
   void socketDisconnected( int );
 	void uploadEnded( int, int );
@@ -112,7 +113,6 @@ protected:
   mutable utils::Log mDefaultLog;
 };
 
-}
 }
 }
 
