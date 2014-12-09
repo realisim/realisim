@@ -17,8 +17,10 @@ namespace realisim
 {
 namespace network
 {
-  QStringList getLocalIpAddresses();
   QString asString(QAbstractSocket::SocketError);
+  QString getGuid();
+  QStringList getLocalIpAddresses();
+  QString getMacAddress();
   
   enum transferProtocol{ tpRaw, tpRealisim, tpNumberOfProtocols };
    

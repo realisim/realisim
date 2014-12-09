@@ -192,10 +192,11 @@ bool SpriteCatalog::hasError() const
 { return !mErrors.isEmpty(); }
 
 //------------------------------------------------------------------------------
-void SpriteCatalog::fromBinary( QByteArray& iBa )
+void SpriteCatalog::fromBinary( const QByteArray& iBa )
 {
 	clear();
-  QDataStream in(&iBa, QIODevice::ReadOnly);
+  QByteArray ba = iBa;
+  QDataStream in(&ba, QIODevice::ReadOnly);
   // Read and check the header
   quint32 header;
   in >> header;

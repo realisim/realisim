@@ -199,7 +199,7 @@ namespace math
     mat_[0] = iV.getX(); mat_[5] = iV.getY(); mat_[10] = iV.getZ();
   }
   
-  //! permet de setter la 4e ligne de la sous matrice 3x3 ("coin" sup gauche)
+  //! permet de setter la 4e ligne de la matrice
   template<class T>
   inline void Matrix4<T>::setTranslation(const Point3<T>& iTrans)
   {

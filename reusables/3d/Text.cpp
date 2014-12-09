@@ -179,7 +179,7 @@ void Text::render() const
     c.set( Point3d(0.0, 0.0, 5.0), 
 	    Point3d(0.0, 0.0, 0.0),
       Vector3d( 0.0, 1.0, 0.0 ) );
-    c.setWindowSize( r.width(), r.height() );
+    c.setViewportSize( r.width(), r.height() );
     c.setProjection( 0, r.width(), 
       0, r.height(), 0.5, 100.0,
       Camera::Projection::tOrthogonal );

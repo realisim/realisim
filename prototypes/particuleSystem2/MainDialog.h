@@ -1,18 +1,14 @@
 /*
  *  MainWindow.h
- *  Project
- *
- *  Created by Pierre-Olivier Beaudoin on 08/11/08.
- *  Copyright 2008 __MyCompanyName__. All rights reserved.
- *
  */
 
 #ifndef MainDialog_hh
 #define MainDialog_hh
 
 #include <QMainWindow>
-#include "3d/Widget3d.h"
 #include "3d/Particules.h"
+#include "3d/Widget3d.h"
+#include "3d/SpriteCatalog.h"
 
 class QComboBox;
 class QFrame;
@@ -26,21 +22,6 @@ class QTimerEvent;
 class Viewer;
 namespace realisim { namespace treeD { class Texture; } }
 
-class Viewer : public realisim::treeD::Widget3d
-{
-public:
-	Viewer( QWidget*, const std::vector< realisim::treeD::Particules >& );
-  virtual ~Viewer();
-  
-protected:
-	virtual void initializeGL();
-  virtual void paintGL();
-  virtual void timerEvent( QTimerEvent* );
-  
-  const std::vector< realisim::treeD::Particules >& mParticules;
-  int mTimerId;
-};
-
 //------------------------------------------------------------------------------
 class MainDialog : public QMainWindow
 {
@@ -48,6 +29,9 @@ class MainDialog : public QMainWindow
 public:
 	MainDialog();
 	~MainDialog(){};
+  
+	int getNumberOfParticuleSystems() const;
+  realisim::treeD::Particules& getParticuleSystem(int);
   
 protected slots:
 	virtual void addClicked();
@@ -65,12 +49,15 @@ protected slots:
   virtual void velocityUpperRangeChanged( const QString& );
                 
 protected:
+	friend class Viewer;
+  
 	virtual void createUi();
   virtual realisim::treeD::Particules& getSelectedSource();
   
   Viewer* mpViewer;
   std::vector< realisim::treeD::Particules > mParticules;
   static realisim::treeD::Particules mDummyParticules;
+  int mSelectionId;
   
   QListWidget* mpParticules;
   QPushButton* mpColorButton;
@@ -84,5 +71,25 @@ protected:
   QSlider* mpRateSlider;
   QSlider* mpSizeSlider;
 };
+
+//------------------------------------------------------------------------------
+class Viewer : public realisim::treeD::Widget3d
+{
+public:
+	Viewer( QWidget*, MainDialog& );
+  virtual ~Viewer();
+  
+protected:
+  virtual void draw();
+  virtual void drawSceneForPicking();
+	virtual void initializeGL();
+  virtual void mouseMoveEvent( QMouseEvent* );
+  virtual void timerEvent( QTimerEvent* );
+  
+	MainDialog& mMainDialog;
+  int mTimerId;
+  realisim::treeD::SpriteCatalog mSpriteCatalog;
+};
+
 
 #endif

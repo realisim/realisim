@@ -35,7 +35,7 @@ virtual std::vector<QString> getSpritesForTexture( QString );
   virtual int getNumberOfSprites() const;
   virtual int getNumberOfTextures() const;
   virtual bool hasError() const;
-  virtual void fromBinary( QByteArray& );
+  virtual void fromBinary( const QByteArray& );
   virtual void removeSprite( QString );
   virtual void removeTexture( QString );
   virtual QByteArray toBinary() const;

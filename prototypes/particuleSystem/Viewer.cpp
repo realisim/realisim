@@ -130,7 +130,13 @@ void Viewer::drawScene() const
   glDisable(GL_TEXTURE_2D);
   glEnable(GL_DEPTH_TEST);
   
-  mPlusMinus.draw();
+  {
+    treeD::ScreenSpaceProjection ssp( Vector2d( width(), height() ) );
+    glPushMatrix();
+    glTranslated( 10, 10, 0);
+    mPlusMinus.draw();
+    glPopMatrix();
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -146,8 +152,14 @@ void Viewer::drawSceneForPicking() const
   
   QColor c = idToColor(kPlusMinusId);
   glColor4ub(c.red(), c.green(), c.blue(), c.alpha());
-  //mPlusMinus.draw(getCamera(), true);
-  mPlusMinus.draw();
+  {
+    treeD::ScreenSpaceProjection ssp( Vector2d( width(), height() ) );
+    Vector2d t = mPlusMinus.getTranslation();
+    glPushMatrix();
+    glTranslated( 10, 10, 0);
+    drawRectangle( Rectangle( Point2d(), mPlusMinus.getFrameSize() ) );
+    glPopMatrix();
+  }
   
   glEnable(GL_BLEND);
   glEnable(GL_TEXTURE_2D);
@@ -199,42 +211,38 @@ void Viewer::initializeGL()
   t.set( QImage(":/images/plusMinus.png") );
   //initialisé a minus
   mPlusMinus.set(t, QRect(QPoint(21,0), QSize(21, 21)));
-//  mPlusMinus.set2dPositioningOn(true);
   mPlusMinus.setAnchorPoint(Sprite::aBottomLeft);
 }
 
 //-----------------------------------------------------------------------------
 void Viewer::mouseDoubleClickEvent(QMouseEvent* ipE)
 {
-  makeCurrent();
-  vector<unsigned int> hits = pick(ipE->x(), ipE->y());
-  if(!hits.empty())
-  {
-  	unsigned int hit = hits[0];
-    
-    ParticuleSystem& ps = *mpParticuleSystem;
-    Camera c = getCamera();
-    Matrix4d m;
-    switch (hit)
-    {
-      case 0: break;
-      case 1: //emitter selected 
-        m.setTranslation(ps.getEmitterPosition());
-        c.setTransformationToGlobal(m);
-        setCamera(c, true);
-        break;
-      default: // gravity holes selected
-      {
-        ParticuleSystem::GravityHole g = 
-          ps.getGravityHoles()[hit - 2];
-        m.setTranslation(g.mPos);
-        c.setTransformationToGlobal(m);
-        setCamera(c, true);      
-        break;
-      }
-      
-    }
-  }
+//  makeCurrent();
+//  vector<unsigned int> hits = pick(ipE->x(), ipE->y());
+//  if(!hits.empty())
+//  {
+//  	unsigned int hit = hits[0];
+//    
+//    ParticuleSystem& ps = *mpParticuleSystem;
+//    Camera c = getCamera();
+//    Vector3d d;
+//    switch (hit)
+//    {
+//      case 0: break;
+//      case 1: //emitter selected 
+//      	d = ps.getEmitterPosition() - c.getLook();
+//        break;
+//      default: // gravity holes selected
+//      {
+//        ParticuleSystem::GravityHole g = 
+//          ps.getGravityHoles()[hit - 2];
+//      	d = g.mPos - c.getLook();
+//        break;
+//      }
+//      c.translate( d );
+//      setCamera(c, true);
+//    }
+//  }
 }
 
 //-----------------------------------------------------------------------------
@@ -247,8 +255,8 @@ void Viewer::mouseMoveEvent(QMouseEvent* ipE)
   if(ipE->buttons() == Qt::LeftButton && !mSelectedId) 
   {
     Camera c = getCamera();
-    Vector3d v = c.pixelDeltaToGLDelta(deltaX, -deltaY);
-    c.move(-v);
+    Vector3d v = c.pixelDeltaToGLDelta(deltaX, deltaY);
+    c.translate(-v);
     setCamera(c, false);
   } 
   
@@ -260,8 +268,8 @@ void Viewer::mouseMoveEvent(QMouseEvent* ipE)
     {
 			Camera c = getCamera();
       Vector3d v = 
-        c.pixelDeltaToGLDelta(deltaX, -deltaY, ps.getEmitterPosition());
-      //ps.setEmitterPosition(ps.getEmitterPosition() + toPoint(v));
+        c.pixelDeltaToGLDelta(deltaX, deltaY, ps.getEmitterPosition());
+      ps.setEmitterPosition( ps.getEmitterPosition() + v );
       break;
     }
     default: // gravity holes selected
@@ -270,8 +278,8 @@ void Viewer::mouseMoveEvent(QMouseEvent* ipE)
         ps.getGravityHoles()[mSelectedId-2];
       Camera c = getCamera();
       Vector3d v = 
-        c.pixelDeltaToGLDelta(deltaX, -deltaY, g.mPos);
-      //ps.setGravityHolePosition(mSelectedId-2, g.mPos + toPoint(v));
+        c.pixelDeltaToGLDelta(deltaX, deltaY, g.mPos);
+      ps.setGravityHolePosition(mSelectedId-2, g.mPos + v);
     }
       break;
   }
@@ -352,5 +360,4 @@ void Viewer::resizeGL(int iWidth, int iHeight)
   Widget3d::resizeGL(iWidth, iHeight);
   mFbo.resize(iWidth, iHeight);
   Camera c = getCamera();
-  //mPlusMinus.set2dPosition(10, c.getWindowInfo().getHeight() - 10);
 }

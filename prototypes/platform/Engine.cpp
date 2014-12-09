@@ -525,7 +525,7 @@ Engine::Engine() : QObject(),
 //   -h/2.0, h/2.0, 0.0, 200, Camera::Projection::tOrthogonal, true);
 
 	mGameCamera.setOrthoProjection( w, h, 0.0, 200 );
-  mGameCamera.setWindowSize(w, h);
+  mGameCamera.setViewportSize(w, h);
   mGameCamera.set( Point3d( 0.0, 0.0, 5.0 ),
   	Point3d( 0.0, 0.0, 0.0 ),
     Vector3d( 0.0, 1.0, 0.0 ) );
@@ -580,8 +580,8 @@ void Engine::computeVisibleCells()
 {
 	const Camera& c = getGameCamera();
   const Stage& s = mStage;
-  Point2d look( c.getTransformationToGlobal().getTranslation().getX(),
-    c.getTransformationToGlobal().getTranslation().getY() );
+  Point2d look( c.getLook().getX(),
+    c.getLook().getY() );
   mVisibleCells = s.getCellIndices( look, Vector2i(
   	(int)ceil( c.getVisibleWidth() / s.getCellSize().x() ) + 1,
     (int)ceil( c.getVisibleHeight() / s.getCellSize().y() ) ) + 1 );
@@ -846,9 +846,10 @@ void Engine::handleEditing()
   }
 
   //deplacement de la camera pour suivre le joueur
-  Matrix4d m = mGameCamera.getTransformationToGlobal();
-  m.translate( Vector3d( d.x(), d.y(), 0.0 ) );
-  mGameCamera.setTransformationToGlobal( m );
+  //Matrix4d m = mGameCamera.getTransformationToGlobal();
+  //m.translate( Vector3d( d.x(), d.y(), 0.0 ) );
+  //mGameCamera.setTransformationToGlobal( m );
+  mGameCamera.translate( Vector3d( d.x(), d.y(), 0.0 ) );
 }
 
 //------------------------------------------------------------------------------
@@ -1035,7 +1036,7 @@ void Engine::mouseWheelMoved( double iD )
 //------------------------------------------------------------------------------
 void Engine::moveGameCamera()  
 {
-  Matrix4d m = mGameCamera.getTransformationToGlobal();
+  //Matrix4d m = mGameCamera.getTransformationToGlobal();
   Point2d desired = mPlayer.getPosition();
   Point2d final = desired;
 	Vector2d viewSize( mGameCamera.getVisibleWidth(),
@@ -1089,16 +1090,22 @@ void Engine::moveGameCamera()
   		desiredView.bottom() + desiredView.height() / 2.0 );
   }
   
-  m.setTranslation( Point3d(final.x(), final.y(), 0.0) );
-  mGameCamera.setTransformationToGlobal( m );
+  //Vector3d delta = Vector3d(final.x(), final.y(), 0.0) - mGameCamera.getLook();
+  //mGameCamera.translate( delta );
+  //m.setTranslation( Point3d(final.x(), final.y(), 0.0) );
+  //mGameCamera.setTransformationToGlobal( m );
+  moveGameCameraTo( final );
 }
 
 //------------------------------------------------------------------------------
 void Engine::moveGameCameraTo( const Point2d& iPos )
 {
-  Matrix4d m = mGameCamera.getTransformationToGlobal();
-  m.setTranslation( Point3d( iPos.x(), iPos.y(), 0.0 ) );
-  mGameCamera.setTransformationToGlobal( m );
+  //Matrix4d m = mGameCamera.getTransformationToGlobal();
+  //m.setTranslation( Point3d( iPos.x(), iPos.y(), 0.0 ) );
+  //mGameCamera.setTransformationToGlobal( m );
+  Vector3d delta = Point3d(iPos.x(), iPos.y(), 0.0) - mGameCamera.getLook();
+  mGameCamera.translate( delta );
+
 }
 
 //------------------------------------------------------------------------------
@@ -1256,10 +1263,11 @@ void Engine::startLevel()
 	  mPlayer.setPosition( Point2d( 10, 10 ) );
   
 	//on met le joueur et la camera dans la premiere case
-  Matrix4d m = mGameCamera.getTransformationToGlobal();
-  m.setTranslation( Point3d( mPlayer.getPosition().x(), 
-  	mPlayer.getPosition().y(), 0.0 ) );
-  mGameCamera.setTransformationToGlobal( m );
+  moveGameCameraTo( mPlayer.getPosition() );
+//  Matrix4d m = mGameCamera.getTransformationToGlobal();
+//  m.setTranslation( Point3d( mPlayer.getPosition().x(), 
+//  	mPlayer.getPosition().y(), 0.0 ) );
+//  mGameCamera.setTransformationToGlobal( m );
 }
 
 //------------------------------------------------------------------------------

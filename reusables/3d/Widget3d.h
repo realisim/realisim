@@ -37,22 +37,29 @@ public:
             Qt::WindowFlags iFlags = 0 );
   virtual ~Widget3d() = 0;
 
-  virtual const Camera& getCamera() const { return mCam; }
+	enum controlType{ ctNone, ctPan, ctRotateAround, ctFree };
+
+  virtual const Camera& getCamera() const;
+  virtual controlType getControlType() const;
   virtual void pushFrameBuffer(const FrameBufferObject& = FrameBufferObject());
   virtual void pushShader(const Shader& = Shader());
   virtual void popFrameBuffer();
   virtual void popShader();
   virtual void setCamera( const Camera& iCam, bool iAnimate = true, int iDuration = 1000 );
+  virtual void setControlType( controlType );
 //void setCameraMode( Camera::Mode iMode );
-  virtual void setCameraOrientation( Camera::Orientation iO );
+//virtual void setCameraOrientation( Camera::Orientation iO );
   
 //signals:
 //    void clicked();
 
 protected:
 	virtual void beginFrame();
-	virtual void drawSceneForPicking() const {};  
+  virtual void draw() {;}
+	virtual void drawSceneForPicking() {;}
   virtual void initializeGL();
+  virtual bool isAnimatingCamera() const;
+  virtual bool isKeyPressed( int ) const;
   virtual void keyPressEvent(QKeyEvent*);
   virtual void keyReleaseEvent(QKeyEvent*);
   virtual void mouseDoubleClickEvent( QMouseEvent* e );
@@ -71,19 +78,19 @@ protected:
   Camera mCam;
   Camera mOldCam; //used to interpolate camera during animation
   Camera mNewCam; //used to interpolate camera during animation
-  
-private:  
+  controlType mControlType;
+   
   QTime mAnimationTimer;
   int mAnimationTimerId;
+  int mCameraControlTimerId;
   int mAnimationDuration;
   double mFps;
   int mFpsFrameCount;
   QTime mFpsTimer;
-  
   bool mMousePressed;
   int mMousePosX;
   int mMousePosY;
-  
+  std::map< int, bool > mKeys;
   std::vector<FrameBufferObject> mFrameBuffers;
   std::vector<Shader> mShaders;
 };

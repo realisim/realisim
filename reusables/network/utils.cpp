@@ -66,6 +66,15 @@ QString asString(QAbstractSocket::SocketError iError)
   return r;
 }
 
+//-----------------------------------------------------------------------------
+QString getGuid()
+{
+	QString r;
+  r = getMacAddress();
+  if( !r.isEmpty() )
+  { r += QDateTime::currentDateTime().toString("yyyy-MM-dd_hh:mm:ss:zzz"); }
+  return r;
+}
 //------------------------------------------------------------------------------
 QStringList getLocalIpAddresses()
 {
@@ -78,6 +87,17 @@ QStringList getLocalIpAddresses()
   }
     
   return result;
+}
+//-----------------------------------------------------------------------------
+QString getMacAddress()
+{
+  foreach(QNetworkInterface netInterface, QNetworkInterface::allInterfaces())
+  {
+			if( !(netInterface.flags() & QNetworkInterface::IsLoopBack) &&
+      	!netInterface.hardwareAddress().isEmpty() )
+      { return netInterface.hardwareAddress(); }
+  }
+  return QString();
 }
 
 //------------------------------------------------------------------------------
