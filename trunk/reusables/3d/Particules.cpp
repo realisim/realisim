@@ -185,6 +185,8 @@ void Particules::iterate() const
   int r1, r2, r3;
   double m1, m2, m3;
   int numberOfParticuleCreated = 0;
+  
+  #pragma omp parallel for
 	for( int i = 0; i < getNumberOfParticules(); ++i )
   {
   	Particule& p = mParticules[i];

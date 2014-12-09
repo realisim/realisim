@@ -2,9 +2,12 @@
 
 #include "3d/Utilities.h"
 #include "MainDialog.h"
+#include "math/MathUtils.h"
 #include <qlayout.h>
 #include <QFile.h>
 #include "utils/utilities.h"
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
 
 using namespace realisim;
   using namespace math;
@@ -65,7 +68,7 @@ void Viewer::drawModeButton(bool iPicking /*=false*/) const
   
   Camera cam;
   cam.set( Point3d(0.0, 0.0, 5.0), Point3d(0.0), Vector3d(0.0, 1.0, 0.0) );
-  cam.setWindowSize( width(), height() );
+  cam.setViewportSize( width(), height() );
   cam.setProjection( 0, width(), 
     0, height(), 0.5, 100.0,
     Camera::Projection::tOrthogonal );
@@ -261,8 +264,8 @@ void Viewer::handleDrag()
     case sNavigation:
     {
       Vector3d delta = getCamera().pixelDeltaToGLDelta( mMouseDelta.x(),
-      	-mMouseDelta.y() );
-      mCam.move( -delta );
+      	mMouseDelta.y() );
+      mCam.translate( -delta );
     }    
     break;
     default:break;
@@ -446,6 +449,23 @@ void Viewer::paintGL()
 }
 
 //-----------------------------------------------------------------------------
+void Viewer::resizeGL(int iWidth, int iHeight)
+{
+	if( getState() == sPreview )
+  {
+    Camera c = getCamera();
+    c.setViewportSize( iWidth, iHeight );
+    c.setOrthoProjection( iWidth, iHeight, 0.5, 1000 );
+    setCamera(c, false);
+    update();
+  }
+  else
+  { Widget3d::resizeGL( iWidth, iHeight );}
+
+}
+
+
+//-----------------------------------------------------------------------------
 void Viewer::setAsPreview(bool iP)
 { mState = iP ? sPreview : sNavigation; }
 
@@ -456,7 +476,8 @@ MainDialog::MainDialog() : QMainWindow(),
 	mTextureToken(),
   mSpriteToken(),
   mSaveFileName(),
-  mPreviewTimer(0)
+  mPreviewTimer(0),
+  mSettings( QSettings::UserScope, "Realisim", "SpriteEditor" )
 {
   resize(1024, 600);
   move( 10, 10 );
@@ -484,7 +505,7 @@ MainDialog::MainDialog() : QMainWindow(),
   
   mpViewer = new Viewer(*this, pMainWidget);
   Camera c = mpViewer->getCamera();
-  c.setOrientation(Camera::XY);
+	c.setOrthoProjection( 640, 0.5, 100 );
   mpViewer->setCamera(c);
   
   //--- panneau de controle
@@ -689,7 +710,7 @@ MainDialog::MainDialog() : QMainWindow(),
           {
             mpPreviewer = new Viewer( *this, pSpriteFrame, mpViewer );
             Camera c = mpPreviewer->getCamera();
-					  c.setOrientation(Camera::XY);
+						c.set( Point3d( 0, 0, 100 ), Point3d(), Vector3d(0, 1, 0) );
 					  mpPreviewer->setCamera(c);
 						mpPreviewer->setAsPreview(true);
             pLine5->addWidget(mpPreviewer);
@@ -731,13 +752,16 @@ MainDialog::MainDialog() : QMainWindow(),
   connect(pTabs, SIGNAL(currentChanged(int)), 
 	  this, SLOT(tabChanged(int)));
   tabChanged(ttTexture);
+  
+  loadSettings();
 }
 
 //-----------------------------------------------------------------------------
 void MainDialog::addTextureClicked()
 {
-	QString fileName = QFileDialog::getOpenFileName(this, tr("Add Texture"),
-  	"/home", tr("Images (*.png *.bmp *.jpg *.jpeg)"));
+	QString fileName = QFileDialog::getOpenFileName( this, 
+  	"Add Texture", mAddTexturePath, 
+    "Images (*.png *.bmp *.jpg *.jpeg)" );
   if(!fileName.isEmpty())
   {
     QImage im(fileName);
@@ -745,10 +769,14 @@ void MainDialog::addTextureClicked()
     t.set(im);
     QString token = fileName.section("/", -1); //utils::getGuid();
    	mSpriteCatalog.add( token, t );
+    
+    mAddTexturePath = QFileInfo(fileName).path();
+	  saveSettings();
   }
 
   if(mTextureToken.isEmpty())
-    textureSelectionChanged( 0 );
+  { textureSelectionChanged( 0 ); }
+
   updateTextureUi();
 }
 
@@ -756,12 +784,13 @@ void MainDialog::addTextureClicked()
 //-----------------------------------------------------------------------------
 void MainDialog::addSpriteClicked()
 {
+	srand( time(NULL) );
 	if( !mTextureToken.isEmpty() )
   {
   	Sprite s;
     Texture t = mSpriteCatalog.getTexture( mTextureToken );
     s.set( t, QRect(0,0,0,0) );
-    QString token = utils::getGuid();
+    QString token = QString::number( rand() );//utils::getGuid();
   	mSpriteCatalog.add( token, s );
     mSpriteToken = token;
   }
@@ -807,6 +836,15 @@ void MainDialog::frameGridYChanged(int iY)
   Sprite& s = mSpriteCatalog.getSprite( mSpriteToken );
   s.setFrameGrid( s.getFrameGrid().x(), iY );
   updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::loadSettings()
+{
+	mSaveAsPath = mSettings.value( "saveAsPath" ).toString();
+  mAddTexturePath = mSettings.value( "addTexturePath" ).toString();
+  mOpenCatalogPath = mSettings.value( "openCatalogPath" ).toString();
+  mRefreshTexturePath = mSettings.value( "refreshTexturePath" ).toString();
 }
 
 //-----------------------------------------------------------------------------
@@ -862,15 +900,17 @@ void MainDialog::numberOfFramesChanged(int iN)
 //-----------------------------------------------------------------------------
 void MainDialog::openCatalogClicked()
 {
-  QString c = QFileDialog::getOpenFileName(
-    	this, tr("Open Catalog"),
-      "/home/untitled.cat",
-      tr("Sprite Catalog (*.cat)"));
+  QString c = QFileDialog::getOpenFileName( this,
+  		"Open Catalog", mOpenCatalogPath + "/untitled.cat",
+      "Sprite Catalog (*.cat)" );
 	if( !c.isEmpty() )
   {
   	QByteArray ba = utils::fromFile(c);
 		mSpriteCatalog.fromBinary( ba );
     mSaveFileName = c;
+    
+    mOpenCatalogPath = QFileInfo(c).path();
+	  saveSettings();
   }
 
   updateUi();
@@ -880,14 +920,18 @@ void MainDialog::openCatalogClicked()
 void MainDialog::refreshTextureClicked()
 {
 	QString fileName = QFileDialog::getOpenFileName(this, 
-  	tr("Rafraîchir la texture"),
-  	"/home", tr("Images (*.png *.bmp *.jpg *.jpeg)"));
+  	"Rafraîchir la texture", mRefreshTexturePath,
+  	"Images (*.png *.bmp *.jpg *.jpeg)" );
   if(!fileName.isEmpty())
   {
     QImage im(fileName);
     Texture t = mSpriteCatalog.getTexture( mTextureToken );
     t.set( im );
+    
+    mRefreshTexturePath = QFileInfo(fileName).path();
+	  saveSettings();
   }
+  
   updateUi();
 }
 
@@ -944,8 +988,20 @@ void MainDialog::saveAs()
   {
   	mSaveFileName = s;
   	utils::toFile( mSaveFileName, mSpriteCatalog.toBinary() );
+    
+    mSaveAsPath = QFileInfo(s).path();
+	  saveSettings();
   }
   updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::saveSettings()
+{
+	mSettings.setValue( "saveAsPath", mSaveAsPath );
+	mSettings.setValue( "addTexturePath", mAddTexturePath );
+  mSettings.setValue( "openCatalogPath", mOpenCatalogPath );
+  mSettings.setValue( "refreshTexturePath", mRefreshTexturePath );
 }
 
 //-----------------------------------------------------------------------------
@@ -1005,12 +1061,8 @@ void MainDialog::textureSelectionChanged(int i)
   c.setOrthoProjection( max( t.width(), t.height() ),
   	0.5, 200);
 	c.setZoom(1.0);
-  Matrix4d m;
-  m.setTranslation( Point3d( t.width()/2.0, t.height()/2.0, 0.0 ) );
-  c.setTransformationToGlobal( m );
-  c.set( Point3d(0.0, 0.0, 5.0),
-  	Point3d(0.0, 0.0, 0.0),
-    Vector3d(0.0, 1.0, 0.0) );
+  Vector3d d = Point3d( t.width()/2.0, t.height()/2.0, 0.0 ) - c.getLook();
+  c.translate(d);
   mpViewer->setCamera(c, false);
   
   updateTextureUi();
@@ -1024,16 +1076,10 @@ void MainDialog::updatePreviewerCamera()
   //camera du preview
   const Sprite& s = mSpriteCatalog.getSprite( mSpriteToken );
   Camera c = mpPreviewer->getCamera();
-  Vector2i fs = s.getFrameSize();
-  c.setOrthoProjection( max( fs.x(), fs.y() ),
-  	0.5, 200);
-	c.setZoom(0.5);
-  Matrix4d m;
-  m.setTranslation( Point3d(s.getTranslation().x(), s.getTranslation().y(), 0.0) );
-  c.setTransformationToGlobal( m );
-  c.set( Point3d(0.0, 0.0, 5.0),
-  	Point3d(0.0, 0.0, 0.0),
-    Vector3d(0.0, 1.0, 0.0) );
+  c.setOrthoProjection( mpPreviewer->width(), mpPreviewer->height(), 0.5, 1000 );
+  Vector3d d = Point3d(s.getTranslation().x(), s.getTranslation().y(), 0.0) 
+  	- c.getLook();
+  c.translate(d);
   mpPreviewer->setCamera(c, false);
   mpPreviewer->doneCurrent();
 }

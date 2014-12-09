@@ -171,25 +171,26 @@ MainDialog::MainDialog() : QMainWindow(),
   connect(mpViewer, SIGNAL(hidePanel(bool)), 
     this, SLOT(hidePanel(bool)));
     
-  mpViewer->setCameraOrientation(Camera::XY);
   mpViewer->setParticuleSystem(&mParticuleSystem);
   pLyt->addWidget(mpViewer, 6);
   
   //set la camera
   Camera c = mpViewer->getCamera();
-  c.setOrthoProjection(20, 1, 10000);
-  c.setZoom(30);
+  c.set( Point3d(0.0, 0.0, 1000.0), 
+  	Point3d(), 
+    Vector3d(0, 1, 0) );
+  c.setOrthoProjection(2000, 1, 10000);
 	mpViewer->setCamera(c, false);
   
   //TODO a enlever lorsque le UI sera fonctionnel.
-  mParticuleSystem.setNumberOfParticules(400000);
+  mParticuleSystem.setNumberOfParticules(200000);
   mParticuleSystem.setMaximumInitialVelocity(5);
   mParticuleSystem.setMaximumInitialLife(2000);
   mParticuleSystem.setColor(QColor(88, 13, 255));
   mParticuleSystem.initialize();
   mParticuleSystem.addGravityHole(Point3d(-110.0, 75.0, 0.0), 2000);
   //mParticuleSystem.addGravityHole(Point3d(-100.0, 55.0, 0.0), 850);
-  mParticuleSystem.addGravityHole(Point3d(-100.0, -55.0, 0.0), 5000);
+  //mParticuleSystem.addGravityHole(Point3d(-100.0, -55.0, 0.0), 5000);
   
   updateUi();
   mParticuleSystem.start();
@@ -215,16 +216,12 @@ void MainDialog::removeGravityHole()
 //-----------------------------------------------------------------------------
 void MainDialog::cameraModeChanged(int iId)
 {
+	Camera c = mpViewer->getCamera();
 	if(iId == 0) //2d
-  {
-    //mpViewer->setCameraMode(Camera::ORTHOGONAL);
-    mpViewer->setCameraOrientation(Camera::XY);
-  }
+  { c.setOrthoProjection(20, 1, 10000);}
   else //3d
-  {
-    //mpViewer->setCameraMode(Camera::PERSPECTIVE);
-    mpViewer->setCameraOrientation(Camera::FREE);
-  }
+  { c.setPerspectiveProjection(60, 1, 0.5, 1000.0);}
+  mpViewer->setCamera( c );
 }
 
 //-----------------------------------------------------------------------------

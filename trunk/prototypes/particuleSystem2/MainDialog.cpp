@@ -11,19 +11,23 @@
 #include "QLayout"
 #include "QLineEdit"
 #include "QListWidget"
+#include "QMouseEvent"
 #include "QPushButton"
 #include "QSlider"
+#include "utils/utilities.h"
 
 using namespace realisim;
-  using namespace math;
+  using namespace math;  
   using namespace treeD;
+  using namespace utils;
   
 static const int kIterationInterval = 30; //ms
 
 realisim::treeD::Particules MainDialog::mDummyParticules;
 
 MainDialog::MainDialog() : QMainWindow(),
-  mpViewer(0)
+  mpViewer(0),
+  mSelectionId(-1)
 {
 	createUi();
   updateUi();
@@ -97,7 +101,7 @@ void MainDialog::createUi()
       
       mpNumberOfParticules = new QLineEdit( pLeftPanel );
       QIntValidator* pVal1 = new QIntValidator( mpNumberOfParticules );
-      pVal1->setBottom( 0 ); pVal1->setTop( 500000 );
+      pVal1->setBottom( 0 ); pVal1->setTop( 1000000 );
       mpNumberOfParticules->setValidator( pVal1 );
       connect( mpNumberOfParticules, SIGNAL( textChanged( const QString& ) ),
         this, SLOT( numberOfParticulesChanged( const QString& ) ) );
@@ -221,12 +225,11 @@ void MainDialog::createUi()
   mParticules.push_back( p );
 	mpParticules->setCurrentRow( -1 );
 
-  mpViewer = new Viewer(pMainFrame, mParticules);
-  //mpViewer->setCameraOrientation(Camera::FREE);
+  mpViewer = new Viewer(pMainFrame, *this);
+  mpViewer->setControlType( Widget3d::ctRotateAround );
   Camera c = mpViewer->getCamera();
-  c.setWindowSize(200, 200);
-  //c.setOrthoProjection(200, 0.5, 200);
-  c.setPerspectiveProjection(60, 1 , 1 , 200 , true);
+  c.setViewportSize(200, 200);
+  c.setPerspectiveProjection(60, 1 , 1 , 10000 , true);
   mpViewer->setCamera( c, false );
   pLyt->addWidget(mpViewer, 4);
 }
@@ -237,6 +240,17 @@ void MainDialog::colorClicked()
     "Choose color", QColorDialog::ShowAlphaChannel );
   getSelectedSource().setColor( c.red(), c.green(), c.blue(), c.alpha() );
 	updateUi();
+}
+//-----------------------------------------------------------------------------
+int MainDialog::getNumberOfParticuleSystems() const
+{ return mParticules.size(); }
+//-----------------------------------------------------------------------------
+Particules& MainDialog::getParticuleSystem(int i)
+{ 
+	Particules* r = &mDummyParticules;
+  if( i >= 0 && i < getNumberOfParticuleSystems() )
+  { r = &mParticules[i]; }
+  return *r;
 }
 //-----------------------------------------------------------------------------
 Particules& MainDialog::getSelectedSource()
@@ -353,31 +367,104 @@ void MainDialog::velocityUpperRangeChanged( const QString& iT )
 //--- Viewer
 //------------------------------------------------------------------------------
 Viewer::Viewer( QWidget* ipW,
-	const std::vector< realisim::treeD::Particules >& iP ) :
+	MainDialog& iM ) :
 	Widget3d( ipW ),
-  mParticules( iP ),
+  mMainDialog( iM ),
   mTimerId(0)  
 {
+	setMouseTracking( true );
   mTimerId = startTimer(kIterationInterval);  
 }
 
 Viewer::~Viewer()
 {}
 //------------------------------------------------------------------------------
-void Viewer::paintGL()
+void Viewer::draw()
 {
-	Widget3d::paintGL();
-
-	for( int i = 0; i < (int)mParticules.size(); ++i )
+	for( int i = 0; i < mMainDialog.getNumberOfParticuleSystems(); ++i )
+  { mMainDialog.getParticuleSystem(i).draw(); }
+  
+  
+  //dessine le dashboard
   {
-  	mParticules[i].draw();
+  	treeD::ScreenSpaceProjection ssp( Vector2d(width(), height()) );
+    Camera cam = getCamera();
+    
+    glDisable( GL_LIGHTING );
+    glColor4ub( 255, 255, 255, 255 );
+    for( int i = 0; i < mMainDialog.getNumberOfParticuleSystems(); ++i )
+    {
+    	if( mMainDialog.mSelectionId == i )
+      { glColor4ub( 0, 255, 0, 255 ); }
+      glPushMatrix();
+      Point2d p = cam.glToPixel( mMainDialog.getParticuleSystem(i).getPosition() );
+      glTranslated( p.x(), p.y(), 0.0);
+      mSpriteCatalog.getSprite( "crosshair" ).draw();
+      glPopMatrix();
+    }
+    
+    glColor4ub( 255, 255, 255, 255 );
+    glPushMatrix();
+    glTranslated( 10, 10, 0 );
+    mSpriteCatalog.getSprite( "minus" ).draw();
+    glPopMatrix();
+    
+    glEnable( GL_LIGHTING );
   }
 }
+//------------------------------------------------------------------------------
+void Viewer::drawSceneForPicking()
+{  
+  //dessine le dashboard
+  {
+  	treeD::ScreenSpaceProjection ssp( Vector2d(width(), height()) );
+    Camera cam = getCamera();
+    
+    glDisable( GL_LIGHTING );
+    for( int i = 0; i < mMainDialog.getNumberOfParticuleSystems(); ++i )
+    {
+    	QColor c = idToColor( i );
+      glColor4ub( c.red(), c.green(), c.blue(), c.alpha() );
+      glPushMatrix();
+      Vector2i s = mSpriteCatalog.getSprite("crosshair").getFrameSize();
+      Point2d p = cam.glToPixel( mMainDialog.getParticuleSystem(i).getPosition() );
+      glTranslated( p.x(), p.y(), 0.0);
+      glScaled( s.x(), s.y(), 0 );
+      drawRectangle( Point2d(-0.5), Vector2d(1.0) );
+      glPopMatrix();
+    }
+    
+//    glPushMatrix();
+//    glTranslated( 10, 10, 0 );
+//    mSpriteCatalog.getSprite( "minus" ).draw();
+//    glPopMatrix();
+    
+    glEnable( GL_LIGHTING );
+  }
+}
+
 //------------------------------------------------------------------------------
 void Viewer::initializeGL()
 {
 	Widget3d::initializeGL();
+  //glClearColor( 0, 0, 0, 0 );
+  
+  mSpriteCatalog.fromBinary( fromFile(":./sprite.cat") );
+}
+//------------------------------------------------------------------------------
+void Viewer::mouseMoveEvent( QMouseEvent* ipE )
+{
+	int x = ipE->x();
+  int y = ipE->y();
+  
+  vector<uint> hits = pick( x, y );
+  if( !hits.empty() )
+  { mMainDialog.mSelectionId = hits[0]; }
+  else { mMainDialog.mSelectionId = -1; }
 }
 //------------------------------------------------------------------------------
 void Viewer::timerEvent(QTimerEvent* ipEvent)
-{ update(); }
+{
+	Widget3d::timerEvent( ipEvent );
+	update();
+}

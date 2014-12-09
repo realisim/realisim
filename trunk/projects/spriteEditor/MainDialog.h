@@ -11,6 +11,7 @@
 #include <QGraphicsScene>
 #include <QMainWindow>
 #include <QtGui>
+#include <QSettings>
 #include "3d/SpriteCatalog.h"
 
 class MainDialog;
@@ -36,6 +37,7 @@ protected:
   virtual void drawSprites(bool = false) const;
   virtual void drawTexture(bool = false);
 //  virtual QColor getColor( colors ) const;
+	virtual state getState() const { return mState; }
   virtual void handleDrag();
   virtual void handleSelection();
 	virtual void initializeGL();
@@ -43,6 +45,7 @@ protected:
   virtual void mousePressEvent( QMouseEvent* );
   virtual void mouseReleaseEvent( QMouseEvent* );
 	virtual void paintGL();
+  virtual void resizeGL(int, int);
   
 	MainDialog& mMain;
   state mState;
@@ -95,6 +98,8 @@ protected:
 	friend class Viewer;
 
 	enum tabType{ ttTexture = 0, ttSprite };
+  virtual void loadSettings();
+  virtual void saveSettings();
   virtual void timerEvent(QTimerEvent*);
   virtual void updatePreviewerCamera();
   virtual void updateSpriteUi();
@@ -107,6 +112,11 @@ protected:
   QString mSpriteToken;
   QString mSaveFileName;
   int mPreviewTimer;
+  QSettings mSettings;
+  QString mSaveAsPath;
+  QString mAddTexturePath;
+  QString mOpenCatalogPath;
+  QString mRefreshTexturePath;
   
   //--- ui
   Viewer* mpViewer;

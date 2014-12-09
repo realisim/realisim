@@ -83,7 +83,7 @@ void Viewer::draw()
     {
 //      Texture lightMask = renderLights();
       drawGame();
-//      const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
+//      const Camera::WindowInfo& wi = mEngine.getGameCamera().getViewport();
 //      ScreenSpaceProjection ssp( wi.getSize() );
 //      {
 //        glEnable(GL_BLEND);
@@ -96,7 +96,7 @@ void Viewer::draw()
       
 //      if( kDebugVisualEffects )
 //      {
-//        const Camera::WindowInfo& wi = mEngine.getGameCamera().getWindowInfo();
+//        const Camera::WindowInfo& wi = mEngine.getGameCamera().getViewport();
 //        ScreenSpaceProjection ssp( wi.getSize() );
 //        {
 //          glEnable(GL_BLEND);
@@ -375,9 +375,9 @@ void Viewer::drawMenu()
   c.set( Point3d( 0.0, 0.0, 5.0 ),
   	Point3d( 0.0, 0.0, 0.0 ),
     Vector3d( 0.0, 1.0, 0.0 ) );
-  c.setWindowSize(c.getWindowInfo().getWidth(), c.getWindowInfo().getHeight());
-  c.setProjection( 0, c.getWindowInfo().getWidth(),
-  	0, c.getWindowInfo().getHeight(), 0.0, 6.0, Camera::Projection::tOrthogonal );
+  c.setViewportSize(c.getViewport().getWidth(), c.getViewport().getHeight());
+  c.setProjection( 0, c.getViewport().getWidth(),
+  	0, c.getViewport().getHeight(), 0.0, 6.0, Camera::Projection::tOrthogonal );
 	
 	c.pushAndApplyMatrices();
   
@@ -403,7 +403,7 @@ void Viewer::drawMenu()
   Text t( "TEXTE CON POUR AVOIR LA HAUTEUR PAR QFONTMETRIC" );
   t.setFont( QFont("Futura", 48 ) );
   int itemsHeight = t.height() * menuItems.size();
-  int y = c.getWindowInfo().getHeight() / 2 + itemsHeight / 2;
+  int y = c.getViewport().getHeight() / 2 + itemsHeight / 2;
   
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
   for(size_t i = 0; i < menuItems.size(); ++i)
@@ -414,7 +414,7 @@ void Viewer::drawMenu()
     else t.setBackgroundColor( QColor( 0, 0, 0, 0 ) );
 
     glPushMatrix();
-    glTranslated( c.getWindowInfo().getWidth() / 2, y, 0 );
+    glTranslated( c.getViewport().getWidth() / 2, y, 0 );
     Sprite s;
     s.set( t.getTexture() );
     s.draw();
@@ -490,7 +490,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	Vector2d rs( 30, 60 );
   Vector2d rs2( 32, 32 );
 	Point2d mp = mEngine.getMouse().getPosition();
-  mp.setY( c.getWindowInfo().getHeight() - mEngine.getMouse().getPosition().y() );
+  mp.setY( c.getViewport().getHeight() - mEngine.getMouse().getPosition().y() );
 	Rectangle r( mp - rs/2.0, rs );
   Rectangle r2( Point2d( 600, 450 ) - rs2/2.0, rs2 );
 
@@ -517,7 +517,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	Vector2d rs( 30, 60 );
   Vector2d rs2( 32, 32 );
 	Point2d mp = mEngine.getMouse().getPosition();
-  mp.setY( c.getWindowInfo().getHeight() - mEngine.getMouse().getPosition().y() );
+  mp.setY( c.getViewport().getHeight() - mEngine.getMouse().getPosition().y() );
 	Rectangle r( mp - rs/2.0, rs );
   Rectangle r2( Point2d( 600, 250 ) - rs2/2.0, rs2 );
   Rectangle r3;
@@ -569,10 +569,10 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 //intersection line2d/line2d et line2d/segment2d
 {
   Point2d mp = mEngine.getMouse().getPosition();
-  mp.setY( c.getWindowInfo().getHeight() - mp.y() );
+  mp.setY( c.getViewport().getHeight() - mp.y() );
 	Line2d l2( Point2d( 0, 10 ), Vector2d( 120, 27 ) );
-  Point2d m(c.getWindowInfo().getWidth() / 2, 
-  	c.getWindowInfo().getHeight() / 2);
+  Point2d m(c.getViewport().getWidth() / 2, 
+  	c.getViewport().getHeight() / 2);
   Line2d l1( m, mp - m); 
   Rectangle rect( Point2d(100, 100), Vector2d( 200, 400 ) );
   
@@ -613,7 +613,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	static int t=0;
   t++;
 	Point2d mp = mEngine.getMouse().getPosition();
-  mp.setY( c.getWindowInfo().getHeight() - mp.y() );
+  mp.setY( c.getViewport().getHeight() - mp.y() );
   Point3d a(200, 400, 0), b(200,500,0), c( 200, 450,0);
   Point3d ra = rotatePoint( t%360 * kDegreeToRadian, a, Vector3d(0.0, 0.0, 1.0),
   	c );
@@ -729,7 +729,7 @@ Camera Viewer::makeLightCamera(int i, const Point2d& iPos,
     default: break;
   }
   
-  r.setWindowSize( iViewport );
+  r.setViewportSize( iViewport );
   r.set(
     Point3d( iPos.x(), iPos.y(), 0.0),
     Point3d( look.x(), look.y(), 0.0),
@@ -799,7 +799,7 @@ Texture Viewer::renderLights()
     popFrameBuffer();
     
     c = gc;
-    c.setWindowSize( mFboLightMask.getSize() );
+    c.setViewportSize( mFboLightMask.getSize() );
     c.pushAndApplyMatrices();
     c.popMatrices();
 
@@ -833,10 +833,10 @@ void Viewer::resizeGL(int iW, int iH)
   Widget3d::resizeGL( iW, iH );
   
   const Camera& gc = mEngine.getGameCamera();
-  Vector2d offSize( 1, gc.getWindowInfo().getHeight() );
+  Vector2d offSize( 1, gc.getViewport().getHeight() );
   mFboLightDepth.resize( offSize );
   
-  mFboLightMask.resize( gc.getWindowInfo().getSize() );
+  mFboLightMask.resize( gc.getViewport().getSize() );
   //mFboLightDepth.resize(iW, iH);
   //mFboLightMask.resize(iW, iH);
   update();
@@ -1009,8 +1009,10 @@ MainWindow::MainWindow() : QMainWindow(),
     pTabs->insertTab( tActor, pPage, "Actor" );
   }
   
-  mpViewer->setCameraOrientation(Camera::XY);
   Camera c = mpViewer->getCamera();
+  c.set( Point3d(10, 0, 0),
+  	Point3d(0),
+    Vector3d( 0, 1, 0 ) );
 	c.setOrthoProjection( 200, 0.5, 2000 );
   mpViewer->setCamera(c, false);
   

@@ -22,12 +22,16 @@ MACRO (ADD_COMPONENT C_PATH)
    #Glober les program openCL
    FILE (GLOB C_OPENCL_PROGRAM_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/ ${C_PATH}/*.cl )
 
+   #Glober les binaires
+   FILE (GLOB C_BINARY_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/ ${C_PATH}/*.cat )
+
 #    message( "C_NAME ${C_NAME} " )
 #    message( "NAME ${NAME} " )
 #    message( "C_IMAGE_FILES ${C_IMAGE_FILES}" )
 #    MESSAGE( "C_INCLUDE_FILES ${C_INCLUDE_FILES}" )
 #    message( "C_SOURCE_FILES ${C_SOURCE_FILES}" )
 #    message( "C_SHADER_FILES ${C_SHADER_FILES}" )
+#    message( "C_BINARY_FILES ${C_BINARY_FILES}" )
 
     IF ( ${ARGV1} MATCHES .+ )
        SET( C_NAME ${ARGV1} )
@@ -52,6 +56,11 @@ MACRO (ADD_COMPONENT C_PATH)
     IF( C_OPENCL_PROGRAM_FILES )
       ADD_OPENCL_RESOURCES (${C_NAME} ${C_OPENCL_PROGRAM_FILES})
     ENDIF( C_OPENCL_PROGRAM_FILES )
+
+    IF( C_BINARY_FILES )
+      ADD_BINARY_RESOURCES (${C_NAME} ${C_BINARY_FILES})
+    ENDIF( C_BINARY_FILES )
+
     
 #    MESSAGE(${CMAKE_CURRENT_SOURCE_DIR}/${C_PATH}/../)
     SET (PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/${C_PATH}/../)
@@ -146,6 +155,19 @@ MACRO (ADD_OPENCL_RESOURCES TO_GROUP PROGRAMS)
    QT4_ADD_RESOURCES( PROGRAMS_TMP ${PROJECT_SOURCE_DIR}/openCL.qrc )
    SET( RESOURCES ${RESOURCES} ${PROGRAMS_TMP} )
 ENDMACRO (ADD_OPENCL_RESOURCES)
+
+# Macro for embedding binary resources and adding them to the project in given group.
+MACRO (ADD_BINARY_RESOURCES TO_GROUP PROGRAMS)
+  #create a source group for compiled embeded resources
+   SET ( PROGRAMS_TMP ${PROGRAMS} ${ARGN} )   
+  
+   SOURCE_GROUP( "MOC files" REGULAR_EXPRESSION .*\\.cxx ) 
+   SOURCE_GROUP ("binary resources" FILES ${PROGRAMS_TMP})
+   
+   CREATE_QRC_FILE(binaries.qrc ${PROGRAMS_TMP})
+   QT4_ADD_RESOURCES( PROGRAMS_TMP ${PROJECT_SOURCE_DIR}/binaries.qrc )
+   SET( RESOURCES ${RESOURCES} ${PROGRAMS_TMP} )
+ENDMACRO (ADD_BINARY_RESOURCES)
 
 #macro to generate the qrc resource file needed by QT. It is a 
 #simple xml file listing files names

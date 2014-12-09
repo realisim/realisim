@@ -236,7 +236,7 @@ void graphicsView::mouseReleaseEvent( QMouseEvent* ipE )
 //--- MainDialog
 //-----------------------------------------------------------------------------  
 MainDialog::MainDialog() : QMainWindow(),
-  mClientMode( cmIdle ),
+  mClientState( csIdle ),
   mServerMode( smIdle ),
   mClientLog(),
   mServerLog(),
@@ -245,6 +245,14 @@ MainDialog::MainDialog() : QMainWindow(),
 {
 	createUi();
   
+  //--- connect hub client
+  connect( &mHubClient, SIGNAL( socketConnected() ),
+  	this, SLOT( hubClientSocketConnected() ) );
+  connect( &mHubClient, SIGNAL( socketDisconnected() ),
+  	this, SLOT( hubClientSocketDisconnected() ) );
+  connect( &mHubClient, SIGNAL( downloadEnded(int) ),
+  	this, SLOT( hubClientDownloadEnded(int) ) );
+    
   //--- connect client
   connect( &mClient, SIGNAL( socketConnected() ),
   	this, SLOT( clientSocketConnected() ) );
@@ -253,19 +261,18 @@ MainDialog::MainDialog() : QMainWindow(),
   connect( &mClient, SIGNAL( downloadEnded(int) ),
   	this, SLOT( clientDownloadEnded(int) ) );
   
-  
   //--- connect server
   connect( &mServer, SIGNAL( socketConnected( int ) ),
   	this, SLOT( serverSocketConnected( int ) ) );
-  connect( &mServer, SIGNAL( socketDisconnected( int ) ),
-  	this, SLOT( serverSocketDisconnected( int ) ) );
+  connect( &mServer, SIGNAL( socketAboutToDisconnect( int ) ),
+  	this, SLOT( serverSocketAboutToDisconnect( int ) ) );
   connect( &mServer, SIGNAL( downloadEnded( int, int ) ),
   	this, SLOT( serverDownloadEnded( int, int ) ) );
   connect( &mServer, SIGNAL( uploadEnded( int, int ) ),
   	this, SLOT( serverUploadEnded( int, int ) ) );
 
-  
   mServer.startServer( 12345 );
+  mHubClient.connectToTcpServer( "localhost", 12346 );
   
   mClientLog.logTimestamp(true);
   mClientLog.logToFile( true, "clientLog.txt" );
@@ -283,6 +290,7 @@ MainDialog::MainDialog() : QMainWindow(),
 
 MainDialog::~MainDialog()
 {
+	mHubClient.disconnect();
 	mClient.disconnect();
 	mServer.stopServer();
 }
@@ -302,7 +310,7 @@ void MainDialog::clientSocketConnected()
 
 	mClient.send( protocol::makeMessageRequestDesktopInfo() );
 	
-	setClientMode( cmActiveSlave );
+	setClientState( csActive );
   updateUi();
   
   mClientLog.log( "client connected." );
@@ -310,7 +318,11 @@ void MainDialog::clientSocketConnected()
 //-----------------------------------------------------------------------------
 void MainDialog::clientSocketDisconnected()
 {	
-	setClientMode( cmIdle );
+	if( mHubClient.isConnected() )
+	{	setClientState( csBrowsingHub ); }
+  else 
+  { setClientState( csIdle ); }
+
   updateUi();
   
   mClientLog.log( "client disconnected." );
@@ -326,6 +338,19 @@ void MainDialog::createUi()
   QVBoxLayout* pLyt = new QVBoxLayout(pMainFrame);
   pLyt->setMargin(0);
   pLyt->setSpacing(5);
+  
+  //-- Client - frame pour le hub
+  mpClientHubFrame = new QFrame( pMainFrame );
+  QVBoxLayout* pHubLyt = new QVBoxLayout( mpClientHubFrame );
+  pHubLyt->setMargin( 2 );
+  pHubLyt->setSpacing( 5 );
+  {
+  	mpPeerListWidget = new QListWidget( mpClientHubFrame );
+    connect( mpPeerListWidget, SIGNAL( itemDoubleClicked( QListWidgetItem* ) ),
+    	this, SLOT( hubPeerDoubleClicked( QListWidgetItem* ) ) );
+    
+    pHubLyt->addWidget( mpPeerListWidget );
+  }
   
   //--- Client - frame de connection
   mpClientConnectionFrame = new QFrame( pMainFrame );
@@ -372,7 +397,6 @@ void MainDialog::createUi()
   pClientActivityLyt->setMargin(0);
   pClientActivityLyt->setSpacing(0);
   {
-  	//mpLabel = new QLabel( mpClientActivityFrame );
     mpScene = new QGraphicsScene( mpClientActivityFrame );
     mpView = new graphicsView( mpScene, mpClientActivityFrame );
 
@@ -405,6 +429,7 @@ void MainDialog::createUi()
   }
   
   //ajoute le left panel au layout principale
+  pLyt->addWidget( mpClientHubFrame );
   pLyt->addWidget( mpClientConnectionFrame );
   pLyt->addWidget( mpClientActivityFrame );
   pLyt->addWidget( mpServerFrame );
@@ -426,8 +451,8 @@ void MainDialog::createUi()
 //-----------------------------------------------------------------------------
 void MainDialog::connectClicked()
 {
-	mClient.disconnect();
-  mClient.connectToTcpServer(mpHostName->text(), mpHostPort->text().toInt());
+	mHubClient.disconnect();
+  mHubClient.connectToTcpServer(mpHostName->text(), mpHostPort->text().toInt());
 }
 //-----------------------------------------------------------------------------
 QRect MainDialog::getModifiedRegion( QPixmap iA, QPixmap iB ) const
@@ -502,24 +527,18 @@ void MainDialog::handleKeyboardInputFromClient( protocol::message iM,
   {
   	case protocol::mKeyPressed:
     	input.ki.dwFlags = 0;
-      //input.ki.dwFlags = KEYEVENTF_UNICODE;
       SendInput( 1, &input, sizeof(input) );
     break;
     case protocol::mKeyReleased:
       input.ki.dwFlags = KEYEVENTF_KEYUP;
-      //input.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
       SendInput( 1, &input, sizeof(input) );
     break;
     case protocol::mKeyRepeated:
 	    input.ki.dwFlags = 0;
-      //input.ki.dwFlags = KEYEVENTF_UNICODE;
       SendInput( 1, &input, sizeof(input) );
     break;
     default: break;
   }
-  //mServerLog.log( " mi.dx: %d, mi.dy: %d SendInput returns: %d, GetLastError: %d", 
-  //   input.mi.dx, input.mi.dy , a, GetLastError() );
-  //mServerLog.log( "handleKeyboardInputFromClient: %s key: %d", protocol::toString(iM).toStdString().c_str(), iKey );
 #endif
 }
 //-----------------------------------------------------------------------------
@@ -649,6 +668,98 @@ void MainDialog::handleMouseInputFromClient( protocol::message iM, QPointF iP )
 #endif
 }
 //-----------------------------------------------------------------------------
+void MainDialog::hubClientDownloadEnded( int iId )
+{
+	QByteArray ba = mHubClient.getDownload( iId );
+  QDataStream ds( &ba, QIODevice::ReadOnly );
+  QString c, host, client;
+  ds >> c;
+  if( QString::compare( c, "peerList" ) == 0 )
+  {
+  	mPeerAddresses.clear();
+    mpPeerListWidget->clear();
+    
+  	qint32 numberOfPeer;
+    QString peerAddress;
+    ds >> numberOfPeer;
+    for( int i = 0; i < numberOfPeer; ++i )
+    {
+    	ds >> peerAddress;
+      mPeerAddresses.push_back( peerAddress );
+    }
+    updateUi();
+  }
+  else if( QString::compare( c, "requestConnection" ) == 0 )
+  {
+  	/*Ici, on va pinger le client (par mServer) pour ouvrir le trou dans le 
+    	système.*/
+  	QString host, client;
+    ds >> host;
+    ds >> client;
+    
+    mHolePunchClient.connectToTcpServer( client, 12345 );
+    mHolePunchClient.disconnect();
+    
+    QByteArray ba2;
+    QDataStream ds2( &ba2, QIODevice::WriteOnly );
+    ds2 << QString( "replyToConnect" );
+    ds2 << host;
+    ds2 << client;
+    mHubClient.send( ba2 );
+    
+    mServerLog.log( "message du hub: %s, host: %s, client %s", 
+    	c.toStdString().c_str(),
+    	host.toStdString().c_str(), client.toStdString().c_str() );
+  }
+  else if( QString::compare( c, "replyToConnect" ) == 0 )
+  {
+  	QString host, client;
+    ds >> host;
+    ds >> client;
+    
+    mClient.connectToTcpServer( host, 12345 );
+  	/*On se connecte a host parce qu'on sait que le trou est ouvert.*/
+    mClientLog.log( "message du hub: %s, host: %s, client %s",
+    	c.toStdString().c_str(),
+    	host.toStdString().c_str(), client.toStdString().c_str() );
+  }
+  else 
+  {
+  }
+
+}
+//-----------------------------------------------------------------------------
+void MainDialog::hubClientSocketConnected()
+{
+	setClientState( csBrowsingHub );
+  updateUi();
+  mClientLog.log( "connected to hub at %s", 
+  	mHubClient.getHostAddress().toStdString().c_str() );
+}
+//-----------------------------------------------------------------------------
+void MainDialog::hubClientSocketDisconnected()
+{
+	setClientState( csIdle );
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+void MainDialog::hubPeerDoubleClicked( QListWidgetItem* ipItem )
+{
+	QString address = ipItem->text();
+  QByteArray ba;
+  QDataStream ds( &ba, QIODevice::WriteOnly );
+  ds.setVersion( QDataStream::Qt_4_7 );
+  QString command("requestConnection");
+  ds << command;
+  ds << address;
+  ds << "unavailable";
+  
+  mHubClient.send( ba );
+  
+  mClientLog.log( "requesting connection to hub. command: %s, host: %s",
+  	command.toStdString().c_str(), address.toStdString().c_str() );
+}
+//-----------------------------------------------------------------------------
 void MainDialog::keyPressedInView( QKeyEvent* ipE )
 {
 mClientLog.log( "---keyPressedInView---" );
@@ -722,7 +833,7 @@ void MainDialog::serverSocketConnected( int iIndex )
 	updateUi();
 }
 //-----------------------------------------------------------------------------
-void MainDialog::serverSocketDisconnected( int iIndex )
+void MainDialog::serverSocketAboutToDisconnect( int iIndex )
 {
 	mServerLog.log( "Client %d with ip %s has disconnected.", iIndex, 
 		mServer.getSocketPeerAddress( iIndex ).toStdString().c_str() );
@@ -750,17 +861,18 @@ void MainDialog::serverUploadEnded( int iSocket, int iId )
 }
 
 //-----------------------------------------------------------------------------
-void MainDialog::setClientMode( clientMode iMode )
+void MainDialog::setClientState( clientState iState )
 {
-	if( iMode != getClientMode() )
+	if( iState != getClientState() )
   {
-  	mClientLog.log( "Client about to change mode from %d to %d", 
-    	getClientMode(), iMode );
-  	switch (iMode)
+  	mClientLog.log( "Client about to change state from %d to %d", 
+    	getClientState(), iState );
+  	switch (iState)
     {
-      case cmIdle: mClientMode = iMode; break;
-      case cmActiveMaster: mClientMode = iMode; break;
-      case cmActiveSlave: mClientMode = iMode; break;
+      case csIdle: mClientState = iState; break;
+      case csBrowsingHub: mClientState = iState; break;
+      case csConnecting: mClientState = iState; break;
+      case csActive: mClientState = iState; break;
       default: break;
     }
   }
@@ -789,14 +901,32 @@ void MainDialog::setServerMode( serverMode iMode )
 //-----------------------------------------------------------------------------
 void MainDialog::updateUi()
 {
-	switch (getClientMode()) 
+	switch ( getClientState() ) 
   {
-    case cmIdle: 
+    case csIdle: 
+    	mpClientHubFrame->hide();
     	mpClientConnectionFrame->show();
       mpClientActivityFrame->hide();
       break;
-    case cmActiveMaster:
-    case cmActiveSlave:
+    case csBrowsingHub:
+    case csConnecting:
+    {
+    	mpClientHubFrame->show();
+    	mpClientConnectionFrame->hide();
+      mpClientActivityFrame->hide();
+      
+      if( mpPeerListWidget->count() == 0 )
+      {
+        for( uint i = 0; i < mPeerAddresses.size(); ++i )
+        {
+          QListWidgetItem* p = new QListWidgetItem();
+          p->setText( mPeerAddresses[i] );
+          mpPeerListWidget->insertItem( i, p );
+        }
+      }
+    } break;
+    case csActive:
+    	mpClientHubFrame->hide();
     	mpClientConnectionFrame->hide();
       mpClientActivityFrame->show();
 

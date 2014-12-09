@@ -90,6 +90,10 @@ protected slots:
   void clientSocketConnected();
   void clientSocketDisconnected();
 	void connectClicked();
+  void hubClientDownloadEnded(int);
+  void hubClientSocketConnected();
+  void hubClientSocketDisconnected();
+  void hubPeerDoubleClicked( QListWidgetItem* );
   void keyPressedInView( QKeyEvent* );
   void keyReleasedInView( QKeyEvent* );
   void keyRepeatedInView( QKeyEvent* );
@@ -97,54 +101,62 @@ protected slots:
   void mousePressedInView( QPoint );
   void mouseReleasedInView( QPoint );
   void serverDownloadEnded( int, int );
-  void serverSocketConnected( int );
-	void serverSocketDisconnected( int );
+  void serverSocketAboutToDisconnect( int );
+  void serverSocketConnected( int );	
   void serverUploadEnded( int, int );
 	void updateUi();
                 
 protected:
-	enum clientMode { cmIdle, cmActiveMaster, cmActiveSlave };
+	enum clientState { csIdle, csBrowsingHub, csConnecting, csActive };
 	enum serverMode { smIdle, smActive };
 	
 
 	void createUi();
-  clientMode getClientMode() const { return mClientMode; }
+  clientState getClientState() const { return mClientState; }
   QRect getModifiedRegion( QPixmap, QPixmap ) const;
   serverMode getServerMode() const {return mServerMode; }
   void handleKeyboardInputFromClient( protocol::message, QString, quint32 );
   void handleMessageFromClient( int, QByteArray );
   void handleMessageFromServer( QByteArray );
   void handleMouseInputFromClient( protocol::message, QPointF );
-  void setClientMode( clientMode );
+  void setClientState( clientState );
   void setServerMode( serverMode );
   
-  clientMode mClientMode;
+  clientState mClientState;
   serverMode mServerMode;
-  reusables::network::Client mClient;
-  reusables::network::Server mServer;
+  network::Client mHubClient;
+  network::Client mHolePunchClient;
+  network::Client mClient;
+  network::Server mServer;
   utils::Log mClientLog;
   utils::Log mServerLog;
   desktopInfo mDesktopInfo;
   desktopInfo mRemoteDesktopInfo;
   int mCurrentFrameId;
+  std::vector<QString> mPeerAddresses;
   
   //--- pour le client
+  //------ hub
+  QFrame* mpClientHubFrame;
+  QListWidget* mpPeerListWidget;
+  
+  //------ connection
   QFrame* mpClientConnectionFrame;
-  QFrame* mpClientActivityFrame;
   QLineEdit* mpHostName;
   QLineEdit* mpHostPort;
+  
+  //------ activity
+  QFrame* mpClientActivityFrame;
   graphicsView* mpView;
   QGraphicsScene* mpScene;
-  QLabel* mpLabel;
   QGraphicsPixmapItem* mpRemoteDesktopItem;
-  
-  QPixmap mDesktopPixmap;
   QPixmap mRemoteDesktopPixmap;
   QRect mRemoteDesktopPixmapRect;
   
   //--- pour le server
   QFrame* mpServerFrame;
   QLabel* mpServerInfo;
+  QPixmap mDesktopPixmap;
 };
 
 }

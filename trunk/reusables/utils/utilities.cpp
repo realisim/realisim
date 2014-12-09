@@ -2,7 +2,7 @@
 #include "utilities.h"
 #include <QDateTime>
 #include <QFile>
-#include <QNetworkInterface>
+//#include <QNetworkInterface>
 #include <QString>
 
 namespace realisim
@@ -21,26 +21,28 @@ QByteArray fromFile(const QString& iFile)
   }
   return r;
 }
+
+//a deplacer dans netWorkutils...
 //-----------------------------------------------------------------------------
-QString getGuid()
-{
-	QString r;
-  r = getMacAddress();
-  if( !r.isEmpty() )
-  { r += QDateTime::currentDateTime().toString("yyyy-MM-dd_hh:mm:ss:zzz"); }
-  return r;
-}
+//QString getGuid()
+//{
+//	QString r;
+//  r = getMacAddress();
+//  if( !r.isEmpty() )
+//  { r += QDateTime::currentDateTime().toString("yyyy-MM-dd_hh:mm:ss:zzz"); }
+//  return r;
+//}
 //-----------------------------------------------------------------------------
-QString getMacAddress()
-{
-  foreach(QNetworkInterface netInterface, QNetworkInterface::allInterfaces())
-  {
-			if( !(netInterface.flags() & QNetworkInterface::IsLoopBack) &&
-      	!netInterface.hardwareAddress().isEmpty() )
-      { return netInterface.hardwareAddress(); }
-  }
-  return QString();
-}
+//QString getMacAddress()
+//{
+//  foreach(QNetworkInterface netInterface, QNetworkInterface::allInterfaces())
+//  {
+//			if( !(netInterface.flags() & QNetworkInterface::IsLoopBack) &&
+//      	!netInterface.hardwareAddress().isEmpty() )
+//      { return netInterface.hardwareAddress(); }
+//  }
+//  return QString();
+//}
 //-----------------------------------------------------------------------------
 bool toFile(const QString& iFile , const QByteArray& iData)
 {

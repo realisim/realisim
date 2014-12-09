@@ -17,7 +17,7 @@ ScreenSpaceProjection::ScreenSpaceProjection( const math::Vector2d& iS )
   c.set( Point3d(0.0, 0.0, 5.0), 
     Point3d(0.0, 0.0, 0.0),
     Vector3d( 0.0, 1.0, 0.0 ) );
-  c.setWindowSize( iS.x(), iS.y() );
+  c.setViewportSize( iS.x(), iS.y() );
   c.setProjection( 0, iS.x(), 
     0, iS.y(), 0.5, 100.0,
     Camera::Projection::tOrthogonal );
@@ -137,6 +137,59 @@ void drawRectangle( const Texture& iT, const Point2d& iO, const Vector2d& iS )
   glVertex2d( iO.x() + iS.x(), iO.y() );
   glEnd();
 	glDisable( GL_TEXTURE_2D );
+}
+
+//------------------------------------------------------------------------------
+void drawRectangularPrism( const Point3d& iLowerLeft, const Point3d& iTopRight )
+{
+	Point3d minCorner = iLowerLeft;
+	Point3d maxCorner = iTopRight;
+
+  glBegin(GL_QUADS);
+  
+  //cote X
+  glNormal3d( 1.0, 0.0, 0.0 );
+  glVertex3d(maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
+  glVertex3d(maxCorner.getX(), minCorner.getY(), maxCorner.getZ());
+  glVertex3d(maxCorner.getX(), minCorner.getY(), minCorner.getZ());
+  glVertex3d(maxCorner.getX(), maxCorner.getY(), minCorner.getZ());    
+  
+  //cote -X
+  glNormal3d( -1.0, 0.0, 0.0 );
+  glVertex3d(minCorner.getX(), minCorner.getY(), minCorner.getZ());
+  glVertex3d(minCorner.getX(), minCorner.getY(), maxCorner.getZ());
+  glVertex3d(minCorner.getX(), maxCorner.getY(), maxCorner.getZ());
+  glVertex3d(minCorner.getX(), maxCorner.getY(), minCorner.getZ());
+  
+  //cote -Z
+  glNormal3d( 0.0, 0.0, -1.0 );
+  glVertex3d(minCorner.getX(), minCorner.getY(), minCorner.getZ());
+  glVertex3d(minCorner.getX(), maxCorner.getY(), minCorner.getZ());
+  glVertex3d(maxCorner.getX(), maxCorner.getY(), minCorner.getZ());
+  glVertex3d(maxCorner.getX(), minCorner.getY(), minCorner.getZ());    
+  
+  //cote Z
+  glNormal3d( 0.0, 0.0, 1.0 );
+  glVertex3d(maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
+  glVertex3d(minCorner.getX(), maxCorner.getY(), maxCorner.getZ());
+  glVertex3d(minCorner.getX(), minCorner.getY(), maxCorner.getZ());
+  glVertex3d(maxCorner.getX(), minCorner.getY(), maxCorner.getZ());
+  
+  //cote Y
+  glNormal3d( 0.0, 1.0, 0.0 );
+  glVertex3d(maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
+  glVertex3d(maxCorner.getX(), maxCorner.getY(), minCorner.getZ());
+  glVertex3d(minCorner.getX(), maxCorner.getY(), minCorner.getZ());
+  glVertex3d(minCorner.getX(), maxCorner.getY(), maxCorner.getZ());
+  
+  //cote -Y
+  glNormal3d( 0.0, -1.0, 0.0 );
+  glVertex3d(minCorner.getX(), minCorner.getY(), minCorner.getZ());
+  glVertex3d(maxCorner.getX(), minCorner.getY(), minCorner.getZ());
+  glVertex3d(maxCorner.getX(), minCorner.getY(), maxCorner.getZ());
+  glVertex3d(minCorner.getX(), minCorner.getY(), maxCorner.getZ());
+  
+  glEnd();
 }
 
 

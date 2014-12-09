@@ -35,8 +35,10 @@ Widget3d::Widget3d( QWidget* ipParent /*= 0*/,
 mCam(),
 mOldCam(),
 mNewCam(),
+mControlType( ctRotateAround ),
 mAnimationTimer(),
-mAnimationTimerId(),
+mAnimationTimerId( 0 ),
+mCameraControlTimerId( 0 ),
 mAnimationDuration(0),
 mFps(0.0),
 mFpsFrameCount(0),
@@ -58,8 +60,18 @@ void Widget3d::beginFrame()
 	makeCurrent();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
-  getCamera().applyModelViewTransformation();
+  mCam.applyModelViewTransformation();
 }
+//-----------------------------------------------------------------------------
+const Camera& Widget3d::getCamera() const
+{
+	const Camera* r = &mCam;
+	if( isAnimatingCamera() ){ r = &mNewCam; }
+	return *r;
+}
+//-----------------------------------------------------------------------------
+Widget3d::controlType Widget3d::getControlType() const
+{ return mControlType; }
 //-----------------------------------------------------------------------------
 void Widget3d::initializeGL()
 {
@@ -108,14 +120,39 @@ void Widget3d::initializeGL()
 }
 
 //-----------------------------------------------------------------------------
-void Widget3d::keyPressEvent(QKeyEvent* ipE)
+bool Widget3d::isAnimatingCamera() const
+{ return mAnimationTimerId != 0; }
+
+//-----------------------------------------------------------------------------
+bool Widget3d::isKeyPressed( int iKey ) const
 {
-	//ipE->ignore();
-  QGLWidget::keyPressEvent(ipE);
+  bool r = false;
+	map< int, bool >::const_iterator it = mKeys.find( iKey );
+ 	if( it != mKeys.end() ) { r = it->second; }
+	return r;
+}
+
+//-----------------------------------------------------------------------------
+void Widget3d::keyPressEvent(QKeyEvent* ipE)
+{ 
+	if( getControlType() != ctNone && !ipE->isAutoRepeat() )
+  {
+    mKeys[(int)ipE->key()] = true;
+    if( mCameraControlTimerId == 0 )
+    { mCameraControlTimerId = startTimer( 15 ); }
+  }	
 }
 //-----------------------------------------------------------------------------
 void Widget3d::keyReleaseEvent( QKeyEvent* ipE )
-{ QGLWidget::keyReleaseEvent(ipE); }
+{ 
+	map< int, bool >::iterator it = mKeys.find( ipE->key() );
+  if( it != mKeys.end() )
+  { mKeys.erase( it ); }
+  
+  if( mKeys.empty() && mCameraControlTimerId != 0)
+  { killTimer( mCameraControlTimerId ); mCameraControlTimerId = 0; }
+}
+
 //-----------------------------------------------------------------------------
 QSize Widget3d::minimumSizeHint() const
 {
@@ -133,22 +170,37 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
 {
   makeCurrent();
 
-  if( mMousePressed )
+  if( mMousePressed && !isAnimatingCamera() ) //deplacement de la camera
   {
     int deltaX = e->x() - mMousePosX;
     int deltaY = e->y() - mMousePosY;
     
-    //on met un - devant le deltaY parce que le systeme de fenetrage QT
-    //a laxe Y vers le bas et notre systeme de fenetrage GL a l'axe y vers le
-    //haut.
-    Vector3d delta = getCamera().pixelDeltaToGLDelta( deltaX, -deltaY );
-    
-    //On met un - devant le delta pour donner l'impression qu'on ne 
-    //déplace pas la camera, mais le model. Si on ne mettait pas de -,
-    //la caméra se déplacerait en suivant la souris et ce qu'on voit a l'écran
-    //s'en irait dans le sens contraire de la souris. En mettant le - on
-    //donne l'impression de déplacer le contenu de l'écran.
-    mCam.move( -delta );
+    Vector3d delta = getCamera().pixelDeltaToGLDelta( deltaX, deltaY, 
+    	mCam.getLook() );
+    switch ( getControlType() ) 
+    {
+      case ctPan: mCam.translate( -delta ); break;
+      case ctRotateAround:
+      {
+      	//arbitrairement, la taille du viewport correspond a une rotation de 360        
+      	double radX = deltaX * 2 * PI / (double)mCam.getViewport().getWidth();
+        double radY = deltaY * 2 * PI / (double)mCam.getViewport().getHeight();
+        //rotation relative a x;
+        mCam.rotate( -radX, Vector3d( 0.0, 1.0, 0.0 ), mCam.getLook() );
+        //rotation relative a y
+      	mCam.rotate( -radY, mCam.getLat(), mCam.getLook() );
+      } break;
+      case ctFree:
+      {
+      	//arbitrairement, la taille du viewport correspond a une rotation de 360        
+      	double radX = deltaX * 2 * PI / (double)mCam.getViewport().getWidth();
+        double radY = deltaY * 2 * PI / (double)mCam.getViewport().getHeight();
+				
+        mCam.rotate( -radX, Vector3d( 0.0, 1.0, 0.0 ), mCam.getPos() );
+      	mCam.rotate( -radY, mCam.getLat(), mCam.getPos() );
+      }break;
+      default: break;
+    }
   }
   
   mMousePosX = e->x();
@@ -183,6 +235,8 @@ Widget3d::paintGL()
   //replacer les lumieres
   GLfloat position[]  = {50.0, 30.0, 5.0, 1.0};
   glLightfv(GL_LIGHT0, GL_POSITION, position);
+
+	draw();
 
 #ifdef NDEBUG
   if(glGetError())
@@ -323,7 +377,7 @@ void
 Widget3d::resizeGL(int iWidth, int iHeight)
 {
   QGLWidget::resizeGL(iWidth, iHeight);
-  mCam.setWindowSize(iWidth, iHeight);
+  mCam.setViewportSize(iWidth, iHeight);
   mCam.applyProjectionTransformation();
   update();
 }
@@ -342,13 +396,12 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
   mNewCam = iCam;
   
   if( iAnimate )
-  {
-    mCam.setProjection( mNewCam.getProjection() );
-    mCam.setOrientation( mNewCam.getOrientation() );
+  {    
     /*L'animation de la camera va interpoler la transformation entre la
       la vielle camera (mOldCam) et la nouvelle camera (mNewCame). Cette
-      matrice interpolé sera appliqué a la camera courante (mCam).*/
-      
+      matrice interpolé sera appliqué a la camera courante (mCam). La projection
+      aussi sera interpolée.*/    
+    
     //we use a QTime to track animation time
     mAnimationDuration = iDuration;
     mAnimationTimer.start();
@@ -359,7 +412,7 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
   else
   {
     mCam = mNewCam;
-    mCam.applyProjectionTransformation();  
+    mCam.applyProjectionTransformation();
     //update();
   }
 }
@@ -372,11 +425,15 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
 //}
 
 //-----------------------------------------------------------------------------
-void Widget3d::setCameraOrientation( Camera::Orientation iO )
-{
-  mCam.setOrientation( iO );
-  update();
-}
+//void Widget3d::setCameraOrientation( Camera::Orientation iO )
+//{
+//  mCam.setOrientation( iO );
+//  update();
+//}
+
+//-----------------------------------------------------------------------------
+void Widget3d::setControlType( controlType iT )
+{ mControlType = iT; }
 
 //-----------------------------------------------------------------------------
 QSize
@@ -414,20 +471,10 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     double t = animationTime / (double)mAnimationDuration;
     t = inversePower(t, 3);
     
-    //animation du système de coordonnées de la caméra
-    Matrix4d iterationMatrix = 
-      math::interpolate(mOldCam.getTransformationToGlobal(),
-        mNewCam.getTransformationToGlobal(), t);
-
-    mCam.setTransformationToGlobal(iterationMatrix);
-        
-    /*animation de la position de la camera à l'intérieur
-      du systeme de coordonnées*/
-    
     /*Ici, on bircole une matrice (main droite) orthonormale qui réprésente
       l'orientation de la caméra (pos, lat, up, look). On interpolera
       la vielle orientation avec la nouvelle afin d'obtenir les positions,
-      ainsi que les vecteurs lat, up er look intermédiaires.*/
+      ainsi que les vecteurs lat, up et look intermédiaires.*/
     Vector3d look;
     Matrix4d m1;    
     m1.setRow1(mOldCam.getLat().getX(), mOldCam.getLat().getY(),mOldCam.getLat().getZ(), 0);
@@ -447,14 +494,29 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     m2.setRow3(look.getX(), look.getY(),look.getZ(), 0);
     m2.setTranslation(mNewCam.getPos());
 
-		iterationMatrix = math::interpolate(m1, m2, t);
+		Matrix4d iterationMatrix = math::interpolate(m1, m2, t);
     Vector3d interpolatedLook = toVector(mOldCam.getLook()) * (1 - t) +
       toVector(mNewCam.getLook()) * t;
     mCam.set(iterationMatrix.getTranslation(),
     	toPoint(interpolatedLook),
-      iterationMatrix.getBaseY() );/*,
-      iterationMatrix.getBaseX());*/
+      iterationMatrix.getBaseY() );
 
+		//--- animation de la projection    
+    Camera::Projection iProj = mNewCam.getProjection();
+    Camera::Projection oldProj = mOldCam.getProjection();
+    Camera::Projection newProj = mNewCam.getProjection();
+    iProj.mRight = oldProj.mRight * (1-t) + newProj.mRight * t;
+    iProj.mLeft = oldProj.mLeft * (1-t) + newProj.mLeft * t;
+    iProj.mBottom = oldProj.mBottom * (1-t) + newProj.mBottom * t;
+    iProj.mTop = oldProj.mTop * (1-t) + newProj.mTop * t;
+    iProj.mNear = oldProj.mNear * (1-t) + newProj.mNear * t;
+    iProj.mFar = oldProj.mFar * (1-t) + newProj.mFar * t;
+    iProj.mZoomFactor =  oldProj.mZoomFactor * (1-t) + newProj.mZoomFactor * t;
+    iProj.mType = newProj.mType;
+    iProj.mProportionalToWindow = newProj.mProportionalToWindow;
+    mCam.setProjection( iProj );
+		mCam.applyProjectionTransformation();
+    
     if ( animationTime >= mAnimationDuration )
     {
       killTimer( mAnimationTimerId );
@@ -462,6 +524,46 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     }
 
     update();
+  }
+  else if( ipE->timerId() == mCameraControlTimerId && !isAnimatingCamera() )
+  {
+  	const double kCamSpeed = 1.0;
+  	switch ( getControlType() ) 
+    {
+    	case ctRotateAround:
+      {
+      	Vector3d v; double a = 1.0 * PI / 180;
+      	if( isKeyPressed( Qt::Key_W ) )
+        { v = mCam.getLat(); a *= -1; }
+        if( isKeyPressed( Qt::Key_S ) )
+        { v = mCam.getLat(); }
+        if( isKeyPressed( Qt::Key_A ) )
+        { v = Vector3d(0, 1, 0); a *= -1; }
+        if( isKeyPressed( Qt::Key_D ) )
+        { v = Vector3d(0, 1, 0); }
+        mCam.rotate( a, v, mCam.getLook() );
+      }break;
+      case ctFree:
+      {
+      	Vector3d v;
+      	if( isKeyPressed( Qt::Key_W ) )
+        { v = Vector3d( mCam.getPos(), mCam.getLook() ); }
+        if( isKeyPressed( Qt::Key_S ) )
+        { v = -Vector3d( mCam.getPos(), mCam.getLook() ); }
+        if( isKeyPressed( Qt::Key_A ) )
+        { v = mCam.getLat() * -1; }
+        if( isKeyPressed( Qt::Key_D ) )
+        { v = mCam.getLat(); }
+        if( isKeyPressed( Qt::Key_Q ) )
+        { v = mCam.getUp(); }
+        if( isKeyPressed( Qt::Key_E ) )
+        { v = mCam.getUp() * -1; }
+        v.normalise();
+        mCam.translate( v * kCamSpeed );
+      } break;
+      default: break;
+    }
+  	update();
   }
   else
   {
@@ -474,6 +576,8 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
 {
   makeCurrent();
 
+	if( isAnimatingCamera() ) { return; }
+    
   if(getCamera().getProjection().mType == Camera::Projection::tOrthogonal)
   {
     double zoom = 1 / 1.15;
