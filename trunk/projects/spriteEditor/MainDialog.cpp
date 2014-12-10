@@ -244,8 +244,8 @@ void Viewer::handleDrag()
       Point3d glMousePos = c.pixelToGL( mMousePos.x(), mMousePos.y() );  
       Sprite& s = mMain.mSpriteCatalog.getSprite( mMain.mSpriteToken );
       Texture& t = mMain.mSpriteCatalog.getTexture( mMain.mTextureToken );
-      QPoint p( round(glMousePos.getX()),
-        t.height() - round(glMousePos.getY()) );
+      QPoint p( round(glMousePos.x()),
+        t.height() - round(glMousePos.y()) );
       QRect r = s.getRect();
 
       switch(mSelectedId)
@@ -389,8 +389,8 @@ void Viewer::mousePressEvent( QMouseEvent* e )
   	const Camera& c = getCamera();
   	Point3d glMousePos = c.pixelToGL( mMousePos.x(), mMousePos.y() );  
     Texture& t = mMain.mSpriteCatalog.getTexture( mMain.mTextureToken );
-    QPoint p( round(glMousePos.getX()),
-      t.height() - round(glMousePos.getY()) );
+    QPoint p( round(glMousePos.x()),
+      t.height() - round(glMousePos.y()) );
   	s.setRect( QRect(p.x(), p.y(), 1, 1) );
     mHoverId = pBottomRightHandle;
   }

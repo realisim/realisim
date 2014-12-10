@@ -23,8 +23,8 @@
     if(f.open(QIODevice::ReadOnly))
     {
       QByteArray a = f.readAll();
-      mCtTexture.set(a.data(), Vector3i(gVolumeSize.getX(), gVolumeSize.getY(),
-        gVolumeSize.getZ()), GL_LUMINANCE, GL_UNSIGNED_SHORT);
+      mCtTexture.set(a.data(), Vector3i(gVolumeSize.x(), gVolumeSize.y(),
+        gVolumeSize.z()), GL_LUMINANCE, GL_UNSIGNED_SHORT);
       f.close();
     }
     

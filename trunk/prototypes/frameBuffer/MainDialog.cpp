@@ -95,21 +95,21 @@ Viewer::~Viewer()
 //    Vector3d n3(Point3d(0.0), iPs.getVertex()[f.index3]);
 //    n3.normalise();
 //  	glBegin(GL_TRIANGLES);
-//      //glNormal3d(n.getX(), n.getY(), n.getZ());
-//      glNormal3d(n1.getX(), n1.getY(), n1.getZ());
-//      glVertex3d(iPs.getVertex()[f.index1].getX(),
-//        iPs.getVertex()[f.index1].getY(),
-//        iPs.getVertex()[f.index1].getZ());
+//      //glNormal3d(n.x(), n.y(), n.z());
+//      glNormal3d(n1.x(), n1.y(), n1.z());
+//      glVertex3d(iPs.getVertex()[f.index1].x(),
+//        iPs.getVertex()[f.index1].y(),
+//        iPs.getVertex()[f.index1].z());
 //      
-//      glNormal3d(n2.getX(), n2.getY(), n2.getZ());  
-//      glVertex3d(iPs.getVertex()[f.index2].getX(),
-//        iPs.getVertex()[f.index2].getY(),
-//        iPs.getVertex()[f.index2].getZ());
+//      glNormal3d(n2.x(), n2.y(), n2.z());  
+//      glVertex3d(iPs.getVertex()[f.index2].x(),
+//        iPs.getVertex()[f.index2].y(),
+//        iPs.getVertex()[f.index2].z());
 //        
-//			glNormal3d(n3.getX(), n3.getY(), n3.getZ());
-//      glVertex3d(iPs.getVertex()[f.index3].getX(),
-//        iPs.getVertex()[f.index3].getY(),
-//        iPs.getVertex()[f.index3].getZ());
+//			glNormal3d(n3.x(), n3.y(), n3.z());
+//      glVertex3d(iPs.getVertex()[f.index3].x(),
+//        iPs.getVertex()[f.index3].y(),
+//        iPs.getVertex()[f.index3].z());
 //    glEnd();
 //  }
 //}
@@ -138,10 +138,10 @@ void Viewer::drawGlowOverLay()
   //for(i = 0; i < kernel; ++i)
   //  qDebug(QString::number(kernelValues[i]).toAscii());
     
-  int viewportWidth = getCamera().getWindowInfo().getWidth() / 4;
-  int viewportHeight = getCamera().getWindowInfo().getHeight() / 4;
+  int viewportWidth = getCamera().getViewport().getWidth() / 4;
+  int viewportHeight = getCamera().getViewport().getHeight() / 4;
   
-  Vector2d screenSize = getCamera().getWindowInfo().getSize();
+  Vector2d screenSize = getCamera().getViewport().getSize();
   Vector2d offScreenSize(viewportWidth, viewportHeight);
   
   pushFrameBuffer(mFbo);
@@ -172,7 +172,7 @@ void Viewer::drawGlowOverLay()
   mBlurShader.setUniform("scale", kScale);
   {
   ScreenSpaceProjection ssp( offScreenSize );
-  drawRectangle2d(t1, Point2d(0.0), offScreenSize );
+  drawRectangle(t1, Point2d(0.0), offScreenSize );
   }
   
   Texture t2 = mFbo.getTexture(1);
@@ -188,7 +188,7 @@ void Viewer::drawGlowOverLay()
   mBlurShader.setUniform("scale", kScale);
 	{
   ScreenSpaceProjection ssp( offScreenSize );
-  drawRectangle2d(t2, Point2d(0.0), offScreenSize );
+  drawRectangle(t2, Point2d(0.0), offScreenSize );
   }
   popShader();
   glPopAttrib();
@@ -203,7 +203,7 @@ void Viewer::drawGlowOverLay()
   glColor4d(0.0, 0.0, 0.0, 0.4);
   {
   ScreenSpaceProjection ssp( screenSize );
-  drawRectangle2d(t3, Point2d(0.0), screenSize );
+  drawRectangle(t3, Point2d(0.0), screenSize );
   }
   
   glDisable(GL_DEPTH_TEST);
@@ -211,10 +211,10 @@ void Viewer::drawGlowOverLay()
   glColor3ub(255, 255, 255);
   {
   ScreenSpaceProjection ssp( screenSize );
-  drawRectangle2d( t1, Point2d(5.0), offScreenSize );
-  drawRectangle2d( t2, Point2d(10.0 + offScreenSize.x(), 5.0), offScreenSize );
-  drawRectangle2d( t3, Point2d(15.0 + 2 * offScreenSize.x(), 5.0), offScreenSize );
-  drawRectangle2d( depthTexture, Point2d(20.0 + 3 * offScreenSize.x(), 5.0), offScreenSize );
+  drawRectangle( t1, Point2d(5.0), offScreenSize );
+  drawRectangle( t2, Point2d(10.0 + offScreenSize.x(), 5.0), offScreenSize );
+  drawRectangle( t3, Point2d(15.0 + 2 * offScreenSize.x(), 5.0), offScreenSize );
+  drawRectangle( depthTexture, Point2d(20.0 + 3 * offScreenSize.x(), 5.0), offScreenSize );
   }
   
   glPopAttrib();
@@ -533,17 +533,15 @@ void Viewer::resizeGL(int iWidth, int iHeight)
 //-----------------------------------------------------------------------------
 void Viewer::timerEvent(QTimerEvent* ipEvent)
 {
+	Widget3d::timerEvent( ipEvent );
+  
   //0 a 0.2;
   if(kCounter >= 180 || kCounter < 60 )
     kStep *= -1;
   kCounter += kStep;
   kScale = (kCounter) / 1000.0;
   
-  Camera c = getCamera();
-  Matrix4d m = c.getTransformationToGlobal() * kRot;
-  c.setTransformationToGlobal(m);
-  setCamera(c, false);
-  updateGL();
+	update();
 }
 
 //-----------------------------------------------------------------------------
@@ -555,14 +553,12 @@ MainDialog::MainDialog() : QMainWindow(),
   QHBoxLayout* pLyt = new QHBoxLayout(this);
   pLyt->setMargin(5);
   mpViewer = new Viewer(this);
-  mpViewer->setCameraOrientation(Camera::FREE);
   pLyt->addWidget(mpViewer);
   setCentralWidget(mpViewer);
   
+	mpViewer->setControlType( Widget3d::ctRotateAround );
   Camera c = mpViewer->getCamera();
-  //c.setPos(Point3d(10.0, 10.0, 10.0));
-  Matrix4d m;
-  m.setTranslation(Point3d(0.5, 0.5, 0.5));
-  c.setTransformationToGlobal(m);
-  mpViewer->setCamera(c, false);
+  c.set( Point3d(0.0, 0.0, 1),
+  	Point3d(), Vector3d(0, 1, 0) );
+  mpViewer->setCamera( c, false ); 
 }

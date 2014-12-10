@@ -200,7 +200,7 @@ void Viewer::mouseMoveEvent(QMouseEvent* ipE)
       	if(getState() == sEdition || getState() == sCreation)
         {
           const Camera& c = getCamera();
-          Vector3d v = c.pixelDeltaToGLDelta(dx, -dy,
+          Vector3d v = c.pixelDeltaToGLDelta(dx, dy,
             mCurves[mCurrentCurve].getPos(mCurrentPoint));
           mCurves[mCurrentCurve].move(mCurrentPoint, v);
           update();
@@ -319,15 +319,12 @@ MainDialog::MainDialog() : QMainWindow(),
   QHBoxLayout* pLyt = new QHBoxLayout(this);
   pLyt->setMargin(5);
   mpViewer = new Viewer(this);
-  //mpViewer->setCameraMode(Camera::ORTHOGONAL);
-  //mpViewer->setCameraOrientation(Camera::XY);
-  mpViewer->setCameraOrientation(Camera::FREE);
   pLyt->addWidget(mpViewer, 1);
   setCentralWidget(mpViewer);
   
-//  Camera c = mpViewer->getCamera();
-//  Matrix4d m;
-//  m.setTranslation(Point3d(8.0, 0.0, 0.0));
-//  c.setTransformationToGlobal(m);
-//  mpViewer->setCamera(c, false);
+	Camera c = mpViewer->getCamera();
+  c.set( Point3d(0.0, 0.0, 100),
+  	Point3d(), Vector3d(0, 1, 0) );
+  mpViewer->setCamera( c );
+	mpViewer->setControlType( Widget3d::ctRotateAround );
 }

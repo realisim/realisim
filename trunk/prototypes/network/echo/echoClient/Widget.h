@@ -46,7 +46,7 @@ protected:
   QPushButton* mpSend;
   QComboBox* mpProtocols;
   
-	reusables::network::Client mClient;
+	network::Client mClient;
   QString mLog;
 };
 

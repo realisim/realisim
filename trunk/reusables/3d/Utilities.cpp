@@ -67,8 +67,8 @@ void drawCircle( Vector3d iN, const Point3d& iP, double iR )
 
   double a;
   glPushMatrix();
-  glTranslated( iP.getX(), iP.getY(), iP.getZ() );
-  glRotated( rot * 180 / PI, r.getX(), r.getY(), r.getZ() );
+  glTranslated( iP.x(), iP.y(), iP.z() );
+  glRotated( rot * 180 / PI, r.x(), r.y(), r.z() );
 	glBegin( GL_LINE_LOOP );
   	for( int i = 0; i < 360; i += 2 )
     {
@@ -149,45 +149,45 @@ void drawRectangularPrism( const Point3d& iLowerLeft, const Point3d& iTopRight )
   
   //cote X
   glNormal3d( 1.0, 0.0, 0.0 );
-  glVertex3d(maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
-  glVertex3d(maxCorner.getX(), minCorner.getY(), maxCorner.getZ());
-  glVertex3d(maxCorner.getX(), minCorner.getY(), minCorner.getZ());
-  glVertex3d(maxCorner.getX(), maxCorner.getY(), minCorner.getZ());    
+  glVertex3d(maxCorner.x(), maxCorner.y(), maxCorner.z());
+  glVertex3d(maxCorner.x(), minCorner.y(), maxCorner.z());
+  glVertex3d(maxCorner.x(), minCorner.y(), minCorner.z());
+  glVertex3d(maxCorner.x(), maxCorner.y(), minCorner.z());    
   
   //cote -X
   glNormal3d( -1.0, 0.0, 0.0 );
-  glVertex3d(minCorner.getX(), minCorner.getY(), minCorner.getZ());
-  glVertex3d(minCorner.getX(), minCorner.getY(), maxCorner.getZ());
-  glVertex3d(minCorner.getX(), maxCorner.getY(), maxCorner.getZ());
-  glVertex3d(minCorner.getX(), maxCorner.getY(), minCorner.getZ());
+  glVertex3d(minCorner.x(), minCorner.y(), minCorner.z());
+  glVertex3d(minCorner.x(), minCorner.y(), maxCorner.z());
+  glVertex3d(minCorner.x(), maxCorner.y(), maxCorner.z());
+  glVertex3d(minCorner.x(), maxCorner.y(), minCorner.z());
   
   //cote -Z
   glNormal3d( 0.0, 0.0, -1.0 );
-  glVertex3d(minCorner.getX(), minCorner.getY(), minCorner.getZ());
-  glVertex3d(minCorner.getX(), maxCorner.getY(), minCorner.getZ());
-  glVertex3d(maxCorner.getX(), maxCorner.getY(), minCorner.getZ());
-  glVertex3d(maxCorner.getX(), minCorner.getY(), minCorner.getZ());    
+  glVertex3d(minCorner.x(), minCorner.y(), minCorner.z());
+  glVertex3d(minCorner.x(), maxCorner.y(), minCorner.z());
+  glVertex3d(maxCorner.x(), maxCorner.y(), minCorner.z());
+  glVertex3d(maxCorner.x(), minCorner.y(), minCorner.z());    
   
   //cote Z
   glNormal3d( 0.0, 0.0, 1.0 );
-  glVertex3d(maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
-  glVertex3d(minCorner.getX(), maxCorner.getY(), maxCorner.getZ());
-  glVertex3d(minCorner.getX(), minCorner.getY(), maxCorner.getZ());
-  glVertex3d(maxCorner.getX(), minCorner.getY(), maxCorner.getZ());
+  glVertex3d(maxCorner.x(), maxCorner.y(), maxCorner.z());
+  glVertex3d(minCorner.x(), maxCorner.y(), maxCorner.z());
+  glVertex3d(minCorner.x(), minCorner.y(), maxCorner.z());
+  glVertex3d(maxCorner.x(), minCorner.y(), maxCorner.z());
   
   //cote Y
   glNormal3d( 0.0, 1.0, 0.0 );
-  glVertex3d(maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
-  glVertex3d(maxCorner.getX(), maxCorner.getY(), minCorner.getZ());
-  glVertex3d(minCorner.getX(), maxCorner.getY(), minCorner.getZ());
-  glVertex3d(minCorner.getX(), maxCorner.getY(), maxCorner.getZ());
+  glVertex3d(maxCorner.x(), maxCorner.y(), maxCorner.z());
+  glVertex3d(maxCorner.x(), maxCorner.y(), minCorner.z());
+  glVertex3d(minCorner.x(), maxCorner.y(), minCorner.z());
+  glVertex3d(minCorner.x(), maxCorner.y(), maxCorner.z());
   
   //cote -Y
   glNormal3d( 0.0, -1.0, 0.0 );
-  glVertex3d(minCorner.getX(), minCorner.getY(), minCorner.getZ());
-  glVertex3d(maxCorner.getX(), minCorner.getY(), minCorner.getZ());
-  glVertex3d(maxCorner.getX(), minCorner.getY(), maxCorner.getZ());
-  glVertex3d(minCorner.getX(), minCorner.getY(), maxCorner.getZ());
+  glVertex3d(minCorner.x(), minCorner.y(), minCorner.z());
+  glVertex3d(maxCorner.x(), minCorner.y(), minCorner.z());
+  glVertex3d(maxCorner.x(), minCorner.y(), maxCorner.z());
+  glVertex3d(minCorner.x(), minCorner.y(), maxCorner.z());
   
   glEnd();
 }
@@ -216,8 +216,8 @@ Texture get3dNoiseTexture(const Vector3i& iSize)
   GLubyte* noise3dTexPtr;
   double amp = 0.5;
   
-  noise3dTexPtr = (GLubyte*) malloc(iSize.getX() *
-    iSize.getY() * iSize.getZ() * 4);
+  noise3dTexPtr = (GLubyte*) malloc(iSize.x() *
+    iSize.y() * iSize.z() * 4);
   if(noise3dTexPtr == NULL)
     return Texture();  
   
@@ -227,14 +227,14 @@ Texture get3dNoiseTexture(const Vector3i& iSize)
     ptr = noise3dTexPtr;
     ni[0] = ni[1] = ni[2] = 0; 
     
-    inci = 1.0 / (iSize.getX() / frequency);
-    for(i = 0; i < iSize.getX(); ++i, ni[0] += inci)
+    inci = 1.0 / (iSize.x() / frequency);
+    for(i = 0; i < iSize.x(); ++i, ni[0] += inci)
     {
-      incj = 1.0 / (iSize.getY() / frequency);
-      for(j = 0; j < iSize.getY(); ++j, ni[1] += incj)
+      incj = 1.0 / (iSize.y() / frequency);
+      for(j = 0; j < iSize.y(); ++j, ni[1] += incj)
       {
-        inck = 1.0 / (iSize.getZ() / frequency);
-        for(k = 0; k < iSize.getZ(); ++k, ni[2] += inck, ptr += 4)
+        inck = 1.0 / (iSize.z() / frequency);
+        for(k = 0; k < iSize.z(); ++k, ni[2] += inck, ptr += 4)
         {
           *(ptr+inc) = (GLubyte)(((noise::noise3(ni)+1.0) * amp)*128.0);
         }
@@ -243,7 +243,7 @@ Texture get3dNoiseTexture(const Vector3i& iSize)
   }
 
 	vector<int> s; s.resize(3);
-  s[0] = iSize.getX(); s[1] = iSize.getY(); s[2] = iSize.getZ();
+  s[0] = iSize.x(); s[1] = iSize.y(); s[2] = iSize.z();
   r.set( noise3dTexPtr, s );
   free(noise3dTexPtr);
   return r;

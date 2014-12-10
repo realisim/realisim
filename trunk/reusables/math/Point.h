@@ -286,11 +286,11 @@ namespace math
     inline void setXYZ(const U &x, const U &y, const U &z);
 
     // --------------- fonction get --------------------------------------------
-    inline const U& getX() const;
-    inline const U& getY() const;
-    inline const U& getZ() const;
+    inline const U& x() const;
+    inline const U& y() const;
+    inline const U& z() const;
     inline void get(Point3 &Point3) const;
-    inline void getXYZ(U &x, U &y, U &z) const;
+    inline void xYZ(U &x, U &y, U &z) const;
     inline const U* getPtr() const;
 
     // --------------- fonction utiles -----------------------------------------
@@ -350,9 +350,9 @@ namespace math
   template <class T>
   inline Point3<U>::Point3(const Point3<T> &point)
   {
-    mData[0] = (U)point.getX();
-    mData[1] = (U)point.getY();
-    mData[2] = (U)point.getZ();
+    mData[0] = (U)point.x();
+    mData[1] = (U)point.y();
+    mData[2] = (U)point.z();
   }
 
   //! destructeur
@@ -441,7 +441,7 @@ namespace math
   //! \return la valeur X du point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline const U& Point3<U>::getX() const
+  inline const U& Point3<U>::x() const
   { return mData[0]; }
 
   //!---------------------------------------------------------------------------
@@ -450,7 +450,7 @@ namespace math
   //! \return la valeur Y du point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline const U& Point3<U>::getY() const
+  inline const U& Point3<U>::y() const
   { return mData[1]; }
 
   //!---------------------------------------------------------------------------
@@ -459,7 +459,7 @@ namespace math
   //! \return la valeur Z du point
   //!---------------------------------------------------------------------------
   template<class U>
-  inline const U& Point3<U>::getZ() const
+  inline const U& Point3<U>::z() const
   { return mData[2]; }
 
   //!---------------------------------------------------------------------------
@@ -472,7 +472,7 @@ namespace math
   //! \param &z
   //!---------------------------------------------------------------------------
   template<class U>
-  inline void Point3<U>::getXYZ(U &x, U &y, U &z) const
+  inline void Point3<U>::xYZ(U &x, U &y, U &z) const
   {
     x=mData[0];
     y=mData[1];
@@ -558,24 +558,24 @@ namespace math
   template<class U>
   inline void Point3<U>::minCoord (const Point3<U>& iP)
   {
-    setX (std::min (getX (), iP.getX ()));
-    setY (std::min (getY (), iP.getY ()));
-    setZ (std::min (getZ (), iP.getZ ()));
+    setX (std::min (x (), iP.x ()));
+    setY (std::min (y (), iP.y ()));
+    setZ (std::min (z (), iP.z ()));
   }
   
   //----------------------------------------------------------------------------
   template<class U>
   inline void Point3<U>::maxCoord (const Point3<U>& iP)
   {
-    setX (std::max (getX (), iP.getX ()));
-    setY (std::max (getY (), iP.getY ()));
-    setZ (std::max (getZ (), iP.getZ ()));
+    setX (std::max (x (), iP.x ()));
+    setY (std::max (y (), iP.y ()));
+    setZ (std::max (z (), iP.z ()));
   }
   
   template<class U>
   inline void Point3<U>::print() const
   {
-    std::cout<<getX()<<" "<<getY()<<" "<<getZ()<<std::endl;
+    std::cout<<x()<<" "<<y()<<" "<<z()<<std::endl;
   }
   
 
@@ -592,9 +592,9 @@ namespace math
   template<class U>
   inline bool Point3<U>::operator== (const Point3 &point) const
   {
-    return getX() == point.getX() &&
-    	getY() == point.getY() &&
-      getZ() == point.getZ();
+    return x() == point.x() &&
+    	y() == point.y() &&
+      z() == point.z();
   }
   
   //----------------------------------------------------------------------------
@@ -602,22 +602,22 @@ namespace math
   inline bool Point3<U>::operator< (const Point3<U>& iP) const
   {
   	U epsilon = std::numeric_limits<U>::epsilon();
-  	if(getX() < iP.getX() - epsilon) return true;
-    if(getX() > iP.getX() + epsilon) return false;
+  	if(x() < iP.x() - epsilon) return true;
+    if(x() > iP.x() + epsilon) return false;
     
-    if(getY() < iP.getY() - epsilon) return true;
-    if(getY() > iP.getY() + epsilon) return false;
+    if(y() < iP.y() - epsilon) return true;
+    if(y() > iP.y() + epsilon) return false;
     
-    if(getZ() < iP.getZ() - epsilon) return true;
+    if(z() < iP.z() - epsilon) return true;
     return false;
     
 /*Ceci est le code preexistant au 9 septembre 2011... Ce code
   semble tout aussi arbitraire que celui que je viens d'insérer
   à l'exception que le code préexistant ne permettait pas 
   d'insérer les points dans un container ordonné (map, set etc...)*/    
-//return getX() < iP.getX() && 
-//      getY() < iP.getY() &&
-//      getZ() < iP.getZ();
+//return x() < iP.x() && 
+//      y() < iP.y() &&
+//      z() < iP.z();
   }
 
   //----------------------------------------------------------------------------
@@ -625,24 +625,24 @@ namespace math
   inline bool Point3<U>::operator<= (const Point3<U>& iP) const
   {
     U epsilon = std::numeric_limits<U>::epsilon();
-    if(getX() >= iP.getX() - epsilon && getX() <= iP.getX() + epsilon) return true;
-    if(getX() < iP.getX() - epsilon) return true;
-    if(getX() > iP.getX() + epsilon) return false;
+    if(x() >= iP.x() - epsilon && x() <= iP.x() + epsilon) return true;
+    if(x() < iP.x() - epsilon) return true;
+    if(x() > iP.x() + epsilon) return false;
     
-    if(getY() >= iP.getY() - epsilon && getY() <= iP.getY() + epsilon) return true;
-    if(getY() < iP.getY() - epsilon) return true;
-    if(getY() > iP.getY() + epsilon) return false;
+    if(y() >= iP.y() - epsilon && y() <= iP.y() + epsilon) return true;
+    if(y() < iP.y() - epsilon) return true;
+    if(y() > iP.y() + epsilon) return false;
     
-    if(getZ() >= iP.getZ() - epsilon && getZ() <= iP.getZ() + epsilon) return true;
-    if(getZ() < iP.getZ() - epsilon) return true;
+    if(z() >= iP.z() - epsilon && z() <= iP.z() + epsilon) return true;
+    if(z() < iP.z() - epsilon) return true;
     return false;
 /*Ceci est le code preexistant au 9 septembre 2011... Ce code
   semble tout aussi arbitraire que celui que je viens d'insérer
   à l'exception que le code préexistant ne permettait pas 
   d'insérer les points dans un container ordonné (map, set etc...)*/    
-//return getX() <= iP.getX() && 
-//  getY() <= iP.getY() &&
-//  getZ() <= iP.getZ();
+//return x() <= iP.x() && 
+//  y() <= iP.y() &&
+//  z() <= iP.z();
   }
 
   //----------------------------------------------------------------------------
@@ -650,9 +650,9 @@ namespace math
   inline bool Point3<U>::operator> (const Point3<U>& iP) const
   {
     //Voir operateur < et corriger ici au besoin
-    return getX() > iP.getX() && 
-      getY() > iP.getY() &&
-      getZ() > iP.getZ();
+    return x() > iP.x() && 
+      y() > iP.y() &&
+      z() > iP.z();
   }
   
   //----------------------------------------------------------------------------
@@ -660,9 +660,9 @@ namespace math
   inline bool Point3<U>::operator>= (const Point3<U>& iP) const
   {
     //Voir operateur <= et corriger ici au besoin
-    return getX() >= iP.getX() && 
-      getY() >= iP.getY() &&
-      getZ() >= iP.getZ();
+    return x() >= iP.x() && 
+      y() >= iP.y() &&
+      z() >= iP.z();
   }
 
   template<class U>

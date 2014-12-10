@@ -580,8 +580,8 @@ void Engine::computeVisibleCells()
 {
 	const Camera& c = getGameCamera();
   const Stage& s = mStage;
-  Point2d look( c.getLook().getX(),
-    c.getLook().getY() );
+  Point2d look( c.getLook().x(),
+    c.getLook().y() );
   mVisibleCells = s.getCellIndices( look, Vector2i(
   	(int)ceil( c.getVisibleWidth() / s.getCellSize().x() ) + 1,
     (int)ceil( c.getVisibleHeight() / s.getCellSize().y() ) ) + 1 );

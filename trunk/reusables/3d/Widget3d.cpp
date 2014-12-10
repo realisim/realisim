@@ -477,21 +477,21 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
       ainsi que les vecteurs lat, up et look intermédiaires.*/
     Vector3d look;
     Matrix4d m1;    
-    m1.setRow1(mOldCam.getLat().getX(), mOldCam.getLat().getY(),mOldCam.getLat().getZ(), 0);
-    m1.setRow2(mOldCam.getUp().getX(), mOldCam.getUp().getY(),mOldCam.getUp().getZ(), 0);    
+    m1.setRow1(mOldCam.getLat().x(), mOldCam.getLat().y(),mOldCam.getLat().z(), 0);
+    m1.setRow2(mOldCam.getUp().x(), mOldCam.getUp().y(),mOldCam.getUp().z(), 0);    
 		//La matrice doit être une matrice main droite (voir quaternion.h)
     look.set(mOldCam.getLook(), mOldCam.getPos());
     look.normalise();
-    m1.setRow3(look.getX(), look.getY(),look.getZ(), 0);
+    m1.setRow3(look.x(), look.y(),look.z(), 0);
     m1.setTranslation(mOldCam.getPos());
     
     Matrix4d m2;
-    m2.setRow1(mNewCam.getLat().getX(), mNewCam.getLat().getY(),mNewCam.getLat().getZ(), 0);
-    m2.setRow2(mNewCam.getUp().getX(), mNewCam.getUp().getY(),mNewCam.getUp().getZ(), 0);
+    m2.setRow1(mNewCam.getLat().x(), mNewCam.getLat().y(),mNewCam.getLat().z(), 0);
+    m2.setRow2(mNewCam.getUp().x(), mNewCam.getUp().y(),mNewCam.getUp().z(), 0);
     //La matrice doit être une matrice main droite (voir quaternion.h)
     look.set(mNewCam.getLook(), mNewCam.getPos());
     look.normalise();
-    m2.setRow3(look.getX(), look.getY(),look.getZ(), 0);
+    m2.setRow3(look.x(), look.y(),look.z(), 0);
     m2.setTranslation(mNewCam.getPos());
 
 		Matrix4d iterationMatrix = math::interpolate(m1, m2, t);
@@ -583,7 +583,7 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
     double zoom = 1 / 1.15;
     if(ipE->delta() < 0)
       zoom = 1.15;
-    double finalZoom = getCamera().getZoom() * zoom;
+    double finalZoom = getCamera().zoom() * zoom;
     if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
     {                  
     	Point3d workingPlane( 0.0, 0.0, mCam.getProjection().mNear );
@@ -596,10 +596,10 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
       Vector3d ecDelta = ( postZoom * viewMatrix ) - ( preZoom * viewMatrix );
       
       Camera::Projection p = mCam.getProjection();
-      p.mLeft -= ecDelta.getX();
-      p.mRight -= ecDelta.getX();
-      p.mTop -= ecDelta.getY();
-      p.mBottom -= ecDelta.getY();
+      p.mLeft -= ecDelta.x();
+      p.mRight -= ecDelta.x();
+      p.mTop -= ecDelta.y();
+      p.mBottom -= ecDelta.y();
       mCam.setProjection( p );      
       mCam.applyProjectionTransformation();
     }
@@ -618,8 +618,8 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
     {
       c.set( p, c.getLook(), c.getUp() );
       setCamera(c, false);
-//      printf("\n\nLook: %3.2f, %3.2f, %3.2f", c.getLook().getX(), c.getLook().getY(), c.getLook().getZ());
-//      printf("\nPos: %3.2f, %3.2f, %3.2f", p.getX(), p.getY(), p.getZ());
+//      printf("\n\nLook: %3.2f, %3.2f, %3.2f", c.getLook().x(), c.getLook().y(), c.getLook().z());
+//      printf("\nPos: %3.2f, %3.2f, %3.2f", p.x(), p.y(), p.z());
     }
   }
 

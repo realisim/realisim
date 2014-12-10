@@ -132,8 +132,8 @@ void Viewer::paintGL()
   c.set( Point3d( 0.0, 0.0, 5.0 ),
   	Point3d( 0.0, 0.0, 0.0 ),
     Vector3d( 0.0, 1.0, 0.0 ) );
-  c.setProjection( 0, c.getWindowInfo().getWidth(),
-  	0, c.getWindowInfo().getHeight(),
+  c.setProjection( 0, c.getViewport().getWidth(),
+  	0, c.getViewport().getHeight(),
    	0.5, 2000, Camera::Projection::tOrthogonal );    
   c.applyProjectionTransformation();
   c.applyModelViewTransformation();
@@ -206,9 +206,11 @@ MainDialog::MainDialog() : QMainWindow(),
   pLyt->addWidget( pPanel, 1 );
   pLyt->addWidget(mpViewer, 5 );
   
-  mpViewer->setCameraOrientation(Camera::XY);
   Camera c = mpViewer->getCamera();
+  c.set( Point3d(0, 0, 100),
+  	Point3d(), Vector3d(0, 1, 0) );
 	c.setOrthoProjection( 200, 0.5, 2000 );
+  mpViewer->setControlType( Widget3d::ctPan );
   mpViewer->setCamera(c, false);
   
   updateUi();

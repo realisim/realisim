@@ -294,7 +294,7 @@ void Texture::set(void* iPtr, const Vector2i& iS, GLenum iF/*= GL_RGBA*/,
 void Texture::set(void* iPtr, const Vector3i& iS, GLenum iF/*= GL_RGBA*/,
   GLenum iDt /*= GL_UNSIGNED_BYTE*/ )
 {
-	vector<int> s(3, 0); s[0] = iS.getX(); s[1] = iS.getY(); s[2] = iS.getZ();
+	vector<int> s(3, 0); s[0] = iS.x(); s[1] = iS.y(); s[2] = iS.z();
   set( iPtr, s, iF, iDt );    
 }
 

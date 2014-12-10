@@ -135,9 +135,9 @@ void Camera::computeProjection()
 //-----------------------------------------------------------------------------
 void Camera::computeViewMatrix()
 {
-  mViewMatrix.setRow1( mLat.getX(), mLat.getY(), mLat.getZ(), 0.0 );
-  mViewMatrix.setRow2( mUp.getX(), mUp.getY(), mUp.getZ(), 0.0 );
-  mViewMatrix.setRow3( -mLookVector.getX(), -mLookVector.getY(), -mLookVector.getZ(), 0.0 );
+  mViewMatrix.setRow1( mLat.x(), mLat.y(), mLat.z(), 0.0 );
+  mViewMatrix.setRow2( mUp.x(), mUp.y(), mUp.z(), 0.0 );
+  mViewMatrix.setRow3( -mLookVector.x(), -mLookVector.y(), -mLookVector.z(), 0.0 );
   mViewMatrix.setRow4( 0.0, 0.0, 0.0, 1.0 );
   /*Ici, la transposé d'une matrice 3x3 (rotation) revient strictement à
    l'inverse.*/
@@ -161,11 +161,11 @@ const Matrix4d& Camera::getProjectionMatrix() const
 //-----------------------------------------------------------------------------
 /*retourne la largeur visible en unité GL*/
 double Camera::getVisibleHeight() const
-{ return mProjectionInfo.getHeight() * 1.0 / getZoom(); }
+{ return mProjectionInfo.getHeight() * 1.0 / zoom(); }
 
 //-----------------------------------------------------------------------------
 double Camera::getVisibleWidth() const
-{ return mProjectionInfo.getWidth() * 1.0 / getZoom(); }
+{ return mProjectionInfo.getWidth() * 1.0 / zoom(); }
 
 //-----------------------------------------------------------------------------
 Point2d Camera::glToPixel( const Point3d& iP ) const
@@ -180,7 +180,7 @@ Point2d Camera::glToPixel( const Point3d& iP ) const
   glGetIntegerv(GL_VIEWPORT, viewport);
 
   double x, y, z;
-	bool sucess = gluProject(iP.getX(), iP.getY(), iP.getZ(), 
+	bool sucess = gluProject(iP.x(), iP.y(), iP.z(), 
     modelView, 
     projection, 
     viewport, 
@@ -226,7 +226,7 @@ Point3d Camera::pixelToGL( int iX, int iY,
     intéresse c'est la coordonnée en z normalisé qui nous donne la profondeur
     de ce point3d dans le zBuffer qui sera utilisé pour trouver le point 
     en coordonnée GL*/
-  gluProject( iPoint.getX(), iPoint.getY(), iPoint.getZ(),
+  gluProject( iPoint.x(), iPoint.y(), iPoint.z(),
     modelView, projection, viewport,
     &winx, &winy, &winz);
     
@@ -269,10 +269,10 @@ void Camera::popMatrices() const
 void Camera::print() const
 {
   using namespace std;
-  cout<<"\n\nPos: "<<mPos.getX()<<" "<<mPos.getY()<<" "<<mPos.getZ();
-  cout<<"\nLook: "<<mLook.getX()<<" "<<mLook.getY()<<" "<<mLook.getZ();
-  cout<<"\nLat: "<<mLat.getX()<<" "<<mLat.getY()<<" "<<mLat.getZ();
-  cout<<"\nUp: "<<mUp.getX()<<" "<<mUp.getY()<<" "<<mUp.getZ();
+  cout<<"\n\nPos: "<<mPos.x()<<" "<<mPos.y()<<" "<<mPos.z();
+  cout<<"\nLook: "<<mLook.x()<<" "<<mLook.y()<<" "<<mLook.z();
+  cout<<"\nLat: "<<mLat.x()<<" "<<mLat.y()<<" "<<mLat.z();
+  cout<<"\nUp: "<<mUp.x()<<" "<<mUp.y()<<" "<<mUp.z();
 }
 
 //-----------------------------------------------------------------------------

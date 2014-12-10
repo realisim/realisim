@@ -36,17 +36,17 @@
         n.normalise();
         glBegin(GL_TRIANGLES);
           glNormal3dv(n.getPtr());
-          glVertex3d(mPs.getVertex()[f.index1].getX(),
-            mPs.getVertex()[f.index1].getY(),
-            mPs.getVertex()[f.index1].getZ());
+          glVertex3d(mPs.getVertex()[f.index1].x(),
+            mPs.getVertex()[f.index1].y(),
+            mPs.getVertex()[f.index1].z());
             
-          glVertex3d(mPs.getVertex()[f.index2].getX(),
-            mPs.getVertex()[f.index2].getY(),
-            mPs.getVertex()[f.index2].getZ());
+          glVertex3d(mPs.getVertex()[f.index2].x(),
+            mPs.getVertex()[f.index2].y(),
+            mPs.getVertex()[f.index2].z());
             
-          glVertex3d(mPs.getVertex()[f.index3].getX(),
-            mPs.getVertex()[f.index3].getY(),
-            mPs.getVertex()[f.index3].getZ());
+          glVertex3d(mPs.getVertex()[f.index3].x(),
+            mPs.getVertex()[f.index3].y(),
+            mPs.getVertex()[f.index3].z());
         glEnd();
       }
     

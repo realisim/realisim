@@ -1,6 +1,7 @@
 /* Created by Pierre-Olivier Beaudoin on 10-02-13. */
 
 #include "network/utils.h"
+#include <QDateTime>
 #include <QDataStream>
 #include <QHostAddress>
 #include <QNetworkInterface>

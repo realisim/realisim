@@ -21,7 +21,7 @@ namespace math
 	//---------------------------------------------------------------------------
   template< class T >
   Vector3<T> absolute( const Vector3<T>& iP )
-  { return Vector3<T>( abs( iP.getX() ), abs( iP.getY() ), abs( iP.getZ() ) ); }
+  { return Vector3<T>( abs( iP.x() ), abs( iP.y() ), abs( iP.z() ) ); }
   //---------------------------------------------------------------------------
 	template<class T>
 	bool isEqual( T a, T b, T iEpsilon = std::numeric_limits<T>::epsilon() )
@@ -35,9 +35,9 @@ namespace math
 	bool isEqual( const Vector3<T>& iV0, const Vector3<T>& iV1, T iEpsilon = 
   	std::numeric_limits<T>::epsilon() )
   {
-    T dx = iV0.getX() - iV1.getX();
-    T dy = iV0.getY() - iV1.getY();
-    T dz = iV0.getZ() - iV1.getZ();
+    T dx = iV0.x() - iV1.x();
+    T dy = iV0.y() - iV1.y();
+    T dz = iV0.z() - iV1.z();
     if(dx<(T)0.0) dx = -dx;
     if(dy<(T)0.0) dy = -dy;
     if(dz<(T)0.0) dz = -dz;
@@ -48,9 +48,9 @@ namespace math
 	bool isEqual( const Point3<T>& iP0, const Point3<T>& iP1, T iEpsilon = 
   	std::numeric_limits<T>::epsilon() )
   {
-    T dx = iP0.getX() - iP1.getX();
-    T dy = iP0.getY() - iP1.getY();
-    T dz = iP0.getZ() - iP1.getZ();
+    T dx = iP0.x() - iP1.x();
+    T dy = iP0.y() - iP1.y();
+    T dz = iP0.z() - iP1.z();
     if(dx<(T)0.0) dx = -dx;
     if(dy<(T)0.0) dy = -dy;
     if(dz<(T)0.0) dz = -dz;
@@ -60,13 +60,13 @@ namespace math
   //convertie un vecteur en point
   template<class T>
   inline Point3<T> toPoint (const Vector3<T>& iV)
-  { return Point3<T>(iV.getX(), iV.getY(), iV.getZ()); }
+  { return Point3<T>(iV.x(), iV.y(), iV.z()); }
   
   //---------------------------------------------------------------------------
   //convertie un point en vecteur
   template<class T>
   inline Vector3<T> toVector (const Point3<T>& iP)
-  { return Vector3<T>(iP.getX(), iP.getY(), iP.getZ()); }
+  { return Vector3<T>(iP.x(), iP.y(), iP.z()); }
   
   //---------------------------------------------------------------------------
   //convertie un vecteur en point
@@ -87,17 +87,17 @@ namespace math
   {
     Quaternion<V> result;
     
-    result.setW(- (quat.getX() * point.getX()) - (quat.getY() * point.getY()) -
-                (quat.getZ() * point.getZ()) );
+    result.setW(- (quat.x() * point.x()) - (quat.y() * point.y()) -
+                (quat.z() * point.z()) );
     
-    result.setX( (quat.getW() * point.getX()) + (quat.getY() * point.getZ()) -
-                (quat.getZ() * point.getY()) );
+    result.setX( (quat.getW() * point.x()) + (quat.y() * point.z()) -
+                (quat.z() * point.y()) );
     
-    result.setY( (quat.getW() * point.getY()) - (quat.getX() * point.getZ()) +
-                (quat.getZ() * point.getX()) );
+    result.setY( (quat.getW() * point.y()) - (quat.x() * point.z()) +
+                (quat.z() * point.x()) );
     
-    result.setZ( (quat.getW() * point.getZ()) + (quat.getX() * point.getY()) -
-                (quat.getY() * point.getX()) );
+    result.setZ( (quat.getW() * point.z()) + (quat.x() * point.y()) -
+                (quat.y() * point.x()) );
     
     return result;
   }
@@ -109,9 +109,9 @@ namespace math
   inline Vector3<T> operator* ( const Vector3<T>& iVect, const Matrix4<T>& iMat)
   {
     Vector3<T> vect;
-    vect.setX( iVect.getX() * iMat(0, 0) + iVect.getY() * iMat(1, 0) + iVect.getZ() * iMat(2, 0) );
-    vect.setY( iVect.getX() * iMat(0, 1) + iVect.getY() * iMat(1, 1) + iVect.getZ() * iMat(2, 1) );
-    vect.setZ( iVect.getX() * iMat(0, 2) + iVect.getY() * iMat(1, 2) + iVect.getZ() * iMat(2, 2) );
+    vect.setX( iVect.x() * iMat(0, 0) + iVect.y() * iMat(1, 0) + iVect.z() * iMat(2, 0) );
+    vect.setY( iVect.x() * iMat(0, 1) + iVect.y() * iMat(1, 1) + iVect.z() * iMat(2, 1) );
+    vect.setZ( iVect.x() * iMat(0, 2) + iVect.y() * iMat(1, 2) + iVect.z() * iMat(2, 2) );
     return vect;
   }
   
@@ -126,9 +126,9 @@ namespace math
   inline Point3<T> operator* ( const Point3<T>& iPoint, const Matrix4<T>& iMat)
   {
     Point3<T> result;
-    result.setX( iPoint.getX() * iMat(0, 0) + iPoint.getY() * iMat(1, 0) + iPoint.getZ() * iMat(2, 0) );
-    result.setY( iPoint.getX() * iMat(0, 1) + iPoint.getY() * iMat(1, 1) + iPoint.getZ() * iMat(2, 1) );
-    result.setZ( iPoint.getX() * iMat(0, 2) + iPoint.getY() * iMat(1, 2) + iPoint.getZ() * iMat(2, 2) );
+    result.setX( iPoint.x() * iMat(0, 0) + iPoint.y() * iMat(1, 0) + iPoint.z() * iMat(2, 0) );
+    result.setY( iPoint.x() * iMat(0, 1) + iPoint.y() * iMat(1, 1) + iPoint.z() * iMat(2, 1) );
+    result.setZ( iPoint.x() * iMat(0, 2) + iPoint.y() * iMat(1, 2) + iPoint.z() * iMat(2, 2) );
     //on ajoute la translation au point
     result += Point3<T>(iMat(3, 0), iMat(3, 1), iMat(3, 2));
     return result;
@@ -137,41 +137,41 @@ namespace math
   template<class T>
   inline Point3<T> operator* (const T& iVal, const Point3<T>& iPoint)
   {
-  	return Point3<T>( iVal * iPoint.getX(),
-    	iVal * iPoint.getY(),
-      iVal * iPoint.getZ() );
+  	return Point3<T>( iVal * iPoint.x(),
+    	iVal * iPoint.y(),
+      iVal * iPoint.z() );
   }
   //---------------------------------------------------------------------------
   template<class T>
   inline Point3<T> operator+ (const Point3<T> &point, const Vector3<T> &vect)
   {
-  	return Point3<T>( point.getX() + vect.getX(),
-    	point.getY() + vect.getY(),
-    	point.getZ() + vect.getZ() );
+  	return Point3<T>( point.x() + vect.x(),
+    	point.y() + vect.y(),
+    	point.z() + vect.z() );
   }
   //---------------------------------------------------------------------------
   template<class T>
   inline Point3<T> operator- (const Point3<T> &point, const Vector3<T> &vect)
   {
-    return Point3<T>( point.getX() - vect.getX(),
-    	point.getY() - vect.getY(),
-    	point.getZ() - vect.getZ() );
+    return Point3<T>( point.x() - vect.x(),
+    	point.y() - vect.y(),
+    	point.z() - vect.z() );
   }
   //---------------------------------------------------------------------------
   template<class T>
   inline Vector3<T> operator+ (const Point3<T> &p1, const Point3<T> &p2)
   {
-    return Vector3<T>( p1.getX() + p2.getX(),
-    	p1.getY() + p2.getY(),
-      p1.getZ() + p2.getZ() );
+    return Vector3<T>( p1.x() + p2.x(),
+    	p1.y() + p2.y(),
+      p1.z() + p2.z() );
   }
   //---------------------------------------------------------------------------
   template<class T>
   inline Vector3<T> operator- (const Point3<T> &p1, const Point3<T> &p2)
   {
-    return Vector3<T>( p1.getX() - p2.getX(),
-    	p1.getY() - p2.getY(),
-      p1.getZ() - p2.getZ() );
+    return Vector3<T>( p1.x() - p2.x(),
+    	p1.y() - p2.y(),
+      p1.z() - p2.z() );
   }
   
   //---------------------------------------------------------------------------
@@ -210,9 +210,9 @@ namespace math
   {
     Vector3<V> result;
     
-    result.setX(iVal * vect.getX());
-    result.setY(iVal * vect.getY());
-    result.setZ(iVal * vect.getZ());
+    result.setX(iVal * vect.x());
+    result.setY(iVal * vect.y());
+    result.setZ(iVal * vect.z());
     
     return result;
   }
@@ -229,12 +229,12 @@ namespace math
       Bref, en permuttant deux valeurs et en inversant une des deux et remplacant
       la troisieme par 0, on obtient toujours un vecteur perpendiculaire.*/
     Vector3<T> r(1.0, 0.0, 0.0);
-    if( !isEqual( iV.getX(), 0.0 ) )
-    	r = Vector3<T>( iV.getY(), -iV.getX(), (T)0.0 );
-    else if( !isEqual( iV.getY(), 0.0 ) ) 
-    	r = Vector3<T>( -iV.getY(), iV.getX(), (T)0.0 );
-    else if( !isEqual( iV.getZ(), 0.0 ) )
-			r = Vector3<T>( (T)0.0, iV.getZ(), -iV.getY() );
+    if( !isEqual( iV.x(), 0.0 ) )
+    	r = Vector3<T>( iV.y(), -iV.x(), (T)0.0 );
+    else if( !isEqual( iV.y(), 0.0 ) ) 
+    	r = Vector3<T>( -iV.y(), iV.x(), (T)0.0 );
+    else if( !isEqual( iV.z(), 0.0 ) )
+			r = Vector3<T>( (T)0.0, iV.z(), -iV.y() );
   	return r;
   }
   //---------------------------------------------------------------------------
@@ -303,7 +303,7 @@ namespace math
     
     //! TODO mettre une explication sur les quaternions...
     //quatResult = (quatRot*point)*quatRot.getConjugate();
-    //point.setXYZ(quatResult.getX(), quatResult.getY(), quatResult.getZ());
+    //point.setXYZ(quatResult.x(), quatResult.y(), quatResult.z());
     
     return ( quatRot*point ).multRotation( quatRot.getConjugate() );
   }
@@ -347,13 +347,13 @@ namespace math
     {
     	n0 = Vector3d( *iP[0], *iP[1] ) ^ Vector3d( *iP[1], *iP[2] );
       n0.normalise();
-//printf("n0; %.16f, %.16f, %.16f\n", n0.getX(), n0.getY(), n0.getZ() );
+//printf("n0; %.16f, %.16f, %.16f\n", n0.x(), n0.y(), n0.z() );
       for( int i = 2; i < (int)iP.size(); ++i )
       {
       	iMinus1 = i -1; i0 = i; i1 = (i + 1) % iP.size();
         n1 = Vector3d( *iP[iMinus1], *iP[i0] ) ^ Vector3d( *iP[i0], *iP[i1] );
         n1.normalise();
-//printf("n1; %.16f, %.16f, %.16f\n", n1.getX(), n1.getY(), n1.getZ() );
+//printf("n1; %.16f, %.16f, %.16f\n", n1.x(), n1.y(), n1.z() );
         if( !math::isEqual( absolute(n0), absolute(n1), iEpsilon ) )
         { r = false; break; }
       }

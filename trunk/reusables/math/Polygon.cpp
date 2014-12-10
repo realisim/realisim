@@ -82,9 +82,9 @@ void Polygon::checkIfConvex() const
     Vector3d y = math::getPerpendicularVector( z );
     Vector3d x = y ^ z;
     Matrix4d m, m1;
-    m.setRow1( x.getX(), x.getY(), x.getZ(), 0.0 );
-    m.setRow2( y.getX(), y.getY(), y.getZ(), 0.0 );
-    m.setRow3( z.getX(), z.getY(), z.getZ(), 0.0 );
+    m.setRow1( x.x(), x.y(), x.z(), 0.0 );
+    m.setRow2( y.x(), y.y(), y.z(), 0.0 );
+    m.setRow3( z.x(), z.y(), z.z(), 0.0 );
     //m.setTranslation( getCentroid() );
     //m.inverse();
     
@@ -104,14 +104,14 @@ void Polygon::checkIfConvex() const
       
       p = getVertex( nextIndex ) * m1;
       r = toVector( p ).norm();
-      cosA = acos( p.getX() / r );
-      sinA = asin( p.getY() / r );
+      cosA = acos( p.x() / r );
+      sinA = asin( p.y() / r );
       theta = sinA < 0.0 ? DEUX_PI - cosA : cosA;
       angles.push_back( theta );
       
 //Point3d _d = getVertex( i ) * m1;;
-//printf("p%d; %f, %f, %f\n", i, _d.getX(), _d.getY(), _d.getZ() );      
-//printf("p%d; %f, %f, %f\n", nextIndex, p.getX(), p.getY(), p.getZ() );
+//printf("p%d; %f, %f, %f\n", i, _d.x(), _d.y(), _d.z() );      
+//printf("p%d; %f, %f, %f\n", nextIndex, p.x(), p.y(), p.z() );
 //printf("cosA %d-%d; %f\n", i, nextIndex, cosA );
 //printf("sinA %d-%d; %f\n", i, nextIndex, sinA );
 //printf("theta %d-%d; %f\n", i, nextIndex, theta * 180 / PI);
@@ -174,9 +174,9 @@ Point3d Polygon::getCentroid() const
 	double cx = 0.0, cy = 0.0, cz = 0.0;
   for( int i = 0; i < getNumberOfVertices(); ++i )
   {
-  	cx += getVertex( i ).getX();
-    cy += getVertex( i ).getY();
-    cz += getVertex( i ).getZ();
+  	cx += getVertex( i ).x();
+    cy += getVertex( i ).y();
+    cz += getVertex( i ).z();
   }
   cx /= (double)getNumberOfVertices();
   cy /= (double)getNumberOfVertices();

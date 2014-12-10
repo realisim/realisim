@@ -97,9 +97,9 @@ void Particules::drawParticules() const
   {
   	Particule& p = mParticules[i];
   	index = i * 3;
-  	mpParticulesPosition[ index ] = p.p.getX();
-    mpParticulesPosition[ index + 1 ] = p.p.getY();
-    mpParticulesPosition[ index + 2 ] = p.p.getZ();
+  	mpParticulesPosition[ index ] = p.p.x();
+    mpParticulesPosition[ index + 1 ] = p.p.y();
+    mpParticulesPosition[ index + 2 ] = p.p.z();
   }
 
   glColor4ub( mColor.red(), mColor.green(), mColor.blue(), mColor.alpha() );
@@ -233,7 +233,7 @@ void Particules::iterate() const
               Par example:
               w = (-bi, aj, 0k)
               w * v = (ai, bj, ck) * ( -bi, aj, 0k) = -ab + ab + 0 = 0  */
-            Vector3d v( mDirection.getY(), -mDirection.getX(), 0.0 );          
+            Vector3d v( mDirection.y(), -mDirection.x(), 0.0 );          
             v.normalise();
             /*on fait une rotation random autour de mDirection*/
             Matrix4d r = getRotationMatrix( r1 % 360 * 3.1415629 / 180.0, 
@@ -247,7 +247,7 @@ void Particules::iterate() const
           case tCone:
           {
           	p.v = mDirection;
-            Vector3d v( mDirection.getY(), -mDirection.getX(), 0.0 );          
+            Vector3d v( mDirection.y(), -mDirection.x(), 0.0 );          
             v.normalise();
             /*on fait une rotation random autour de mDirection*/
             Matrix4d r = getRotationMatrix( r1 % 360 * 3.1415629 / 180.0, 
