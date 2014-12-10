@@ -73,9 +73,9 @@ namespace math
 
     // --------------- fonction get --------------------------------------------
     inline T getW() const;
-    inline T getX() const;
-    inline T getY() const;
-    inline T getZ() const;
+    inline T x() const;
+    inline T y() const;
+    inline T z() const;
     inline void getQuat(T &w, T &x, T &y, T &z) const;
     inline Quaternion<T> getConjugate() const;
     inline double getLength() const;
@@ -218,19 +218,19 @@ namespace math
   }
 
   template<class T>
-  inline T Quaternion<T>::getX() const
+  inline T Quaternion<T>::x() const
   {
     return x_;
   }
 
   template<class T>
-  inline T Quaternion<T>::getY() const
+  inline T Quaternion<T>::y() const
   {
     return y_;
   }
 
   template<class T>
-  inline T Quaternion<T>::getZ() const
+  inline T Quaternion<T>::z() const
   {
     return z_;
   }
@@ -454,9 +454,9 @@ namespace math
   {
     T sinTmp = std::sin(angle/(T)(2.0));
 
-    x_ = iAxis.getX() * sinTmp;
-    y_ = iAxis.getY() * sinTmp;
-    z_ = iAxis.getZ() * sinTmp;
+    x_ = iAxis.x() * sinTmp;
+    y_ = iAxis.y() * sinTmp;
+    z_ = iAxis.z() * sinTmp;
     w_ = std::cos(angle/(T)(2.0));
   }
 

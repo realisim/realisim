@@ -57,21 +57,21 @@ Viewer::~Viewer()
 //    Vector3d n3(Point3d(0.0), iPs.getVertex()[f.index3]);
 //    n3.normalise();
 //  	glBegin(GL_TRIANGLES);
-//      //glNormal3d(n.getX(), n.getY(), n.getZ());
-//      glNormal3d(n1.getX(), n1.getY(), n1.getZ());
-//      glVertex3d(iPs.getVertex()[f.index1].getX(),
-//        iPs.getVertex()[f.index1].getY(),
-//        iPs.getVertex()[f.index1].getZ());
+//      //glNormal3d(n.x(), n.y(), n.z());
+//      glNormal3d(n1.x(), n1.y(), n1.z());
+//      glVertex3d(iPs.getVertex()[f.index1].x(),
+//        iPs.getVertex()[f.index1].y(),
+//        iPs.getVertex()[f.index1].z());
 //      
-//      glNormal3d(n2.getX(), n2.getY(), n2.getZ());  
-//      glVertex3d(iPs.getVertex()[f.index2].getX(),
-//        iPs.getVertex()[f.index2].getY(),
-//        iPs.getVertex()[f.index2].getZ());
+//      glNormal3d(n2.x(), n2.y(), n2.z());  
+//      glVertex3d(iPs.getVertex()[f.index2].x(),
+//        iPs.getVertex()[f.index2].y(),
+//        iPs.getVertex()[f.index2].z());
 //        
-//			glNormal3d(n3.getX(), n3.getY(), n3.getZ());
-//      glVertex3d(iPs.getVertex()[f.index3].getX(),
-//        iPs.getVertex()[f.index3].getY(),
-//        iPs.getVertex()[f.index3].getZ());
+//			glNormal3d(n3.x(), n3.y(), n3.z());
+//      glVertex3d(iPs.getVertex()[f.index3].x(),
+//        iPs.getVertex()[f.index3].y(),
+//        iPs.getVertex()[f.index3].z());
 //    glEnd();
 //  }
 //}
@@ -174,18 +174,18 @@ void Viewer::paintGL()
   Widget3d::paintGL();
   
   pushShader(mShader);
-  draw(mPs);
+  treeD::draw(mPs);
 
   pushShader(mShader2);
   glPushMatrix();
   glTranslated(2, 0, 0);
-  draw(mPs);
+  treeD::draw(mPs);
   glPopMatrix();
   popShader();
   
   glPushMatrix();
   glTranslated(4, 0, 0);
-  draw(mPs);
+  treeD::draw(mPs);
   glPopMatrix();
   
   
@@ -196,14 +196,14 @@ void Viewer::paintGL()
     mNoiseShader.setUniform("Noise", 0);
     glPushMatrix();
     glTranslated(6, 0, 0);
-    draw(mPs);
+    treeD::draw(mPs);
     glPopMatrix();
     
     pushShader(mSunShader);
     mSunShader.setUniform("Noise", 0);
     glPushMatrix();
     glTranslated(8, 0, 0);
-    draw(mPs);
+    treeD::draw(mPs);
     glPopMatrix();
     popShader();
   glPopAttrib();
@@ -215,6 +215,7 @@ void Viewer::paintGL()
 //-----------------------------------------------------------------------------
 void Viewer::timerEvent(QTimerEvent* ipEvent)
 {
+	Widget3d::timerEvent( ipEvent );
   updateGL();
 }
 
@@ -227,13 +228,12 @@ MainDialog::MainDialog() : QMainWindow(),
   QHBoxLayout* pLyt = new QHBoxLayout(this);
   pLyt->setMargin(5);
   mpViewer = new Viewer(this);
-  mpViewer->setCameraOrientation(Camera::FREE);
   pLyt->addWidget(mpViewer, 1);
   setCentralWidget(mpViewer);
-  
-  Camera c = mpViewer->getCamera();
-  Matrix4d m;
-  m.setTranslation(Point3d(8.0, 0.0, 0.0));
-  c.setTransformationToGlobal(m);
-  mpViewer->setCamera(c, false);
+
+	Camera c = mpViewer->getCamera();
+  c.set( Point3d(0.0, 0.0, 100),
+  	Point3d(), Vector3d(0, 1, 0) );
+  mpViewer->setCamera( c );
+	mpViewer->setControlType( Widget3d::ctFree );
 }

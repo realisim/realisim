@@ -196,23 +196,23 @@ namespace math
   template<class T>
   inline void Matrix4<T>::setScaling(const Vector3<T>& iV)
   {
-    mat_[0] = iV.getX(); mat_[5] = iV.getY(); mat_[10] = iV.getZ();
+    mat_[0] = iV.x(); mat_[5] = iV.y(); mat_[10] = iV.z();
   }
   
   //! permet de setter la 4e ligne de la matrice
   template<class T>
   inline void Matrix4<T>::setTranslation(const Point3<T>& iTrans)
   {
-    mat_[12] = iTrans.getX(); mat_[13] = iTrans.getY(); mat_[14] = iTrans.getZ();
+    mat_[12] = iTrans.x(); mat_[13] = iTrans.y(); mat_[14] = iTrans.z();
   }
   
   // permet d'ajouter la translation iTrans a la matrice
   template<class T>
   inline void Matrix4<T>::translate(const Vector3<T>& iTrans)
   {
-  	Point3d t( getTranslation().getX() + iTrans.getX(),
-    	getTranslation().getY() + iTrans.getY(),
-      getTranslation().getZ() + iTrans.getZ() );
+  	Point3d t( getTranslation().x() + iTrans.x(),
+    	getTranslation().y() + iTrans.y(),
+      getTranslation().z() + iTrans.z() );
     setTranslation(t);
   }
 

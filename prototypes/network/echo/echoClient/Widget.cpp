@@ -4,8 +4,7 @@
 #include "Widget.h"
 
 using namespace realisim;
-  using namespace reusables;
-    using namespace network;
+  using namespace network;
   using namespace prototypes;
 using namespace std;
 

@@ -218,7 +218,7 @@ Intersection2d intersect( const Line2d& iL1, const Line2d& iL2)
   Point2d i2 = p2 + s*v2;
   printf( "%f, %f = %f, %f\n", i.x(), i.y(), i2.x(), i2.y() ); */
   Vector3d n3d = Vector3d( v2.x(), v2.y(), 0.0 ) ^ Vector3d( 0.0, 0.0, -1.0 );
-  Vector2d n( n3d.getX(), n3d.getY() );
+  Vector2d n( n3d.x(), n3d.y() );
   n.normalise();
   r.add( i, n );
   return r;

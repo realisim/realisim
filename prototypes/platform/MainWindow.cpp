@@ -619,7 +619,7 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   	c );
   Point3d rb = rotatePoint( t%360 * kDegreeToRadian, b, Vector3d(0.0, 0.0, 1.0),
   	c );
-	LineSegment2d ls1( Point2d(ra.getX(), ra.getY()), Point2d(rb.getX(), rb.getY()) );
+	LineSegment2d ls1( Point2d(ra.x(), ra.y()), Point2d(rb.x(), rb.y()) );
   Rectangle r( Point2d(50, 400), Vector2d(100, 200) );
   LineSegment2d lsUser1( mp, toPoint(mp + Point2d( 0, 100 )) );
   LineSegment2d lsUser2( mp, toPoint(mp + Point2d( 100, 0 )) );

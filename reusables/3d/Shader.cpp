@@ -389,7 +389,7 @@ bool Shader::setUniform(const char* iName, const Point3i& iValue)
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
-  glUniform3i(loc, iValue.getX(), iValue.getY(), iValue.getZ());
+  glUniform3i(loc, iValue.x(), iValue.y(), iValue.z());
   return loc >= 0 ? true : false;
 }
 
@@ -399,9 +399,9 @@ bool Shader::setUniform(const char* iName, const Point3d& iValue)
 	if(!isValid())
     return false;
   
-  Point3f t(iValue.getX(), iValue.getY(), iValue.getZ());
+  Point3f t(iValue.x(), iValue.y(), iValue.z());
   GLint loc = glGetUniformLocation(getProgramId(), iName);
-  glUniform3f(loc, t.getX(), t.getY(), t.getZ());
+  glUniform3f(loc, t.x(), t.y(), t.z());
   return loc >= 0 ? true : false;
 }
 
@@ -412,7 +412,7 @@ bool Shader::setUniform(const char* iName, const Point3f& iValue)
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
-  glUniform3f(loc, iValue.getX(), iValue.getY(), iValue.getZ());
+  glUniform3f(loc, iValue.x(), iValue.y(), iValue.z());
   return loc >= 0 ? true : false;
 }
 
@@ -423,7 +423,7 @@ bool Shader::setUniform(const char* iName, const Vector3i& iValue)
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
-  glUniform3i(loc, iValue.getX(), iValue.getY(), iValue.getZ());
+  glUniform3i(loc, iValue.x(), iValue.y(), iValue.z());
   return loc >= 0 ? true : false;
 }
 
@@ -446,9 +446,9 @@ bool Shader::setUniform(const char* iName, const Vector3d& iValue)
 	if(!isValid())
     return false;
     
-  Point3f t(iValue.getX(), iValue.getY(), iValue.getZ());
+  Point3f t(iValue.x(), iValue.y(), iValue.z());
   GLint loc = glGetUniformLocation(getProgramId(), iName);
-  glUniform3f(loc, t.getX(), t.getY(), t.getZ());
+  glUniform3f(loc, t.x(), t.y(), t.z());
   return loc >= 0 ? true : false;
 }
 
@@ -459,7 +459,7 @@ bool Shader::setUniform(const char* iName, const Vector3f& iValue)
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
-  glUniform3f(loc, iValue.getX(), iValue.getY(), iValue.getZ());
+  glUniform3f(loc, iValue.x(), iValue.y(), iValue.z());
   return loc >= 0 ? true : false;
 }
 

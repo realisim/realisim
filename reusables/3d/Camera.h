@@ -92,7 +92,7 @@ public:
   double getVisibleWidth() const;
   const Viewport& getViewport() const {return mViewport;}
   Point2d glToPixel( const Point3d& ) const;//sceneToPixel
-  const double getZoom() const { return mProjectionInfo.mZoomFactor; }
+  const double zoom() const { return mProjectionInfo.mZoomFactor; }
 void move( const Vector3d& );
   Point3d pixelToGL( int, int, const Point3d& = Point3d(0.0)) const;//pixelToscene
 	Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(0.0)) const;//pixelDeltaToSceneDelta

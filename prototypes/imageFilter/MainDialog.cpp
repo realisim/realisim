@@ -221,7 +221,7 @@ void Viewer::paintGL()
     glBindTexture(GL_TEXTURE_3D, mUltraSoundTexture.getTextureId());
   
   pushShader(mActiveShader);
-  glScaled(gScale.getX(), gScale.getY(), gScale.getZ());
+  glScaled(gScale.x(), gScale.y(), gScale.z());
   drawSlice();
   popShader();
  
@@ -670,7 +670,7 @@ void MainDialog::viewChanged(int iId)
   switch (gView) 
   {
     case vAxial:
-      gScale.setXYZ(gVolumeSize.getY() * gSpacing.getY(), gVolumeSize.getZ() * gSpacing.getZ(), 0.0);
+      gScale.setXYZ(gVolumeSize.y() * gSpacing.y(), gVolumeSize.z() * gSpacing.z(), 0.0);
       gOffset9[0] = Vector3f(0, -1, 1);
       gOffset9[1] = Vector3f(0, 0, 1);
       gOffset9[2] = Vector3f(0, 1, 1);
@@ -682,7 +682,7 @@ void MainDialog::viewChanged(int iId)
       gOffset9[8] = Vector3f(0, 1, -1);
       break;
     case vSagittal:
-      gScale.setXYZ(gVolumeSize.getX() * gSpacing.getX(), gVolumeSize.getZ() * gSpacing.getZ(), 0.0);
+      gScale.setXYZ(gVolumeSize.x() * gSpacing.x(), gVolumeSize.z() * gSpacing.z(), 0.0);
       gOffset9[0] = Vector3f(-1, 0, 1);
       gOffset9[1] = Vector3f(0, 0, 1);
       gOffset9[2] = Vector3f(1, 0, 1);
@@ -694,7 +694,7 @@ void MainDialog::viewChanged(int iId)
       gOffset9[8] = Vector3f(1, 0, -1);
       break;
     case vCoronal:
-      gScale.setXYZ(gVolumeSize.getX() * gSpacing.getX(), gVolumeSize.getY() * gSpacing.getY(), 0.0);
+      gScale.setXYZ(gVolumeSize.x() * gSpacing.x(), gVolumeSize.y() * gSpacing.y(), 0.0);
       gOffset9[0] = Vector3f(-1, 1, 0);
       gOffset9[1] = Vector3f(0, 1, 0);
       gOffset9[2] = Vector3f(1, 1, 0);

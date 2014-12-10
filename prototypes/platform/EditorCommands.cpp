@@ -92,7 +92,7 @@ void CommandCellEdition::update()
 	Point2i mousePos = mEngine.getMouse().getPosition();
   Point3d gl = mEngine.getGameCamera().pixelToGL( mousePos.x(),
   	mousePos.y() );
-  Vector2i c = stage.getCellCoordinate( Point2d( gl.getX(), gl.getY() ) );
+  Vector2i c = stage.getCellCoordinate( Point2d( gl.x(), gl.y() ) );
   
   /*Si l'index courant est dans le terrain, on fait l'édition, sinon, on
     agrandit le terrain.*/

@@ -208,7 +208,7 @@ void MainDialog::updateUi()
 
 	mpCameraProjection->setCurrentIndex( mpViewer->getCamera().getProjection().mType );
 	mpCameraControl->setCurrentIndex( mpViewer->getControlType() );
-  mpZoom->setText( QString::number( mpViewer->getCamera().getZoom(), 'g', 2 ) );
+  mpZoom->setText( QString::number( mpViewer->getCamera().zoom(), 'g', 2 ) );
 
 	mpViewer->update();
 }
@@ -247,7 +247,7 @@ void Viewer::draw() const
   {
   	glPushMatrix();
     const Point3d& p = mObjectPositions[i];
-    glTranslated(p.getX(), p.getY(), p.getZ());
+    glTranslated(p.x(), p.y(), p.z());
   	drawRectangularPrism( Point3d(-10), Point3d(10) );
     glPopMatrix();
   }  

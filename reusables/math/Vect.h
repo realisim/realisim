@@ -44,11 +44,11 @@ namespace math
     inline void set(const Point3<T> &pt1, const Point3<T> &pt2);
     
     // --------------- fonction get --------------------------------------------
-    inline const T& getX() const;
-    inline const T& getY() const;
-    inline const T& getZ() const;
+    inline const T& x() const;
+    inline const T& y() const;
+    inline const T& z() const;
     inline void get(Vector3<T> &vect) const;
-    inline void getXYZ(T &x, T &y, T &z) const;
+    inline void xYZ(T &x, T &y, T &z) const;
     inline const T* getPtr() const;
 //inline std::String toString() const;
     
@@ -222,9 +222,9 @@ namespace math
   template<class T>
   inline void Vector3<T>::set(const Point3<T> &pt1, const Point3<T> &pt2)
   {
-    mData[0] = (pt2.getX() - pt1.getX());
-    mData[1] = (pt2.getY() - pt1.getY());
-    mData[2] = (pt2.getZ() - pt1.getZ());
+    mData[0] = (pt2.x() - pt1.x());
+    mData[1] = (pt2.y() - pt1.y());
+    mData[2] = (pt2.z() - pt1.z());
   }
   
   //!---------------------------------------------------------------------------
@@ -244,7 +244,7 @@ namespace math
   //! \return la valeur X du vecteur
   //!---------------------------------------------------------------------------
   template<class T>
-  inline const T& Vector3<T>::getX() const
+  inline const T& Vector3<T>::x() const
   { return mData[0]; }
   
   //!---------------------------------------------------------------------------
@@ -253,7 +253,7 @@ namespace math
   //! \return la valeur Y du vecteur
   //!---------------------------------------------------------------------------
   template<class T>
-  inline const T& Vector3<T>::getY() const
+  inline const T& Vector3<T>::y() const
   { return mData[1]; }
   
   //!---------------------------------------------------------------------------
@@ -262,7 +262,7 @@ namespace math
   //! \return la valeur Z du vecteur
   //!---------------------------------------------------------------------------
   template<class T>
-  inline const T& Vector3<T>::getZ() const
+  inline const T& Vector3<T>::z() const
   { return mData[2]; }
   
   //!---------------------------------------------------------------------------
@@ -275,7 +275,7 @@ namespace math
   //! \param &z
   //!---------------------------------------------------------------------------
   template<class T>
-  inline void Vector3<T>::getXYZ(T &x, T &y, T &z) const
+  inline void Vector3<T>::xYZ(T &x, T &y, T &z) const
   {
     x = mData[0];
     y = mData[1];
@@ -290,18 +290,18 @@ namespace math
   template<class T>
   inline void Vector3<T>::minCoord (const Vector3<T>& iVect)
   {
-    setX (std::min (getX (), iVect.getX ()));
-    setY (std::min (getY (), iVect.getY ()));
-    setZ (std::min (getZ (), iVect.getZ ()));
+    setX (std::min (x (), iVect.x ()));
+    setY (std::min (y (), iVect.y ()));
+    setZ (std::min (z (), iVect.z ()));
   }
   
   //----------------------------------------------------------------------------
   template<class T>
   inline void Vector3<T>::maxCoord (const Vector3<T>& iVect)
   {
-    setX (std::max (getX (), iVect.getX ()));
-    setY (std::max (getY (), iVect.getY ()));
-    setZ (std::max (getZ (), iVect.getZ ()));
+    setX (std::max (x (), iVect.x ()));
+    setY (std::max (y (), iVect.y ()));
+    setZ (std::max (z (), iVect.z ()));
   }
     
   //!---------------------------------------------------------------------------
@@ -340,9 +340,9 @@ namespace math
   {
     T max, med, min, mom;
     
-    max = getX();
-    med = getY();
-    min = getZ();
+    max = x();
+    med = y();
+    min = z();
     
     max = max > 0.0  ?  max  :  -max;
     med = med > 0.0  ?  med  :  -med;
@@ -365,9 +365,9 @@ namespace math
   template<class T>
   inline bool Vector3<T>::operator== (const Vector3<T>& iV) const
   {
-  	return getX() == iV.getX() &&
-    	getY() == iV.getY() &&
-      getZ() == iV.getZ();
+  	return x() == iV.x() &&
+    	y() == iV.y() &&
+      z() == iV.z();
   }
   //----------------------------------------------------------------------------
   template<class T>
@@ -378,9 +378,9 @@ namespace math
   template<class T>
   inline Vector3<T>& Vector3<T>::operator= (const Vector3<T> &vect)
   {
-    mData[0] = vect.getX();
-    mData[1] = vect.getY();
-    mData[2] = vect.getZ();
+    mData[0] = vect.x();
+    mData[1] = vect.y();
+    mData[2] = vect.z();
     return *this;
   }
   
@@ -398,9 +398,9 @@ namespace math
   {
     Vector3<T> r;
     
-    r.mData[0] = getX() + vect.getX();
-    r.mData[1] = getY() + vect.getY();
-    r.mData[2] = getZ() + vect.getZ();
+    r.mData[0] = x() + vect.x();
+    r.mData[1] = y() + vect.y();
+    r.mData[2] = z() + vect.z();
     
     return r;
   }
@@ -411,9 +411,9 @@ namespace math
   {
     Vector3<T> r;
     
-    r.mData[0] = getX() + val;
-    r.mData[1] = getY() + val;
-    r.mData[2] = getZ() + val;
+    r.mData[0] = x() + val;
+    r.mData[1] = y() + val;
+    r.mData[2] = z() + val;
     
     return r;
   }
@@ -422,9 +422,9 @@ namespace math
   template<class T>
   inline Vector3<T>& Vector3<T>::operator+= (const Vector3<T> &vect)
   {
-    mData[0] += vect.getX();
-    mData[1] += vect.getY();
-    mData[2] += vect.getZ();
+    mData[0] += vect.x();
+    mData[1] += vect.y();
+    mData[2] += vect.z();
     return *this;
   }
     
@@ -444,9 +444,9 @@ namespace math
   {
     Vector3<T> r;
     
-    r.mData[0] = getX() - vect.getX();
-    r.mData[1] = getY() - vect.getY();
-    r.mData[2] = getZ() - vect.getZ();
+    r.mData[0] = x() - vect.x();
+    r.mData[1] = y() - vect.y();
+    r.mData[2] = z() - vect.z();
     
     return r;
   }
@@ -457,9 +457,9 @@ namespace math
   {
     Vector3<T> r;
     
-    r.mData[0] = getX() - val;
-    r.mData[1] = getY() - val;
-    r.mData[2] = getZ() - val;
+    r.mData[0] = x() - val;
+    r.mData[1] = y() - val;
+    r.mData[2] = z() - val;
     
     return r;
   }
@@ -481,9 +481,9 @@ namespace math
   template<class T>
   inline Vector3<T>& Vector3<T>::operator-= (const Vector3<T> &vect)
   {
-    mData[0] -= vect.getX();
-    mData[1] -= vect.getY();
-    mData[2] -= vect.getZ();
+    mData[0] -= vect.x();
+    mData[1] -= vect.y();
+    mData[2] -= vect.z();
     return *this;
   }
   
@@ -504,9 +504,9 @@ namespace math
   {
     Vector3<T> r;
     
-    r.mData[0] = getX() * val;
-    r.mData[1] = getY() * val;
-    r.mData[2] = getZ() * val;
+    r.mData[0] = x() * val;
+    r.mData[1] = y() * val;
+    r.mData[2] = z() * val;
     
     return r;
   }
@@ -561,9 +561,9 @@ namespace math
   {
     Vector3<T> r;
     
-    r.mData[0] = getY() * vect.getZ() - getZ() * vect.getY();
-    r.mData[1] = getZ() * vect.getX() - getX() * vect.getZ();
-    r.mData[2] = getX() * vect.getY() - getY() * vect.getX();
+    r.mData[0] = y() * vect.z() - z() * vect.y();
+    r.mData[1] = z() * vect.x() - x() * vect.z();
+    r.mData[2] = x() * vect.y() - y() * vect.x();
     
     return r;
   }
@@ -573,7 +573,7 @@ namespace math
   template<class T>
   inline T Vector3<T>::operator* (const Vector3<T> &vect) const
   {
-    T res = getX() * vect.getX() + getY() * vect.getY() + getZ() * vect.getZ();
+    T res = x() * vect.x() + y() * vect.y() + z() * vect.z();
     return res;
   }
 

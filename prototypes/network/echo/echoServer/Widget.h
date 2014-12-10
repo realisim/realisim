@@ -44,7 +44,7 @@ protected:
   QLabel* mpNumberOfPeers;
   QComboBox* mpProtocols;
 
-  reusables::network::Server mServer;
+  network::Server mServer;
   mutable QString mLog;
 private:
   void initUi();
