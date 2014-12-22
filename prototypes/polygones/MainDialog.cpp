@@ -51,7 +51,12 @@ void MainDialog::createUi()
   pLyt->addWidget(pLeftPanel, 1);
   
   mpViewer = new Viewer(pMainFrame);
-  mpViewer->setCameraOrientation(Camera::FREE);
+  Camera c = mpViewer->getCamera();
+  c.set( Point3d( 0.0, 0.0, 50.0 ),
+  	Point3d(0.0),
+    Vector3d( 0, 1, 0) );
+  mpViewer->setCamera( c, false );
+  mpViewer->setControlType( Widget3d::ctFree );
   pLyt->addWidget(mpViewer, 4);
 }
 //-----------------------------------------------------------------------------
@@ -126,7 +131,7 @@ void Viewer::drawSceneForPicking() const
     	QColor c = idToColor( j * mData.mPolygons.size() + i );
 	  	glColor4ub( c.red(), c.green(), c.blue(), c.alpha() );
   		const Point3d& p = pol.getVertex(j);
-  		glVertex3d( p.getX(), p.getY(), p.getZ() );
+  		glVertex3d( p.x(), p.y(), p.z() );
     }
     glEnd();     
   }
@@ -245,7 +250,7 @@ void Viewer::paintGL()
   glTranslated(5, 5, 5);
   glEnable( GL_LIGHTING );
   glColor3ub( 128, 128, 128 );
-  draw( PlatonicSolid( PlatonicSolid::tIsocahedron ) );
+  treeD::draw( PlatonicSolid( PlatonicSolid::tIsocahedron ) );
   glPopMatrix();
   
   drawPolygon( Polygon( mData.mPoints ) );  
@@ -275,4 +280,7 @@ void Viewer::paintGL()
 }
 //------------------------------------------------------------------------------
 void Viewer::timerEvent(QTimerEvent* ipEvent)
-{ update(); }
+{
+	Widget3d::timerEvent( ipEvent );
+	update();
+}

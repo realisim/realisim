@@ -69,11 +69,11 @@ void MainDialog::createUi()
   c1.setViewportSize( 800, 600 );
   c1.setPerspectiveProjection( 60, 1, 0.5, 10000, true );
   c1.set( Point3d( 50 ),
-  	Point3d( 0.0 ),
+  	Point3d( 0.0, 0.0, 0.0 ),
     Vector3d( 0.0, 1.0, 0.0 ) );
   c2 = c1;
   c2.set( Point3d( 50, 0.0, 0.0 ),
-  	Point3d( 0.0 ),
+  	Point3d( 10.0, 0.0, 0.0 ),
     Vector3d( 0.0, 1.0, 0.0 ) );
   c3 = c1;
   c3.set( Point3d( 0.0, 0.0, 50 ),
@@ -81,7 +81,7 @@ void MainDialog::createUi()
     Vector3d( 0.0, 1.0, 0.0 ) );
   c4 = c1;
   c4.set( Point3d( 0.0, 50, 0.0 ),
-  	Point3d( 0.0 ),
+  	Point3d( 0.0, 10.0, 0.0 ),
     Vector3d( 0.0, 0.0, -1.0 ) );
   c5 = c1;
   c5.setPerspectiveProjection( 120, 1, 0.5, 10000, true );
@@ -163,11 +163,19 @@ void MainDialog::createUi()
       pL3->addWidget( mpZoom );
       pL3->addWidget( pApply );
     }
+    
+    QHBoxLayout* pL4 = new QHBoxLayout();
+    pL4->setMargin(2); pL4->setSpacing(2);
+    {
+    	mpCameraInfo = new QLabel( pMainFrame );
+      pL4->addWidget( mpCameraInfo );
+    }
   
 	  pLeftPanelLyt->addLayout(pL0);
 	  pLeftPanelLyt->addLayout(pL1);
   	pLeftPanelLyt->addLayout(pL2);
     pLeftPanelLyt->addLayout(pL3);
+    pLeftPanelLyt->addLayout(pL4);
     pLeftPanelLyt->addStretch(1);
   }
   
@@ -210,6 +218,17 @@ void MainDialog::updateUi()
 	mpCameraControl->setCurrentIndex( mpViewer->getControlType() );
   mpZoom->setText( QString::number( mpViewer->getCamera().zoom(), 'g', 2 ) );
 
+
+	QString cameraInfo;
+  Camera c = mpViewer->getCamera();
+  cameraInfo = QString().sprintf( "eye: %.2f, %.2f, %.2f\n",
+  	c.getPos().x(), c.getPos().y(), c.getPos().z() );
+  cameraInfo += QString().sprintf( "look: %.2f, %.2f, %.2f\n",
+  	c.getLook().x(), c.getLook().y(), c.getLook().z() );
+  cameraInfo += QString().sprintf( "up: %.2f, %.2f, %.2f\n",
+  	c.getUp().x(), c.getUp().y(), c.getUp().z() );
+  mpCameraInfo->setText( cameraInfo );
+  
 	mpViewer->update();
 }
 //------------------------------------------------------------------------------
@@ -241,8 +260,34 @@ Viewer::Viewer( QWidget* ipW ) :
 Viewer::~Viewer()
 {}
 //------------------------------------------------------------------------------
-void Viewer::draw() const
+void Viewer::draw()
 {	
+	//draw axes  
+  glDisable( GL_LIGHTING );
+  glBegin( GL_LINES );
+  	glColor3ub( 255, 0, 0 );
+  	glVertex3d( -1000.0, 0.0, 0.0 );
+    glVertex3d( 1000.0, 0.0, 0.0 );
+    
+    glColor3ub( 0, 255, 0 );
+    glVertex3d( 0, -1000.0, 0.0 );
+    glVertex3d( 0, 1000.0, 0.0 );
+    
+    glColor3ub( 0, 0, 255 );
+    glVertex3d( 0.0, 0.0, -1000.0 );
+    glVertex3d( 0.0, 0.0, 1000.0 );
+  glEnd();
+  
+  //draw look
+  glPointSize( 3 );
+  glColor3ub( 200, 200, 0 );
+  glBegin( GL_POINTS );
+  	glVertex3dv( getCamera().getLook().getPtr() );
+  glEnd();
+  
+  glEnable( GL_LIGHTING );
+
+	glColor3ub( 255, 255, 255 );
 	for( uint i = 0; i < mObjectPositions.size(); ++i )
   {
   	glPushMatrix();
@@ -274,10 +319,6 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
     default: break;
   }
 }
-
-//------------------------------------------------------------------------------
-void Viewer::paintGL()
-{ Widget3d::paintGL(); }
 
 //------------------------------------------------------------------------------
 void Viewer::timerEvent(QTimerEvent* ipEvent)

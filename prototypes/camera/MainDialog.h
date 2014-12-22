@@ -8,25 +8,6 @@
 
 class Viewer;
 
-class Viewer : public realisim::treeD::Widget3d
-{
-public:
-	Viewer( QWidget* );
-  virtual ~Viewer();
-  
-protected:
-  virtual void draw() const;
-	virtual void initializeGL();
-  virtual void keyPressEvent( QKeyEvent* );
-//  virtual void keyReleaseEvent( QKeyEvent* );
-//  virtual void mouseMoveEvent( QMouseEvent* e );
-//  virtual void mousePressEvent( QMouseEvent* e );
-//  virtual void mouseReleaseEvent( QMouseEvent* e );
-  virtual void paintGL();
-  virtual void timerEvent( QTimerEvent* );
-  
-  std::vector< realisim::math::Point3d > mObjectPositions;
-};
 //------------------------------------------------------------------------------
 class MainDialog : public QMainWindow
 {
@@ -49,8 +30,29 @@ protected:
   QComboBox* mpCameraProjection;
   QComboBox* mpCameraControl;
   QLineEdit* mpZoom;
+  QLabel* mpCameraInfo;
   Viewer* mpViewer;
   std::vector< realisim::treeD::Camera > mCameras;
+};
+
+//------------------------------------------------------------------------------
+class Viewer : public realisim::treeD::Widget3d
+{
+public:
+	Viewer( QWidget* );
+  virtual ~Viewer();
+  
+protected:
+  virtual void draw();
+	virtual void initializeGL();
+  virtual void keyPressEvent( QKeyEvent* );
+//  virtual void keyReleaseEvent( QKeyEvent* );
+//  virtual void mouseMoveEvent( QMouseEvent* e );
+//  virtual void mousePressEvent( QMouseEvent* e );
+//  virtual void mouseReleaseEvent( QMouseEvent* e );
+  virtual void timerEvent( QTimerEvent* );
+  
+  std::vector< realisim::math::Point3d > mObjectPositions;
 };
 
 #endif

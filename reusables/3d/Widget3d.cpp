@@ -475,31 +475,22 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
       l'orientation de la caméra (pos, lat, up, look). On interpolera
       la vielle orientation avec la nouvelle afin d'obtenir les positions,
       ainsi que les vecteurs lat, up et look intermédiaires.*/
-    Vector3d look;
-    Matrix4d m1;    
-    m1.setRow1(mOldCam.getLat().x(), mOldCam.getLat().y(),mOldCam.getLat().z(), 0);
-    m1.setRow2(mOldCam.getUp().x(), mOldCam.getUp().y(),mOldCam.getUp().z(), 0);    
-		//La matrice doit être une matrice main droite (voir quaternion.h)
-    look.set(mOldCam.getLook(), mOldCam.getPos());
-    look.normalise();
-    m1.setRow3(look.x(), look.y(),look.z(), 0);
-    m1.setTranslation(mOldCam.getPos());
+    Vector3d lookVector( mOldCam.getLook(), mOldCam.getPos() );
+    lookVector.normalise();
+    myMatrix4 m1( mOldCam.getLat(), mOldCam.getUp(), lookVector );
+    m1 = myMatrix4( toVector(mOldCam.getPos()) ) * m1;
+    lookVector.set( mNewCam.getLook(), mNewCam.getPos() );
+    lookVector.normalise();
+    myMatrix4 m2( mNewCam.getLat(), mNewCam.getUp(), lookVector );
+    m2 = myMatrix4( toVector(mNewCam.getPos()) ) * m2;
     
-    Matrix4d m2;
-    m2.setRow1(mNewCam.getLat().x(), mNewCam.getLat().y(),mNewCam.getLat().z(), 0);
-    m2.setRow2(mNewCam.getUp().x(), mNewCam.getUp().y(),mNewCam.getUp().z(), 0);
-    //La matrice doit être une matrice main droite (voir quaternion.h)
-    look.set(mNewCam.getLook(), mNewCam.getPos());
-    look.normalise();
-    m2.setRow3(look.x(), look.y(),look.z(), 0);
-    m2.setTranslation(mNewCam.getPos());
-
-		Matrix4d iterationMatrix = math::interpolate(m1, m2, t);
+    myMatrix4 iterationMatrix = 
+    	math::interpolate( m1, m2, t );
     Vector3d interpolatedLook = toVector(mOldCam.getLook()) * (1 - t) +
       toVector(mNewCam.getLook()) * t;
-    mCam.set(iterationMatrix.getTranslation(),
+    mCam.set( toPoint(iterationMatrix.getTranslationAsVector()),
     	toPoint(interpolatedLook),
-      iterationMatrix.getBaseY() );
+      Vector3d( iterationMatrix(1, 0), iterationMatrix(1, 1), iterationMatrix(1, 2) ) );
 
 		//--- animation de la projection    
     Camera::Projection iProj = mNewCam.getProjection();
@@ -534,30 +525,30 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
       {
       	Vector3d v; double a = 1.0 * PI / 180;
       	if( isKeyPressed( Qt::Key_W ) )
-        { v = mCam.getLat(); a *= -1; }
+        { v += mCam.getLat(); a *= -1; }
         if( isKeyPressed( Qt::Key_S ) )
-        { v = mCam.getLat(); }
+        { v += mCam.getLat(); }
         if( isKeyPressed( Qt::Key_A ) )
-        { v = Vector3d(0, 1, 0); a *= -1; }
+        { v += Vector3d(0, 1, 0); a *= -1; }
         if( isKeyPressed( Qt::Key_D ) )
-        { v = Vector3d(0, 1, 0); }
+        { v += Vector3d(0, 1, 0); }
         mCam.rotate( a, v, mCam.getLook() );
       }break;
       case ctFree:
       {
       	Vector3d v;
       	if( isKeyPressed( Qt::Key_W ) )
-        { v = Vector3d( mCam.getPos(), mCam.getLook() ); }
+        { v += Vector3d( mCam.getPos(), mCam.getLook() ); }
         if( isKeyPressed( Qt::Key_S ) )
-        { v = -Vector3d( mCam.getPos(), mCam.getLook() ); }
+        { v += -Vector3d( mCam.getPos(), mCam.getLook() ); }
         if( isKeyPressed( Qt::Key_A ) )
-        { v = mCam.getLat() * -1; }
+        { v += mCam.getLat() * -1; }
         if( isKeyPressed( Qt::Key_D ) )
-        { v = mCam.getLat(); }
+        { v += mCam.getLat(); }
         if( isKeyPressed( Qt::Key_Q ) )
-        { v = mCam.getUp(); }
+        { v += mCam.getUp(); }
         if( isKeyPressed( Qt::Key_E ) )
-        { v = mCam.getUp() * -1; }
+        { v += mCam.getUp() * -1; }
         v.normalise();
         mCam.translate( v * kCamSpeed );
       } break;
@@ -592,7 +583,7 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
       Point3d postZoom = mCam.pixelToGL( ipE->x(), ipE->y(), workingPlane );
       
       //on trouve le delta en coordonnée oeil.
-      Matrix4d viewMatrix = mCam.getViewMatrix();
+      Matrix4d viewMatrix = fromMyMatrix( mCam.getViewMatrix() );
       Vector3d ecDelta = ( postZoom * viewMatrix ) - ( preZoom * viewMatrix );
       
       Camera::Projection p = mCam.getProjection();

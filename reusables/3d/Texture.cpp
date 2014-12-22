@@ -142,7 +142,7 @@ Texture Texture::copy()
 //----------------------------------------------------------------------------
 void Texture::deleteGuts()
 {
-  if(mpGuts && --mpGuts->mRefCount == 0)
+  if(mpGuts && --mpGuts->mRefCount == 0 && mpGuts->mTextureId != 0)
   {
     glDeleteTextures(1, &mpGuts->mTextureId);
     delete mpGuts;
