@@ -58,7 +58,7 @@ namespace math
     inline Quaternion();
     inline Quaternion(const T &w, const T &x, const T &y, const T &z);
     inline Quaternion(const Quaternion<T> &quat);
-    inline Quaternion(const Matrix4<T>& iMat);
+//    inline Quaternion(const Matrix4<T>& iMat);
 
     // --------------- destructeurs --------------------------------------------
     inline ~Quaternion();
@@ -72,7 +72,7 @@ namespace math
     inline void setRot(const T &angle, const Vector3<T>& iAxis);
 
     // --------------- fonction get --------------------------------------------
-    inline T getW() const;
+    inline T w() const;
     inline T x() const;
     inline T y() const;
     inline T z() const;
@@ -131,45 +131,45 @@ namespace math
     z_ = quat.z_;
   }
   
-  //----------------------------------------------------------------------------
-  template<class T>
-  inline Quaternion<T>::Quaternion(const Matrix4<T>& iMat)
-  {
-    T trace = iMat(0, 0) + iMat(1, 1) + iMat(2, 2);
-    if( trace > (T)0 ) 
-    {
-      T s = sqrt(trace+1.0) * 2;
-      w_ = 0.25 * s;
-      x_ = ( iMat(1, 2) - iMat(2, 1) ) / s;
-      y_ = ( iMat(2, 0) - iMat(0, 2) ) / s;
-      z_ = ( iMat(0, 1) - iMat(1, 0) ) / s;
-    } 
-    else if ( iMat(0, 0) > iMat(1, 1) && iMat(0, 0) > iMat(2, 2) ) 
-    {
-      T s = sqrt(1.0 + iMat(0, 0) - iMat(1, 1) - iMat(2, 2)) * 2;
-      w_ = (iMat(1, 2) - iMat(2, 1) ) / s;
-      x_ = 0.25 * s;
-      y_ = (iMat(0, 1) + iMat(1, 0) ) / s;
-      z_ = (iMat(2, 0) + iMat(0, 2) ) / s;
-    } 
-    else if (iMat(1, 1) > iMat(2, 2)) 
-    {
-      T s = sqrt(1.0 + iMat(1, 1) - iMat(0, 0) - iMat(2, 2)) * 2;
-      w_ = (iMat(2, 0) - iMat(0, 2) ) / s;
-      x_ = (iMat(0, 1) + iMat(1, 0) ) / s;
-      y_ = 0.25 * s;
-      z_ = (iMat(1, 2) + iMat(2, 1) ) / s;
-    } 
-    else 
-    {
-      T s = sqrt(1.0 + iMat(2, 2) - iMat(0 ,0 ) - iMat(1, 1)) * 2;
-      w_ = (iMat(0, 1) - iMat(1, 0) ) / s;
-      x_ = (iMat(2, 0) + iMat(0, 2) ) / s;
-      y_ = (iMat(1, 2) + iMat(2, 1) ) / s;
-      z_ = 0.25 * s;
-    }
-  normalize();
-  }
+//  //----------------------------------------------------------------------------
+//  template<class T>
+//  inline Quaternion<T>::Quaternion(const Matrix4<T>& iMat)
+//  {
+//    T trace = iMat(0, 0) + iMat(1, 1) + iMat(2, 2);
+//    if( trace > (T)0 ) 
+//    {
+//      T s = sqrt(trace+1.0) * 2;
+//      w_ = 0.25 * s;
+//      x_ = ( iMat(1, 2) - iMat(2, 1) ) / s;
+//      y_ = ( iMat(2, 0) - iMat(0, 2) ) / s;
+//      z_ = ( iMat(0, 1) - iMat(1, 0) ) / s;
+//    } 
+//    else if ( iMat(0, 0) > iMat(1, 1) && iMat(0, 0) > iMat(2, 2) ) 
+//    {
+//      T s = sqrt(1.0 + iMat(0, 0) - iMat(1, 1) - iMat(2, 2)) * 2;
+//      w_ = (iMat(1, 2) - iMat(2, 1) ) / s;
+//      x_ = 0.25 * s;
+//      y_ = (iMat(0, 1) + iMat(1, 0) ) / s;
+//      z_ = (iMat(2, 0) + iMat(0, 2) ) / s;
+//    } 
+//    else if (iMat(1, 1) > iMat(2, 2)) 
+//    {
+//      T s = sqrt(1.0 + iMat(1, 1) - iMat(0, 0) - iMat(2, 2)) * 2;
+//      w_ = (iMat(2, 0) - iMat(0, 2) ) / s;
+//      x_ = (iMat(0, 1) + iMat(1, 0) ) / s;
+//      y_ = 0.25 * s;
+//      z_ = (iMat(1, 2) + iMat(2, 1) ) / s;
+//    } 
+//    else 
+//    {
+//      T s = sqrt(1.0 + iMat(2, 2) - iMat(0 ,0 ) - iMat(1, 1)) * 2;
+//      w_ = (iMat(0, 1) - iMat(1, 0) ) / s;
+//      x_ = (iMat(2, 0) + iMat(0, 2) ) / s;
+//      y_ = (iMat(1, 2) + iMat(2, 1) ) / s;
+//      z_ = 0.25 * s;
+//    }
+//  normalize();
+//  }
   
   //! destructeur
   template<class T>
@@ -212,7 +212,7 @@ namespace math
   }
 
   template<class T>
-  inline T Quaternion<T>::getW() const
+  inline T Quaternion<T>::w() const
   {
     return w_;
   }
@@ -460,8 +460,8 @@ namespace math
     w_ = std::cos(angle/(T)(2.0));
   }
 
-  typedef Quaternion<float>   Quat4f;
-  typedef Quaternion<double>  Quat4d;
+  typedef Quaternion<float>   Quaternionf;
+  typedef Quaternion<double>  Quaterniond;
   //NE PAS FAIRE DE QUATERNION DE INT!!
 
 } //math

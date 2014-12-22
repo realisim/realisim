@@ -453,7 +453,9 @@ void Viewer::initializeGL()
 }
 //------------------------------------------------------------------------------
 void Viewer::mouseMoveEvent( QMouseEvent* ipE )
-{
+{	
+	Widget3d::mouseMoveEvent( ipE );
+  
 	int x = ipE->x();
   int y = ipE->y();
   

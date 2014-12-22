@@ -615,10 +615,15 @@ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	Point2d mp = mEngine.getMouse().getPosition();
   mp.setY( c.getViewport().getHeight() - mp.y() );
   Point3d a(200, 400, 0), b(200,500,0), c( 200, 450,0);
-  Point3d ra = rotatePoint( t%360 * kDegreeToRadian, a, Vector3d(0.0, 0.0, 1.0),
-  	c );
-  Point3d rb = rotatePoint( t%360 * kDegreeToRadian, b, Vector3d(0.0, 0.0, 1.0),
-  	c );
+  myMatrix4 rot( t%360 * kDegreeToRadian, Vector3d(0.0, 0.0, 1.0) );
+  myMatrix4 trans( toVector( c ) );
+  rot = trans * rot * trans.inverse();
+	Point3d ra = rot * a;
+  Point3d rb = rot * b;  
+//  Point3d ra = rotatePoint( t%360 * kDegreeToRadian, a, Vector3d(0.0, 0.0, 1.0),
+//  	c );
+//  Point3d rb = rotatePoint( t%360 * kDegreeToRadian, b, Vector3d(0.0, 0.0, 1.0),
+//  	c );
 	LineSegment2d ls1( Point2d(ra.x(), ra.y()), Point2d(rb.x(), rb.y()) );
   Rectangle r( Point2d(50, 400), Vector2d(100, 200) );
   LineSegment2d lsUser1( mp, toPoint(mp + Point2d( 0, 100 )) );
@@ -761,68 +766,68 @@ void Viewer::paintGL()
 //-----------------------------------------------------------------------------
 Texture Viewer::renderLights()
 {
-  const Camera& gc = mEngine.getGameCamera();
-  const Player& p = mEngine.getPlayer();
-  Texture shadowMap;
-  Matrix4d lightCamView, lightCamProjection, MCToShadowMap;
-  Matrix4d camView, camProjection;
-
-  double sightDepth = 400;
-  Vector2i fboSize = mFboLightDepth.getSize();
-  
-  pushFrameBuffer( mFboLightMask );
-  mFboLightMask.drawTo(0);
-  glClear( GL_COLOR_BUFFER_BIT );
-  popFrameBuffer();
-    
-  for( int i = 0; i < 4; ++i )
-  {
-    pushFrameBuffer( mFboLightDepth );
-    mFboLightDepth.drawTo(0);
-    glEnable(GL_DEPTH_TEST);
-    glClear( GL_DEPTH_BUFFER_BIT );
-    Camera c = makeLightCamera( i, p.getPosition(), fboSize, sightDepth );
-
-    c.pushAndApplyMatrices();
-    lightCamView = c.getViewMatrix();
-    lightCamProjection = c.getProjectionMatrix();
-    MCToShadowMap = lightCamView * lightCamProjection;
-
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glLineWidth(5.0);
-    drawDataMap();
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glLineWidth(1.0);
-    c.popMatrices();
-    glDisable( GL_DEPTH_TEST );
-    shadowMap = mFboLightDepth.getDepthTexture();
-    popFrameBuffer();
-    
-    c = gc;
-    c.setViewportSize( mFboLightMask.getSize() );
-    c.pushAndApplyMatrices();
-    c.popMatrices();
-
-    Matrix4d clipToWindow;      
-    clipToWindow.setScaling( Vector3d(0.5) );
-    clipToWindow.setTranslation( Point3d(0.5) );
-    camView = c.getViewMatrix();
-    camProjection = c.getProjectionMatrix();
-
-    pushFrameBuffer( mFboLightMask );
-    pushShader( mShadowMapShader );
-    mFboLightMask.drawTo(0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, shadowMap.getId() );
-    mShadowMapShader.setUniform( "MVPMatrix", camView * camProjection );
-    mShadowMapShader.setUniform( "MCToShadowMap", MCToShadowMap * clipToWindow );
-    mShadowMapShader.setUniform( "shadowMap", 0 );
-    drawRectangle( 
-      toPoint( toVector(p.getPosition()) - c.getProjection().getSize() ), 
-      2 * c.getProjection().getSize() );
-    popShader();
-  	popFrameBuffer();
-  }
+//  const Camera& gc = mEngine.getGameCamera();
+//  const Player& p = mEngine.getPlayer();
+//  Texture shadowMap;
+//  Matrix4d lightCamView, lightCamProjection, MCToShadowMap;
+//  Matrix4d camView, camProjection;
+//
+//  double sightDepth = 400;
+//  Vector2i fboSize = mFboLightDepth.getSize();
+//  
+//  pushFrameBuffer( mFboLightMask );
+//  mFboLightMask.drawTo(0);
+//  glClear( GL_COLOR_BUFFER_BIT );
+//  popFrameBuffer();
+//    
+//  for( int i = 0; i < 4; ++i )
+//  {
+//    pushFrameBuffer( mFboLightDepth );
+//    mFboLightDepth.drawTo(0);
+//    glEnable(GL_DEPTH_TEST);
+//    glClear( GL_DEPTH_BUFFER_BIT );
+//    Camera c = makeLightCamera( i, p.getPosition(), fboSize, sightDepth );
+//
+//    c.pushAndApplyMatrices();
+//    lightCamView = c.getViewMatrix();
+//    lightCamProjection = c.getProjectionMatrix();
+//    MCToShadowMap = lightCamView * lightCamProjection;
+//
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//    glLineWidth(5.0);
+//    drawDataMap();
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//    glLineWidth(1.0);
+//    c.popMatrices();
+//    glDisable( GL_DEPTH_TEST );
+//    shadowMap = mFboLightDepth.getDepthTexture();
+//    popFrameBuffer();
+//    
+//    c = gc;
+//    c.setViewportSize( mFboLightMask.getSize() );
+//    c.pushAndApplyMatrices();
+//    c.popMatrices();
+//
+//    Matrix4d clipToWindow;      
+//    clipToWindow.setScaling( Vector3d(0.5) );
+//    clipToWindow.setTranslation( Point3d(0.5) );
+//    camView = c.getViewMatrix();
+//    camProjection = c.getProjectionMatrix();
+//
+//    pushFrameBuffer( mFboLightMask );
+//    pushShader( mShadowMapShader );
+//    mFboLightMask.drawTo(0);
+//    glActiveTexture(GL_TEXTURE0);
+//    glBindTexture(GL_TEXTURE_2D, shadowMap.getId() );
+//    mShadowMapShader.setUniform( "MVPMatrix", camView * camProjection );
+//    mShadowMapShader.setUniform( "MCToShadowMap", MCToShadowMap * clipToWindow );
+//    mShadowMapShader.setUniform( "shadowMap", 0 );
+//    drawRectangle( 
+//      toPoint( toVector(p.getPosition()) - c.getProjection().getSize() ), 
+//      2 * c.getProjection().getSize() );
+//    popShader();
+//  	popFrameBuffer();
+//  }
     
   return mFboLightMask.getTexture(0);//.copy();
 }

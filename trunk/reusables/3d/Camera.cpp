@@ -1,11 +1,4 @@
-/*
- *  Camera.cpp
- *  Project
- *
- *  Created by Pierre-Olivier Beaudoin on 06/12/08.
- *  Copyright 2008 __MyCompanyName__. All rights reserved.
- *
- */
+/* Camera.cpp */
 
 #include "Camera.h"
 #include <iostream>
@@ -61,7 +54,10 @@ Camera::~Camera()
 
 //-----------------------------------------------------------------------------
 void Camera::applyModelViewTransformation() const
-{ glLoadMatrixd( mViewMatrix.getPtr() ); }
+{ 
+	//glLoadMatrixd( mViewMatrix.getPtr() );
+  glLoadMatrixd( mViewMatrix.getDataPointer() );
+}
 
 //-----------------------------------------------------------------------------
 void Camera::applyProjectionTransformation() const
@@ -70,15 +66,11 @@ void Camera::applyProjectionTransformation() const
   glLoadIdentity();
     
   if( getViewport().mOrientation == Viewport::oHorizontal )
-  {
-    glViewport(0, 0, getViewport().getWidth(), getViewport().getHeight() );
-  }
+  { glViewport(0, 0, getViewport().getWidth(), getViewport().getHeight() ); }
   else //vertical
-  {
-    glViewport(0, 0, getViewport().getWidth(), getViewport().getHeight() );
-  }
+  { glViewport(0, 0, getViewport().getWidth(), getViewport().getHeight() ); }
 
-	glLoadMatrixd(mProjectionMatrix.getPtr()); 
+	glLoadMatrixd(mProjectionMatrix.getDataPointer()); 
     
   glMatrixMode(GL_MODELVIEW);
 }
@@ -116,18 +108,26 @@ void Camera::computeProjection()
 
   switch ( p.mType ) 
   {
-    case Projection::tOrthogonal: 
-    	mProjectionMatrix.setRow1(2.0/(r-l), 0.0, 0.0, 0.0 );
-      mProjectionMatrix.setRow2(0.0, 2.0/(t-b), 0.0, 0.0);
-      mProjectionMatrix.setRow3(0.0, 0.0, -2.0/(p.mFar - p.mNear), 0.0);
-      mProjectionMatrix.setRow4(-(r+l)/(r-l), -(t+b)/(t-b), -(p.mFar+p.mNear)/(p.mFar-p.mNear), 1.0);
-      break;
+    case Projection::tOrthogonal:
+    {
+    	double m[4][4] = {
+      	{ 2.0/(r-l), 0.0, 0.0, -(r+l)/(r-l) },
+        { 0.0, 2.0/(t-b), 0.0, -(t+b)/(t-b) },
+        { 0.0, 0.0, -2.0/(p.mFar - p.mNear), -(p.mFar+p.mNear)/(p.mFar-p.mNear) },
+        { 0, 0, 0, 1.0 },
+      };
+      mProjectionMatrix = myMatrix4( m[0] );
+    }	break;
     case Projection::tPerspective: 
-    	mProjectionMatrix.setRow1( (2.0*p.mNear)/(r-l), 0.0, 0.0, 0.0 );
-      mProjectionMatrix.setRow2(0.0, (2.0*p.mNear)/(t-b), 0.0, 0.0);
-      mProjectionMatrix.setRow3((r+l)/(r-l), (t+b)/(t-b), -(p.mFar+p.mNear)/(p.mFar-p.mNear), -1.0);    	
-      mProjectionMatrix.setRow4(0.0, 0.0, (-2 * p.mFar * p.mNear)/(p.mFar - p.mNear), 0.0);
-      break;
+    {
+    	double m[4][4] = {
+      	{ (2.0*p.mNear)/(r-l), 0.0, (r+l)/(r-l), 0.0 },
+        { 0.0, (2.0*p.mNear)/(t-b), (t+b)/(t-b), 0.0 },
+        { 0, 0, -(p.mFar+p.mNear)/(p.mFar-p.mNear), (-2 * p.mFar * p.mNear)/(p.mFar - p.mNear) },
+        { 0.0, 0.0, -1, 0.0 },
+      };
+      mProjectionMatrix = myMatrix4( m[0] );
+    } break;
     default: break;
   }
 }
@@ -135,15 +135,9 @@ void Camera::computeProjection()
 //-----------------------------------------------------------------------------
 void Camera::computeViewMatrix()
 {
-  mViewMatrix.setRow1( mLat.x(), mLat.y(), mLat.z(), 0.0 );
-  mViewMatrix.setRow2( mUp.x(), mUp.y(), mUp.z(), 0.0 );
-  mViewMatrix.setRow3( -mLookVector.x(), -mLookVector.y(), -mLookVector.z(), 0.0 );
-  mViewMatrix.setRow4( 0.0, 0.0, 0.0, 1.0 );
-  /*Ici, la transposé d'une matrice 3x3 (rotation) revient strictement à
-   l'inverse.*/
-  mViewMatrix.transpose();
-  Point3d t = -getPos() * mViewMatrix;
-  mViewMatrix.setTranslation( t );
+  myMatrix4 viewMatrix( mLat, mUp, -mLookVector );
+  myMatrix4 t( toVector( -getPos() ) );
+  mViewMatrix = viewMatrix * t;
 }
 
 //-----------------------------------------------------------------------------
@@ -151,11 +145,11 @@ const Vector3d& Camera::getLookVector() const
 {return mLookVector;}
 
 //-----------------------------------------------------------------------------
-const Matrix4d& Camera::getViewMatrix() const
+const myMatrix4& Camera::getViewMatrix() const
 { return mViewMatrix; }
 
 //-----------------------------------------------------------------------------
-const Matrix4d& Camera::getProjectionMatrix() const
+const myMatrix4& Camera::getProjectionMatrix() const
 { return mProjectionMatrix; }
 
 //-----------------------------------------------------------------------------
@@ -293,15 +287,13 @@ void Camera::rotate( double iRad, Vector3d iAxe,
 	Point3d eye = getPos(), center = getLook();
   Vector3d up = getUp();  
   
-  Matrix4d m;
-  m.translate(toVector(iAxisPos * -1));
-  m *= getRotationMatrix( iRad, iAxe );
-  m.translate(toVector(iAxisPos));
-  
-  eye = eye * m;
-  center = center * m;
-  up = up * m;
-  
+	myMatrix4 r( iRad, iAxe );
+  myMatrix4 t( toVector( iAxisPos ) );
+  r =  t * r * t.inverse();
+
+  eye = r * eye;
+  center = r * center;
+  up = r * up;
   set( eye, center, up );
 }
 

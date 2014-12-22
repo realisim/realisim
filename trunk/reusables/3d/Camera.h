@@ -2,6 +2,7 @@
 #ifndef Realisim_E3d_Camera_hh
 #define Realisim_E3d_Camera_hh
 
+#include "math/Matrix4.h"
 #include "math/Matrix4x4.h"
 #include "math/Point.h"
 #include "math/Vect.h"
@@ -85,9 +86,9 @@ public:
   const Point3d& getLook() const { return mLook; }
   const Point3d& getPos() const { return mPos; }
   const Projection& getProjection() const {return mProjectionInfo;}
-  const Matrix4d& getProjectionMatrix() const;
+  const myMatrix4& getProjectionMatrix() const;
   const Vector3d& getUp() const { return mUp; }
-  const Matrix4d& getViewMatrix() const;
+  const myMatrix4& getViewMatrix() const;
   double getVisibleHeight() const;
   double getVisibleWidth() const;
   const Viewport& getViewport() const {return mViewport;}
@@ -126,8 +127,8 @@ protected:
   Vector3d mUp;
   Projection mProjectionInfo;
   Viewport mViewport;
-  mutable Matrix4d mProjectionMatrix;
-  mutable Matrix4d mViewMatrix;
+  mutable myMatrix4 mProjectionMatrix;
+  mutable myMatrix4 mViewMatrix;
 };
 
 } //treeD

@@ -7,6 +7,7 @@
 #ifndef MATH_UTILE_H
 #define MATH_UTILE_H
 
+#include "Matrix4.h"
 #include "Matrix4x4.h"
 #include "Point.h"
 #include "Vect.h"
@@ -18,6 +19,9 @@ namespace realisim
 namespace math
 {
 	using namespace std;
+  Matrix4d fromMyMatrix( const myMatrix4& iM );  
+  myMatrix4 toMyMatrix( const Matrix4d& iM );
+  
 	//---------------------------------------------------------------------------
   template< class T >
   Vector3<T> absolute( const Vector3<T>& iP )
@@ -90,13 +94,13 @@ namespace math
     result.setW(- (quat.x() * point.x()) - (quat.y() * point.y()) -
                 (quat.z() * point.z()) );
     
-    result.setX( (quat.getW() * point.x()) + (quat.y() * point.z()) -
+    result.setX( (quat.w() * point.x()) + (quat.y() * point.z()) -
                 (quat.z() * point.y()) );
     
-    result.setY( (quat.getW() * point.y()) - (quat.x() * point.z()) +
+    result.setY( (quat.w() * point.y()) - (quat.x() * point.z()) +
                 (quat.z() * point.x()) );
     
-    result.setZ( (quat.getW() * point.z()) + (quat.x() * point.y()) -
+    result.setZ( (quat.w() * point.z()) + (quat.x() * point.y()) -
                 (quat.y() * point.x()) );
     
     return result;
@@ -241,8 +245,8 @@ namespace math
   //retourne la matrice de rotation correpondant a la rotation de iAngle
   //radian autour de l'axe iAxis
   template<class T>
-  inline Matrix4<T> getRotationMatrix( double iAngle,
-                                       Vector3<T> iAxis )
+  inline Matrix4d getRotationMatrix( double iAngle,
+                                      Vector3<T> iAxis )
   {
     iAxis.normalise();
     Quaternion<T> quat;
@@ -267,12 +271,11 @@ namespace math
     return r;
   }
   //---------------------------------------------------------------------------
-  template<class T>
-  inline Matrix4<T> interpolate(const Matrix4<T>& iM1, const Matrix4<T>& iM2, 
+  inline myMatrix4 interpolate(const myMatrix4& iM1, const myMatrix4& iM2, 
     double iT)
   {
-  	Quat4d q1( iM1 );
-    Quat4d q2( iM2 );
+  	Quaterniond q1 = iM1.getRotationAsQuaternion();
+    Quaterniond q2 = iM2.getRotationAsQuaternion();
     //on compare avec les longueurs pour prendre le plus petit angle
     if( (-q2-q1).getLength() < (q2-q1).getLength() )
     {
@@ -280,60 +283,61 @@ namespace math
     }
     
     q2 = q1*( 1 - iT ) + q2*iT;
-    Matrix4d iterationMatrix = q2.getUnitRotationMatrix();
+    myMatrix4 iterationMatrix( q2 );
     
     //trouver la translation totale a effectuer
-    iterationMatrix.setTranslation( toPoint(
-    	iM1.getTranslation()*( 1 - iT ) + 
-      iM2.getTranslation()*( iT ) ) );
+  	Vector3d t = iM1.getTranslationAsVector()*( 1 - iT ) + 
+      iM2.getTranslationAsVector()*( iT );
+    myMatrix4 translation(t);
+    iterationMatrix = translation * iterationMatrix;
     return iterationMatrix;
   }
   
-  //---------------------------------------------------------------------------
-  //l'angle est en radian
-  template<class T>
-  inline Point3<T> rotatePoint(const T &angle, const Point3<T> &point,
-                              Vector3<T> axis)
-  {
-    Quaternion<T> quatRot;
-    Quaternion<T> quatResult;
-    
-    axis.normalise();
-    quatRot.setRot( angle, axis );
-    
-    //! TODO mettre une explication sur les quaternions...
-    //quatResult = (quatRot*point)*quatRot.getConjugate();
-    //point.setXYZ(quatResult.x(), quatResult.y(), quatResult.z());
-    
-    return ( quatRot*point ).multRotation( quatRot.getConjugate() );
-  }
-  
-  //---------------------------------------------------------------------------
-  template<class T>
-  inline Point3<T> rotatePoint(const Quaternion<T> &quat, const Point3<T> &point)
-  {
-    return (quat*point).multRotation(quat.getConjugate());
-  }
-  
-  //---------------------------------------------------------------------------
-  //l'angle est en radian
-  template<class T>
-  inline Point3<T> rotatePoint(const T &angle, const Point3<T> &point,
-                              Vector3<T> axis, const Point3<T> &axisPos)
-  {
-    axis.normalise();
-    
-    //On trouve la position relative du Point a tourner par rapport a l'axe
-    Point3<T> relPos, rotatedPoint;
-    
-    relPos = point - toVector(axisPos);
-    rotatedPoint = rotatePoint(angle, relPos, axis);
-    
-    //On retranslate le point rotater
-    rotatedPoint = rotatedPoint + toVector(axisPos);
-    
-    return rotatedPoint;
-  }
+//  //---------------------------------------------------------------------------
+//  //l'angle est en radian
+//  template<class T>
+//  inline Point3<T> rotatePoint(const T &angle, const Point3<T> &point,
+//                              Vector3<T> axis)
+//  {
+//    Quaternion<T> quatRot;
+//    Quaternion<T> quatResult;
+//    
+//    axis.normalise();
+//    quatRot.setRot( angle, axis );
+//    
+//    //! TODO mettre une explication sur les quaternions...
+//    //quatResult = (quatRot*point)*quatRot.getConjugate();
+//    //point.setXYZ(quatResult.x(), quatResult.y(), quatResult.z());
+//    
+//    return ( quatRot*point ).multRotation( quatRot.getConjugate() );
+//  }
+//  
+//  //---------------------------------------------------------------------------
+//  template<class T>
+//  inline Point3<T> rotatePoint(const Quaternion<T> &quat, const Point3<T> &point)
+//  {
+//    return (quat*point).multRotation(quat.getConjugate());
+//  }
+//  
+//  //---------------------------------------------------------------------------
+//  //l'angle est en radian
+//  template<class T>
+//  inline Point3<T> rotatePoint(const T &angle, const Point3<T> &point,
+//                              Vector3<T> axis, const Point3<T> &axisPos)
+//  {
+//    axis.normalise();
+//    
+//    //On trouve la position relative du Point a tourner par rapport a l'axe
+//    Point3<T> relPos, rotatedPoint;
+//    
+//    relPos = point - toVector(axisPos);
+//    rotatedPoint = rotatePoint(angle, relPos, axis);
+//    
+//    //On retranslate le point rotater
+//    rotatedPoint = rotatedPoint + toVector(axisPos);
+//    
+//    return rotatedPoint;
+//  }
   
   //----------------------------------------------------------------------------
   template< class T >

@@ -236,9 +236,8 @@ void Particules::iterate() const
             Vector3d v( mDirection.y(), -mDirection.x(), 0.0 );          
             v.normalise();
             /*on fait une rotation random autour de mDirection*/
-            Matrix4d r = getRotationMatrix( r1 % 360 * 3.1415629 / 180.0, 
-              mDirection );
-            v = v * r;
+            myMatrix4 r( r1 % 360 * 3.1415629 / 180.0, mDirection );
+            v = r * v;
             /* on ajoute un valeur random entre 0.0 et mRadis */
             v *= r2 / (double)RAND_MAX * mRadius;
             p.p = mPosition + v;
@@ -250,9 +249,8 @@ void Particules::iterate() const
             Vector3d v( mDirection.y(), -mDirection.x(), 0.0 );          
             v.normalise();
             /*on fait une rotation random autour de mDirection*/
-            Matrix4d r = getRotationMatrix( r1 % 360 * 3.1415629 / 180.0, 
-              mDirection );
-            v = v * r;
+            myMatrix4 r( r1 % 360 * 3.1415629 / 180.0, mDirection );
+            v = r * v;
             /* on ajoute un valeur random entre 0.0 et mRadis */
             v *= r2 / (double)RAND_MAX * mRadius;
             p.v += v;

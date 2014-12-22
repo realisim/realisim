@@ -70,7 +70,7 @@ namespace math
     
     inline Vector3<T>  operator-  (const Vector3<T> &vect) const;
     inline Vector3<T>  operator-  (const T &val) const;
-    inline Vector3<T>  operator-  ();
+    inline Vector3<T>  operator-  () const;
     inline Vector3<T>& operator-= (const Vector3<T> &vect);
     inline Vector3<T>& operator-= (const T &val);
     
@@ -466,7 +466,7 @@ namespace math
   
   //! surcharge opÈrateur -
   template<class T>
-  inline Vector3<T> Vector3<T>::operator- ()
+  inline Vector3<T> Vector3<T>::operator- () const
   { 
     Vector3<T> r;
        

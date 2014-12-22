@@ -5,6 +5,29 @@ using namespace realisim;
 	using namespace math;
 using namespace std;
 
+
+  Matrix4d realisim::math::fromMyMatrix( const myMatrix4& iM )
+  {
+  	Vector3d t = iM.getTranslationAsVector();
+  	Matrix4d r;
+    r.setRow1( iM(0, 0), iM(1, 0), iM(2, 0), 0.0 );
+    r.setRow2( iM(0, 1), iM(1, 1), iM(2, 1), 0.0 );
+    r.setRow3( iM(0, 2), iM(1, 2), iM(2, 2), 0.0 );
+    r.setRow4( t.x(), t.y(), t.z(), 1.0 );
+    return r;
+  }
+  
+myMatrix4 realisim::math::toMyMatrix( const Matrix4d& iM )
+  {
+  	Point3d t = iM.getTranslation();
+  	double m[4][4];
+    m[0][0]=iM(0, 0); m[1][0]=iM(0, 1); m[2][0]=iM(0, 2); m[3][0]=t.x();
+    m[0][1]=iM(1, 0); m[1][1]=iM(1, 1); m[2][1]=iM(1, 2); m[3][1]=t.y();
+    m[0][2]=iM(2, 0); m[1][2]=iM(2, 1); m[2][2]=iM(2, 2); m[3][2]=t.z();
+    m[0][3]=iM(0, 3); m[1][3]=iM(1, 3); m[2][3]=iM(2, 3); m[3][3]=iM(3, 3);
+  	return myMatrix4( m[0], false );
+  }
+
 //----------------------------------------------------------------------------
 /* applique l'équation d'une distribution normale.
 voir 

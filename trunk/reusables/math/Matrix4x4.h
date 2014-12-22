@@ -23,8 +23,8 @@
   right multiply) A by C" means AC.
 */
 
-#ifndef MATRIX_4_H
-#define MATRIX_4_H
+#ifndef MATRIX_4x4_H
+#define MATRIX_4x4_H
 
 #include <cassert>
 #include "Point.h"
