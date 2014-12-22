@@ -82,24 +82,27 @@ public:
   
   void applyModelViewTransformation() const;
   void applyProjectionTransformation() const;
-  const Vector3d& getLat() const { return mLat; }
+//Point3d cameraToWorld( const Point3d& ) const;
+//Vector3d cameraToWorld( const Vector3d& ) const;
+  const Vector3d& getLat() const { return mLat; } //a enlever... cameraToWorld fait la djob
   const Point3d& getLook() const { return mLook; }
-  const Point3d& getPos() const { return mPos; }
+  const Point3d& getPos() const { return mPos; } 
   const Projection& getProjection() const {return mProjectionInfo;}
   const myMatrix4& getProjectionMatrix() const;
-  const Vector3d& getUp() const { return mUp; }
+  const Vector3d& getUp() const { return mUp; } //a enlever... cameraToWorld fait la djob
   const myMatrix4& getViewMatrix() const;
   double getVisibleHeight() const;
   double getVisibleWidth() const;
-  const Viewport& getViewport() const {return mViewport;}
-  Point2d glToPixel( const Point3d& ) const;//sceneToPixel
-  const double zoom() const { return mProjectionInfo.mZoomFactor; }
-void move( const Vector3d& );
-  Point3d pixelToGL( int, int, const Point3d& = Point3d(0.0)) const;//pixelToscene
+  const Viewport& getViewport() const {return mViewport;}  
+Point2d glToPixel( const Point3d& ) const;//worldToSreen  
+void move( const Vector3d& );//a enlever
+  Point3d pixelToGL( int, int, const Point3d& = Point3d(0.0)) const;//screenToWorld
 	Vector3d pixelDeltaToGLDelta( int, int, const Point3d& = Point3d(0.0)) const;//pixelDeltaToSceneDelta
   void popMatrices() const;
   void pushAndApplyMatrices() const;  
   void rotate( double, Vector3d, Point3d = Point3d() );
+//Point3d screenToWorld( Point2d, const Point3d& = Point3d(0.0)) const;//pixelToGL
+//Vector3d screenToWorld( Vector2d, const Point3d& = Point3d(0.0)) const;//pixelToGL
   void set( const Point3d&, const Point3d&, const Vector3d& );
   void setOrthoProjection(double, double, double);
   void setOrthoProjection(double, double, double, double);
@@ -110,8 +113,13 @@ void move( const Vector3d& );
   void setViewportSize( Vector2i );
   void setZoom(double);
   void translate( const Point3d& );
-	void translate( const Vector3d& );
-  
+  void translate( const Vector3d& );
+//Point3d worldToCamera( const Point3d& ) const;
+//Vector3d worldToCamera( const Vector3d& ) const;
+//Point2d worldToSreen( const Point3d& ) const;// comme glToPixel
+//Vector2d worldToSreen( const Vector3d& ) const;// comme glToPixel
+const double zoom() const { return mProjectionInfo.mZoomFactor; }  
+
 //  QString toString() const;
 void print() const;
   
