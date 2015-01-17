@@ -208,7 +208,7 @@ namespace math
   	return r;
   }
   //---------------------------------------------------------------------------
-  inline myMatrix4 interpolate(const myMatrix4& iM1, const myMatrix4& iM2, 
+  inline Matrix4 interpolate(const Matrix4& iM1, const Matrix4& iM2, 
     double iT)
   {
   	Quaterniond q1 = iM1.getRotationAsQuaternion();
@@ -220,12 +220,12 @@ namespace math
     }
     
     q2 = q1*( 1 - iT ) + q2*iT;
-    myMatrix4 iterationMatrix( q2 );
+    Matrix4 iterationMatrix( q2 );
     
     //trouver la translation totale a effectuer
   	Vector3d t = iM1.getTranslationAsVector()*( 1 - iT ) + 
       iM2.getTranslationAsVector()*( iT );
-    myMatrix4 translation(t);
+    Matrix4 translation(t);
     iterationMatrix = translation * iterationMatrix;
     return iterationMatrix;
   }

@@ -121,7 +121,7 @@ void Camera::computeProjection()
         { 0.0, 0.0, -2.0/(p.mFar - p.mNear), -(p.mFar+p.mNear)/(p.mFar-p.mNear) },
         { 0, 0, 0, 1.0 },
       };
-      mProjectionMatrix = myMatrix4( m[0] );
+      mProjectionMatrix = Matrix4( m[0] );
     }	break;
     case Projection::tPerspective: 
     {
@@ -131,7 +131,7 @@ void Camera::computeProjection()
         { 0, 0, -(p.mFar+p.mNear)/(p.mFar-p.mNear), (-2 * p.mFar * p.mNear)/(p.mFar - p.mNear) },
         { 0.0, 0.0, -1, 0.0 },
       };
-      mProjectionMatrix = myMatrix4( m[0] );
+      mProjectionMatrix = Matrix4( m[0] );
     } break;
     default: break;
   }
@@ -140,8 +140,8 @@ void Camera::computeProjection()
 //-----------------------------------------------------------------------------
 void Camera::computeViewMatrix()
 {
-  myMatrix4 viewMatrix( mLat, mUp, -mLookVector );
-  myMatrix4 t( toVector( -getPos() ) );
+  Matrix4 viewMatrix( mLat, mUp, -mLookVector );
+  Matrix4 t( toVector( -getPos() ) );
   mViewMatrix = viewMatrix.transpose()*t;
 }
 
@@ -150,11 +150,11 @@ const Vector3d& Camera::getLookVector() const
 {return mLookVector;}
 
 //-----------------------------------------------------------------------------
-const myMatrix4& Camera::getViewMatrix() const
+const Matrix4& Camera::getViewMatrix() const
 { return mViewMatrix; }
 
 //-----------------------------------------------------------------------------
-const myMatrix4& Camera::getProjectionMatrix() const
+const Matrix4& Camera::getProjectionMatrix() const
 { return mProjectionMatrix; }
 
 //-----------------------------------------------------------------------------
@@ -203,8 +203,8 @@ void Camera::rotate( double iRad, Vector3d iAxe,
 	Point3d eye = getPos(), center = getLook();
   Vector3d up = getUp();
   
-	myMatrix4 r( iRad, iAxe );
-  myMatrix4 t( toVector( iAxisPos ) );
+	Matrix4 r( iRad, iAxe );
+  Matrix4 t( toVector( iAxisPos ) );
   r =  t * r * t.inverse();
 
   eye = r * eye;
