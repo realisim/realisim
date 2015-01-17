@@ -476,27 +476,17 @@ bool Shader::setUniform(const char* iName, int iSize, const math::Vector3f* iDat
 }
 
 //----------------------------------------------------------------------------
-bool Shader::setUniform(const char* iName, const Matrix4f& iValue)
+bool Shader::setUniform(const char* iName, const myMatrix4& iValue)
 {
 	if(!isValid())
     return false;
-    
-  GLint loc = glGetUniformLocation(getProgramId(), iName);
-  /*pas besoin de faire le transpose, nos matrice son column-major comme
-    openGL.*/
-  glUniformMatrix4fv(loc, 1, false, iValue.getPtr());
-  return loc >= 0 ? true : false;
-}
 
-//----------------------------------------------------------------------------
-bool Shader::setUniform(const char* iName, const Matrix4d& iValue)
-{
-	if(!isValid())
-    return false;
-    
-  Matrix4f m( iValue );
+  float f[16];
+  for( int i = 0; i < 4; ++i )
+	  for( int j = 0; j < 4; ++j )
+    { f[ i*4 + j] = (float)iValue(j, i); }
   GLint loc = glGetUniformLocation(getProgramId(), iName);
-  glUniformMatrix4fv(loc, 1, false, m.getPtr());
+  glUniformMatrix4fv(loc, 1, false, f);
   return loc >= 0 ? true : false;
 }
 

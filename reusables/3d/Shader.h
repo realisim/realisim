@@ -4,9 +4,9 @@
 
 #include <QString>
 #include <qgl.h>
+#include <math/Matrix4.h>
 #include <math/Point.h>
 #include <math/Vect.h>
-#include <math/Matrix4x4.h>
 #include <vector>
 
 /* Cette classe sert à créer et interacgir avec un shader OpenGL. Les
@@ -96,8 +96,7 @@ public:
   virtual bool setUniform(const char*, const math::Vector3d&);
   virtual bool setUniform(const char*, const math::Vector3f&);
   virtual bool setUniform(const char*, int, const math::Vector3f*);
-  virtual bool setUniform(const char*, const math::Matrix4f&);
-  virtual bool setUniform(const char*, const math::Matrix4d&);
+  virtual bool setUniform(const char*, const math::myMatrix4&);
 
 //bindVextexAttrib et setVertexAttrib?
   

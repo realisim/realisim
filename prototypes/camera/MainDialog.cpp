@@ -216,7 +216,7 @@ void MainDialog::updateUi()
 
 	mpCameraProjection->setCurrentIndex( mpViewer->getCamera().getProjection().mType );
 	mpCameraControl->setCurrentIndex( mpViewer->getControlType() );
-  mpZoom->setText( QString::number( mpViewer->getCamera().zoom(), 'g', 2 ) );
+  mpZoom->setText( QString::number( mpViewer->getCamera().getZoom(), 'g', 2 ) );
 
 
 	QString cameraInfo;

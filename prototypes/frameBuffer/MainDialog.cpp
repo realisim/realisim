@@ -11,7 +11,6 @@
 #include "3d/Sprite.h"
 #include "3d/Texture.h"
 #include "3d/Utilities.h"
-#include "math/Matrix4x4.h"
 #include "math/Point.h"
 #include "math/MathUtils.h"
 #include "MainDialog.h"
@@ -28,9 +27,6 @@ namespace
 	float kScale = 0.0;
   int kCounter = 60;
   int kStep = 4;
-  
-  Matrix4d kRot = getRotationMatrix(PI/300.0, Vector3d(1.0, 0.0, 0.0)) *
-    getRotationMatrix(PI/480.0, Vector3d(0.0, 1.0, 0.0));
 
   float e = 2.718;
   float sigma = 0.4;

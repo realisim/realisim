@@ -53,7 +53,7 @@ protected:
   virtual void mousePressEvent( QMouseEvent* e );
   virtual void mouseReleaseEvent( QMouseEvent* e );
   virtual void paintGL();
-  virtual void timerEvent( QTimerEvent* );
+//  virtual void timerEvent( QTimerEvent* );
   
   int mTimerId;
   Data mData;

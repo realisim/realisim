@@ -51,7 +51,8 @@ void MainDialog::createUi()
   pLyt->addWidget(pLeftPanel, 1);
   
   mpViewer = new Viewer(pMainFrame);
-  Camera c = mpViewer->getCamera();
+  mpViewer->setCameraSpeed( 0.2 );
+  Camera c = mpViewer->getCamera();  
   c.set( Point3d( 0.0, 0.0, 50.0 ),
   	Point3d(0.0),
     Vector3d( 0, 1, 0) );
@@ -69,13 +70,13 @@ void MainDialog::updateUi()
 //------------------------------------------------------------------------------
 Viewer::Viewer( QWidget* ipW ) :
 	Widget3d( ipW ),
-  mTimerId(0),
+//  mTimerId(0),
   mData(),
   mMode( mCamera ),
   mSelection( -1 )
 {
 	setMouseTracking( true );
-  mTimerId = startTimer(kIterationInterval);  
+//  mTimerId = startTimer(kIterationInterval);  
 }
 
 Viewer::~Viewer()
@@ -116,6 +117,29 @@ void Viewer::drawPolygon( const Polygon& iP ) const
     glVertex3dv( iP.getCentroid().getPtr() );
     glVertex3dv( v.getPtr() );
   glEnd();
+  
+//  if( iP.getNumberOfVertices() )
+//  { //debug
+//      Vector3d z = iP.getNormal();
+//      Vector3d x = iP.getVertex( 0 ) - iP.getCentroid();
+//      x.normalise();
+//      Vector3d y = z ^ x;
+//      
+//      Point3d centroid = iP.getCentroid();
+//      glBegin( GL_LINES );
+//      glColor3ub( 255, 0, 0 );
+//      glVertex3dv( centroid.getPtr() );
+//      glVertex3dv( (centroid + x).getPtr() );
+//      
+//      glColor3ub( 0, 255, 0 );
+//      glVertex3dv( centroid.getPtr() );
+//      glVertex3dv( (centroid + y).getPtr() );
+//      
+//      glColor3ub( 0, 0, 255 );
+//      glVertex3dv( centroid.getPtr() );
+//      glVertex3dv( (centroid + z).getPtr() );
+//      glEnd();
+//  }
 }
 //------------------------------------------------------------------------------
 void Viewer::drawSceneForPicking() const
@@ -153,20 +177,18 @@ void Viewer::initializeGL()
 //------------------------------------------------------------------------------
 void Viewer::keyPressEvent( QKeyEvent* e )
 {
-	if( e->isAutoRepeat() ) return;
-  switch ( e->key() )
-  {
-    case Qt::Key_C: break;
-    default: break;
-  }
+  if( mMode == mCamera ) { Widget3d::keyPressEvent(e); }
+  update();
 }
 //------------------------------------------------------------------------------
 void Viewer::keyReleaseEvent( QKeyEvent* e )
 {
+	if( mMode == mCamera ) { Widget3d::keyReleaseEvent(e); }
+  
   switch ( e->key() )
   {
     case Qt::Key_C: mMode = mCamera; break;
-    case Qt::Key_A:
+    case Qt::Key_X:
     	mMode = mAddPoint;
       if( !mData.mPoints.empty() )
       {
@@ -174,7 +196,6 @@ void Viewer::keyReleaseEvent( QKeyEvent* e )
         mData.mPoints.clear();
       }
       break;
-    case Qt::Key_E: mMode = mEditPoint; break;
     case Qt::Key_T:
     {
       vector< Point3d > points;
@@ -187,6 +208,7 @@ void Viewer::keyReleaseEvent( QKeyEvent* e )
     }break;
     default: break;
   }
+  update();
 }
 //------------------------------------------------------------------------------
 void Viewer::mouseMoveEvent( QMouseEvent* e )
@@ -198,13 +220,6 @@ void Viewer::mouseMoveEvent( QMouseEvent* e )
     {
       vector<unsigned int> selected = pick( e->x(), e->y(), 3, 3 );
       if( !selected.empty() ) printf( "%d\n", selected[0] );
-    }break;
-    case mEditPoint:
-    {
-    	if( mSelection != -1 )
-      {
-      	;
-      }
     }break;
     default: break;
   }
@@ -219,28 +234,22 @@ void Viewer::mousePressEvent( QMouseEvent* e )
     {
     	Point3d point;
       const Camera& c = getCamera();
-      point = c.pixelToGL( e->x(), e->y(), c.getLook() );
+      point = c.screenToWorld( Point2d( e->x(), e->y() ), c.getLook() );
       mData.mPoints.push_back( point );
       update();
     } break;
-    case mEditPoint:
-    {
-    	vector<unsigned int> selected = pick( e->x(), e->y(), 3, 3 );
-      if( !selected.empty() )
-      {
-      	mSelection = selected[0];
-        update();
-      }
-    }break;
     default: break;
   }
+  update();
 }
 //------------------------------------------------------------------------------
 void Viewer::mouseReleaseEvent( QMouseEvent* e )
 {
 	Widget3d::mouseReleaseEvent( e );
   mSelection = -1;
+  update();
 }
+static PlatonicSolid sIsocahedron( PlatonicSolid::tIsocahedron );
 //------------------------------------------------------------------------------
 void Viewer::paintGL()
 {
@@ -250,13 +259,64 @@ void Viewer::paintGL()
   glTranslated(5, 5, 5);
   glEnable( GL_LIGHTING );
   glColor3ub( 128, 128, 128 );
-  treeD::draw( PlatonicSolid( PlatonicSolid::tIsocahedron ) );
+  treeD::draw( sIsocahedron );
   glPopMatrix();
   
   drawPolygon( Polygon( mData.mPoints ) );  
   for( int i = 0; i < (int)mData.mPolygons.size(); ++i )
   {
   	drawPolygon( mData.mPolygons[i] );
+    
+//    { //debug - montre le polygon remapper a zéro comme le fait la fonction
+//      //Polygon::checkIfConvex() const
+//      Polygon g = mData.mPolygons[i];
+//      Vector3d z = g.getNormal();
+//      Vector3d x = g.getVertex( 0 ) - g.getCentroid();
+//      x.normalise();
+//      Vector3d y = z ^ x;
+//			y.normalise();
+//
+//			glLineWidth(3);
+//			glBegin( GL_LINES );
+//      glColor3ub( 255, 0, 0 );
+//      glVertex3dv( Point3d().getPtr() );
+//      glVertex3dv( (Point3d() + x).getPtr() );
+//      
+//      glColor3ub( 0, 255, 0 );
+//      glVertex3dv( Point3d().getPtr() );
+//      glVertex3dv( (Point3d() + y).getPtr() );
+//      
+//      glColor3ub( 0, 0, 255 );
+//      glVertex3dv( Point3d().getPtr() );
+//      glVertex3dv( (Point3d() + z).getPtr() );
+//      glEnd();
+//      glLineWidth(1);
+//
+//      myMatrix4 m( x, y, z );
+//      printf("produit scalaire x et y: %.4f\n", x*y );
+//      printf("produit scalaire y et z: %.4f\n", y*z );
+//      printf("produit scalaire z et x: %.4f\n", z*x );
+//      printf(" vx: %.4f, %.4f, %.4f, norm %f\n", x.x(), x.y(), x.z(), x.norm() );
+//      printf(" vy: %.4f, %.4f, %.4f, norm %f\n", y.x(), y.y(), y.z(), y.norm() );
+//      printf(" vz: %.4f, %.4f, %.4f, norm %f\n", z.x(), z.y(), z.z(), z.norm() );
+//      printf("debug matrice:\n %s", m.toString().toStdString().c_str() );
+//      m.setTranslation( toVector(g.getCentroid()) );
+//      m.invert();
+//      vector<Point3d> verts;
+//      for( int i = 0; i < g.getNumberOfVertices(); ++i )
+//      {
+//        Point3d p =  m * g.getVertex(i) ;
+//        verts.push_back(p);
+//				printf(" debug p%d %.4f, %.4f, %.4f\n", i, p.x(), p.y(), p.z() );
+//      }
+//      Polygon g2( verts );
+//      drawPolygon( g2 );
+//      
+//			Vector3d n1 = g.getNormal();
+//			Vector3d n2 = g2.getNormal();
+//      printf("debug normal orig:%.4f, %.4f, %.4f\n", n1.x(), n1.y(), n1.z() );
+//      printf("debug normal transf:%.4f, %.4f, %.4f\n", n2.x(), n2.y(), n2.z() );
+//    }
   }
   
   //on affihce le point selectionné
@@ -277,10 +337,27 @@ void Viewer::paintGL()
     glEnd();
     glEnable(GL_DEPTH_TEST);
   }
+  
+  //on affiche les axes globaux
+  {
+    glBegin( GL_LINES );
+    glColor3ub( 255, 0, 0 );
+    glVertex3d( -1000, 0, 0 );
+    glVertex3d( 1000, 0, 0 );
+    
+    glColor3ub( 0, 255, 0 );
+    glVertex3d( 0, -1000, 0 );
+    glVertex3d( 0, 1000, 0 );
+    
+    glColor3ub( 0, 0, 255 );
+    glVertex3d( 0, 0, -1000 );
+    glVertex3d( 0, 0, 1000 );
+    glEnd();
+  }
 }
 //------------------------------------------------------------------------------
-void Viewer::timerEvent(QTimerEvent* ipEvent)
-{
-	Widget3d::timerEvent( ipEvent );
-	update();
-}
+//void Viewer::timerEvent(QTimerEvent* ipEvent)
+//{
+//	Widget3d::timerEvent( ipEvent );
+//	update();
+//}

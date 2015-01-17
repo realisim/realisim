@@ -241,7 +241,8 @@ void Viewer::handleDrag()
     case sEdition:
     {
       const Camera& c = getCamera();
-      Point3d glMousePos = c.pixelToGL( mMousePos.x(), mMousePos.y() );  
+      Point3d glMousePos = c.screenToWorld( Point2d(mMousePos.x(),
+      	mMousePos.y() ) );  
       Sprite& s = mMain.mSpriteCatalog.getSprite( mMain.mSpriteToken );
       Texture& t = mMain.mSpriteCatalog.getTexture( mMain.mTextureToken );
       QPoint p( round(glMousePos.x()),
@@ -263,8 +264,8 @@ void Viewer::handleDrag()
     break;
     case sNavigation:
     {
-      Vector3d delta = getCamera().pixelDeltaToGLDelta( mMouseDelta.x(),
-      	mMouseDelta.y() );
+      Vector3d delta = getCamera().screenToWorld( Vector2d(mMouseDelta.x(),
+      	mMouseDelta.y() ) );
       mCam.translate( -delta );
     }    
     break;
@@ -387,7 +388,8 @@ void Viewer::mousePressEvent( QMouseEvent* e )
   if( s.getRect().isNull() )
   {
   	const Camera& c = getCamera();
-  	Point3d glMousePos = c.pixelToGL( mMousePos.x(), mMousePos.y() );  
+  	Point3d glMousePos = c.screenToWorld( Point2d( mMousePos.x(),
+    	mMousePos.y() ) );  
     Texture& t = mMain.mSpriteCatalog.getTexture( mMain.mTextureToken );
     QPoint p( round(glMousePos.x()),
       t.height() - round(glMousePos.y()) );

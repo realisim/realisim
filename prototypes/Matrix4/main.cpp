@@ -79,11 +79,14 @@ int main(int argc, char** argv)
   }
   
   {
-  printf("---constructeur( double iAngle, Vector3d iAxis )\n");
-	Vector3d v( 0, 1, 0 );
-  double angle = 3.14159265 / 4.0;
-  myMatrix4 m( angle, v );
+  printf("---constructeur( double, Vector3d ); //rotation (angle et axe)\n");
+	Vector3d z( 0, 0, 1 );
+  myMatrix4 m( 3.14156925 / 3.0, z );
   printMatrix( m );
+  printf("---operator*(Point3d) avec la matrice de rotation\n");
+  Point3d p( 1.0, 0, 0 );
+  Point3d r = m * p;
+  printf( "résultat de l'operator*: %.4f, %.4f, %.4f\n", r.x(), r.y(), r.z() );
   }
   
   
@@ -130,7 +133,7 @@ int main(int argc, char** argv)
   double mat[4][4] = { {1,2,3,4}, 
   										 {5,1,7,8}, 
                        {9,10,1,12}, 
-                       {0,0,0,1} };
+                       {13,14,15,1} };
   myMatrix4 m( mat[0] );
   printf("---inverse \n");
   m = m.inverse();

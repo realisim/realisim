@@ -46,6 +46,7 @@ mFpsTimer(),
 mMousePressed( false ),
 mMousePosX( 0 ),
 mMousePosY( 0 ),
+mCameraSpeed( 1.0 ),
 mFrameBuffers(),
 mShaders()
 { setFocusPolicy( Qt::StrongFocus ); }
@@ -175,7 +176,7 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
     int deltaX = e->x() - mMousePosX;
     int deltaY = e->y() - mMousePosY;
     
-    Vector3d delta = getCamera().pixelDeltaToGLDelta( deltaX, deltaY, 
+    Vector3d delta = getCamera().screenToWorld( Vector2d(deltaX, deltaY), 
     	mCam.getLook() );
     switch ( getControlType() ) 
     {
@@ -188,7 +189,7 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
         //rotation relative a x;
         mCam.rotate( -radX, Vector3d( 0.0, 1.0, 0.0 ), mCam.getLook() );
         //rotation relative a y
-      	mCam.rotate( -radY, mCam.getLat(), mCam.getLook() );
+      	mCam.rotate( -radY, mCam.cameraToWorld( Vector3d(1,0,0) ), mCam.getLook() );
       } break;
       case ctFree:
       {
@@ -197,7 +198,8 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
         double radY = deltaY * 2 * PI / (double)mCam.getViewport().getHeight();
 				
         mCam.rotate( -radX, Vector3d( 0.0, 1.0, 0.0 ), mCam.getPos() );
-      	mCam.rotate( -radY, mCam.getLat(), mCam.getPos() );
+      	mCam.rotate( -radY, mCam.getLat(),
+        mCam.getPos() );
       }break;
       default: break;
     }
@@ -518,7 +520,6 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
   }
   else if( ipE->timerId() == mCameraControlTimerId && !isAnimatingCamera() )
   {
-  	const double kCamSpeed = 1.0;
   	switch ( getControlType() ) 
     {
     	case ctRotateAround:
@@ -550,7 +551,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
         if( isKeyPressed( Qt::Key_E ) )
         { v += mCam.getUp() * -1; }
         v.normalise();
-        mCam.translate( v * kCamSpeed );
+        mCam.translate( v * getCameraSpeed() );
       } break;
       default: break;
     }
@@ -571,20 +572,21 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
     
   if(getCamera().getProjection().mType == Camera::Projection::tOrthogonal)
   {
+  	Point2d mousePos( ipE->x(), ipE->y() );
     double zoom = 1 / 1.15;
     if(ipE->delta() < 0)
       zoom = 1.15;
-    double finalZoom = getCamera().zoom() * zoom;
+    double finalZoom = getCamera().getZoom() * zoom;
     if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
     {                  
     	Point3d workingPlane( 0.0, 0.0, mCam.getProjection().mNear );
-      Point3d preZoom = mCam.pixelToGL( ipE->x(), ipE->y(), workingPlane );
+      Point3d preZoom = mCam.screenToWorld( mousePos, workingPlane );
       mCam.setZoom(finalZoom);
-      Point3d postZoom = mCam.pixelToGL( ipE->x(), ipE->y(), workingPlane );
+      Point3d postZoom = mCam.screenToWorld( mousePos, workingPlane );
       
       //on trouve le delta en coordonnée oeil.
-      Matrix4d viewMatrix = fromMyMatrix( mCam.getViewMatrix() );
-      Vector3d ecDelta = ( postZoom * viewMatrix ) - ( preZoom * viewMatrix );
+      myMatrix4 viewMatrix = mCam.getViewMatrix();
+      Vector3d ecDelta = ( viewMatrix * postZoom ) - ( viewMatrix * preZoom );
       
       Camera::Projection p = mCam.getProjection();
       p.mLeft -= ecDelta.x();
