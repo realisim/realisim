@@ -10,7 +10,7 @@ namespace
 {
 	/*La matrice augmentée est row-major et on la remet en column-major puisque
     c'est la représentation interne choisie pour Matrix4*/
-	void augmentedMatrixToMatrix4( const double* iAug, myMatrix4& A, myMatrix4 &B )
+	void augmentedMatrixToMatrix4( const double* iAug, Matrix4& A, Matrix4 &B )
   {
   	double mA[4][4], mB[4][4];
     //double aug[4][8];
@@ -23,8 +23,8 @@ namespace
       	mA[i][j] = *(iAug + ( j*nbCols ) + i );
         mB[i][j] = *(iAug + ( j*nbCols ) + (i+4) );
       }
-    A = myMatrix4( mA[0], false );
-    B = myMatrix4( mB[0], false ); 
+    A = Matrix4( mA[0], false );
+    B = Matrix4( mB[0], false ); 
   }
   
   void printAugmentedMatrix( const double* iM )
@@ -45,21 +45,21 @@ namespace
 }
 
 //------------------------------------------------------------------------------
-myMatrix4::myMatrix4()
+Matrix4::Matrix4()
 { identity(); }
 //------------------------------------------------------------------------------
 /*Constructeur qui recoit un pointeur sur un tableau de double. Le boolein 
 	iRowMajor specifie l'agencement mémoire du tableau pointé par ipM. */
-myMatrix4::myMatrix4( const double* ipM, bool iRowMajor /*= true*/ )
+Matrix4::Matrix4( const double* ipM, bool iRowMajor /*= true*/ )
 { import( ipM, iRowMajor ); }
 //------------------------------------------------------------------------------
-myMatrix4::myMatrix4( Vector3d iV )
+Matrix4::Matrix4( Vector3d iV )
 {
 	identity();
   m[3][0] = iV.x(); m[3][1] = iV.y(); m[3][2] = iV.z();
 }
 //------------------------------------------------------------------------------
-myMatrix4::myMatrix4( Quaterniond iQ )
+Matrix4::Matrix4( Quaterniond iQ )
 {
 	double x = iQ.x(), y = iQ.y(), z = iQ.z(), w = iQ.w();
   double mat[4][4] = {
@@ -81,19 +81,19 @@ myMatrix4::myMatrix4( Quaterniond iQ )
 }
 //------------------------------------------------------------------------------
 /*angle en radian et axe de rotation */
-myMatrix4::myMatrix4( double iAngle, Vector3d iAxis )
+Matrix4::Matrix4( double iAngle, Vector3d iAxis )
 {
 	Quaterniond q;
   iAxis.normalise();
   q.setRot( iAngle, iAxis );
-  *this = myMatrix4( q );
+  *this = Matrix4( q );
 }
 //------------------------------------------------------------------------------
 /*Matrice de passage
 
 http://fr.wikipedia.org/wiki/Matrice_de_passage
 */
-myMatrix4::myMatrix4( Vector3d iX, Vector3d iY, Vector3d iZ )
+Matrix4::Matrix4( Vector3d iX, Vector3d iY, Vector3d iZ )
 {
 	assert( math::isEqual(iX.norm(), 1.0, 5*std::numeric_limits<double>::epsilon()) );
   assert( math::isEqual(iY.norm(), 1.0, 5*std::numeric_limits<double>::epsilon()) );
@@ -107,13 +107,13 @@ myMatrix4::myMatrix4( Vector3d iX, Vector3d iY, Vector3d iZ )
   import( mat[0] );
 }
 //------------------------------------------------------------------------------
-myMatrix4::~myMatrix4()
+Matrix4::~Matrix4()
 {}
 //------------------------------------------------------------------------------
-const double* myMatrix4::getDataPointer() const
+const double* Matrix4::getDataPointer() const
 { return m[0]; }
 //------------------------------------------------------------------------------
-Quaterniond myMatrix4::getRotationAsQuaternion() const
+Quaterniond Matrix4::getRotationAsQuaternion() const
 {
 	double x, y, z, w;
  	double trace = m[0][0] + m[1][1] + m[2][2];
@@ -155,16 +155,16 @@ Quaterniond myMatrix4::getRotationAsQuaternion() const
 }
 //------------------------------------------------------------------------------
 /*La translation est dans la colonne 3*/
-Vector3d myMatrix4::getTranslationAsVector() const
+Vector3d Matrix4::getTranslationAsVector() const
 { return Vector3d( m[3][0], m[3][1], m[3][2] ); }
 //------------------------------------------------------------------------------
-void myMatrix4::identity()
+void Matrix4::identity()
 {
 	memset( &m, 0, 16*sizeof(double) );
   m[0][0] = 1.0; m[1][1] = 1.0; m[2][2] = 1.0; m[3][3] = 1.0;
 }
 //------------------------------------------------------------------------------
-void myMatrix4::import( const double* ipM, bool iRowMajor /*=true*/ )
+void Matrix4::import( const double* ipM, bool iRowMajor /*=true*/ )
 {
 	memcpy( &m, ipM, 16*sizeof(double) );
 	if( iRowMajor )
@@ -179,7 +179,7 @@ Ne pas oublier que la representation interne est column-major. Ce qui veut
 dire que A[colonne][ligne]. Pour simplifier, la matrice augmenter est en
 row-major et les commentaires sont en notation mathématique (row-major)
 A[ligne, colonne]. */
-myMatrix4 myMatrix4::inverse() const
+Matrix4 Matrix4::inverse() const
 {  
   //la matrice augmenter est comme suis [A | I]
   double aug[4][8];  
@@ -249,19 +249,19 @@ myMatrix4 myMatrix4::inverse() const
     }
   }
   
-  myMatrix4 identity, supposedlyIdentity, inverse;
+  Matrix4 identity, supposedlyIdentity, inverse;
 	augmentedMatrixToMatrix4( aug[0], supposedlyIdentity, inverse );
   if( supposedlyIdentity != identity ) { inverse = identity; }
   return inverse;
 }
 //------------------------------------------------------------------------------
-myMatrix4& myMatrix4::invert()
+Matrix4& Matrix4::invert()
 {
 	*this = this->inverse();
 	return *this;
 }
 //------------------------------------------------------------------------------
-bool myMatrix4::isEqual( const myMatrix4& iM, double iEpsilon ) const
+bool Matrix4::isEqual( const Matrix4& iM, double iEpsilon ) const
 {
 	return 
   	math::isEqual( m[0][0], iM.m[0][0], iEpsilon ) &&
@@ -283,21 +283,21 @@ bool myMatrix4::isEqual( const myMatrix4& iM, double iEpsilon ) const
 
 }
 //------------------------------------------------------------------------------
-double myMatrix4::operator()(int i, int j) const
+double Matrix4::operator()(int i, int j) const
 { return m[j][i]; }
 //------------------------------------------------------------------------------
-double& myMatrix4::operator()(int i, int j)
+double& Matrix4::operator()(int i, int j)
 { return m[j][i]; }
 //------------------------------------------------------------------------------
-bool myMatrix4::operator== (const myMatrix4& iM) const
+bool Matrix4::operator== (const Matrix4& iM) const
 { return isEqual( iM ); }
 //------------------------------------------------------------------------------
-bool myMatrix4::operator!= (const myMatrix4& iM) const
+bool Matrix4::operator!= (const Matrix4& iM) const
 { return !isEqual( iM ); }
 //------------------------------------------------------------------------------
-myMatrix4 myMatrix4::operator* (const myMatrix4& iM) const
+Matrix4 Matrix4::operator* (const Matrix4& iM) const
 {
-	myMatrix4 r;
+	Matrix4 r;
   for( int i = 0; i < 4; ++i ) //ligne
   {
   	for( int j = 0; j < 4; ++j ) //colonne
@@ -311,13 +311,13 @@ myMatrix4 myMatrix4::operator* (const myMatrix4& iM) const
   return r;
 }
 //------------------------------------------------------------------------------
-myMatrix4& myMatrix4::operator*= (const myMatrix4& iM)
+Matrix4& Matrix4::operator*= (const Matrix4& iM)
 {
 	*this = *this * iM;
 	return *this;
 }
 //------------------------------------------------------------------------------
-Vector3d myMatrix4::operator* (const Vector3d& iV) const
+Vector3d Matrix4::operator* (const Vector3d& iV) const
 {
   double x,y,z;
   x = m[0][0]*iV.x() + m[1][0]*iV.y() + m[2][0]*iV.z();
@@ -327,7 +327,7 @@ Vector3d myMatrix4::operator* (const Vector3d& iV) const
 	return Vector3d( x, y, z );
 }
 //------------------------------------------------------------------------------
-Vector2d myMatrix4::operator* (const Vector2d& iV) const
+Vector2d Matrix4::operator* (const Vector2d& iV) const
 {
   double x,y;
   x = m[0][0]*iV.x() + m[1][0]*iV.y() + m[2][0]*0;
@@ -337,7 +337,7 @@ Vector2d myMatrix4::operator* (const Vector2d& iV) const
 	return Vector2d( x, y ); 
 }
 //------------------------------------------------------------------------------
-Point3d myMatrix4::operator* (const Point3d& iV) const
+Point3d Matrix4::operator* (const Point3d& iV) const
 {
   double x,y,z,w;
   x = m[0][0]*iV.x() + m[1][0]*iV.y() + m[2][0]*iV.z() + m[3][0]*1;
@@ -347,7 +347,7 @@ Point3d myMatrix4::operator* (const Point3d& iV) const
 	return Point3d( x/w, y/w, z/w );
 }
 //------------------------------------------------------------------------------
-Point2d myMatrix4::operator* (const Point2d& iV) const
+Point2d Matrix4::operator* (const Point2d& iV) const
 {
   double x,y,w;
   x = m[0][0]*iV.x() + m[1][0]*iV.y() + m[2][0]*0 + m[3][0]*1;
@@ -357,14 +357,14 @@ Point2d myMatrix4::operator* (const Point2d& iV) const
 	return Point2d( x/w, y/w ); 
 }
 //------------------------------------------------------------------------------
-void myMatrix4::setTranslation( const Vector3d& iP )
+void Matrix4::setTranslation( const Vector3d& iP )
 { m[3][0]=iP.x(); m[3][1] = iP.y(); m[3][2] = iP.z(); }
 //------------------------------------------------------------------------------
 /*Retourne un string formater qui presente la matrice sous forme row-major.*/
-QString myMatrix4::toString() const
+QString Matrix4::toString() const
 {
 	QString s;
-  const myMatrix4& mat = *this;
+  const Matrix4& mat = *this;
   for( int i = 0; i < 4; ++i)
   {
 	  for( int j = 0; j < 4; ++j)
@@ -377,9 +377,9 @@ QString myMatrix4::toString() const
   return s;
 }
 //------------------------------------------------------------------------------
-myMatrix4 myMatrix4::transpose() const
+Matrix4 Matrix4::transpose() const
 {
-	myMatrix4 r; 
+	Matrix4 r; 
   r.m[0][0] = m[0][0]; r.m[0][1] = m[1][0]; r.m[0][2] = m[2][0]; r.m[0][3] = m[3][0];
   r.m[1][0] = m[0][1]; r.m[1][1] = m[1][1]; r.m[1][2] = m[2][1]; r.m[1][3] = m[3][1];
   r.m[2][0] = m[0][2]; r.m[2][1] = m[1][2]; r.m[2][2] = m[2][2]; r.m[2][3] = m[3][2];

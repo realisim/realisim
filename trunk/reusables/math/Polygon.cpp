@@ -94,7 +94,7 @@ void Polygon::checkIfConvex() const
     for( int i = 0; i < getNumberOfVertices(); ++i )
     {
     	int nextIndex = ( i + 1 ) % getNumberOfVertices();
-      myMatrix4 m1(x,y,z);
+      Matrix4 m1(x,y,z);
 			m1.setTranslation( toVector( getVertex( i ) ) );
       m1.invert();
       p = m1 * getVertex( nextIndex );

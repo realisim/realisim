@@ -87,9 +87,9 @@ public:
   const Point3d& getLook() const { return mLook; }
   const Point3d& getPos() const { return mPos; } 
   const Projection& getProjection() const {return mProjectionInfo;}
-  const myMatrix4& getProjectionMatrix() const;
+  const Matrix4& getProjectionMatrix() const;
   const Vector3d& getUp() const { return mUp; }
-  const myMatrix4& getViewMatrix() const;
+  const Matrix4& getViewMatrix() const;
   double getVisibleHeight() const;
   double getVisibleWidth() const;
   const Viewport& getViewport() const {return mViewport;}  
@@ -130,8 +130,8 @@ protected:
   Vector3d mUp;
   Projection mProjectionInfo;
   Viewport mViewport;
-  mutable myMatrix4 mProjectionMatrix;
-  mutable myMatrix4 mViewMatrix;
+  mutable Matrix4 mProjectionMatrix;
+  mutable Matrix4 mViewMatrix;
 };
 
 } //treeD

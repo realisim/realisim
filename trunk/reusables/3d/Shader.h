@@ -96,7 +96,7 @@ public:
   virtual bool setUniform(const char*, const math::Vector3d&);
   virtual bool setUniform(const char*, const math::Vector3f&);
   virtual bool setUniform(const char*, int, const math::Vector3f*);
-  virtual bool setUniform(const char*, const math::myMatrix4&);
+  virtual bool setUniform(const char*, const math::Matrix4&);
 
 //bindVextexAttrib et setVertexAttrib?
   

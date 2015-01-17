@@ -476,7 +476,7 @@ bool Shader::setUniform(const char* iName, int iSize, const math::Vector3f* iDat
 }
 
 //----------------------------------------------------------------------------
-bool Shader::setUniform(const char* iName, const myMatrix4& iValue)
+bool Shader::setUniform(const char* iName, const Matrix4& iValue)
 {
 	if(!isValid())
     return false;

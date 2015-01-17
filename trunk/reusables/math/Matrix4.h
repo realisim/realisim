@@ -88,46 +88,46 @@ namespace math
 
 */
 
-class myMatrix4
+class Matrix4
 {
 public:
-  myMatrix4();
-  //myMatrix4( const myMatrix4& ); //explicitement absent
-  //myMatrix4& operator= (const myMatrix4&); //explicitement absent
-  myMatrix4( const double*, bool iRowMajor = true );
-  myMatrix4( Vector3d ); //translation
-  myMatrix4( Quaterniond ); //rotation
-  //myMatrix4( Vector3d, Quaterniond, Vector3d = Vector3d(1.0) ); //translation - rotation - scaling
-  myMatrix4( double, Vector3d ); //rotation (angle et axe)
-  myMatrix4( Vector3d, Vector3d, Vector3d ); //specification de la base
-  ~myMatrix4();
+  Matrix4();
+  //Matrix4( const Matrix4& ); //explicitement absent
+  //Matrix4& operator= (const Matrix4&); //explicitement absent
+  Matrix4( const double*, bool iRowMajor = true );
+  Matrix4( Vector3d ); //translation
+  Matrix4( Quaterniond ); //rotation
+  //Matrix4( Vector3d, Quaterniond, Vector3d = Vector3d(1.0) ); //translation - rotation - scaling
+  Matrix4( double, Vector3d ); //rotation (angle et axe)
+  Matrix4( Vector3d, Vector3d, Vector3d ); //specification de la base
+  ~Matrix4();
 
 	double operator()(int, int) const;
   double& operator()(int, int);
-  bool operator== (const myMatrix4&) const;
-  bool operator!= (const myMatrix4&) const;
-  myMatrix4 operator* (const myMatrix4&) const;
-  myMatrix4& operator*= (const myMatrix4&);
+  bool operator== (const Matrix4&) const;
+  bool operator!= (const Matrix4&) const;
+  Matrix4 operator* (const Matrix4&) const;
+  Matrix4& operator*= (const Matrix4&);
   Point3d operator* (const Point3d&) const;
   Point2d operator* (const Point2d&) const;
   Vector3d operator* (const Vector3d&) const;
   Vector2d operator* (const Vector2d&) const;
-//myMatrix4 operator+ (const myMatrix4&);
-//myMatrix4& operator+= (const myMatrix4&);
-//myMatrix4 operator- (const myMatrix4&);
-//myMatrix4& operator-= (const myMatrix4&);
+//Matrix4 operator+ (const Matrix4&);
+//Matrix4& operator+= (const Matrix4&);
+//Matrix4 operator- (const Matrix4&);
+//Matrix4& operator-= (const Matrix4&);
 
 	const double* getDataPointer() const;
   Quaterniond getRotationAsQuaternion() const;
   Vector3d getTranslationAsVector() const;
-  myMatrix4 inverse() const;
-  myMatrix4& invert();
-  bool isEqual( const myMatrix4&, 
+  Matrix4 inverse() const;
+  Matrix4& invert();
+  bool isEqual( const Matrix4&, 
   	double = std::numeric_limits<double>::epsilon() ) const;
 //void setRotation( const Quaterniond& );
 //void setScale( const Vector3d& );
 void setTranslation( const Vector3d& );
-  myMatrix4 transpose() const;
+  Matrix4 transpose() const;
   QString toString() const;
   
 protected:

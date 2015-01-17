@@ -479,14 +479,14 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
       ainsi que les vecteurs lat, up et look intermédiaires.*/
     Vector3d lookVector( mOldCam.getLook(), mOldCam.getPos() );
     lookVector.normalise();
-    myMatrix4 m1( mOldCam.getLat(), mOldCam.getUp(), lookVector );
-    m1 = myMatrix4( toVector(mOldCam.getPos()) ) * m1;
+    Matrix4 m1( mOldCam.getLat(), mOldCam.getUp(), lookVector );
+    m1 = Matrix4( toVector(mOldCam.getPos()) ) * m1;
     lookVector.set( mNewCam.getLook(), mNewCam.getPos() );
     lookVector.normalise();
-    myMatrix4 m2( mNewCam.getLat(), mNewCam.getUp(), lookVector );
-    m2 = myMatrix4( toVector(mNewCam.getPos()) ) * m2;
+    Matrix4 m2( mNewCam.getLat(), mNewCam.getUp(), lookVector );
+    m2 = Matrix4( toVector(mNewCam.getPos()) ) * m2;
     
-    myMatrix4 iterationMatrix = 
+    Matrix4 iterationMatrix = 
     	math::interpolate( m1, m2, t );
     Vector3d interpolatedLook = toVector(mOldCam.getLook()) * (1 - t) +
       toVector(mNewCam.getLook()) * t;
@@ -585,7 +585,7 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
       Point3d postZoom = mCam.screenToWorld( mousePos, workingPlane );
       
       //on trouve le delta en coordonnée oeil.
-      myMatrix4 viewMatrix = mCam.getViewMatrix();
+      Matrix4 viewMatrix = mCam.getViewMatrix();
       Vector3d ecDelta = ( viewMatrix * postZoom ) - ( viewMatrix * preZoom );
       
       Camera::Projection p = mCam.getProjection();
