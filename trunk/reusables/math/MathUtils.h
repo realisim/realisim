@@ -8,7 +8,6 @@
 #define MATH_UTILE_H
 
 #include "Matrix4.h"
-#include "Matrix4x4.h"
 #include "Point.h"
 #include "Vect.h"
 #include <vector>
@@ -19,8 +18,6 @@ namespace realisim
 namespace math
 {
 	using namespace std;
-  Matrix4d fromMyMatrix( const myMatrix4& iM );  
-  myMatrix4 toMyMatrix( const Matrix4d& iM );
   
 	//---------------------------------------------------------------------------
   template< class T >
@@ -106,37 +103,6 @@ namespace math
     return result;
   }
   
-    //---------------------------------------------------------------------------
-  /*Le vecteur multiplié par la matrice ne fait que modifié sont orientation,
-    on n'ajoute pas la translation.*/
-  template<class T>
-  inline Vector3<T> operator* ( const Vector3<T>& iVect, const Matrix4<T>& iMat)
-  {
-    Vector3<T> vect;
-    vect.setX( iVect.x() * iMat(0, 0) + iVect.y() * iMat(1, 0) + iVect.z() * iMat(2, 0) );
-    vect.setY( iVect.x() * iMat(0, 1) + iVect.y() * iMat(1, 1) + iVect.z() * iMat(2, 1) );
-    vect.setZ( iVect.x() * iMat(0, 2) + iVect.y() * iMat(1, 2) + iVect.z() * iMat(2, 2) );
-    return vect;
-  }
-  
-  //---------------------------------------------------------------------------
-  //---
-  //-- Operateur pour Point3d
-  //---
-  //---------------------------------------------------------------------------
-  /*On multiplie le point par la partie de rotation et on ajoute la translation
-    au point.*/
-  template<class T>
-  inline Point3<T> operator* ( const Point3<T>& iPoint, const Matrix4<T>& iMat)
-  {
-    Point3<T> result;
-    result.setX( iPoint.x() * iMat(0, 0) + iPoint.y() * iMat(1, 0) + iPoint.z() * iMat(2, 0) );
-    result.setY( iPoint.x() * iMat(0, 1) + iPoint.y() * iMat(1, 1) + iPoint.z() * iMat(2, 1) );
-    result.setZ( iPoint.x() * iMat(0, 2) + iPoint.y() * iMat(1, 2) + iPoint.z() * iMat(2, 2) );
-    //on ajoute la translation au point
-    result += Point3<T>(iMat(3, 0), iMat(3, 1), iMat(3, 2));
-    return result;
-  }
   //---------------------------------------------------------------------------
   template<class T>
   inline Point3<T> operator* (const T& iVal, const Point3<T>& iPoint)
@@ -242,35 +208,6 @@ namespace math
   	return r;
   }
   //---------------------------------------------------------------------------
-  //retourne la matrice de rotation correpondant a la rotation de iAngle
-  //radian autour de l'axe iAxis
-  template<class T>
-  inline Matrix4d getRotationMatrix( double iAngle,
-                                      Vector3<T> iAxis )
-  {
-    iAxis.normalise();
-    Quaternion<T> quat;
-    quat.setRot(iAngle, iAxis);
-    
-    return quat.getUnitRotationMatrix();
-  }
-  //---------------------------------------------------------------------------
-  //retourne la matrice de rotation correpondant a la rotation de la matrice m
-  //de iAngle radian autour de l'axe iAxis
-  template<class T>
-  inline Matrix4<T> rotate( const Matrix4<T> &m, const T &angle,
-                              Vector3<T> axis, const Point3<T> &axisPos )
-  {
-		Matrix4<T> r = m;
-    axis.normalise();
-    Quaternion<T> quat;
-    quat.setRot(angle, axis);
-    r.translate(toVector(axisPos * -1));
-    r = r * quat.getUnitRotationMatrix(); 
-    r.translate(toVector(axisPos));
-    return r;
-  }
-  //---------------------------------------------------------------------------
   inline myMatrix4 interpolate(const myMatrix4& iM1, const myMatrix4& iM2, 
     double iT)
   {
@@ -292,53 +229,7 @@ namespace math
     iterationMatrix = translation * iterationMatrix;
     return iterationMatrix;
   }
-  
-//  //---------------------------------------------------------------------------
-//  //l'angle est en radian
-//  template<class T>
-//  inline Point3<T> rotatePoint(const T &angle, const Point3<T> &point,
-//                              Vector3<T> axis)
-//  {
-//    Quaternion<T> quatRot;
-//    Quaternion<T> quatResult;
-//    
-//    axis.normalise();
-//    quatRot.setRot( angle, axis );
-//    
-//    //! TODO mettre une explication sur les quaternions...
-//    //quatResult = (quatRot*point)*quatRot.getConjugate();
-//    //point.setXYZ(quatResult.x(), quatResult.y(), quatResult.z());
-//    
-//    return ( quatRot*point ).multRotation( quatRot.getConjugate() );
-//  }
-//  
-//  //---------------------------------------------------------------------------
-//  template<class T>
-//  inline Point3<T> rotatePoint(const Quaternion<T> &quat, const Point3<T> &point)
-//  {
-//    return (quat*point).multRotation(quat.getConjugate());
-//  }
-//  
-//  //---------------------------------------------------------------------------
-//  //l'angle est en radian
-//  template<class T>
-//  inline Point3<T> rotatePoint(const T &angle, const Point3<T> &point,
-//                              Vector3<T> axis, const Point3<T> &axisPos)
-//  {
-//    axis.normalise();
-//    
-//    //On trouve la position relative du Point a tourner par rapport a l'axe
-//    Point3<T> relPos, rotatedPoint;
-//    
-//    relPos = point - toVector(axisPos);
-//    rotatedPoint = rotatePoint(angle, relPos, axis);
-//    
-//    //On retranslate le point rotater
-//    rotatedPoint = rotatedPoint + toVector(axisPos);
-//    
-//    return rotatedPoint;
-//  }
-  
+    
   //----------------------------------------------------------------------------
   template< class T >
   bool isCoplanar( const std::vector< Point3<T>* >& iP, double iEpsilon = 

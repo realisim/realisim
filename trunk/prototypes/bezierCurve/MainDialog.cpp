@@ -10,7 +10,6 @@
 #include "3d/Camera.h"
 #include "3d/Texture.h"
 #include "3d/Utilities.h"
-#include "math/Matrix4x4.h"
 #include "math/Point.h"
 #include "math/MathUtils.h"
 #include "MainDialog.h"
@@ -110,7 +109,7 @@ void Viewer::drawBezier(bool iPicking) const
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::drawSceneForPicking() const
+void Viewer::drawSceneForPicking()
 {
 	glDisable(GL_MULTISAMPLE);
   drawBezier(true);
@@ -200,7 +199,7 @@ void Viewer::mouseMoveEvent(QMouseEvent* ipE)
       	if(getState() == sEdition || getState() == sCreation)
         {
           const Camera& c = getCamera();
-          Vector3d v = c.pixelDeltaToGLDelta(dx, dy,
+          Vector3d v = c.screenToWorld( Vector2d(dx, dy),
             mCurves[mCurrentCurve].getPos(mCurrentPoint));
           mCurves[mCurrentCurve].move(mCurrentPoint, v);
           update();
@@ -227,7 +226,7 @@ void Viewer::mousePressEvent(QMouseEvent* ipE)
         
         if(getState() == sCreation)
         {
-          Point3d p = c.pixelToGL(ipE->x(), ipE->y(), c.getLook());
+          Point3d p = c.screenToWorld( Point2d(ipE->x(), ipE->y()), c.getLook());
           if(mHover != -1)
           	if(mCurves[mCurrentCurve].canCloseOn(mHover))
             {

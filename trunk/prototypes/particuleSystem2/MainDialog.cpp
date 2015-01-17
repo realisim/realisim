@@ -397,7 +397,7 @@ void Viewer::draw()
     	if( mMainDialog.mSelectionId == i )
       { glColor4ub( 0, 255, 0, 255 ); }
       glPushMatrix();
-      Point2d p = cam.glToPixel( mMainDialog.getParticuleSystem(i).getPosition() );
+      Point2d p = cam.worldToSreen( mMainDialog.getParticuleSystem(i).getPosition() );
       glTranslated( p.x(), p.y(), 0.0);
       mSpriteCatalog.getSprite( "crosshair" ).draw();
       glPopMatrix();
@@ -427,7 +427,7 @@ void Viewer::drawSceneForPicking()
       glColor4ub( c.red(), c.green(), c.blue(), c.alpha() );
       glPushMatrix();
       Vector2i s = mSpriteCatalog.getSprite("crosshair").getFrameSize();
-      Point2d p = cam.glToPixel( mMainDialog.getParticuleSystem(i).getPosition() );
+      Point2d p = cam.worldToSreen( mMainDialog.getParticuleSystem(i).getPosition() );
       glTranslated( p.x(), p.y(), 0.0);
       glScaled( s.x(), s.y(), 0 );
       drawRectangle( Point2d(-0.5), Vector2d(1.0) );

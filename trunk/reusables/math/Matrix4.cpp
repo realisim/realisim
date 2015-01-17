@@ -1,4 +1,5 @@
 
+#include "cassert"
 #include "math/Matrix4.h"
 #include "math/MathUtils.h"
 
@@ -63,15 +64,15 @@ myMatrix4::myMatrix4( Quaterniond iQ )
 	double x = iQ.x(), y = iQ.y(), z = iQ.z(), w = iQ.w();
   double mat[4][4] = {
     { 1-(2*y*y)-(2*z*z),
-      (2*x*y)+(2*w*z),
-      (2*x*z)-(2*w*y),
+      (2*x*y)-(2*w*z),
+      (2*x*z)+(2*w*y),
       0 },
-    { (2*x*y)-(2*w*z),
+    { (2*x*y)+(2*w*z),
       1-(2*x*x)-(2*z*z),
-      (2*y*z)+(2*w*x),
-      0 },
-    { (2*x*z)+(2*w*y),
       (2*y*z)-(2*w*x),
+      0 },
+    { (2*x*z)-(2*w*y),
+      (2*y*z)+(2*w*x),
       1-(2*x*x)-(2*y*y),
       0 },
     { 0, 0, 0, 1 }
@@ -88,12 +89,19 @@ myMatrix4::myMatrix4( double iAngle, Vector3d iAxis )
   *this = myMatrix4( q );
 }
 //------------------------------------------------------------------------------
+/*Matrice de passage
+
+http://fr.wikipedia.org/wiki/Matrice_de_passage
+*/
 myMatrix4::myMatrix4( Vector3d iX, Vector3d iY, Vector3d iZ )
 {
+	assert( math::isEqual(iX.norm(), 1.0, 5*std::numeric_limits<double>::epsilon()) );
+  assert( math::isEqual(iY.norm(), 1.0, 5*std::numeric_limits<double>::epsilon()) );
+  assert( math::isEqual(iZ.norm(), 1.0, 5*std::numeric_limits<double>::epsilon()) );
 	double mat[4][4] = {
-  	{ iX.x(), iX.y(), iX.z(), 0 },
-    { iY.x(), iY.y(), iY.z(), 0 },
-    { iZ.x(), iZ.y(), iZ.z(), 0 },
+  	{ iX.x(), iY.x(), iZ.x(), 0 },
+    { iX.y(), iY.y(), iZ.y(), 0 },
+    { iX.z(), iY.z(), iZ.z(), 0 },
     { 0, 0, 0, 1 }
   };
   import( mat[0] );
@@ -113,32 +121,32 @@ Quaterniond myMatrix4::getRotationAsQuaternion() const
   {
     double s = sqrt(trace+1.0) * 2.0;
     w = 0.25 * s;
-    x = ( m[2][1] - m[1][2] ) / s;
-    y = ( m[0][2] - m[2][0] ) / s;
-    z = ( m[1][0] - m[0][1] ) / s;
+    x = ( m[1][2] - m[2][1] ) / s;
+    y = ( m[2][0] - m[0][2] ) / s;
+    z = ( m[0][1] - m[1][0] ) / s;
   } 
   else if ( m[0][0] > m[1][1] && m[0][0] > m[2][2] ) 
   {
     double s = sqrt(1.0 + m[0][0] - m[1][1] - m[2][2]) * 2;
-    w = ( m[2][1] - m[1][2] ) / s;
+    w = ( m[1][2] - m[2][1] ) / s;
     x = 0.25 * s;
-    y = ( m[1][0] + m[0][1] ) / s;
-    z = ( m[0][2] + m[2][0] ) / s;
+    y = ( m[0][1] + m[1][0] ) / s;
+    z = ( m[2][0] + m[0][2] ) / s;
   } 
   else if ( m[1][1] > m[2][2] ) 
   {
     double s = sqrt(1.0 + m[1][1] - m[0][0] - m[2][2] ) * 2;
-    w = ( m[0][2] - m[2][0] ) / s;
-    x = ( m[1][0] + m[0][1] ) / s;
+    w = ( m[2][0] - m[0][2] ) / s;
+    x = ( m[0][1] + m[1][0] ) / s;
     y = 0.25 * s;
-    z = ( m[2][1] + m[1][2] ) / s;
+    z = ( m[1][2] + m[2][1] ) / s;
   } 
   else 
   {
     double s = sqrt(1.0 + m[2][2] - m[0][0] - m[1][1] ) * 2;
-    w = ( m[1][0] - m[0][1] ) / s;
-    x = ( m[0][2] + m[2][0] ) / s;
-    y = ( m[2][1] + m[1][2] ) / s;
+    w = ( m[0][1] - m[1][0] ) / s;
+    x = ( m[2][0] + m[0][2] ) / s;
+    y = ( m[1][2] + m[2][1] ) / s;
     z = 0.25 * s;
   }
   Quaterniond r( w, x, y, z );
@@ -341,13 +349,16 @@ Point3d myMatrix4::operator* (const Point3d& iV) const
 //------------------------------------------------------------------------------
 Point2d myMatrix4::operator* (const Point2d& iV) const
 {
-  double x,y,z,w;
+  double x,y,w;
   x = m[0][0]*iV.x() + m[1][0]*iV.y() + m[2][0]*0 + m[3][0]*1;
   y = m[0][1]*iV.x() + m[1][1]*iV.y() + m[2][1]*0 + m[3][1]*1;
-  z = m[0][2]*iV.x() + m[1][2]*iV.y() + m[2][2]*0 + m[3][2]*1;
+//  z = m[0][2]*iV.x() + m[1][2]*iV.y() + m[2][2]*0 + m[3][2]*1;
   w = m[0][3]*iV.x() + m[1][3]*iV.y() + m[2][3]*0 + m[3][3]*1;
 	return Point2d( x/w, y/w ); 
 }
+//------------------------------------------------------------------------------
+void myMatrix4::setTranslation( const Vector3d& iP )
+{ m[3][0]=iP.x(); m[3][1] = iP.y(); m[3][2] = iP.z(); }
 //------------------------------------------------------------------------------
 /*Retourne un string formater qui presente la matrice sous forme row-major.*/
 QString myMatrix4::toString() const

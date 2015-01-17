@@ -74,7 +74,12 @@ void Camera::applyProjectionTransformation() const
     
   glMatrixMode(GL_MODELVIEW);
 }
-
+//-----------------------------------------------------------------------------
+Point3d Camera::cameraToWorld( const Point3d& iP ) const
+{ return getViewMatrix().inverse() * iP; }
+//-----------------------------------------------------------------------------
+Vector3d Camera::cameraToWorld( const Vector3d& iV ) const
+{ return getViewMatrix().inverse() * iV; }
 //-----------------------------------------------------------------------------
 void Camera::computeProjection()
 {
@@ -137,7 +142,7 @@ void Camera::computeViewMatrix()
 {
   myMatrix4 viewMatrix( mLat, mUp, -mLookVector );
   myMatrix4 t( toVector( -getPos() ) );
-  mViewMatrix = viewMatrix * t;
+  mViewMatrix = viewMatrix.transpose()*t;
 }
 
 //-----------------------------------------------------------------------------
@@ -155,100 +160,11 @@ const myMatrix4& Camera::getProjectionMatrix() const
 //-----------------------------------------------------------------------------
 /*retourne la largeur visible en unité GL*/
 double Camera::getVisibleHeight() const
-{ return mProjectionInfo.getHeight() * 1.0 / zoom(); }
+{ return mProjectionInfo.getHeight() * 1.0 / getZoom(); }
 
 //-----------------------------------------------------------------------------
 double Camera::getVisibleWidth() const
-{ return mProjectionInfo.getWidth() * 1.0 / zoom(); }
-
-//-----------------------------------------------------------------------------
-Point2d Camera::glToPixel( const Point3d& iP ) const
-{
-  pushAndApplyMatrices();
-  
-  double modelView[16];
-  glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
-  double projection[16];
-  glGetDoublev(GL_PROJECTION_MATRIX, projection);
-  int viewport[4];
-  glGetIntegerv(GL_VIEWPORT, viewport);
-
-  double x, y, z;
-	bool sucess = gluProject(iP.x(), iP.y(), iP.z(), 
-    modelView, 
-    projection, 
-    viewport, 
-    &x, &y, &z);
-  if ( !sucess ) { x = 0; y = 0; z = 0; }
-
-  popMatrices();
-
-	//dépendant de l'orientation de la camera?
-	return Point2d( x, y );
-}
-
-//-----------------------------------------------------------------------------
-/*Convertie une position pixel a l'écran en coordonnée GL.
-  Les paramètres sont en pixels. Puisque le systeme de fenetrage est Qt, 
-  contrairement a openGL, l'origine (0, 0) est dans le coin supérieur gauche.
-  Ainsi la coordonné y est inversée. Le point converti sera en  coordonné
-  globale. iPoint doit être en coordonné locale de la camera. Ce point
-  représente la position d'un plan, parallele à la camera. Le Point3d retourné
-  par cette fonction est donc l'intersection de la projection du point iX, iY
-  avec ce plan. La projection de caméra est tenue en compte.
-  Note: cette methode applique les projections de projection et de modelview
-    afin de faire les calculs.*/
-Point3d Camera::pixelToGL( int iX, int iY,
-  const Point3d& iPoint /*= Point3d(0.0)*/ ) const
-{
-  //l'axe de Qt est inversé par rapport a openGL
-  iY = getViewport().getHeight() - iY;
-  
-  pushAndApplyMatrices();
-  
-  double modelView[16];
-  glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
-  double projection[16];
-  glGetDoublev(GL_PROJECTION_MATRIX, projection);
-  int viewport[4];
-  glGetIntegerv(GL_VIEWPORT, viewport);
-
-  double winx, winy, winz, p0x, p0y, p0z;
-
-  /*A partir du Point3d qui represente le point sur le plan de travail
-    perpendiculaire a la camera, on le projete a l'écran. Ce qui nous
-    intéresse c'est la coordonnée en z normalisé qui nous donne la profondeur
-    de ce point3d dans le zBuffer qui sera utilisé pour trouver le point 
-    en coordonnée GL*/
-  gluProject( iPoint.x(), iPoint.y(), iPoint.z(),
-    modelView, projection, viewport,
-    &winx, &winy, &winz);
-    
-  /*On projete le point d'écran iX, iY, winz qui nous donnera un point (p0)
-    qui correspond au point d'écran (iX, iY) a la profondeur du plan de
-    travail. */
-  gluUnProject(iX, iY, winz,
-    modelView, projection, viewport,
-    &p0x, &p0y, &p0z);
-
-	popMatrices();
-  return Point3d(p0x, p0y, p0z);
-}
-
-//-----------------------------------------------------------------------------
-/*Convertie une delta en pixel d'écran en delta GL. Le deltaGL sera en
-  coordonnée locale.
-  Les paramètres sont en pixels. Le Point3d répresente un point sur le
-  plan de travail qui est perdiculaire a la caméra. On a besoin de ce point
-  afin de déterminer, dans la vue de perspective, la profodeur à laquelle on
-  veut le deltaGL.*/
-Vector3d Camera::pixelDeltaToGLDelta( int iDeltaX, int iDeltaY,
-	const Point3d& iPoint /*= Point3d(0.0)*/ ) const
-{
-	Point3d p0 = pixelToGL( 0, 0, iPoint);
-  Point3d p1 = pixelToGL( iDeltaX, iDeltaY, iPoint);
-  return p1 - p0;
-}
+{ return mProjectionInfo.getWidth() * 1.0 / getZoom(); }
 
 //-----------------------------------------------------------------------------
 void Camera::popMatrices() const
@@ -285,7 +201,7 @@ void Camera::rotate( double iRad, Vector3d iAxe,
 	Point3d iAxisPos /*= Point3d()*/ )
 {
 	Point3d eye = getPos(), center = getLook();
-  Vector3d up = getUp();  
+  Vector3d up = getUp();
   
 	myMatrix4 r( iRad, iAxe );
   myMatrix4 t( toVector( iAxisPos ) );
@@ -295,6 +211,62 @@ void Camera::rotate( double iRad, Vector3d iAxe,
   center = r * center;
   up = r * up;
   set( eye, center, up );
+}
+	
+//-----------------------------------------------------------------------------
+/*Convertie une position pixel a l'écran en coordonnée GL.
+  Les paramètres sont en pixels. Puisque le systeme de fenetrage est Qt, 
+  contrairement a openGL, l'origine (0, 0) est dans le coin supérieur gauche.
+  Ainsi la coordonné y est inversée. Le point converti sera en  coordonné
+  globale. iPoint doit être en coordonné locale de la camera. Ce point
+  représente la position d'un plan, parallele à la camera. Le Point3d retourné
+  par cette fonction est donc l'intersection de la projection du point iX, iY
+  avec ce plan. La projection de caméra est tenue en compte.
+  Note: cette methode applique les projections de projection et de modelview
+    afin de faire les calculs.*/
+Point3d Camera::screenToWorld( Point2d iP, const Point3d& iR /*=Point3d(0.0)*/) const
+{
+	double x = iP.x();
+  //l'axe de Qt est inversé par rapport a openGL
+  double y = getViewport().getHeight() - iP.y();
+  
+  pushAndApplyMatrices();
+  
+  double modelView[16];
+  glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+  double projection[16];
+  glGetDoublev(GL_PROJECTION_MATRIX, projection);
+  int viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+
+  double winx, winy, winz, p0x, p0y, p0z;
+
+  /*A partir du Point3d qui represente le point sur le plan de travail
+    perpendiculaire a la camera, on le projete a l'écran. Ce qui nous
+    intéresse c'est la coordonnée en z normalisé qui nous donne la profondeur
+    de ce point3d dans le zBuffer qui sera utilisé pour trouver le point 
+    en coordonnée GL*/
+  gluProject( iR.x(), iR.y(), iR.z(),
+    modelView, projection, viewport,
+    &winx, &winy, &winz);
+    
+  /*On projete le point d'écran iX, iY, winz qui nous donnera un point (p0)
+    qui correspond au point d'écran (iX, iY) a la profondeur du plan de
+    travail. */
+  gluUnProject(x, y, winz,
+    modelView, projection, viewport,
+    &p0x, &p0y, &p0z);
+
+	popMatrices();
+  return Point3d(p0x, p0y, p0z);
+}
+
+//-----------------------------------------------------------------------------
+Vector3d Camera::screenToWorld( Vector2d iV, const Point3d& iP/*=Point3d(0.0)*/) const
+{
+	Point3d p0 = screenToWorld( Point2d(0.0), iP);
+  Point3d p1 = screenToWorld( toPoint(iV), iP);
+  return p1 - p0;
 }
 
 //-----------------------------------------------------------------------------
@@ -377,7 +349,6 @@ void Camera::setProjection(double iLeft, double iRight,
 	p.mProportionalToWindow = iProportional;
   setProjection(p);
 }
-
 //-----------------------------------------------------------------------------
 void Camera::setViewportSize( int iWidth, int iHeight )
 {
@@ -393,22 +364,56 @@ void Camera::setViewportSize( int iWidth, int iHeight )
   
   computeProjection();
 }
-
 //-----------------------------------------------------------------------------
 void Camera::setViewportSize( Vector2i iS )
 { setViewportSize( iS.x(), iS.y() ); }
-
 //-----------------------------------------------------------------------------
 void Camera::setZoom(double iZoom)
 {
   mProjectionInfo.mZoomFactor = iZoom;
   computeProjection();
 }
-
 //-----------------------------------------------------------------------------
 void Camera::translate( const Point3d& iV )
 { Vector3d d = iV - getPos(); translate( d ); }
-
 //-----------------------------------------------------------------------------
 void Camera::translate( const Vector3d& iV )
 { set( mPos + iV, mLook + iV, getUp() ); }
+//-----------------------------------------------------------------------------
+Point3d Camera::worldToCamera( const Point3d& iP ) const
+{ return getViewMatrix() * iP; }
+//-----------------------------------------------------------------------------
+Vector3d Camera::worldToCamera( const Vector3d& iV ) const
+{ return getViewMatrix() * iV; }
+//-----------------------------------------------------------------------------
+Point2d Camera::worldToSreen( const Point3d& iP ) const // comme glToPixel
+{
+  pushAndApplyMatrices();
+  
+  double modelView[16];
+  glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+  double projection[16];
+  glGetDoublev(GL_PROJECTION_MATRIX, projection);
+  int viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+
+  double x, y, z;
+	bool sucess = gluProject(iP.x(), iP.y(), iP.z(), 
+    modelView, 
+    projection, 
+    viewport, 
+    &x, &y, &z);
+  if ( !sucess ) { x = 0; y = 0; z = 0; }
+
+  popMatrices();
+
+	//dépendant de l'orientation de la camera?
+	return Point2d( x, y );
+}
+//-----------------------------------------------------------------------------
+Vector2d Camera::worldToSreen( const Vector3d& iV ) const
+{
+	Point2d v0 = worldToSreen( Point3d(0.0) );
+  Point2d v1 = worldToSreen( toPoint( iV ) );
+  return v1-v0;
+}

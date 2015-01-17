@@ -40,12 +40,14 @@ public:
 	enum controlType{ ctNone, ctPan, ctRotateAround, ctFree };
 
   virtual const Camera& getCamera() const;
+  virtual double getCameraSpeed() const { return mCameraSpeed; }
   virtual controlType getControlType() const;
   virtual void pushFrameBuffer(const FrameBufferObject& = FrameBufferObject());
   virtual void pushShader(const Shader& = Shader());
   virtual void popFrameBuffer();
   virtual void popShader();
   virtual void setCamera( const Camera& iCam, bool iAnimate = true, int iDuration = 1000 );
+  virtual void setCameraSpeed( double iS ) { mCameraSpeed = iS; }
   virtual void setControlType( controlType );
 //void setCameraMode( Camera::Mode iMode );
 //virtual void setCameraOrientation( Camera::Orientation iO );
@@ -90,6 +92,7 @@ protected:
   bool mMousePressed;
   int mMousePosX;
   int mMousePosY;
+  double mCameraSpeed;
   std::map< int, bool > mKeys;
   std::vector<FrameBufferObject> mFrameBuffers;
   std::vector<Shader> mShaders;

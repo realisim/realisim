@@ -5,7 +5,6 @@
 #include "3d/Texture.h"
 #include "3d/Utilities.h"
 #include "math/BoundingBox.h"
-#include "math/Matrix4x4.h"
 #include "math/Point.h"
 #include "math/MathUtils.h"
 #include "MainWindow.h"

@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include "Camera.h"
-#include "math/Matrix4x4.h"
 #include "math/Point.h"
 #include "3d/Sprite.h"
 #include "3d/Utilities.h"

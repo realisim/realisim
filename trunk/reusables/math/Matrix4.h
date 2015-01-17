@@ -124,6 +124,9 @@ public:
   myMatrix4& invert();
   bool isEqual( const myMatrix4&, 
   	double = std::numeric_limits<double>::epsilon() ) const;
+//void setRotation( const Quaterniond& );
+//void setScale( const Vector3d& );
+void setTranslation( const Vector3d& );
   myMatrix4 transpose() const;
   QString toString() const;
   

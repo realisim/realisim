@@ -10,7 +10,6 @@
 #include <iostream>
 
 #include "MathDef.h"
-#include "Matrix4x4.h"
 #include "Point.h"
 #include "Vect.h"
 
@@ -18,31 +17,7 @@
 //! \brief Classe gerant les fonctionalites associees a un quaternion
 //!
 //! un quaternion est de la forme q = w + xi + yj + zk
-/*
-  Notes: Lorsqu'on construit un quaternion à partir d'une matrice (constructeur
-    qui prend une matrice) il est impératif que la matrice réponde aux normes 
-    d'un système main droite. Ie:
-    
-          y
-          ^
-          |
-          |
-          |
-          ------>X
-         /
-        /
-       /
-      Z
-    
-    Donc avec la main droite: x vers y donne Z
-                              y vers z donne x
-                              z vers x donne y
-                              
-    http://en.wikipedia.org/wiki/Cartesian_coordinate_system
-    
-    De plus, la méthode getUnitRotationMatrix retourne une matrice qui
-    répond aux normes d'un système main droite.
-                          
+/*                          
 */
 //!-----------------------------------------------------------------------------
 namespace realisim
@@ -58,7 +33,6 @@ namespace math
     inline Quaternion();
     inline Quaternion(const T &w, const T &x, const T &y, const T &z);
     inline Quaternion(const Quaternion<T> &quat);
-//    inline Quaternion(const Matrix4<T>& iMat);
 
     // --------------- destructeurs --------------------------------------------
     inline ~Quaternion();
@@ -79,7 +53,6 @@ namespace math
     inline void getQuat(T &w, T &x, T &y, T &z) const;
     inline Quaternion<T> getConjugate() const;
     inline double getLength() const;
-    inline Matrix4<T> getUnitRotationMatrix() const;
 
     // --------------- fonction utiles -----------------------------------------
     inline Quaternion<T>& inverse();        
@@ -130,46 +103,6 @@ namespace math
     y_ = quat.y_;
     z_ = quat.z_;
   }
-  
-//  //----------------------------------------------------------------------------
-//  template<class T>
-//  inline Quaternion<T>::Quaternion(const Matrix4<T>& iMat)
-//  {
-//    T trace = iMat(0, 0) + iMat(1, 1) + iMat(2, 2);
-//    if( trace > (T)0 ) 
-//    {
-//      T s = sqrt(trace+1.0) * 2;
-//      w_ = 0.25 * s;
-//      x_ = ( iMat(1, 2) - iMat(2, 1) ) / s;
-//      y_ = ( iMat(2, 0) - iMat(0, 2) ) / s;
-//      z_ = ( iMat(0, 1) - iMat(1, 0) ) / s;
-//    } 
-//    else if ( iMat(0, 0) > iMat(1, 1) && iMat(0, 0) > iMat(2, 2) ) 
-//    {
-//      T s = sqrt(1.0 + iMat(0, 0) - iMat(1, 1) - iMat(2, 2)) * 2;
-//      w_ = (iMat(1, 2) - iMat(2, 1) ) / s;
-//      x_ = 0.25 * s;
-//      y_ = (iMat(0, 1) + iMat(1, 0) ) / s;
-//      z_ = (iMat(2, 0) + iMat(0, 2) ) / s;
-//    } 
-//    else if (iMat(1, 1) > iMat(2, 2)) 
-//    {
-//      T s = sqrt(1.0 + iMat(1, 1) - iMat(0, 0) - iMat(2, 2)) * 2;
-//      w_ = (iMat(2, 0) - iMat(0, 2) ) / s;
-//      x_ = (iMat(0, 1) + iMat(1, 0) ) / s;
-//      y_ = 0.25 * s;
-//      z_ = (iMat(1, 2) + iMat(2, 1) ) / s;
-//    } 
-//    else 
-//    {
-//      T s = sqrt(1.0 + iMat(2, 2) - iMat(0 ,0 ) - iMat(1, 1)) * 2;
-//      w_ = (iMat(0, 1) - iMat(1, 0) ) / s;
-//      x_ = (iMat(2, 0) + iMat(0, 2) ) / s;
-//      y_ = (iMat(1, 2) + iMat(2, 1) ) / s;
-//      z_ = 0.25 * s;
-//    }
-//  normalize();
-//  }
   
   //! destructeur
   template<class T>
@@ -390,37 +323,6 @@ namespace math
   inline double Quaternion<T>::getLength() const
   {
     return (double)sqrt(w_*w_ + x_*x_ + y_*y_ + z_*z_);
-  }
-
-  //----------------------------------------------------------------------------
-  //Cette fonction remplie la matrice unitRotationMatrix avec la matrice de
-  //rotation correspondant au quaternion.
-  template<class T>
-  inline Matrix4<T>
-  Quaternion<T>::getUnitRotationMatrix() const
-  {
-    Matrix4<T> mat; //matrice identité
-    mat.setRow1(
-          1-(2*y_*y_)-(2*z_*z_),
-          (2*x_*y_)+(2*w_*z_),
-          (2*x_*z_)-(2*w_*y_),
-          0 );
-    mat.setRow2(
-          (2*x_*y_)-(2*w_*z_),
-          1-(2*x_*x_)-(2*z_*z_),
-          (2*y_*z_)+(2*w_*x_),
-          0 );
-    mat.setRow3(
-          (2*x_*z_)+(2*w_*y_),
-          (2*y_*z_)-(2*w_*x_),
-          1-(2*x_*x_)-(2*y_*y_),
-          0 );
-    mat.setRow4(
-          0,
-          0,
-          0,
-          1 );
-    return mat;
   }
 
   //----------------------------------------------------------------------------

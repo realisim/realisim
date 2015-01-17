@@ -1,6 +1,6 @@
 
 #include <algorithm>
-#include "MathUtils.h"
+#include "math/MathUtils.h"
 #include "Polygon.h"
 #include <vector>
 
@@ -78,15 +78,11 @@ void Polygon::checkIfConvex() const
       parallele a l'axe normal du polygon et son origine sur un vertex. Ainsi,
       on peut transformer les coordonnées des vertices 3d en position 2d ( x,y sur
       le plan du polygon) et ainsi faciliter le travail.*/
+      
     Vector3d z = getNormal();
-    Vector3d y = math::getPerpendicularVector( z );
-    Vector3d x = y ^ z;
-    Matrix4d m, m1;
-    m.setRow1( x.x(), x.y(), x.z(), 0.0 );
-    m.setRow2( y.x(), y.y(), y.z(), 0.0 );
-    m.setRow3( z.x(), z.y(), z.z(), 0.0 );
-    //m.setTranslation( getCentroid() );
-    //m.inverse();
+    Vector3d x = getVertex( 0 ) - getCentroid();
+    x.normalise();
+    Vector3d y = z ^ x;
     
     /*Pour chaque vertex du polygon, on déplace le systeme de coordonné m
       sur ce vertex. On met le vertex suivant dans ce systeme de coordonné et
@@ -98,19 +94,19 @@ void Polygon::checkIfConvex() const
     for( int i = 0; i < getNumberOfVertices(); ++i )
     {
     	int nextIndex = ( i + 1 ) % getNumberOfVertices();
-    	m1 = m;
-      m1.setTranslation( getVertex( i ) );
-      m1.inverse();
-      
-      p = getVertex( nextIndex ) * m1;
+      myMatrix4 m1(x,y,z);
+			m1.setTranslation( toVector( getVertex( i ) ) );
+      m1.invert();
+      p = m1 * getVertex( nextIndex );
+
       r = toVector( p ).norm();
       cosA = acos( p.x() / r );
       sinA = asin( p.y() / r );
       theta = sinA < 0.0 ? DEUX_PI - cosA : cosA;
       angles.push_back( theta );
       
-//Point3d _d = getVertex( i ) * m1;;
-//printf("p%d; %f, %f, %f\n", i, _d.x(), _d.y(), _d.z() );      
+//Point3d _d = m1 * getVertex( i );
+//printf("\n-----------p%d; %f, %f, %f\n", i, _d.x(), _d.y(), _d.z() );      
 //printf("p%d; %f, %f, %f\n", nextIndex, p.x(), p.y(), p.z() );
 //printf("cosA %d-%d; %f\n", i, nextIndex, cosA );
 //printf("sinA %d-%d; %f\n", i, nextIndex, sinA );
@@ -144,10 +140,10 @@ void Polygon::checkIfCoplanar() const
 	mIsCoplanar = getNumberOfVertices() == 3;
   if( getNumberOfVertices() > 3 )
 	{
-  	mIsCoplanar = math::isCoplanar( mVertices, 0.0001 );
-    //on dirait que le code qui suit est redondant... a tester et enlever.
-    if( !mIsCoplanar )
-    	math::isCoplanar( mVertices, 0.0001 );
+  	mIsCoplanar = math::isCoplanar( mVertices, 0.000001 );
+//    //on dirait que le code qui suit est redondant... a tester et enlever.
+//    if( !mIsCoplanar )
+//    	math::isCoplanar( mVertices, 0.0001 );
   }
 }
 //-----------------------------------------------------------------------------

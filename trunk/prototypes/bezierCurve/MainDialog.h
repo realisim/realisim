@@ -26,7 +26,7 @@ private:
   enum state{sCreation, sEdition, sSelection};
   
   virtual void drawBezier(bool) const;
-  virtual void drawSceneForPicking() const;
+  virtual void drawSceneForPicking();
   virtual mouseState getMouseState() const {return mMouseState;}
   virtual state getState() const {return mState;}
   virtual void initializeGL();
