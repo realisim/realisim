@@ -3,7 +3,7 @@
 #define Realisim_TreeD_Text_hh
 
 #include <cassert>
-#include <qgl.h>
+#include <QtOpenGL/qgl.h>
 #include <QColor>
 #include <QFont>
 #include <QString>

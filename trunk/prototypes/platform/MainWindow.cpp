@@ -1292,7 +1292,7 @@ void MainWindow::updateUi()
     	mpLayers->item( i )->setCheckState( cs );
     }
     
-    mpCellTypeFrame->setShown( mpLayers->item( mEngine.getCurrentLayer() )->text() == "data" );
+    mpCellTypeFrame->setVisible( mpLayers->item( mEngine.getCurrentLayer() )->text() == "data" );
     mpCellType->setCurrentIndex( mEngine.getEditingTool() );
     
     //sprites

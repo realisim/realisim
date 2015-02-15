@@ -12,7 +12,7 @@ class QTimerEvent;
 #include "3d/Text.h"
 #include "3d/Texture.h"
 #include "3d/Widget3d.h"
-#include <QtGui>
+#include <QtWidgets>
 
 namespace realisim { namespace platform { class Viewer;} }
 

@@ -18,7 +18,7 @@
 #include <map>
 class QKeyEvent;
 #include <QTime>
-#include <QGLWidget>
+#include <QtOpenGL/QGLWidget>
 
 /*
 	Documenter la relation entre pick() et drawSceneForPicking()

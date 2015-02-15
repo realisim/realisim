@@ -3,7 +3,7 @@
 #define Realisim_TreeD_Shader_hh
 
 #include <QString>
-#include <qgl.h>
+#include <QtOpenGL/qgl.h>
 #include <math/Matrix4.h>
 #include <math/Point.h>
 #include <math/Vect.h>
