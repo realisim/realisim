@@ -10,7 +10,7 @@
 #include "3d/Widget3d.h"
 #include <QGraphicsScene>
 #include <QMainWindow>
-#include <QtGui>
+#include <QtWidgets>
 #include <QSettings>
 #include "3d/SpriteCatalog.h"
 
@@ -33,7 +33,7 @@ protected:
 //enum colors{ cHover, cSelect };
   
   virtual void drawModeButton(bool = false) const;
-  virtual void drawSceneForPicking() const;
+  virtual void drawSceneForPicking();
   virtual void drawSprites(bool = false) const;
   virtual void drawTexture(bool = false);
 //  virtual QColor getColor( colors ) const;

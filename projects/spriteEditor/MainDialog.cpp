@@ -97,7 +97,7 @@ void Viewer::drawModeButton(bool iPicking /*=false*/) const
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::drawSceneForPicking() const
+void Viewer::drawSceneForPicking()
 {
 	if( !isPreviewing() )
   {

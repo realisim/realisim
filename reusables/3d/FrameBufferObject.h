@@ -4,7 +4,7 @@
 
 #include <cassert>
 #include <QImage>
-#include <qgl.h>
+#include <QtOpenGL/qgl.h>
 #include "Texture.h"
 #include <vector>
 

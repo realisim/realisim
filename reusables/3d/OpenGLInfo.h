@@ -5,7 +5,7 @@
   a opengl. Le numéro de version d"openGL, le numéro de version du langage
   de shader, le manufacturier de la carte et les extensions supportées.*/
 
-#include <qgl.h>
+#include <QtOpenGL/qgl.h>
 #include <vector>
 #include <string>
 

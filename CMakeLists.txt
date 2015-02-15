@@ -3,35 +3,34 @@ PROJECT( Realisim )
 
 INCLUDE( "macro_component.cmake" )
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.8.11)
 
 SET(SOURCES)  #all .cpp files
 SET(INCLUDES) #all .h files
 SET(RESOURCES) #all resources files 
                   # .qrc Qt resources files
-SET(MOC_HEADERS) #all files that contain Q_OBJECT macro and need to be moc'ed               
                   
 SET(PROJECT_INCLUDE_DIRS) #additional include directory to add
 SET(PROJECT_LINK_LIBRAIRIES) #additional link librairies                 
 SET(BINDIR ${CMAKE_SOURCE_DIR}/distribution/bin)
 
 #Set a global group for all cxx files ( usualy moc'ed files )
-
-FIND_PACKAGE(Qt4)
-INCLUDE(${QT_USE_FILE})
+# Find includes in corresponding build directories
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+# Instruct CMake to run moc automatically when needed.
+set(CMAKE_AUTOMOC ON)
+# Widgets finds its own dependencies (QtGui and QtCore).
+FIND_PACKAGE(Qt5Widgets)
 
 MACRO( GENERATE_EXE iExecutableName )
-#   MESSAGE( "PROJECT_INCLUDE_DIRS: ${PROJECT_INCLUDE_DIRS}" )
+   MESSAGE( "PROJECT_INCLUDE_DIRS: ${PROJECT_INCLUDE_DIRS}" )
 #   Message("QT_PLUGINS_DIR: ${QT_PLUGINS_DIR}")
 #   MESSAGE( "sources: ${SOURCES}" )
 #   MESSAGE( "executable: ${iExecutableName}" )
 #   MESSAGE( "BINDIR: ${BINDIR}" )
 #   MESSAGE( "MOC_HEADER: ${MOC_HEADERS}" )
   
-#  SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINDIR} )
-  IF( MOC_HEADERS )
-    QT_WRAP_CPP (${PROJECT_NAME} MOC_FILES ${MOC_HEADERS})
-  ENDIF( MOC_HEADERS )
+  #SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINDIR} )
   
   INCLUDE_DIRECTORIES( ${PROJECT_INCLUDE_DIRS} )
 
@@ -42,12 +41,22 @@ MACRO( GENERATE_EXE iExecutableName )
       ${PROJECT_LINK_LIBRAIRIES}
       )
 
-    ADD_EXECUTABLE( ${iExecutableName} MACOSX_BUNDLE  ${INCLUDES} ${SOURCES} ${RESOURCES} ${MOC_FILES} )
+    ADD_EXECUTABLE( ${iExecutableName} MACOSX_BUNDLE ${INCLUDES} ${SOURCES} ${RESOURCES} ${MOC_FILES} )
   ELSE(APPLE)
     ADD_EXECUTABLE( ${iExecutableName} ${INCLUDES} ${SOURCES} ${RESOURCES} ${MOC_FILES} )
   ENDIF(APPLE)
-  TARGET_LINK_LIBRARIES(${iExecutableName} ${QT_LIBRARIES} ${PROJECT_LINK_LIBRAIRIES})
+  TARGET_LINK_LIBRARIES(${iExecutableName} Qt5::Widgets ${PROJECT_LINK_LIBRAIRIES} )
 ENDMACRO( GENERATE_EXE  )
+
+MACRO(ADD_QT_OPENGL)
+  find_package(Qt5OpenGL)
+  # OpenGL & GLEW library sur Mac
+  find_package(OpenGL REQUIRED)
+  SET( PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIR})
+  MESSAGE( "OPENGL_LIBRARIES: ${OPENGL_LIBRARIES}" )
+
+  SET( PROJECT_LINK_LIBRAIRIES ${PROJECT_LINK_LIBRAIRIES} Qt5::OpenGL ${OPENGL_LIBRARIES} )
+ENDMACRO(ADD_QT_OPENGL)
 
 MACRO(ADD_OPENCL)
   IF(APPLE)
@@ -73,8 +82,9 @@ MACRO(ADD_OPENAL)
   IF(APPLE)
   find_package(OpenAL)
   IF(OPENAL_FOUND)
-    MESSAGE("OPENAL FOUND - including directory ${OPENAL_INCLUDE_DIR}")
+    MESSAGE("OPENAL FOUND - including directory ${OPENAL_INCLUDE_DIR}, including library ${OPENAL_LIBRARY}")
     SET( PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${OPENAL_INCLUDE_DIR} )
+    SET( PROJECT_LINK_LIBRAIRIES ${PROJECT_LINK_LIBRAIRIES} ${OPENAL_LIBRARY} )
   ENDIF()
   ENDIF(APPLE)
 ENDMACRO(ADD_OPENAL)

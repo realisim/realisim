@@ -5,7 +5,7 @@
 #include <cassert>
 #include "math/Vect.h"
 #include <QImage>
-#include <qgl.h>
+#include <QtOpenGL/qgl.h>
 #include <QString>
 #include <vector>
 

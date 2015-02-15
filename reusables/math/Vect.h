@@ -751,7 +751,7 @@ namespace math
   //----------------------------------------------------------------------------
   template<class T>
   inline Vector2<T> Vector2<T>::getUnit() const
-  { return Vector2<T>( *this / max(this->norm(), 1.0) ); }
+    { return Vector2<T>( *this / std::max(this->norm(), 1.0) ); }
   
   //----------------------------------------------------------------------------
   template<class T>
