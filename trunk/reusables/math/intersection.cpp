@@ -74,6 +74,10 @@ bool intersects( const Circle& iA, const Circle& iB )
 //------------------------------------------------------------------------------
 bool intersects( const Line2d& iL1, const Line2d& iL2 )
 { return intersect( iL1, iL2 ).hasContacts(); }
+  
+//------------------------------------------------------------------------------
+bool intersects( const Line2d& iL1, const LineSegment2d& iL2 )
+{ return intersect( iL1, iL2 ).hasContacts(); }
 
 //------------------------------------------------------------------------------
 bool intersects( const Line2d& l, const Rectangle& r )
@@ -82,6 +86,10 @@ bool intersects( const Line2d& l, const Rectangle& r )
 //------------------------------------------------------------------------------
 bool intersects( const LineSegment2d& iL1, const LineSegment2d& iL2 )
 { return intersect(iL1, iL2).hasContacts() ; }
+
+//------------------------------------------------------------------------------
+bool intersects( const LineSegment2d& iL1, const Line2d& iL2 )
+{ return intersect(iL2, iL1).hasContacts() ; }
 
 //------------------------------------------------------------------------------
 bool intersects( const LineSegment2d& iL, const Rectangle& iR )

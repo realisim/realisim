@@ -47,9 +47,9 @@ namespace math
   private:
   
     Point3d  origin_;    //! origin de la ligne
-    Vect3f direction_;    //! direction de la ligne
+    Vector3d direction_;    //! direction de la ligne
   
-  }
+  };
   
   //! constructeur par defaut
   inline Line::Line() : origin_(), direction_()
@@ -78,7 +78,7 @@ namespace math
   }
   
   //! destructeur
-  virtual Line::~Line()
+  Line::~Line()
   {
     ;
   }
