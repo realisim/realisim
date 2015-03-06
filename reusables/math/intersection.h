@@ -46,8 +46,10 @@ namespace math
 //Point3d intersect( const Plane&, const Line3d& );
 	bool intersects( const Circle&, const Circle& );
   bool intersects( const Line2d&, const Line2d& );
+  bool intersects( const Line2d&, const LineSegment2d& );
   bool intersects( const Line2d&, const Rectangle& );  
   bool intersects( const LineSegment2d&, const LineSegment2d& );
+  bool intersects( const LineSegment2d&, const Line2d& );
   bool intersects( const LineSegment2d&, const Rectangle& );
   bool intersects( const Rectangle&, const Rectangle& );
   bool intersects( const Rectangle&, const LineSegment2d& );

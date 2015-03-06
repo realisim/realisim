@@ -92,6 +92,7 @@ ENDMACRO(ADD_OPENAL)
 option( REALEDIT_BUILDOPTION "Build RealEdit" OFF )
 option( SPRITEEDITOR_BUILDOPTION "Build SpriteEditor" ON )
 option( REMOTEDESKTOP_BUILDOPTION "Build RemoteDesktop" OFF )
+option( SARGAM_BUILDOPTION "Build RemoteDesktop" OFF )
 option( PROTOTYPES_BUILDOPTION "Build Prototypes" OFF )
 
 add_subdirectory( projects )
