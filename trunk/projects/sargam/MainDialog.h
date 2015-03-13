@@ -18,15 +18,18 @@ public:
 enum notes{ nSa = 1, nRe, nGa, nMa, nPa, nDha, nNi, nComma, nChick, nRest };
 //  enum phrasing{ sComa, sAccent };
 //  enum picking{ pDa, pRa, pDiri };
-  enum techniqueType{ ttMeend, ttKrintan };
+  enum ornementType{ otMeend, otKrintan, otAndolan, otGamak };
   
+  //void addMatra( std::vector< std::pair<int, int> > );
+  void addMatraFromSelection();
   void addNote( int );
   void addNote( int, int );
-  void addNote( int, int, int );
+  void addNote( int, int, int, int );
+  //void addOrnement( std::vector< std::pair<int, int> > );
+  void addOrnementFromSelection( ornementType );
   void clear();
-//  void closeBeatGroup( int );
-//  void closeTechniqueGroup();
   void decreaseOctave();
+  void eraseNote( int, int );
   void generateRandomPartition();
   int getCurrentBar() const;
   int getCurrentNote() const;
@@ -36,87 +39,100 @@ enum notes{ nSa = 1, nRe, nGa, nMa, nPa, nDha, nNi, nComma, nChick, nRest };
   int getNumberOfNotesInBar( int ) const;
   int getOctave() const;
   QSizeF getPaperSizeInInch() const;
+  bool hasSelection() const;
   void increaseOctave();
   bool isDebugging() const;
-//  bool isBeatGroupOpen() const;
-//bool isTechniqueGroupOpen() const;
-//  void openBeatGroup( int );
-//  void openTechniqueGroup( techniqueType );
-  void removeNote( int, int );
+  bool isNoteInMatra( int, int ) const;
+  bool isNoteInOrnement( int, int ) const;
+  bool isNoteSelected( int, int ) const;
   void setAsDebugging( bool );
   void setCurrentBar(int);
   void setCurrentNote(int);
 //void setPaperSize( QSizeF );
   
+protected slots:
+  void titleChanged( const QString& );
+  
 protected:
   enum region { rPartition, rTitle };
   enum pageRegion { prPage, prBody, prPageFooter };
   enum barRegion { brSeparatorX, brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
-    brTechniqueY, brBeatGroupY };
+    brOrnementY, brMatraGroupY };
   
   struct Bar
   {
     Bar() : mIsDirty(true){;}
+    QRect getNoteRect( int ) const;
+    
     //--- cache d'Affichage
     QRect mRect;
     std::vector< QRect > mNotesRect;
-    std::vector< QRect > mBeatGroupsRect;
+    std::vector< QRect > mMatraGroupsRect;
     QPixmap mPixmap;
     std::vector< QRect > mPageLayout;
     std::vector< QRect > mNotesPageLayout;
     //--- data
     std::vector< std::pair<int, int> > mNotes;
-    std::vector< std::vector<int> > mBeatGroups;
+    std::vector< std::vector<int> > mMatraGroups;
+    std::vector< int > mGraceNotes;
     bool mIsDirty;
   };
   
-  struct Technique //technique...
+  struct Ornement //ornoment...
   {
-    Technique() : mTechniqueType( ttMeend ){}
-    Technique( techniqueType iTt ) : mTechniqueType( iTt ){}
+    Ornement() : mOrnementType( otMeend ){}
+    Ornement( ornementType iTt ) : mOrnementType( iTt ){}
     
-    void addNote( int, int );
+    //void addNote( int, int );
     bool appliesToBar( int ) const;
     std::vector<int> barsInvolved() const;
     QRect getBlit( int ) const;
     QRect getCut( int ) const;
-    void removeNote( int, int );
+    //void removeNote( int, int );
     
-    QRect mFullTechnique;
+    //--- cache d'Affichage
+    QRect mFullOrnement;
     std::vector< std::pair< int, QRect > > mCuts; //barIndex, rect to form full meend
     std::vector< std::pair< int, QRect > > mBlits; //barIndex, rect to cut from mFullMeend
       //and blit to bar.mPixmap;
+    
+    //--- data
     std::vector< std::pair<int, int> > mNotes; //barIndex, noteIndex
-    techniqueType mTechniqueType;
+    ornementType mOrnementType;
   };
   
   void addBar();
-  void addBeatGroup();
-  void addTechniqueGroup( techniqueType );
   void addPage();
+  void addNoteToMatra( int, int, int );
+  void addNoteToOrnement( int, int, int );
   void addNoteToSelection( int, int );
-  void closeSelection();
+  void clearSelection();
+  void createUi();
   int cmToPixel( double ) const;
+void eraseNoteFromMatraGroup( int, int );
+void eraseNoteFromOrnementGroup( int, int );
+  int findMatra( int, int ) const;
+  int findOrnement( int, int ) const;
   int getBarRegion( barRegion ) const;
   QRect getPageRegion( pageRegion, int ) const;
   QRect getRegion( region ) const;
-  bool isNoteSelected( int, int ) const;
   bool isSelectionOpen() const;
   virtual void keyPressEvent( QKeyEvent* );
   virtual void keyReleaseEvent( QKeyEvent* );
   QString noteToString( std::pair<int, int> ) const;
-  void openSelection();
   virtual void paintEvent(QPaintEvent*);
   void renderBarOffscreen( int );
   void setBarAsDirty( int, bool );
+  void shiftMatra(int, int, int);
+  void shiftOrnement(int, int, int);
   int toPageIndex( QPoint ) const;
   void updateBar( int );
-  void updateTechnique( Technique* );
+  void updateOrnement( Ornement* );
   void updatePageLayouts();
   void updateUi();
-//  void validateAndCleanBeatGroup( int, int );
-//  void validateAndCleanLastBeatGroup( int );
-  void validateAndCleanTechniqueGroup();
+  
+  //--- ui
+  QLineEdit* mpTitleLe;
   
   //--- data
   bool mIsDebugging;
@@ -125,15 +141,12 @@ protected:
   QFont mTitleFont;
   QFont mBarFont;
   std::vector< Bar > mBars;
-  Technique mCurrentTechnique;
-  std::vector< Technique > mTechniques;
+  std::vector< Ornement > mOrnements;
   int mCurrentBar;
   int mCurrentNote;
   QPoint mLayoutCursor;
-//  bool mIsTechniqueGroupOpen;
-//  bool mIsBeatGroupOpen;
+
   int mOctave;
-  bool mIsSelectionOpen;
   std::vector< std::pair<int, int> > mNotesSelected; //bar, index
 };
 
