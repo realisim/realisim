@@ -3,9 +3,15 @@
 #ifndef MainDialog_hh
 #define MainDialog_hh
 
+#include "data.h"
 #include <QtWidgets>
 #include <QSettings>
 #include <vector>
+
+namespace realisim
+{
+namespace sargam
+{
 
 //------------------------------------------------------------------------------
 class PartitionViewer : public QWidget
@@ -14,17 +20,15 @@ class PartitionViewer : public QWidget
 public:
   PartitionViewer( QWidget* );
   ~PartitionViewer();
-
-enum notes{ nSa = 1, nRe, nGa, nMa, nPa, nDha, nNi, nComma, nChick, nRest };
-//  enum phrasing{ sComa, sAccent };
-//  enum picking{ pDa, pRa, pDiri };
-  enum ornementType{ otMeend, otKrintan, otAndolan, otGamak };
+  
+  enum ornementType{ otMeend, otKrintan, otAndolan, otGamak }; //a bouger dans data
   
   //void addMatra( std::vector< std::pair<int, int> > );
+  void addGraceNotesFromSelection(); //addSelectionToGraceNotes
+  //void addGraceNotes( std::vector< std::pair<int, int> > )
   void addMatraFromSelection();
-  void addNote( int );
-  void addNote( int, int );
-  void addNote( int, int, int, int );
+  void addNote( Note );
+  void addNote( Note, int, int );
   //void addOrnement( std::vector< std::pair<int, int> > );
   void addOrnementFromSelection( ornementType );
   void clear();
@@ -33,31 +37,43 @@ enum notes{ nSa = 1, nRe, nGa, nMa, nPa, nDha, nNi, nComma, nChick, nRest };
   void generateRandomPartition();
   int getCurrentBar() const;
   int getCurrentNote() const;
-  std::pair<int, int> getNote( int, int ) const;
+  const Note& getNote( int, int ) const;
   int getNumberOfBars() const;
   int getNumberOfPages() const;
   int getNumberOfNotesInBar( int ) const;
-  int getOctave() const;
+  //getNumberOfMatrasInBar( int ) const;
+  //getNumberOfNoteInMatra( int iBar, int iMatra ) const;
+  //getMatraNoteIndex( int iBar, int iMatra, int iIndex ) const;
+  //getNumberOfGraceNotesInBar(int iBar) const;
+  //getGraceNoteIndex( int iBar, int iIndex ) const;
+  //getNumberOfOrnements() const;
+  //getNumberOfNotesInOrnement( int iOrnementIndex ) const;
+  //getOrnmentNoteIndex( int iOrnementIndex, int iIndex ) const;
+int getOctave() const;
   QSizeF getPaperSizeInInch() const;
+  std::vector<Note> getScale() const;
   bool hasSelection() const;
   void increaseOctave();
   bool isDebugging() const;
+  bool isGraceNote( int, int) const;
   bool isNoteInMatra( int, int ) const;
   bool isNoteInOrnement( int, int ) const;
   bool isNoteSelected( int, int ) const;
   void setAsDebugging( bool );
   void setCurrentBar(int);
   void setCurrentNote(int);
-//void setPaperSize( QSizeF );
+  //void setPaperSize( QSizeF );
   
-protected slots:
+  protected slots:
   void titleChanged( const QString& );
   
 protected:
-  enum region { rPartition, rTitle };
+  enum bars{ bScale = 0, /*bAscendingScale, bDescendingScale, bTarabTuning,*/
+    bFirstSargamBar };
+  enum region { rPartition, rTitle, rSargamScaleLabel, rSargamScale };
   enum pageRegion { prPage, prBody, prPageFooter };
   enum barRegion { brSeparatorX, brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
-    brOrnementY, brMatraGroupY };
+    brOrnementY, brMatraGroupY, brGraceNoteTopY };
   
   struct Bar
   {
@@ -72,7 +88,7 @@ protected:
     std::vector< QRect > mPageLayout;
     std::vector< QRect > mNotesPageLayout;
     //--- data
-    std::vector< std::pair<int, int> > mNotes;
+    std::vector< sargam::Note > mNotes;
     std::vector< std::vector<int> > mMatraGroups;
     std::vector< int > mGraceNotes;
     bool mIsDirty;
@@ -94,7 +110,7 @@ protected:
     QRect mFullOrnement;
     std::vector< std::pair< int, QRect > > mCuts; //barIndex, rect to form full meend
     std::vector< std::pair< int, QRect > > mBlits; //barIndex, rect to cut from mFullMeend
-      //and blit to bar.mPixmap;
+    //and blit to bar.mPixmap;
     
     //--- data
     std::vector< std::pair<int, int> > mNotes; //barIndex, noteIndex
@@ -106,23 +122,37 @@ protected:
   void addNoteToMatra( int, int, int );
   void addNoteToOrnement( int, int, int );
   void addNoteToSelection( int, int );
+  void addToGraceNotes( int, int );
+  void commandAddNote( noteValue );
+void commandBreakMatrasFromSelection();
+void commandBreakOrnementsFromSelection();
+  void commandErase();
+  void commandShiftNote();
   void clearSelection();
   void createUi();
   int cmToPixel( double ) const;
-void eraseNoteFromMatraGroup( int, int );
-void eraseNoteFromOrnementGroup( int, int );
+  void eraseGraceNote( int, int );
+  void eraseMatra( int, int );
+  void eraseNoteFromMatra( int, int );
+  void eraseNoteFromOrnement( int, int );
+  void eraseOrnement( int );
   int findMatra( int, int ) const;
   int findOrnement( int, int ) const;
+//Bar& getBar( int, int );
   int getBarRegion( barRegion ) const;
+  int getInterNoteSpacing(int, int, int) const;
+  Note& getNote( int, int );
   QRect getPageRegion( pageRegion, int ) const;
   QRect getRegion( region ) const;
   bool isSelectionOpen() const;
   virtual void keyPressEvent( QKeyEvent* );
   virtual void keyReleaseEvent( QKeyEvent* );
-  QString noteToString( std::pair<int, int> ) const;
+  Note makeNoteFromScale( noteValue ) const;
+  QString noteToString( Note ) const;
   virtual void paintEvent(QPaintEvent*);
   void renderBarOffscreen( int );
   void setBarAsDirty( int, bool );
+  void shiftGraceNotes( int, int, int );
   void shiftMatra(int, int, int);
   void shiftOrnement(int, int, int);
   int toPageIndex( QPoint ) const;
@@ -133,6 +163,7 @@ void eraseNoteFromOrnementGroup( int, int );
   
   //--- ui
   QLineEdit* mpTitleLe;
+  QString mSargamScaleLabel;
   
   //--- data
   bool mIsDebugging;
@@ -140,15 +171,20 @@ void eraseNoteFromOrnementGroup( int, int );
   int mNumberOfPages;
   QFont mTitleFont;
   QFont mBarFont;
+  QFont mGraceNotesFont;
   std::vector< Bar > mBars;
   std::vector< Ornement > mOrnements;
   int mCurrentBar;
   int mCurrentNote;
   QPoint mLayoutCursor;
-
+  
   int mOctave;
   std::vector< std::pair<int, int> > mNotesSelected; //bar, index
 };
+
+  
+}
+}
 
 //------------------------------------------------------------------------------
 class MainDialog : public QMainWindow
@@ -169,7 +205,7 @@ protected:
   void saveSettings();
   void updateUi();
   
-  PartitionViewer* mpPartitionViewer;
+  realisim::sargam::PartitionViewer* mpPartitionViewer;
   QSettings mSettings;
 };
 
