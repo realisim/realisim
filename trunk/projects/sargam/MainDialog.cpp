@@ -15,9 +15,11 @@
 using namespace std;
 using namespace realisim;
   using namespace math;
+  using namespace sargam;
 
 namespace
 {
+  const int kSpacing = 5;
   //page
   const int kInterPageGap = 15;
   const int kPageMarginInCm = 1;
@@ -40,7 +42,9 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mNumberOfPages(0),
   mCurrentBar( -1 ),
   mCurrentNote( -1 ),
-  mOctave( 0 )
+  mOctave( 0 ),
+  mpTitleLe(0),
+  mSargamScaleLabel( "no text for sargamScale" )
 {
   setStyleSheet("QLineEdit { border: none }");
   setFocusPolicy( Qt::StrongFocus );
@@ -48,17 +52,54 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mTitleFont = QFont( "Arial", 24 );
   mTitleFont.setBold( true );
   mBarFont = QFont( "Arial", 14 );
+  mGraceNotesFont = QFont( "Arial", 10 );
 
   createUi();
   addPage();
-  addBar();
-  setCurrentBar( 0 );
+  
+  //ajout des barres par defauts et de la premiere barre du sargam
+  for( int i = 0; i <= bFirstSargamBar; ++i )
+  { addBar(); }
+  
+  //valeurs par defaut de la gamme
+  Bar& b = mBars[ bScale ];
+  for( int i = nvSa; i <= nvNi; ++i )
+  { b.mNotes.push_back( Note( (noteValue)i ) ); }
+  setBarAsDirty( bScale, true );
+  
+  setCurrentBar( bFirstSargamBar );
+  
   //generateRandomPartition();
   updateUi();
 }
 
 PartitionViewer::~PartitionViewer()
 {}
+//-----------------------------------------------------------------------------
+void PartitionViewer::addBar()
+{
+  mBars.push_back( Bar() );
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+/*Les notes de la selection deviennent des graces notes si elle ne le sont
+  pas déjà.*/
+void PartitionViewer::addGraceNotesFromSelection()
+{
+  if( hasSelection() )
+  {
+    for( int i = 0; i < mNotesSelected.size(); ++i )
+    {
+      int barIndex = mNotesSelected[i].first;;
+      int noteIndex = mNotesSelected[i].second;
+      Bar& b = mBars[ barIndex ];
+      if( !isGraceNote( barIndex, noteIndex ) )
+      { b.mGraceNotes.push_back( noteIndex ); }
+      
+      setBarAsDirty( barIndex, true );
+    }
+  }
+}
 //-----------------------------------------------------------------------------
 /*ajoute un matra composé du groupe de pair( barIndex, noteIndex )*/
 void PartitionViewer::addMatraFromSelection()
@@ -86,48 +127,46 @@ void PartitionViewer::addMatraFromSelection()
   }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::addOrnementFromSelection( ornementType iT )
-{
-  for( int i = 0; i < mNotesSelected.size(); ++i )
-  {
-    int bar = mNotesSelected[i].first;
-    setBarAsDirty( bar , true );
-  }
-  Ornement t;
-  t.mOrnementType = iT;
-  t.mNotes = mNotesSelected;
-  mOrnements.push_back( t );
-}
-//-----------------------------------------------------------------------------
-void PartitionViewer::addNote( int iNote )
-{ addNote( iNote, 0 ); }
-//-----------------------------------------------------------------------------
-void PartitionViewer::addNote( int iNote, int iOctave )
-{ addNote( iNote, iOctave, getCurrentBar(), getCurrentNote() ); }
+void PartitionViewer::addNote( Note iNote )
+{ addNote( iNote, getCurrentBar(), getCurrentNote() ); }
 //-----------------------------------------------------------------------------
 /*Insère la note (iNote, iOctave) dans la barre iBar immédiatement après
   l'index iCursorIndex */
-void PartitionViewer::addNote( int iNote, int iOctave,
+void PartitionViewer::addNote( Note iNote,
   int iBar, int iCursorIndex )
 {
   if( iBar >= 0 && iBar < getNumberOfBars() )
   {
     int noteIndex = iCursorIndex + 1;
-    vector< pair< int, int > >::iterator pos = mBars[iBar].mNotes.begin() +
+    vector< Note >::iterator pos = mBars[iBar].mNotes.begin() +
       noteIndex;
     
-    mBars[iBar].mNotes.insert( pos, make_pair( iNote, iOctave ) );
+    mBars[iBar].mNotes.insert( pos, iNote );
     //on shift le matra de 1
     shiftMatra( 1, iBar, iCursorIndex );
-    //Si la note au curseur est dans le matra, la nouvelle note devra
-    //aussi etre dans le matra
-    if( isNoteInMatra( iBar, iCursorIndex) )
+    //Si la note au curseur, ainsi que la suivante, sont dans le matra, la
+    //nouvelle note devra aussi etre dans le matra
+    int matra1 = findMatra( iBar, iCursorIndex );
+    int matra2 = findMatra( iBar, iCursorIndex + 2 );
+    if( matra1 != -1 && matra1 == matra2 )
     { addNoteToMatra( findMatra( iBar, iCursorIndex ), iBar, noteIndex ); }
     
     //on shift les ornements de 1
     shiftOrnement( 1, iBar, iCursorIndex );
-    if( isNoteInOrnement( iBar, iCursorIndex) )
+    //Si la note au curseur, ainsi que la suivante, sont dans lornement, la
+    //nouvelle note devra aussi etre dans l'ornement
+    int ornm1 = findOrnement( iBar, iCursorIndex );
+    int ornm2 = findOrnement( iBar, iCursorIndex + 2 );
+    if( ornm1 != -1 && ornm1 == ornm2 )
+    if( isNoteInOrnement( iBar, iCursorIndex) && isNoteInOrnement( iBar, iCursorIndex + 1) )
     { addNoteToOrnement( findOrnement( iBar, iCursorIndex ), iBar, noteIndex ); }
+    
+    //on shift les graces notes
+    shiftGraceNotes( 1, iBar, iCursorIndex );
+    //Si la note au curseur, ainsi que la suivante, sont des notes de grace, la
+    //nouvelle note devra aussi etre une note de grace
+    if( isGraceNote( iBar, iCursorIndex ) && isGraceNote( iBar, iCursorIndex + 1 ) )
+    { addToGraceNotes( iBar, noteIndex ); }
     
     setBarAsDirty( iBar, true );
     updateUi();
@@ -157,10 +196,17 @@ void PartitionViewer::addNoteToSelection( int iBar, int iNote )
   setBarAsDirty( iBar, true );
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::addBar()
+void PartitionViewer::addOrnementFromSelection( ornementType iT )
 {
-  mBars.push_back( Bar() );
-  updateUi();
+  for( int i = 0; i < mNotesSelected.size(); ++i )
+  {
+    int bar = mNotesSelected[i].first;
+    setBarAsDirty( bar , true );
+  }
+  Ornement t;
+  t.mOrnementType = iT;
+  t.mNotes = mNotesSelected;
+  mOrnements.push_back( t );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::addPage()
@@ -168,6 +214,13 @@ void PartitionViewer::addPage()
   mNumberOfPages++;
   QRect p = getRegion( rPartition );
   resize( p.width()+1, p.height()+1 );
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::addToGraceNotes( int iBar, int iNoteIndex )
+{
+  Bar& b = mBars[ iBar ];
+  b.mGraceNotes.push_back( iNoteIndex );
+  sort( b.mGraceNotes.begin(), b.mGraceNotes.end() );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::clear()
@@ -189,17 +242,116 @@ void PartitionViewer::clearSelection()
 int PartitionViewer::cmToPixel( double iCm ) const
 { return logicalDpiX() * iCm / 2.54; }
 //-----------------------------------------------------------------------------
+void PartitionViewer::commandAddNote( noteValue iN )
+{
+  if( hasSelection() )
+  { commandErase(); }
+  addNote( makeNoteFromScale( iN ) );
+  mCurrentNote++;
+  clearSelection();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::commandBreakMatrasFromSelection()
+{
+  for( int i = 0; i < mNotesSelected.size(); ++i )
+  {
+    int bar = mNotesSelected[i].first;
+    int index = mNotesSelected[i].second;
+    int matraIndex = findMatra( bar, index );
+    if( matraIndex != -1 )
+    { eraseMatra( bar, matraIndex ); }
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::commandBreakOrnementsFromSelection()
+{
+  for( int i = 0; i < mNotesSelected.size(); ++i )
+  {
+    int bar = mNotesSelected[i].first;
+    int index = mNotesSelected[i].second;
+    int ornementIndex = findOrnement( bar, index );
+    if( ornementIndex != -1 )
+    { eraseOrnement( ornementIndex ); }
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::commandErase()
+{
+  if( hasSelection() )
+  {
+    for( int i = mNotesSelected.size() - 1; i >= 0; --i )
+    { eraseNote( mNotesSelected[i].first, mNotesSelected[i].second); }
+    setCurrentBar( mNotesSelected[0].first );
+    /*Le -1 est parce que la premiere note selectionnée est effacée, il faut
+      donc aller à l'autre d'avant.*/
+    setCurrentNote( mNotesSelected[0].second - 1);
+    clearSelection();
+  }
+  else
+  {
+    eraseNote( getCurrentBar(), getCurrentNote() );
+    mCurrentNote--;
+  };
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::commandShiftNote()
+{
+  vector< pair<int, int> > l;
+  if( hasSelection() )
+  { l = mNotesSelected; }
+  else
+  { l.push_back( make_pair( getCurrentBar(), getCurrentNote()) ); }
+ 
+  for( int i = 0; i < l.size(); ++i )
+  {
+    int bar = l[i].first;
+    int index = l[i].second;
+    Note& n = getNote( bar, index );
+    if( n.getModification() == nmKomal || n.getModification() == nmTivra )
+    { n.setModification( nmShuddh ); }
+    else if( n.canBeKomal() )
+    { n.setModification( nmKomal); }
+    else if( n.canBeTivra() )
+    { n.setModification( nmTivra ); }
+    
+    setBarAsDirty( bar, true );
+  }
+  
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::createUi()
 {
+  //new
   mpTitleLe = new QLineEdit( this );
+  
+  //titre
   connect( mpTitleLe, SIGNAL( textChanged(const QString&)),
           this, SLOT( titleChanged(const QString&) ) );
   mpTitleLe->setFont( mTitleFont );
   mpTitleLe->setText( "Untitled" );
+
+  mSargamScaleLabel = "Scale: ";
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::decreaseOctave()
 { mOctave = std::max( --mOctave, -1 ); }
+//-----------------------------------------------------------------------------
+void PartitionViewer::eraseGraceNote( int iBar, int iNoteIndex )
+{
+  Bar& b = mBars[ iBar ];
+  for( int i = 0; i < b.mGraceNotes.size(); ++i )
+  {
+    if( b.mGraceNotes[i] == iNoteIndex )
+    { b.mGraceNotes.erase( b.mGraceNotes.begin() + i ); break; }
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::eraseMatra( int iBar, int iMatraIndex )
+{
+  Bar& b = mBars[iBar];
+  b.mMatraGroups.erase( b.mMatraGroups.begin() + iMatraIndex );
+  setBarAsDirty( iBar, true );
+}
 //-----------------------------------------------------------------------------
 void PartitionViewer::eraseNote( int iBar, int iNoteIndex )
 {
@@ -211,20 +363,25 @@ void PartitionViewer::eraseNote( int iBar, int iNoteIndex )
 
     //si la note est dans le matra, on l'enleve, sinon on shift le groupe
     if( isNoteInMatra( iBar, iNoteIndex ) )
-    { eraseNoteFromMatraGroup( iBar, iNoteIndex ); }
+    { eraseNoteFromMatra( iBar, iNoteIndex ); }
     shiftMatra( -1, iBar, iNoteIndex );
     
     //on enleve des ornements
     if( isNoteInOrnement( iBar, iNoteIndex ) )
-    { eraseNoteFromOrnementGroup( iBar, iNoteIndex ); }
+    { eraseNoteFromOrnement( iBar, iNoteIndex ); }
     shiftOrnement( -1, iBar, iNoteIndex );
+    
+    //on eneleve les graceNotes
+    if( isGraceNote( iBar, iNoteIndex ) )
+    { eraseGraceNote( iBar, iNoteIndex ); }
+    shiftGraceNotes( -1, iBar, iNoteIndex );
     
     setBarAsDirty( iBar, true);
     updateUi();
   }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::eraseNoteFromMatraGroup( int iBar, int iNoteIndex )
+void PartitionViewer::eraseNoteFromMatra( int iBar, int iNoteIndex )
 {
   Bar& b = mBars[ iBar ];
   //on enleve iNoteIndex de tous les matra de la barre iBar
@@ -243,7 +400,7 @@ void PartitionViewer::eraseNoteFromMatraGroup( int iBar, int iNoteIndex )
   }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::eraseNoteFromOrnementGroup( int iBar, int iNoteIndex )
+void PartitionViewer::eraseNoteFromOrnement( int iBar, int iNoteIndex )
 {
   //SI on trouve la note dans un ornement, on l'enleve et ensuite on décrémente
   //tous les indices des notes suivantes dans cet ornement.
@@ -261,6 +418,14 @@ void PartitionViewer::eraseNoteFromOrnementGroup( int iBar, int iNoteIndex )
       }
     }
   }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::eraseOrnement( int iIndex )
+{
+  Ornement& o = mOrnements[iIndex];
+  for( int i = 0; i < o.mNotes.size(); ++i )
+  { setBarAsDirty( o.mNotes[i].first, true ); }
+  mOrnements.erase( mOrnements.begin() + iIndex );
 }
 //-----------------------------------------------------------------------------
 /* Cherche dans les matras de iBar pour la note iNoteIndex, si elle est trouvé,
@@ -302,7 +467,7 @@ void PartitionViewer::generateRandomPartition()
   clear();
   const int kNumBars = 52;
   mBars.resize( kNumBars );
-  for( int i = 0; i < getNumberOfBars() - 1; ++i )
+  for( int i = bFirstSargamBar; i < getNumberOfBars() - 1; ++i )
   {
     double norm = rand() / (double)RAND_MAX;
     int numNotes = 4 + norm * 16;
@@ -314,7 +479,7 @@ void PartitionViewer::generateRandomPartition()
       if( norm < 0.33 ) octave = -1;
       else if( 0.33 <= norm && norm < 0.66 ) octave = 0;
       else octave = 1;
-      mBars[i].mNotes.push_back( make_pair( note, octave ) );
+      mBars[i].mNotes.push_back( Note( (noteValue)note, octave ) );
     }
   }
   updateUi();
@@ -331,8 +496,13 @@ int PartitionViewer::getBarRegion( barRegion br ) const
     case brNoteTopY: r = kBarHeight / 2 - fm.height() / 2; break;
     case brNoteBottomY: r = kBarHeight / 2 + fm.height() / 2; break;
     case brStrokeY: r = kBarHeight / 2 + fm.height() / 2 + 5; break;
-    case brOrnementY: r = getBarRegion(brNoteTopY) - 8; break;
+    case brOrnementY: r = getBarRegion(brGraceNoteTopY) - 8; break;
     case brMatraGroupY: r = getBarRegion(brNoteBottomY); break;
+    case brGraceNoteTopY:
+    {
+      QFontMetrics fm(mGraceNotesFont);
+      r = getBarRegion( brNoteTopY ) - fm.height() / 2;
+    } break;
     default: break;
   }
   return r;
@@ -344,7 +514,27 @@ int PartitionViewer::getCurrentBar() const
 int PartitionViewer::getCurrentNote() const
 { return mCurrentNote; }
 //-----------------------------------------------------------------------------
-std::pair<int, int> PartitionViewer::getNote( int iNote, int iBar ) const
+int PartitionViewer::getInterNoteSpacing(int iBar, int iIndex1, int iIndex2 ) const
+{
+  
+  int r = kInterNoteGap;
+  int matra1 = findMatra( iBar, iIndex1 );
+  int matra2 = findMatra( iBar, iIndex2 );
+  //les notes d'un même matra
+  if( matra1 == matra2 && matra1 != -1 && matra2 != -1 )
+  {
+    r = 2;
+    //si ce sont des graceNotes
+    if( isGraceNote( iBar, iIndex1 ) && isGraceNote( iBar, iIndex2 ) )
+    { r = 1; }
+  }
+  return r;
+}
+//-----------------------------------------------------------------------------
+Note& PartitionViewer::getNote( int iBar, int iNote )
+{ return mBars[iBar].mNotes[iNote]; }
+//-----------------------------------------------------------------------------
+const Note& PartitionViewer::getNote( int iBar, int iNote ) const
 { return mBars[iBar].mNotes[iNote]; }
 //-----------------------------------------------------------------------------
 int PartitionViewer::getNumberOfBars() const
@@ -375,15 +565,16 @@ QRect PartitionViewer::getPageRegion( pageRegion iR, int iPage /*=0*/ ) const
     }break;
     case prBody:
     {
-      int titleHeight = iPage == 0 ? getRegion(rTitle).height() : 0;
       int margin = cmToPixel( kPageMarginInCm );
+      int sargamScaleBottom = iPage == 0 ? getRegion(rSargamScale).bottom() + kSpacing : 0;
+      int startOfBody = max( margin, sargamScaleBottom );
       int paperWidth = getPaperSizeInInch().width() * logicalDpiX();
       int paperHeight = getPaperSizeInInch().height() * logicalDpiY();
-      int topOfPage = iPage * paperHeight + iPage * kInterPageGap;
+      int topOfPage = getPageRegion( prPage, iPage ).top();//iPage * paperHeight + iPage * kInterPageGap;
       r.setLeft( margin );
       r.setWidth( paperWidth - 2*margin );
-      r.setTop( topOfPage + titleHeight + margin );
-      r.setHeight( paperHeight - titleHeight - 2*margin );
+      r.setTop( topOfPage + startOfBody );
+      r.setBottom( topOfPage + paperHeight - margin );
     }break;
     case prPageFooter:
     {
@@ -419,7 +610,32 @@ QRect PartitionViewer::getRegion( region iR ) const
       int h = mpTitleLe->height();
       r.setTop( cmToPixel( kPageMarginInCm ) ); r.setWidth( w ); r.setHeight( h );
     }break;
+    case rSargamScaleLabel:
+    {
+      QFontMetrics fm( mBarFont );
+      QRect t = getRegion( rTitle );
+      r = t;
+      r.translate( 0, t.height() + kSpacing );
+      r.setHeight( kBarHeight );
+      r.setWidth( fm.width( mSargamScaleLabel ) );
+    } break;
+    case rSargamScale:
+    {
+      QFontMetrics fm( mBarFont );
+      QRect t = getRegion( rTitle );
+      r = t;
+      r.translate( 0, t.height() + kSpacing );
+      r.setLeft( fm.width( mSargamScaleLabel ) );
+      r.setHeight( kBarHeight );
+    } break;
   }
+  return r;
+}
+//-----------------------------------------------------------------------------
+vector<Note> PartitionViewer::getScale() const
+{
+  vector<Note> r;
+  r = mBars[ bScale ].mNotes;
   return r;
 }
 //-----------------------------------------------------------------------------
@@ -428,6 +644,13 @@ bool PartitionViewer::hasSelection() const
 //-----------------------------------------------------------------------------
 bool PartitionViewer::isDebugging() const
 { return mIsDebugging; }
+//-----------------------------------------------------------------------------
+bool PartitionViewer::isGraceNote(int iBar, int iNoteIndex ) const
+{
+  const Bar& b = mBars[iBar];
+  return ::find( b.mGraceNotes.begin(), b.mGraceNotes.end(), iNoteIndex ) !=
+    b.mGraceNotes.end();
+}
 //-----------------------------------------------------------------------------
 bool PartitionViewer::isNoteInMatra(int iBar, int iNoteIndex ) const
 { return findMatra( iBar, iNoteIndex ) != -1; }
@@ -451,28 +674,35 @@ void PartitionViewer::increaseOctave()
 //-----------------------------------------------------------------------------
 void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
 {
-  int o = getOctave();
   switch (ipE->key())
   {
-    case Qt::Key_1: addNote( nSa, o ); mCurrentNote++; clearSelection(); ;break;
-    case Qt::Key_2: addNote( nRe, o ); mCurrentNote++; clearSelection(); break;
-    case Qt::Key_3: addNote( nGa, o ); mCurrentNote++; clearSelection(); break;
-    case Qt::Key_4: addNote( nMa, o ); mCurrentNote++; clearSelection(); break;
-    case Qt::Key_5: addNote( nPa, o ); mCurrentNote++; clearSelection(); break;
-    case Qt::Key_6: addNote( nDha, o ); mCurrentNote++; clearSelection(); break;
-    case Qt::Key_7: addNote( nNi, o ); mCurrentNote++; clearSelection(); break;
-    case Qt::Key_Comma: addNote( nComma ); mCurrentNote++; clearSelection(); break;
-    case Qt::Key_C: addNote( nChick ); mCurrentNote++; clearSelection(); break;
-    case Qt::Key_R: addNote( nRest ); mCurrentNote++; clearSelection(); break;
+    case Qt::Key_1: commandAddNote( nvSa ); break;
+    case Qt::Key_2: commandAddNote( nvRe ); break;
+    case Qt::Key_3: commandAddNote( nvGa ); break;
+    case Qt::Key_4: commandAddNote( nvMa );  break;
+    case Qt::Key_5: commandAddNote( nvPa );  break;
+    case Qt::Key_6: commandAddNote( nvDha );  break;
+    case Qt::Key_7: commandAddNote( nvNi );  break;
+    case Qt::Key_Comma: commandAddNote( nvComma ); break;
+    case Qt::Key_C: commandAddNote( nvChick ); break;
     case Qt::Key_G:
-      addMatraFromSelection();
-      break;
-    case Qt::Key_M:
-      addOrnementFromSelection( otMeend );
+      if( (ipE->modifiers() & Qt::ShiftModifier) )
+      { commandBreakMatrasFromSelection(); }
+      else{ addMatraFromSelection();}
       break;
     case Qt::Key_K:
-      addOrnementFromSelection( otKrintan );
+      if( (ipE->modifiers() & Qt::ShiftModifier) )
+      { commandBreakOrnementsFromSelection(); }
+      else{ addOrnementFromSelection( otKrintan ); }
       break;
+    case Qt::Key_M:
+      if( (ipE->modifiers() & Qt::ShiftModifier) )
+      { commandBreakOrnementsFromSelection(); }
+      else{ addOrnementFromSelection( otMeend ); }
+      break;
+    case Qt::Key_N: addGraceNotesFromSelection(); break;
+    case Qt::Key_R: commandAddNote( nvRest );break;
+    case Qt::Key_S: commandShiftNote();break;
     case Qt::Key_Left:
       /*S'il ny a pas de selection ou que shift est pesé, on déplace le
        curseur vers la gauche. Lorsqu'il atteint -1, on essait de changer
@@ -538,21 +768,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
       setCurrentBar( getNumberOfBars() -1 );
       clearSelection();
       break;
-    case Qt::Key_Backspace:
-      if( hasSelection() )
-      {
-        for( int i = mNotesSelected.size() - 1; i >= 0; --i )
-        { eraseNote( mNotesSelected[i].first, mNotesSelected[i].second); }
-        setCurrentBar( mNotesSelected[0].first );
-        setCurrentNote( mNotesSelected[0].second );
-        clearSelection();
-      }
-      else
-      {
-        eraseNote( getCurrentBar(), getCurrentNote() );
-        mCurrentNote--;
-      };
-      break;
+    case Qt::Key_Backspace: commandErase(); break;
     case Qt::Key_Plus: increaseOctave(); break;
     case Qt::Key_Minus: decreaseOctave(); break;
     case Qt::Key_Shift: break;
@@ -569,29 +785,42 @@ void PartitionViewer::keyReleaseEvent( QKeyEvent* ipE )
   }
 }
 //-----------------------------------------------------------------------------
-QString PartitionViewer::noteToString( std::pair<int, int> iNote ) const
+Note PartitionViewer::makeNoteFromScale( noteValue iN ) const
 {
-  int note = iNote.first;
-  int octave = iNote.second;
+  Note r( iN, 0, nmShuddh );
+  vector<Note> v = getScale();
+  for( int i = 0; i < v.size(); ++i )
+  {
+    if( v[i].getValue() == r.getValue() )
+    { r.setModification( v[i].getModification() ); break; }
+  }
+  return r;
+}
+//-----------------------------------------------------------------------------
+QString PartitionViewer::noteToString( Note iNote ) const
+{
+  int note = iNote.getValue();
+  int octave = iNote.getOctave();
+  noteModification nm = iNote.getModification();
   
   QString r;
   switch( note )
   {
-    case nSa: r = "S"; break;
-    case nRe: r = "R"; break;
-    case nGa: r = "G"; break;
-    case nMa: r = "M"; break;
-    case nPa: r = "P"; break;
-    case nDha: r = "D"; break;
-    case nNi: r = "N"; break;
-    case nChick: r = "\xE2\x9c\x93"; break; //check
-    case nRest: r = "\xE2\x80\x94"; break; //barre horizontale
-    case nComma: r = ","; break;
+    case nvSa: r = "S"; break;
+    case nvRe: if(nm == nmKomal){r = "f";}else {r = "R";} break;
+    case nvGa: if(nm == nmKomal){r = "g";}else {r = "G";} break;
+    case nvMa: if(nm == nmTivra){r = "M";}else {r = "m";} break;
+    case nvPa: r = "P"; break;
+    case nvDha: if(nm == nmKomal){r = "d";}else {r = "D";} break;
+    case nvNi: if(nm == nmKomal){r = "n";}else {r = "N";} break;
+    case nvChick: r = "\xE2\x9c\x93"; break; //check
+    case nvRest: r = "\xE2\x80\x94"; break; //barre horizontale
+    case nvComma: r = ","; break;
     default: break;
   }
   
   //ajout de la notation octave
-  if( note != nChick && note != nRest && note != nComma )
+  if( note != nvChick && note != nvRest && note != nvComma )
   {
     switch (octave)
     {
@@ -610,6 +839,7 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
   QPainter p(this);
   p.setBackgroundMode( Qt::OpaqueMode );
   QBrush b( Qt::white );
+  QPen pen = p.pen();
   p.setBackground( b );
   p.setRenderHints( p.renderHints() | QPainter::Antialiasing );
   
@@ -624,12 +854,6 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
     //--- tout le text de la page
     p.setPen( Qt::black );
     p.setBrush( Qt::NoBrush );
-    //le titre
-//    if( i == 0 )
-//    {
-//      p.setFont( mTitleFont );
-//      p.drawText( getRegion( rTitle ), Qt::AlignCenter, "Title");
-//    }
     
     //on dessine le bas de page
     //l'indice de page commence à 0, mais on veut que montrer page 1.
@@ -638,6 +862,10 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
                "page " + QString::number(i) + 1 );
   }
   
+  //--- rendu des textes pour barres speciales (sargam scale, tarab tuning...)
+  p.setFont( mBarFont );
+  p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, mSargamScaleLabel );
+             
   //render bars
   for( int i = 0; i < getNumberOfBars(); ++i )
   {
@@ -650,14 +878,10 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       p.drawPixmap( b.mPageLayout[j], b.mPixmap, cut );
       cut.setLeft( cut.width() + 1 );
       
-      //le contoure de la barre selectionné
-      p.setPen( QColor( 125, 125, 125, 120 ) );
-      if( getCurrentBar() == i )
-      { p.drawRoundedRect( b.mPageLayout[j], 2, 2 ); }
-      p.setPen( Qt::black );
-      
       //le curseur dans la barre courante s'il n'y a pas de selection
-      p.setPen( Qt::black );
+      pen.setColor( Qt::black );
+      pen.setWidth( 1 );
+      p.setPen( pen );
       if( /*!hasSelection() &&*/ getCurrentBar() == i )
       {
         QLine l;
@@ -678,15 +902,32 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
     }
   }
   
+  //on dessine le contour de la barre courante
+  //le contoure de la barre selectionné
+  if( getCurrentBar() != -1 )
+  {
+    pen.setColor( QColor( 125, 125, 125, 120 ) );
+    pen.setWidth( 2 );
+    p.setPen( pen );
+    Bar& b = mBars[ getCurrentBar() ];
+    for( int i = 0; i < b.mPageLayout.size(); ++i )
+    { p.drawRoundedRect( b.mPageLayout[i], 2, 2 ); }
+  }
+  
   //--- render debug infos
   if( isDebugging() )
   {
+    p.setFont(QFont("Arial", 10));
     p.setPen(Qt::blue);
     p.setBrush( Qt::NoBrush );
     for( int i = 0; i < getNumberOfPages(); ++i)
     {
       if( i == 0 )
-      { p.drawRect( getRegion( rTitle ) ); }
+      {
+        p.drawRect( getRegion( rTitle ) );
+        p.drawRect( getRegion( rSargamScaleLabel ) );
+        p.drawRect( getRegion( rSargamScale ) );
+      }
       p.drawRect( getPageRegion( prBody, i ) );
       p.drawRect( getPageRegion( prPageFooter, i ) );
     }
@@ -735,11 +976,16 @@ void PartitionViewer::renderBarOffscreen( int iBar )
    est pour déplacer le contenu lineaire de la bar à zéro.*/
   for( int j = 0; j < getNumberOfNotesInBar( iBar ); ++j )
   {
-    QString s = noteToString( getNote( j, iBar ) );
+    QString s = noteToString( getNote( iBar, j ) );
+    QFont f = isGraceNote( iBar, j ) ? mGraceNotesFont : mBarFont;
+    bp.setFont(f);
     bp.drawText( b.getNoteRect(j), s);
   }
   
   //la barre vertical
+  QPen pen = bp.pen();
+  pen.setWidth( 2 );
+  bp.setPen( pen );
   int x1 = getBarRegion( brSeparatorX );
   int y1 = 0.15 * kBarHeight;
   int y2 = kBarHeight - 0.15 * kBarHeight;
@@ -748,6 +994,8 @@ void PartitionViewer::renderBarOffscreen( int iBar )
   //b.mPixmap.toImage().save( "bar" + QString::number(i) + ".png", "PNG" );
   
   //--- render beat groups
+  pen.setWidth( 1 );
+  bp.setPen( pen );
   for( int i = 0; i < b.mMatraGroupsRect.size(); ++i )
   {
     QRect r = b.mMatraGroupsRect[i];
@@ -764,13 +1012,16 @@ void PartitionViewer::renderBarOffscreen( int iBar )
       pix.fill( QColor( 0, 0, 0, 0 ) );
       QPainter mp( &pix );
       mp.setRenderHints( mp.renderHints() | QPainter::Antialiasing );
-      mp.setPen( Qt::black );
+      QPen ornementPen;
+      ornementPen.setColor( Qt::black );
+      ornementPen.setWidth( 1 );
+      mp.setPen( ornementPen );
       mp.setBrush( Qt::NoBrush );
       if( m.mOrnementType == otMeend )
       { mp.drawArc( pix.rect(), 10 * 16, 170 * 16 ); }
       else //krintan
       {
-        QRect r = pix.rect();
+        QRect r = pix.rect(); r.adjust( 1, 1, -1, -1 );
         mp.drawLine( r.bottomLeft(), r.topLeft() );
         mp.drawLine( r.topLeft(), r.topRight() );
         mp.drawLine( r.topRight(), r.bottomRight() );
@@ -800,13 +1051,14 @@ void PartitionViewer::renderBarOffscreen( int iBar )
       }
     }
     
-    bp.setPen( QColor( 0, 0, 255, 185 ) );
+    pen.setColor( QColor( 0, 0, 255, 185 ) );
+    pen.setWidth( 2 );
+    bp.setPen( pen );
     if( !r.isNull() )
     {
       r.adjust( -2, -2, 2, 2 );
       bp.drawRoundedRect( r, 2, 2 );
     }
-    bp.setPen( Qt::black );
   }
 
 }
@@ -825,6 +1077,16 @@ void PartitionViewer::setCurrentBar( int iB )
 //-----------------------------------------------------------------------------
 void PartitionViewer::setCurrentNote( int iN )
 { mCurrentNote = iN; updateUi(); }
+//-----------------------------------------------------------------------------
+void PartitionViewer::shiftGraceNotes( int iN, int iBar, int iFromIndex )
+{
+  Bar& b = mBars[iBar];
+  for( int i = 0; i < b.mGraceNotes.size(); ++i )
+  {
+    if( b.mGraceNotes[i] > iFromIndex )
+    { b.mGraceNotes[i] += iN; }
+  }
+}
 //-----------------------------------------------------------------------------
 void PartitionViewer::shiftMatra( int iN, int iBar, int iFromIndex )
 {
@@ -853,6 +1115,25 @@ void PartitionViewer::shiftOrnement( int iN, int iBar, int iFromIndex )
   }
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::titleChanged(const QString& iT)
+{
+  QFontMetrics fm( mpTitleLe->font() );
+  mpTitleLe->resize( std::max( fm.width( iT ) * 1.1,
+                              (double)fm.width( "short" ) ), mpTitleLe->height() );
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+int PartitionViewer::toPageIndex( QPoint iP ) const
+{
+  int r = 0;
+  for( int i = 0; i < getNumberOfPages(); ++i )
+  {
+    if( getPageRegion( prBody, i ).contains( iP ) )
+    { r = i; break; }
+  }
+  return r;
+}
+//-----------------------------------------------------------------------------
 /* voir la doc de Qt (http://doc.qt.io/qt-5/qrect.html#details) pour le +1 après
  chaque fonction right() et bottom()*/
 void PartitionViewer::updateBar( int iBar )
@@ -864,20 +1145,23 @@ void PartitionViewer::updateBar( int iBar )
   //--- definition des rect contenants les notes
   b.mNotesRect.clear();
   QFontMetrics fm( mBarFont );
+  QFontMetrics gfm( mGraceNotesFont );
   int separatorPos = getBarRegion( brNoteStartX );
   int barWidth = separatorPos + 2*kMargin;
   int cursorX = kMargin + separatorPos;
   for( int j = 0; j < getNumberOfNotesInBar( iBar ); ++j )
   {
-    QString n = noteToString( getNote( j, iBar ) );
-    int noteLenght = fm.width( n ) + 1;
-    int noteHeight = fm.height();
-    b.mNotesRect.push_back(
-                           QRect( cursorX, getBarRegion( brNoteTopY ), noteLenght, noteHeight ) );
-    cursorX += noteLenght + kInterNoteGap;
-    barWidth += noteLenght;
+    QString n = noteToString( getNote( iBar, j ) );
+    int noteLenght = isGraceNote( iBar, j ) ? gfm.width(n) + 1 : fm.width( n ) + 1;
+    int noteHeight = isGraceNote( iBar, j )  ? gfm.height() : fm.height();
+    int posY = isGraceNote( iBar, j ) ?
+      getBarRegion( brGraceNoteTopY ) : getBarRegion( brNoteTopY );
+    b.mNotesRect.push_back( QRect( cursorX, posY,
+      noteLenght, noteHeight ) );
+    cursorX += noteLenght + getInterNoteSpacing( iBar, j, j+1 );
+    barWidth = cursorX;
   }
-  barWidth += std::max( (getNumberOfNotesInBar( iBar ) - 1) * kInterNoteGap, 0 );
+//  barWidth += std::max( (getNumberOfNotesInBar( iBar ) - 1) * kInterNoteGap, 0 );
   
   //--- Rectangle contenant la bar
   QRect barRect( QPoint(0, 0), QSize(std::max( barWidth, kMinBarWidth), kBarHeight ) );
@@ -903,8 +1187,25 @@ void PartitionViewer::updateBar( int iBar )
 //-----------------------------------------------------------------------------
 void PartitionViewer::updatePageLayouts()
 {
+  //layout des barres spéciale (gamme, accordage tarab, etc...)
+  Bar& b = mBars[ bScale ];
+  b.mPageLayout.clear();
+  b.mNotesPageLayout.clear();
+  QRect l = b.mRect;
+  QPoint sargamScaleTopLeft = getRegion( rSargamScale ).topLeft();
+  l.translate( sargamScaleTopLeft );
+  b.mPageLayout.push_back( l );
+  //on fait le layout des notes restantes pour cette barre
+  for( int j = 0; j < getNumberOfNotesInBar(bScale); ++j )
+  {
+    QRect n = b.getNoteRect(j);
+    n.translate( sargamScaleTopLeft );
+    b.mNotesPageLayout.push_back( n );
+  }
+  
+  //--- le layout des barres du sargam
   mLayoutCursor = getPageRegion( prBody, 0 ).topLeft();
-  for( int i = 0; i < getNumberOfBars(); ++i )
+  for( int i = bFirstSargamBar; i < getNumberOfBars(); ++i )
   {
     Bar& b = mBars[i];
     b.mPageLayout.clear();
@@ -1033,28 +1334,10 @@ void PartitionViewer::updateOrnement( Ornement* ipM )
   ipM->mFullOrnement = QRect( QPoint(0, 0), QSize(widthAccum, height) );
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::titleChanged(const QString& iT)
-{
-  QFontMetrics fm( mpTitleLe->font() );
-  mpTitleLe->resize( std::max( fm.width( iT ) * 1.1,
-    (double)fm.width( "short" ) ), mpTitleLe->height() );
-  updateUi();
-}
-//-----------------------------------------------------------------------------
-int PartitionViewer::toPageIndex( QPoint iP ) const
-{
-  int r = 0;
-  for( int i = 0; i < getNumberOfPages(); ++i )
-  {
-    if( getPageRegion( prBody, i ).contains( iP ) )
-    { r = i; break; }
-  }
-  return r;
-}
-//-----------------------------------------------------------------------------
 void PartitionViewer::updateUi()
 {
   //placer le ui l'écran
+  //titre
   QRect r = getRegion( rTitle );
   QPoint c = r.center() - QPoint( mpTitleLe->width() / 2, mpTitleLe->height() / 2 );
   mpTitleLe->move( c );
@@ -1079,7 +1362,7 @@ void PartitionViewer::updateUi()
         { updateOrnement( &mOrnements[j] ); }
       }
       renderBarOffscreen(i);
-      setBarAsDirty( i, false );//b.mIsDirty = false;
+      setBarAsDirty( i, false );
       shouldUpdateLayout = true;
     }
   }
