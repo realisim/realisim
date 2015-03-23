@@ -24,21 +24,24 @@ public:
   enum ornementType{ otMeend, otKrintan, otAndolan, otGamak }; //a bouger dans data
   
   //void addMatra( std::vector< std::pair<int, int> > );
-  void addGraceNotesFromSelection(); //addSelectionToGraceNotes
   //void addGraceNotes( std::vector< std::pair<int, int> > )
   void addMatraFromSelection();
   void addNote( Note );
   void addNote( Note, int, int );
   //void addOrnement( std::vector< std::pair<int, int> > );
   void addOrnementFromSelection( ornementType );
+  void addSelectionToGraceNotes();
   void clear();
   void decreaseOctave();
   void eraseNote( int, int );
   void generateRandomPartition();
   int getCurrentBar() const;
   int getCurrentNote() const;
+  int getLineStart( int ) const;
+  QString getLineText( int ) const;
   const Note& getNote( int, int ) const;
   int getNumberOfBars() const;
+  int getNumberOfLines() const;
   int getNumberOfPages() const;
   int getNumberOfNotesInBar( int ) const;
   //getNumberOfMatrasInBar( int ) const;
@@ -117,16 +120,39 @@ protected:
     ornementType mOrnementType;
   };
   
+  struct Line
+  {
+    Line();
+    Line( int, QString);
+    
+    int getFirstBar() const {return mFirstBar;}
+    QString getText() const {return mText;}
+    void setBarIndex( int i ) { mFirstBar = i; }
+    void setText( QString s ) { mText = s; }
+    
+    //--- cache d'affichage
+    QRect mLineNumberRect;
+    QRect mTextRect;
+    
+    //--- data
+    int mFirstBar; //index de la premiere barre de cette ligne.
+    QString mText;
+  };
+  
   void addBar();
+void addLine( int, QString = QString() );
   void addPage();
   void addNoteToMatra( int, int, int );
   void addNoteToOrnement( int, int, int );
   void addNoteToSelection( int, int );
   void addToGraceNotes( int, int );
+  void commandAddBar();
+  void commandAddLine();
   void commandAddNote( noteValue );
 void commandBreakMatrasFromSelection();
 void commandBreakOrnementsFromSelection();
   void commandErase();
+  void commandRemoveSelectionFromGraceNotes();
   void commandShiftNote();
   void clearSelection();
   void createUi();
@@ -136,6 +162,7 @@ void commandBreakOrnementsFromSelection();
   void eraseNoteFromMatra( int, int );
   void eraseNoteFromOrnement( int, int );
   void eraseOrnement( int );
+  int findLine( int ) const;
   int findMatra( int, int ) const;
   int findOrnement( int, int ) const;
 //Bar& getBar( int, int );
@@ -144,7 +171,7 @@ void commandBreakOrnementsFromSelection();
   Note& getNote( int, int );
   QRect getPageRegion( pageRegion, int ) const;
   QRect getRegion( region ) const;
-  bool isSelectionOpen() const;
+  bool isStartOfLine( int ) const;
   virtual void keyPressEvent( QKeyEvent* );
   virtual void keyReleaseEvent( QKeyEvent* );
   Note makeNoteFromScale( noteValue ) const;
@@ -172,8 +199,10 @@ void commandBreakOrnementsFromSelection();
   QFont mTitleFont;
   QFont mBarFont;
   QFont mGraceNotesFont;
+  QFont mLineNumberFont;
   std::vector< Bar > mBars;
   std::vector< Ornement > mOrnements;
+  std::vector< Line > mLines;
   int mCurrentBar;
   int mCurrentNote;
   QPoint mLayoutCursor;

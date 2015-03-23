@@ -4,6 +4,9 @@
 #ifndef realisim_sargam_data_h
 #define realisim_sargam_data_h
 
+#include <QString>
+#include <vector>
+
 namespace realisim
 {
 namespace sargam
@@ -35,22 +38,59 @@ protected:
   int mOctave;
   noteModification mModification;
 };
-  
-////------------------------------------------------------------------------------
-//class Ornements
-//{
-//};
-//
 
-////------------------------------------------------------------------------------
-//class Bar
-//{
-//};
-//
-////------------------------------------------------------------------------------
-//class composition
-//{
-//};
+//------------------------------------------------------------------------------
+class NoteLocator
+{
+public:
+  NoteLocator();
+  NoteLocator( int, int );
+  
+  int getBar() const;
+  int getIndex() const;
+  bool isValid() const;
+  
+protected:
+  int mBar;
+  int mIndex;
+};
+bool operator<( const NoteLocator&, const NoteLocator& );
+
+//------------------------------------------------------------------------------
+class Composition
+{
+public:
+  Composition();
+
+protected:
+  struct Bar
+  {
+  public:
+    Bar();
+    std::vector<Note> mNotes;
+    std::vector< std::vector<int> > mMatras;
+    std::vector<int> mGraceNotes;
+  };
+  
+  struct Ornements
+  {
+    Ornements();
+    std::vector< std::vector<NoteLocator> > mNotes;
+  };
+  
+  struct Line
+  {
+    Line();
+    
+    QString mText;
+    std::vector<int> mBarIndices;
+  };
+  
+  std::vector<Note> mScale;
+  std::vector<Bar> mBars;
+  std::vector<Line> mLines;
+  std::vector<Ornements> mOrnements;
+};
   
 }
 }
