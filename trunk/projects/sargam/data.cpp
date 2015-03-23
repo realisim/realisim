@@ -7,6 +7,8 @@ using namespace realisim;
 using namespace sargam;
 
 //------------------------------------------------------------------------------
+//--- Note
+//------------------------------------------------------------------------------
 Note::Note( noteValue iV) :
 mValue( iV ),
 mOctave( 0 ),
@@ -34,7 +36,6 @@ bool Note::canBeTivra() const
   if( mModification != nmTivra && mValue == nvMa ){ r = true; }
   return  r;
 }
-
 //------------------------------------------------------------------------------
 noteModification Note::getModification() const
 { return mModification; }
@@ -53,4 +54,34 @@ void Note::setOctave( int iO )
 //------------------------------------------------------------------------------
 void Note::setValue( noteValue iV )
 { mValue = iV; }
+
 //------------------------------------------------------------------------------
+//--- NoteLocator
+//------------------------------------------------------------------------------
+NoteLocator::NoteLocator() :
+ mBar( -1 ),
+ mIndex( -1 )
+{}
+//------------------------------------------------------------------------------
+NoteLocator::NoteLocator( int iBar, int iIndex ) :
+mBar( iBar ),
+mIndex( iIndex )
+{}
+//------------------------------------------------------------------------------
+int NoteLocator::getBar() const
+{ return mBar; }
+//------------------------------------------------------------------------------
+int NoteLocator::getIndex() const
+{ return mIndex; }
+//------------------------------------------------------------------------------
+bool NoteLocator::isValid() const
+{ return mBar != -1 && mIndex != -1; }
+//------------------------------------------------------------------------------
+bool operator<( const NoteLocator& iLhs, const NoteLocator& iRhs )
+{
+  bool r = iLhs.getBar() < iRhs.getBar();
+  if( iLhs.getBar() == iRhs.getBar() )
+  { r = iLhs.getIndex() < iRhs.getIndex(); }
+  return r;
+}
+
