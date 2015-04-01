@@ -15,6 +15,7 @@ namespace sargam
 enum noteValue{ nvSa = 1, nvRe, nvGa, nvMa, nvPa, nvDha, nvNi, nvComma, nvChick,
   nvRest };
 enum noteModification{ nmKomal, nmShuddh, nmTivra };
+enum strokeType{ stDa, stRa, stDiri, stNone };
 //enum ornementType{}'
   
 //------------------------------------------------------------------------------
