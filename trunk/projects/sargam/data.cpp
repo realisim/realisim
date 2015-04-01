@@ -50,7 +50,7 @@ void Note::setModification( noteModification iM )
 { mModification = iM; }
 //------------------------------------------------------------------------------
 void Note::setOctave( int iO )
-{ mOctave = iO; }
+{ mOctave = std::min( std::max(iO, -1), 1 ); }
 //------------------------------------------------------------------------------
 void Note::setValue( noteValue iV )
 { mValue = iV; }

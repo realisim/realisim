@@ -23,21 +23,19 @@ public:
   
   enum ornementType{ otMeend, otKrintan, otAndolan, otGamak }; //a bouger dans data
   
-  //void addMatra( std::vector< std::pair<int, int> > );
+  void addMatra( std::vector< std::pair<int, int> > );
   //void addGraceNotes( std::vector< std::pair<int, int> > )
-  void addMatraFromSelection();
   void addNote( Note );
   void addNote( Note, int, int );
-  //void addOrnement( std::vector< std::pair<int, int> > );
-  void addOrnementFromSelection( ornementType );
+  void addOrnement( ornementType, std::vector< std::pair<int, int> > );
+  void addStroke( int, strokeType, std::vector< int > );
   void addSelectionToGraceNotes();
   void clear();
-  void decreaseOctave();
   void eraseNote( int, int );
   void generateRandomPartition();
   int getCurrentBar() const;
   int getCurrentNote() const;
-  int getLineStart( int ) const;
+  int getLineFirstBar( int ) const;
   QString getLineText( int ) const;
   const Note& getNote( int, int ) const;
   int getNumberOfBars() const;
@@ -56,7 +54,6 @@ int getOctave() const;
   QSizeF getPaperSizeInInch() const;
   std::vector<Note> getScale() const;
   bool hasSelection() const;
-  void increaseOctave();
   bool isDebugging() const;
   bool isGraceNote( int, int) const;
   bool isNoteInMatra( int, int ) const;
@@ -67,8 +64,10 @@ int getOctave() const;
   void setCurrentNote(int);
   //void setPaperSize( QSizeF );
   
-  protected slots:
-  void titleChanged( const QString& );
+protected slots:
+  void resizeLineEditToContent();
+  void restoreFocus();
+  void stopLineTextEdit();
   
 protected:
   enum bars{ bScale = 0, /*bAscendingScale, bDescendingScale, bTarabTuning,*/
@@ -77,6 +76,15 @@ protected:
   enum pageRegion { prPage, prBody, prPageFooter };
   enum barRegion { brSeparatorX, brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
     brOrnementY, brMatraGroupY, brGraceNoteTopY };
+  
+  struct Stroke
+  {
+    Stroke( strokeType, int );
+    Stroke( strokeType, std::vector<int> );
+    
+    strokeType mStrokeType;
+    std::vector<int> mSpan;
+  };
   
   struct Bar
   {
@@ -92,6 +100,7 @@ protected:
     std::vector< QRect > mNotesPageLayout;
     //--- data
     std::vector< sargam::Note > mNotes;
+    std::vector< Stroke > mStrokes;
     std::vector< std::vector<int> > mMatraGroups;
     std::vector< int > mGraceNotes;
     bool mIsDirty;
@@ -107,7 +116,6 @@ protected:
     std::vector<int> barsInvolved() const;
     QRect getBlit( int ) const;
     QRect getCut( int ) const;
-    //void removeNote( int, int );
     
     //--- cache d'Affichage
     QRect mFullOrnement;
@@ -127,12 +135,14 @@ protected:
     
     int getFirstBar() const {return mFirstBar;}
     QString getText() const {return mText;}
+    bool hasText() const {return !mText.isEmpty(); }
     void setBarIndex( int i ) { mFirstBar = i; }
     void setText( QString s ) { mText = s; }
     
     //--- cache d'affichage
     QRect mLineNumberRect;
     QRect mTextRect;
+    QRect mHotSpot;
     
     //--- data
     int mFirstBar; //index de la premiere barre de cette ligne.
@@ -149,9 +159,14 @@ void addLine( int, QString = QString() );
   void commandAddBar();
   void commandAddLine();
   void commandAddNote( noteValue );
+  void commandAddMatra();
+  void commandAddOrnement( ornementType );
+  void commandAddStroke( strokeType );
 void commandBreakMatrasFromSelection();
 void commandBreakOrnementsFromSelection();
+  void commandDecreaseOctave();
   void commandErase();
+  void commandIncreaseOctave();
   void commandRemoveSelectionFromGraceNotes();
   void commandShiftNote();
   void clearSelection();
@@ -162,26 +177,36 @@ void commandBreakOrnementsFromSelection();
   void eraseNoteFromMatra( int, int );
   void eraseNoteFromOrnement( int, int );
   void eraseOrnement( int );
+  void eraseStroke( int, int );
   int findLine( int ) const;
   int findMatra( int, int ) const;
   int findOrnement( int, int ) const;
+  int findStroke( int, int ) const;
 //Bar& getBar( int, int );
   int getBarRegion( barRegion ) const;
   int getInterNoteSpacing(int, int, int) const;
   Note& getNote( int, int );
   QRect getPageRegion( pageRegion, int ) const;
   QRect getRegion( region ) const;
+  bool hasLineEditionPending() const;
+  bool hasStroke( int, int ) const;
   bool isStartOfLine( int ) const;
   virtual void keyPressEvent( QKeyEvent* );
   virtual void keyReleaseEvent( QKeyEvent* );
   Note makeNoteFromScale( noteValue ) const;
+  virtual void mouseMoveEvent( QMouseEvent* );
+  virtual void mouseReleaseEvent( QMouseEvent* );
   QString noteToString( Note ) const;
   virtual void paintEvent(QPaintEvent*);
   void renderBarOffscreen( int );
   void setBarAsDirty( int, bool );
   void shiftGraceNotes( int, int, int );
-  void shiftMatra(int, int, int);
-  void shiftOrnement(int, int, int);
+  void shiftMatras(int, int, int);
+  void shiftOrnements(int, int, int);
+  void shiftStrokes( int, int, int );
+  std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > );
+  void startLineTextEdit( int );
+  QString strokeToString( strokeType );
   int toPageIndex( QPoint ) const;
   void updateBar( int );
   void updateOrnement( Ornement* );
@@ -191,6 +216,7 @@ void commandBreakOrnementsFromSelection();
   //--- ui
   QLineEdit* mpTitleLe;
   QString mSargamScaleLabel;
+  QLineEdit* mpLineTextEdit;
   
   //--- data
   bool mIsDebugging;
@@ -199,16 +225,18 @@ void commandBreakOrnementsFromSelection();
   QFont mTitleFont;
   QFont mBarFont;
   QFont mGraceNotesFont;
-  QFont mLineNumberFont;
+  QFont mLineFont;
   std::vector< Bar > mBars;
   std::vector< Ornement > mOrnements;
   std::vector< Line > mLines;
   int mCurrentBar;
   int mCurrentNote;
   QPoint mLayoutCursor;
-  
   int mOctave;
-  std::vector< std::pair<int, int> > mNotesSelected; //bar, index
+  std::vector< std::pair<int, int> > mSelectedNotes; //bar, index
+  int mEditingLineIndex;
+  int mAddLineTextHover;
+  static Note mDummyNote;
 };
 
   
