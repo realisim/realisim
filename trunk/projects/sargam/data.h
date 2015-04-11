@@ -14,9 +14,9 @@ namespace sargam
 
 enum noteValue{ nvSa = 1, nvRe, nvGa, nvMa, nvPa, nvDha, nvNi, nvComma, nvChick,
   nvRest };
+enum ornementType{ otMeend, otKrintan, otAndolan, otGamak };
 enum noteModification{ nmKomal, nmShuddh, nmTivra };
 enum strokeType{ stDa, stRa, stDiri, stNone };
-//enum ornementType{}'
   
 //------------------------------------------------------------------------------
 class Note
@@ -39,13 +39,22 @@ protected:
   int mOctave;
   noteModification mModification;
 };
-
+//------------------------------------------------------------------------------
+struct Stroke
+{
+  Stroke( strokeType, int );
+  Stroke( strokeType, std::vector<int> );
+  
+  strokeType mStrokeType;
+  std::vector<int> mSpan;
+};
 //------------------------------------------------------------------------------
 class NoteLocator
 {
 public:
   NoteLocator();
   NoteLocator( int, int );
+  bool operator<( const NoteLocator& ) const;
   
   int getBar() const;
   int getIndex() const;
@@ -55,42 +64,128 @@ protected:
   int mBar;
   int mIndex;
 };
-bool operator<( const NoteLocator&, const NoteLocator& );
 
 //------------------------------------------------------------------------------
+/*
+ 
+ Notes:
+   On suppose que les notes ne seront pas dans plus de 1 matras/ornement/stroke
+   simultanément.
+ */
 class Composition
 {
 public:
   Composition();
 
+  void addBar();
+void addBar( int );
+  void addLine( int, QString = QString() );
+  void addMatra( int, std::vector<int> );
+  void addNote( int, Note );
+void addNote( int, int, Note );
+  void addOrnement( ornementType, std::vector<NoteLocator> );
+  void addStroke( int, strokeType, std::vector<int> );
+  void addGraceNote( int, int );
+  void clear();
+void eraseBar( int );
+void eraseLine( int );
+void eraseGraceNote( int, int );
+void eraseMatra( int, int );
+void eraseNote( int, int );
+void eraseOrnement( int );
+void eraseStroke( int, int );
+int findLine( int ) const;
+int findMatra( int, int ) const;
+int findOrnement( int, int ) const;
+int findStroke( int, int ) const;
+  void fromBinary( QByteArray );
+  QString getAndClearLastErrors() const;
+//vector<int> getBarsInvolvedByOrnement( int ) const;
+  int getLineFirstBar( int ) const;
+  QString getLineText( int ) const;
+  Note getNote( int, int ) const;
+  int getNoteIndexFromGraceNote( int iBar, int i ) const;
+  int getNoteIndexFromMatra( int iBar, int iMatra, int i ) const;
+  int getNoteIndexFromStroke( int iBar, int iStroke, int i ) const;
+  NoteLocator getNoteLocatorFromOrnement( int iO, int i ) const;
+  int getNumberOfBars() const;
+  int getNumberOfLines() const;
+  int getNumberOfGraceNotesInBar( int ) const;
+  int getNumberOfMatraInBar( int ) const;
+  int getNumberOfNotesInBar( int ) const;
+  int getNumberOfNotesInMatra( int, int ) const;
+  int getNumberOfNotesInOrnement( int ) const;
+  int getNumberOfNotesInStroke( int, int) const;
+  int getNumberOfOrnements() const;
+  int getNumberOfStrokesInBar( int ) const;
+  ornementType getOrnementType( int ) const;
+  std::vector<Note> getScale() const;
+  strokeType getStrokeType( int iBar, int i ) const;
+  QString getTitle() const;
+  bool hasError() const;
+bool hasStroke( int, int ) const;
+bool isGraceNote( int, int) const;
+bool isNoteInMatra( int, int ) const;
+bool isNoteInOrnement( int, int ) const;
+bool isStartOfLine( int ) const;
+  void setScale( std::vector<Note> );
+  void setTitle( QString );
+  QByteArray toBinary() const;
+  
 protected:
   struct Bar
   {
-  public:
-    Bar();
     std::vector<Note> mNotes;
     std::vector< std::vector<int> > mMatras;
     std::vector<int> mGraceNotes;
+    std::vector<Stroke> mStrokes;
   };
   
-  struct Ornements
+  struct Ornement
   {
-    Ornements();
-    std::vector< std::vector<NoteLocator> > mNotes;
+    Ornement();
+    Ornement( ornementType, std::vector<NoteLocator> );
+    
+    ornementType mOrnementType;
+    std::vector<NoteLocator> mNotes;
   };
   
   struct Line
   {
     Line();
+    Line( int, QString );
     
+    int mFirstBar;
     QString mText;
-    std::vector<int> mBarIndices;
   };
   
+void addNoteToMatra( int, int, int );
+void addNoteToOrnement( int, int, int );
+  void addError( QString ) const;
+  std::vector<Note> defaultScale() const;
+void eraseNoteFromMatra( int, int );
+void eraseNoteFromOrnement( int, int );
+
+  const Bar& getBar(int) const;
+  Bar& getBar( int );
+Note& getNote( int, int );
+void shiftGraceNotes( int, int, int );
+void shiftLines( int, int );
+void shiftMatras(int, int, int);
+void shiftOrnements(int, int);
+void shiftOrnements(int, int, int);
+void shiftStrokes( int, int, int );
+
+  //-- data
+  static Bar mDummyBar;
+  static Note mDummyNote;
+  QString mTitle;
   std::vector<Note> mScale;
+  //std::vector<Note> mTarabTuning;
   std::vector<Bar> mBars;
   std::vector<Line> mLines;
-  std::vector<Ornements> mOrnements;
+  std::vector<Ornement> mOrnements;
+  mutable QString mErrors;
 };
   
 }

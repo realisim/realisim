@@ -13,7 +13,7 @@ int startMainApp()
     }
     else
     {
-        printf("ERROR: unable to start RealEdit\n");
+        printf("ERROR: unable to start Sargam\n");
         return 0;
     }
 }
@@ -22,7 +22,6 @@ int startMainApp()
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
-//    QTextCodec::setCodecForCStrings (QTextCodec::codecForName("UTF-8"));
     MainDialog m;
     m.show();
 	
