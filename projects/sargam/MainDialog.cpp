@@ -33,8 +33,6 @@ namespace
 
 }
 
-//instatiation des statiques
-Note PartitionViewer::mDummyNote = Note( nvSa );
 //-----------------------------------------------------------------------------
 // --- partition viewer
 //-----------------------------------------------------------------------------
@@ -50,7 +48,8 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mCurrentNote( -1 ),
   mOctave( 0 ),
   mEditingLineIndex( -1 ),
-  mAddLineTextHover( -1 )
+  mAddLineTextHover( -1 ),
+  mBarHoverIndex(-1)
 {
   setMouseTracking( true );
   setStyleSheet("QLineEdit { border: none }");
@@ -61,22 +60,10 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mBarFont = QFont( "Arial", 14 );
   mGraceNotesFont = QFont( "Arial", 10 );
   mLineFont = QFont( "Arial", 12 );
+  mStrokeFont = QFont( "Arial", 10 );
 
   createUi();
   addPage();
-  
-  //ajout des barres par defauts et de la premiere barre du sargam
-  for( int i = 0; i <= bFirstSargamBar; ++i )
-  { addBar(); }
-  
-  //valeurs par defaut de la gamme
-  Bar& b = mBars[ bScale ];
-  for( int i = nvSa; i <= nvNi; ++i )
-  { b.mNotes.push_back( Note( (noteValue)i ) ); }
-  setBarAsDirty( bScale, true );
-  
-  setCurrentBar( bFirstSargamBar );
-  addLine( bFirstSargamBar );
   
   //generateRandomPartition();
   updateUi();
@@ -86,10 +73,33 @@ PartitionViewer::~PartitionViewer()
 {}
 //-----------------------------------------------------------------------------
 void PartitionViewer::addBar()
+{ addBar( getNumberOfBars() ); }
+//-----------------------------------------------------------------------------
+/*Ajoute une barre a la suite de la barre iBarIndex*/
+void PartitionViewer::addBar( int iBarIndex )
 {
-  mBars.push_back( Bar() );
+  vector<Bar>::iterator it = mBars.begin() + iBarIndex + 1;
+  if( it < mBars.end() )
+  {
+    mBars.insert(it, Bar());
+    shiftLines( 1, iBarIndex );
+    shiftOrnements( 1, iBarIndex );
+  }
+  else{ mBars.push_back( Bar() ); }
   updateUi();
 }
+//-----------------------------------------------------------------------------
+void PartitionViewer::addGraceNotes( int iBar, int iNoteIndex )
+{
+  Bar& b = getBar( iBar );
+  if( !isGraceNote( iBar, iNoteIndex ) )
+  {
+    b.mGraceNotes.push_back( iNoteIndex );
+    sort( b.mGraceNotes.begin(), b.mGraceNotes.end() );
+    setBarAsDirty( iBar, true );
+  }
+}
+
 //-----------------------------------------------------------------------------
 void PartitionViewer::addLine( int iBarIndex, QString iText /*=QString*/ )
 {
@@ -107,7 +117,7 @@ void PartitionViewer::addMatra( std::vector< std::pair<int, int> > iMatra )
     for( ; it != m.end(); ++it )
     {
       int bar = it->first;
-      mBars[bar].mMatraGroups.push_back( it->second );
+      getBar(bar).mMatraGroups.push_back( it->second );
       setBarAsDirty( bar, true );
     }
   }
@@ -121,49 +131,46 @@ void PartitionViewer::addNote( Note iNote )
 void PartitionViewer::addNote( Note iNote,
   int iBar, int iCursorIndex )
 {
-  if( iBar >= 0 && iBar < getNumberOfBars() )
-  {
-    int noteIndex = iCursorIndex + 1;
-    vector< Note >::iterator pos = mBars[iBar].mNotes.begin() +
-      noteIndex;
-    
-    mBars[iBar].mNotes.insert( pos, iNote );
-    
-    //on shift le matra de 1
-    shiftMatras( 1, iBar, iCursorIndex );
-    //Si la note au curseur, ainsi que la suivante, sont dans le matra, la
-    //nouvelle note devra aussi etre dans le matra
-    int matra1 = findMatra( iBar, iCursorIndex );
-    int matra2 = findMatra( iBar, iCursorIndex + 2 );
-    if( matra1 != -1 && matra1 == matra2 )
-    { addNoteToMatra( findMatra( iBar, iCursorIndex ), iBar, noteIndex ); }
-    
-    //on shift les ornements de 1
-    shiftOrnements( 1, iBar, iCursorIndex );
-    //Si la note au curseur, ainsi que la suivante, sont dans lornement, la
-    //nouvelle note devra aussi etre dans l'ornement
-    int ornm1 = findOrnement( iBar, iCursorIndex );
-    int ornm2 = findOrnement( iBar, iCursorIndex + 2 );
-    if( ornm1 != -1 && ornm1 == ornm2 )
-    { addNoteToOrnement( findOrnement( iBar, iCursorIndex ), iBar, noteIndex ); }
-    
-    //on shift les graces notes
-    shiftGraceNotes( 1, iBar, iCursorIndex );
-    //Si la note au curseur, ainsi que la suivante, sont des notes de grace, la
-    //nouvelle note devra aussi etre une note de grace
-    if( isGraceNote( iBar, iCursorIndex ) && isGraceNote( iBar, iCursorIndex + 2 ) )
-    { addToGraceNotes( iBar, noteIndex ); }
-    
-    shiftStrokes( 1, iBar, iCursorIndex );
-    
-    setBarAsDirty( iBar, true );
-    updateUi();
-  }
+  int noteIndex = iCursorIndex + 1;
+  vector< Note >::iterator pos = getBar(iBar).mNotes.begin() +
+    noteIndex;
+  
+  getBar(iBar).mNotes.insert( pos, iNote );
+  
+  //on shift le matra de 1
+  shiftMatras( 1, iBar, iCursorIndex );
+  //Si la note au curseur, ainsi que la suivante, sont dans le matra, la
+  //nouvelle note devra aussi etre dans le matra
+  int matra1 = findMatra( iBar, iCursorIndex );
+  int matra2 = findMatra( iBar, iCursorIndex + 2 );
+  if( matra1 != -1 && matra1 == matra2 )
+  { addNoteToMatra( findMatra( iBar, iCursorIndex ), iBar, noteIndex ); }
+  
+  //on shift les ornements de 1
+  shiftOrnements( 1, iBar, iCursorIndex );
+  //Si la note au curseur, ainsi que la suivante, sont dans lornement, la
+  //nouvelle note devra aussi etre dans l'ornement
+  int ornm1 = findOrnement( iBar, iCursorIndex );
+  int ornm2 = findOrnement( iBar, iCursorIndex + 2 );
+  if( ornm1 != -1 && ornm1 == ornm2 )
+  { addNoteToOrnement( findOrnement( iBar, iCursorIndex ), iBar, noteIndex ); }
+  
+  //on shift les graces notes
+  shiftGraceNotes( 1, iBar, iCursorIndex );
+  //Si la note au curseur, ainsi que la suivante, sont des notes de grace, la
+  //nouvelle note devra aussi etre une note de grace
+  if( isGraceNote( iBar, iCursorIndex ) && isGraceNote( iBar, iCursorIndex + 2 ) )
+  { addGraceNotes( iBar, noteIndex ); }
+  
+  shiftStrokes( 1, iBar, iCursorIndex );
+  
+  setBarAsDirty( iBar, true );
+  updateUi();
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::addNoteToMatra( int iMatraIndex, int iBar, int iNoteIndex )
 {
-  vector<int>& m = mBars[iBar].mMatraGroups[iMatraIndex];
+  vector<int>& m = getBar(iBar).mMatraGroups[iMatraIndex];
   m.push_back( iNoteIndex );
   sort( m.begin(), m.end() );
 }
@@ -173,8 +180,13 @@ void PartitionViewer::addNoteToOrnement( int iIndex, int iBar, int iNoteIndex )
   Ornement& o = mOrnements[iIndex];
   o.mNotes.push_back( make_pair( iBar, iNoteIndex ) );
   sort( o.mNotes.begin(), o.mNotes.end() );
+  
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //!!!!! dans la commandeAddNote, il faudra ajouter le setDirty avec
+  //composition::getBarsInvolvedByOrnment
   for( int i = 0; i < o.barsInvolved().size(); ++i )
   { setBarAsDirty( o.barsInvolved()[i] , true); }
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::addNoteToSelection( int iBar, int iNote )
@@ -205,45 +217,32 @@ void PartitionViewer::addPage()
   resize( p.width()+1, p.height()+1 );
 }
 //-----------------------------------------------------------------------------
-/*Les notes de la selection deviennent des graces notes si elle ne le sont
- pas déjà.*/
-void PartitionViewer::addSelectionToGraceNotes()
+void PartitionViewer::addStroke( strokeType iSt, vector< pair<int, int> > iSpan )
 {
-  if( hasSelection() )
+  if( iSpan.size() )
   {
-    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    map< int, vector<int> > m = splitPerBar( iSpan );
+    map< int, vector<int> >::const_iterator it = m.begin();
+    for( ; it != m.end(); ++it )
     {
-      int barIndex = mSelectedNotes[i].first;;
-      int noteIndex = mSelectedNotes[i].second;
-      addToGraceNotes( barIndex, noteIndex );
+      int bar = it->first;
+      getBar(bar).mStrokes.push_back( Stroke( iSt, it->second ) );
+      setBarAsDirty( bar, true );
     }
-  }
-}
-//-----------------------------------------------------------------------------
-void PartitionViewer::addStroke( int iBar, strokeType iSt, vector<int> iSpan )
-{
-  mBars[iBar].mStrokes.push_back( Stroke( iSt, iSpan ) );
-  setBarAsDirty( iBar, true );
-}
-//-----------------------------------------------------------------------------
-void PartitionViewer::addToGraceNotes( int iBar, int iNoteIndex )
-{
-  Bar& b = mBars[ iBar ];
-  if( !isGraceNote( iBar, iNoteIndex ) )
-  {
-    b.mGraceNotes.push_back( iNoteIndex );
-    sort( b.mGraceNotes.begin(), b.mGraceNotes.end() );
-    setBarAsDirty( iBar, true );
   }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::clear()
 {
   mNumberOfPages = 1;
+  mpTitleLe->setText( "Untitled" );
   mBars.clear();
+  mLines.clear();
   mOrnements.clear();
   mCurrentBar = -1;
   mCurrentNote = -1;
+  mSelectedNotes.clear();
+  updateUi();
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::clearSelection()
@@ -258,11 +257,27 @@ int PartitionViewer::cmToPixel( double iCm ) const
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddBar()
 {
-  addBar();
+  addBar( getCurrentBar() );
   setCurrentNote( -1 );
-  setCurrentBar( getNumberOfBars() -1 );
+  setCurrentBar( getCurrentBar() + 1 );
   clearSelection();
 }
+//-----------------------------------------------------------------------------
+/*Les notes de la selection deviennent des graces notes si elle ne le sont
+ pas déjà.*/
+void PartitionViewer::commandAddGraceNotes()
+{
+  if( hasSelection() )
+  {
+    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    {
+      int barIndex = mSelectedNotes[i].first;;
+      int noteIndex = mSelectedNotes[i].second;
+      addGraceNotes( barIndex, noteIndex );
+    }
+  }
+}
+
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddLine()
 {
@@ -328,25 +343,21 @@ void PartitionViewer::commandAddStroke( strokeType iSt )
   }
   else{ v.push_back( make_pair( getCurrentBar(), getCurrentNote() ) ); }
  
-  map< int, vector<int> > m = splitPerBar( v );
-  map< int, vector<int> >::const_iterator it = m.begin();
-  for( ; it != m.end(); ++it )
+  for( int i = 0; i < v.size(); ++i )
   {
-    int bar = it->first;
-    const vector<int>& v = it->second;
+    int bar = v[i].first;
+    int index = v[i].second;
     
     /*On commence par chercher si il y a deja un stroke associe aux
       note du stroke qu'on est en train d'ajouter. Si oui, on enleve les strokes
      deja existants.*/
-    for( int i = 0; i < v.size(); ++i )
-    {
-      if( hasStroke( bar, v[i] ) )
-      { eraseStroke( bar, findStroke( bar, v[i] ) ); }
-    }
-    
-    //on ajoute le stroke
-    addStroke( bar, iSt, v );
+    if( hasStroke( bar, index ) )
+    { eraseStroke( bar, findStroke( bar, index ) ); }
+
   }
+
+  //on ajoute les stroke
+  addStroke( iSt, v );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandBreakMatrasFromSelection()
@@ -406,8 +417,18 @@ void PartitionViewer::commandErase()
   }
   else
   {
-    eraseNote( getCurrentBar(), getCurrentNote() );
-    mCurrentNote--;
+    int cb = getCurrentBar();
+    if( getNumberOfNotesInBar(cb) > 0 )
+    {
+      eraseNote( cb, getCurrentNote() );
+      mCurrentNote--;
+    }
+    else
+    {
+      eraseBar( cb );
+      setCurrentBar( cb - 1 );
+      setCurrentNote( getNumberOfNotesInBar( getCurrentBar() ) - 1 );
+    }
   };
 }
 //-----------------------------------------------------------------------------
@@ -488,9 +509,41 @@ void PartitionViewer::createUi()
           this, SLOT( resizeLineEditToContent() ) );
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::drawBarContour( QPainter& iP, int iBarIndex, QColor iCol )
+{
+  if( iBarIndex != -1 && hasFocus() )
+  {
+    QPen pen = iP.pen();
+    iP.save();
+    iP.setRenderHints( QPainter::Antialiasing );
+    pen.setColor( iCol );
+    pen.setWidth( 1 );
+    iP.setPen( pen );
+    Bar& b = getBar( iBarIndex );
+    for( int i = 0; i < b.mPageLayout.size(); ++i )
+    { iP.drawRoundedRect( b.mPageLayout[i], 2, 2 ); }
+    iP.restore();
+  }
+
+}
+//-----------------------------------------------------------------------------
+/*Permet d'effacer la barre iBar*/
+void PartitionViewer::eraseBar( int iBar )
+{
+  if( iBar >= 0 && iBar < getNumberOfBars() )
+  {
+    mBars.erase( mBars.begin() + iBar );
+    if( isStartOfLine( iBar ) )
+    { eraseLine( findLine(iBar) ); }
+    shiftLines(-1, iBar);
+    shiftOrnements(-1, iBar);
+    if( getNumberOfBars() > 0 ){ setBarAsDirty(0, true); }
+  }
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::eraseGraceNote( int iBar, int iNoteIndex )
 {
-  Bar& b = mBars[ iBar ];
+  Bar& b = getBar( iBar );
   for( int i = 0; i < b.mGraceNotes.size(); ++i )
   {
     if( b.mGraceNotes[i] == iNoteIndex )
@@ -502,9 +555,16 @@ void PartitionViewer::eraseGraceNote( int iBar, int iNoteIndex )
   }
 }
 //-----------------------------------------------------------------------------
+/*Permet d'effacer la ligne iLigne*/
+void PartitionViewer::eraseLine( int iLine )
+{
+  if( iLine >= 0 && iLine < mLines.size() )
+  { mLines.erase( mLines.begin() + iLine ); }
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::eraseMatra( int iBar, int iMatraIndex )
 {
-  Bar& b = mBars[iBar];
+  Bar& b = getBar(iBar);
   if( iMatraIndex >= 0 && iMatraIndex < b.mMatraGroups.size() )
   {
     b.mMatraGroups.erase( b.mMatraGroups.begin() + iMatraIndex );
@@ -514,12 +574,11 @@ void PartitionViewer::eraseMatra( int iBar, int iMatraIndex )
 //-----------------------------------------------------------------------------
 void PartitionViewer::eraseNote( int iBar, int iNoteIndex )
 {
-  if( iBar >= 0 && iBar < getNumberOfBars() &&
-     iNoteIndex >= 0 && iNoteIndex < getNumberOfNotesInBar(iBar) )
+  Bar& b = getBar(iBar);
+  if( iNoteIndex >= 0 && iNoteIndex < getNumberOfNotesInBar(iBar) )
   {
-    Bar& b = mBars[iBar];
     b.mNotes.erase( b.mNotes.begin() + iNoteIndex );
-
+    
     //si la note est dans le matra, on l'enleve, sinon on shift le groupe
     if( isNoteInMatra( iBar, iNoteIndex ) )
     { eraseNoteFromMatra( iBar, iNoteIndex ); }
@@ -546,7 +605,7 @@ void PartitionViewer::eraseNote( int iBar, int iNoteIndex )
 //-----------------------------------------------------------------------------
 void PartitionViewer::eraseNoteFromMatra( int iBar, int iNoteIndex )
 {
-  Bar& b = mBars[ iBar ];
+  Bar& b = getBar( iBar );
   //on enleve iNoteIndex de tous les matra de la barre iBar
   for( int i = 0; i < b.mMatraGroups.size(); ++i )
   {
@@ -576,7 +635,10 @@ void PartitionViewer::eraseNoteFromOrnement( int iBar, int iNoteIndex )
       if( (*it).first == iBar && (*it).second == iNoteIndex )
       {
         it = o.mNotes.erase( it );
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//faire la passe getBarsInvoldedByOrnment dnas la commandEraseNote
         setBarAsDirty( it->first, true );
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         break;
       }
     }
@@ -588,6 +650,8 @@ void PartitionViewer::eraseOrnement( int iIndex )
   if( iIndex >= 0 && iIndex < mOrnements.size() )
   {
     Ornement& o = mOrnements[iIndex];
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//faire la passe getBarsInvoldedByOrnment dnas la commandEraseNote
     for( int i = 0; i < o.mNotes.size(); ++i )
     { setBarAsDirty( o.mNotes[i].first, true ); }
     mOrnements.erase( mOrnements.begin() + iIndex );
@@ -596,7 +660,7 @@ void PartitionViewer::eraseOrnement( int iIndex )
 //-----------------------------------------------------------------------------
 void PartitionViewer::eraseStroke( int iBar, int iStrokeIndex )
 {
-  Bar& b = mBars[iBar];
+  Bar& b = getBar(iBar);
   if( iStrokeIndex >= 0 && iStrokeIndex < b.mStrokes.size() )
   { b.mStrokes.erase( b.mStrokes.begin() + iStrokeIndex ); }
 }
@@ -618,7 +682,7 @@ int PartitionViewer::findLine( int iBarIndex ) const
 int PartitionViewer::findMatra( int iBar, int iNoteIndex ) const
 {
   int r = -1;
-  const Bar& b = mBars[iBar];
+  const Bar& b = getBar(iBar);
   for( int i = 0; i < b.mMatraGroups.size(); ++i )
   {
     const vector< int >& g = b.mMatraGroups[i];
@@ -647,12 +711,27 @@ int PartitionViewer::findOrnement( int iBar, int iNoteIndex ) const
   return r;
 }
 //-----------------------------------------------------------------------------
+int PartitionViewer::findStroke( int iBar, int iNoteIndex ) const
+{
+  int r = -1;
+  const Bar& b = getBar(iBar);
+  for( int i = 0; i < b.mStrokes.size(); ++i )
+  {
+    for( int j = 0; j < b.mStrokes[i].mSpan.size(); ++j )
+    {
+      if( b.mStrokes[i].mSpan[j] == iNoteIndex )
+      { r = i; break; }
+    }
+  }
+  return r;
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::generateRandomPartition()
 {
   clear();
   const int kNumBars = 52;
   mBars.resize( kNumBars );
-  for( int i = bFirstSargamBar; i < getNumberOfBars() - 1; ++i )
+  for( int i = 0; i < getNumberOfBars() - 1; ++i )
   {
     double norm = rand() / (double)RAND_MAX;
     int numNotes = 4 + norm * 16;
@@ -664,10 +743,82 @@ void PartitionViewer::generateRandomPartition()
       if( norm < 0.33 ) octave = -1;
       else if( 0.33 <= norm && norm < 0.66 ) octave = 0;
       else octave = 1;
-      mBars[i].mNotes.push_back( Note( (noteValue)note, octave ) );
+      getBar(i).mNotes.push_back( Note( (noteValue)note, octave ) );
     }
   }
   updateUi();
+}
+//-----------------------------------------------------------------------------
+PartitionViewer::Bar& PartitionViewer::getBar( int iBar )
+{
+  return const_cast<Bar&>(
+    const_cast< const PartitionViewer* >(this)->getBar(iBar) );
+}
+//-----------------------------------------------------------------------------
+const PartitionViewer::Bar& PartitionViewer::getBar( int iBar ) const
+{
+  const Bar* r = 0;
+  switch( iBar )
+  {
+    case bScale: r = &mScale; break;
+    default: r = &mBars[iBar]; break;
+  }
+  return *r;
+}
+//-----------------------------------------------------------------------------
+Composition PartitionViewer::getComposition() const
+{
+  Composition r;
+  
+  //--- barres
+  for( int i = 0; i < getNumberOfBars(); ++i )
+  {
+    const Bar& b = getBar(i);
+    //notes
+    r.addBar();
+    for( int j = 0; j < getNumberOfNotesInBar(i); ++j )
+    { r.addNote( i, getNote( i, j ) ); }
+    
+    //matras
+    for( int j = 0; j < b.mMatraGroups.size(); ++j )
+    { r.addMatra( i, b.mMatraGroups[j] ); }
+
+    //grace notes
+    for( int j = 0; j < b.mGraceNotes.size(); ++j )
+    { r.addGraceNote(i, b.mGraceNotes[j]); }
+
+    //strokes
+    for( int j = 0; j < b.mStrokes.size(); ++j )
+    { r.addStroke( i, b.mStrokes[j].mStrokeType, b.mStrokes[j].mSpan ); }
+  }
+  
+  //lines
+  for( int i = 0; i < getNumberOfLines(); ++i )
+  { r.addLine( getLineFirstBar(i), getLineText(i) ); }
+  
+  //ornemnts
+  for( int i = 0; i < mOrnements.size(); ++i )
+  {
+    ornementType ot = mOrnements[i].mOrnementType;
+    vector<NoteLocator> vo;
+    for( int j = 0; j < mOrnements[i].mNotes.size(); ++j )
+    {
+      vo.push_back( NoteLocator( mOrnements[i].mNotes[j].first,
+        mOrnements[i].mNotes[j].second  ) );
+    }
+    r.addOrnement( ot, vo );
+  }
+    
+  //scale
+  r.setScale( getScale() );
+  
+  //title
+  r.setTitle( getTitle() );
+  
+  if( r.hasError() )
+  { printf( "%s", r.getAndClearLastErrors().toStdString().c_str() ); }
+
+  return r;
 }
 //-----------------------------------------------------------------------------
 int PartitionViewer::getBarRegion( barRegion br ) const
@@ -680,9 +831,9 @@ int PartitionViewer::getBarRegion( barRegion br ) const
     case brNoteStartX: r = 10; break;
     case brNoteTopY: r = kBarHeight / 2 - fm.height() / 2; break;
     case brNoteBottomY: r = kBarHeight / 2 + fm.height() / 2; break;
-    case brStrokeY: r = kBarHeight / 2 + fm.height() / 2 + 5; break;
+    case brStrokeY: r = kBarHeight - fm.height(); break;
     case brOrnementY: r = getBarRegion(brGraceNoteTopY) - 8; break;
-    case brMatraGroupY: r = getBarRegion(brNoteBottomY); break;
+    case brMatraGroupY: r = getBarRegion(brNoteBottomY) - 4; break;
     case brGraceNoteTopY:
     {
       QFontMetrics fm(mGraceNotesFont);
@@ -730,10 +881,8 @@ Note& PartitionViewer::getNote( int iBar, int iNote )
 //-----------------------------------------------------------------------------
 const Note& PartitionViewer::getNote( int iBar, int iNote ) const
 {
-  const Note* r = &mDummyNote;
-  if( iBar >= 0 && iBar < mBars.size() &&
-     iNote >= 0 && iNote < getNumberOfNotesInBar( iBar ) )
-  { r = &mBars[iBar].mNotes[iNote]; }
+  const Note* r = 0;
+  r = &getBar(iBar).mNotes[iNote];
   return *r;
 }
 //-----------------------------------------------------------------------------
@@ -747,7 +896,7 @@ int PartitionViewer::getNumberOfPages() const
 { return mNumberOfPages; }
 //-----------------------------------------------------------------------------
 int PartitionViewer::getNumberOfNotesInBar( int iB ) const
-{ return mBars[iB].mNotes.size(); }
+{ return getBar(iB).mNotes.size(); }
 //-----------------------------------------------------------------------------
 int PartitionViewer::getOctave() const
 { return mOctave; }
@@ -840,11 +989,10 @@ QRect PartitionViewer::getRegion( region iR ) const
 }
 //-----------------------------------------------------------------------------
 vector<Note> PartitionViewer::getScale() const
-{
-  vector<Note> r;
-  r = mBars[ bScale ].mNotes;
-  return r;
-}
+{ return mScale.mNotes; }
+//-----------------------------------------------------------------------------
+QString PartitionViewer::getTitle() const
+{ return mpTitleLe->text(); }
 //-----------------------------------------------------------------------------
 bool PartitionViewer::hasSelection() const
 { return mSelectedNotes.size() > 0; }
@@ -852,27 +1000,12 @@ bool PartitionViewer::hasSelection() const
 bool PartitionViewer::hasStroke( int iBar, int iNoteIndex ) const
 { return findStroke( iBar, iNoteIndex) != -1; }
 //-----------------------------------------------------------------------------
-int PartitionViewer::findStroke( int iBar, int iNoteIndex ) const
-{
-  int r = -1;
-  const Bar& b = mBars[iBar];
-  for( int i = 0; i < b.mStrokes.size(); ++i )
-  {
-    for( int j = 0; j < b.mStrokes[i].mSpan.size(); ++j )
-    {
-      if( b.mStrokes[i].mSpan[j] == iNoteIndex )
-      { r = i; break; }
-    }
-  }
-  return r;
-}
-//-----------------------------------------------------------------------------
 bool PartitionViewer::isDebugging() const
 { return mIsDebugging; }
 //-----------------------------------------------------------------------------
 bool PartitionViewer::isGraceNote(int iBar, int iNoteIndex ) const
 {
-  const Bar& b = mBars[iBar];
+  const Bar& b = getBar(iBar);
   return ::find( b.mGraceNotes.begin(), b.mGraceNotes.end(), iNoteIndex ) !=
     b.mGraceNotes.end();
 }
@@ -927,7 +1060,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
     case Qt::Key_G: //grace note
       if( (ipE->modifiers() & Qt::ShiftModifier) )
       { commandRemoveSelectionFromGraceNotes(); }
-      else { addSelectionToGraceNotes(); }
+      else { commandAddGraceNotes(); }
       break;
     case Qt::Key_K: //krintan
       if( (ipE->modifiers() & Qt::ShiftModifier) )
@@ -959,7 +1092,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
         { addNoteToSelection( getCurrentBar(), mCurrentNote ); }
         
         mCurrentNote = std::max( --mCurrentNote, -2 );
-        if( getCurrentNote() == -2 && getCurrentBar() > 0 )
+        if( getCurrentNote() == -2 && getCurrentBar() > bScale )
         {
           setCurrentBar( getCurrentBar() - 1 );
           setCurrentNote( getNumberOfNotesInBar( getCurrentBar() ) - 1 );
@@ -1041,15 +1174,23 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
   Qt::CursorShape cs = Qt::ArrowCursor;
   
   //intersection avec les barres
+  for( int i = 0; i < getNumberOfBars(); ++i )
+  {
+    const Bar& b = getBar(i);
+    for( int j = 0; j < b.mPageLayout.size(); ++j )
+    {
+      if( b.mPageLayout[j].contains( pos ) )
+      { mBarHoverIndex = i; updateUi(); }
+      else if ( mBarHoverIndex == i )
+      { mBarHoverIndex = -1; updateUi(); }
+    }
+  }
   
   //intersection avec les lignes
   for( int i = 0; i < getNumberOfLines(); ++i )
   {
     if( mLines[i].mHotSpot.contains( pos ) )
-    {
-      mAddLineTextHover = i;
-      updateUi();
-    }
+    { mAddLineTextHover = i; updateUi(); }
     else if(mAddLineTextHover == i)
     { mAddLineTextHover = -1; updateUi(); }
       
@@ -1065,6 +1206,12 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   QPoint pos = ipE->pos();
   
   //intersection avec les barres
+  if( mBarHoverIndex != -1 )
+  {
+    setCurrentBar( mBarHoverIndex );
+    setCurrentNote( getNumberOfNotesInBar( mBarHoverIndex ) - 1 );
+    updateUi();
+  }
   
   //intersection avec les lignes
   for( int i = 0; i < getNumberOfLines(); ++i )
@@ -1150,9 +1297,9 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
   p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, mSargamScaleLabel );
              
   //render bars
-  for( int i = 0; i < getNumberOfBars(); ++i )
+  for( int i = bScale; i < getNumberOfBars(); ++i )
   {
-    Bar& b = mBars[i];
+    Bar& b = getBar(i);
     //on blit le pixmap dans le widget.
     QRect cut( 0, 0, 0, 0 );
     for( int j = 0; j < b.mPageLayout.size(); ++j )
@@ -1162,10 +1309,11 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       cut.setLeft( cut.width() + 1 );
       
       //le curseur dans la barre courante s'il n'y a pas de selection
+      //et que le focus y est
       pen.setColor( Qt::black );
       pen.setWidth( 1 );
       p.setPen( pen );
-      if( !hasSelection() && getCurrentBar() == i )
+      if( !hasSelection() && getCurrentBar() == i && hasFocus() )
       {
         QLine l;
         if( getCurrentNote() >= 0 )
@@ -1185,20 +1333,11 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
     }
   }
   
+  //on dessine le contour de la barre survolee si ce nest pas la courant
+  if( mBarHoverIndex != getCurrentBar() )
+  { drawBarContour( p, mBarHoverIndex, QColor( 125, 125, 125, 120 ) ); }
   //on dessine le contour de la barre courante
-  //le contoure de la barre selectionné
-  if( getCurrentBar() != -1 && hasFocus() )
-  {
-    p.save();
-    p.setRenderHints( QPainter::Antialiasing );
-    pen.setColor( QColor( 125, 125, 125, 120 ) );
-    pen.setWidth( 1 );
-    p.setPen( pen );
-    Bar& b = mBars[ getCurrentBar() ];
-    for( int i = 0; i < b.mPageLayout.size(); ++i )
-    { p.drawRoundedRect( b.mPageLayout[i], 2, 2 ); }
-    p.restore();
-  }
+  drawBarContour( p, getCurrentBar(), QColor( 0, 10, 210, 120 ) );
   
   //rendu des lignes, numero et texte
   for( int i = 0; i < getNumberOfLines(); ++i )
@@ -1241,7 +1380,7 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
     //on dessine le layout des bars...
     for( int i = 0; i < getNumberOfBars(); ++i )
     {
-      Bar& b = mBars[i];
+      Bar& b = getBar(i);
       //le layput page de la bar
       for( int j = 0; j < b.mPageLayout.size(); ++j )
       {
@@ -1279,7 +1418,7 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
 //-----------------------------------------------------------------------------
 void PartitionViewer::renderBarOffscreen( int iBar )
 {
-  Bar& b = mBars[ iBar ];
+  Bar& b = getBar( iBar );
   b.mPixmap = QPixmap( b.mRect.width(), b.mRect.height() );
   b.mPixmap.fill( Qt::white );
   QPainter bp( &b.mPixmap );
@@ -1301,7 +1440,7 @@ void PartitionViewer::renderBarOffscreen( int iBar )
   //la barre vertical
   int x1 = getBarRegion( brSeparatorX );
   int y1 = 0.15 * kBarHeight;
-  int y2 = kBarHeight - 0.15 * kBarHeight;
+  int y2 = getBarRegion( brNoteBottomY );
   bp.drawLine( x1, y1, x1, y2 );
   
   //b.mPixmap.toImage().save( "bar" + QString::number(i) + ".png", "PNG" );
@@ -1347,6 +1486,7 @@ void PartitionViewer::renderBarOffscreen( int iBar )
   }
   
   //render strokes
+  bp.setFont(mStrokeFont);
   for( int i = 0; i < b.mStrokes.size(); ++i )
   {
     const Stroke& s = b.mStrokes[i];
@@ -1373,7 +1513,7 @@ void PartitionViewer::renderBarOffscreen( int iBar )
       int barIndex = mSelectedNotes[i].first;
       if( barIndex == iBar )
       {
-        Bar& b = mBars[ barIndex ];
+        Bar& b = getBar( barIndex );
         int noteIndex = mSelectedNotes[i].second;
         if( r.isNull() )
         { r = b.getNoteRect(noteIndex); }
@@ -1410,10 +1550,7 @@ void PartitionViewer::setAsDebugging( bool iD )
 { mIsDebugging = iD; updateUi(); }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setBarAsDirty( int iBar, bool iD )
-{
-  if( iBar >= 0 && iBar < getNumberOfBars() )
-  { mBars[iBar].mIsDirty = iD; }
-}
+{ getBar(iBar).mIsDirty = iD; }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setCurrentBar( int iB )
 { mCurrentBar = iB; updateUi(); }
@@ -1421,9 +1558,71 @@ void PartitionViewer::setCurrentBar( int iB )
 void PartitionViewer::setCurrentNote( int iN )
 { mCurrentNote = iN; updateUi(); }
 //-----------------------------------------------------------------------------
+void PartitionViewer::setComposition(const Composition& iC)
+{
+  clear();
+  for( int i = 0; i < iC.getNumberOfBars(); ++i )
+  {
+    mBars.push_back( Bar() );
+    int barIndex = i;
+    Bar& b = getBar(barIndex);
+    
+    //--- notes
+    for( int j = 0; j < iC.getNumberOfNotesInBar(i); ++j )
+    { b.mNotes.push_back( iC.getNote(i, j) ); }
+    
+    //--- matras
+    for( int j = 0; j < iC.getNumberOfMatraInBar(i); ++j )
+    {
+      vector<int> m;
+      for( int k = 0; k < iC.getNumberOfNotesInMatra(i, j); ++k )
+      { m.push_back( iC.getNoteIndexFromMatra(i, j, k) ); }
+      b.mMatraGroups.push_back(m);
+    }
+    
+    //--- graceNotes
+    for( int j = 0; j < iC.getNumberOfGraceNotesInBar(i); ++j )
+    { b.mGraceNotes.push_back( iC.getNoteIndexFromGraceNote(i, j) ); }
+    
+    //--- strokes
+    for( int j = 0; j < iC.getNumberOfStrokesInBar(i); ++j )
+    {
+      vector<int> vs;
+      for( int k = 0; k < iC.getNumberOfNotesInStroke(i, j); ++k )
+      { vs.push_back( iC.getNoteIndexFromStroke(i, j, k) ); }
+      strokeType st = iC.getStrokeType(i, j);
+      b.mStrokes.push_back( Stroke( st, vs) );
+    }
+  }
+  
+  //--- lines
+  for( int i = 0; i < iC.getNumberOfLines(); ++i )
+  { mLines.push_back( Line( iC.getLineFirstBar(i), iC.getLineText(i) ) ); }
+                     
+  //--- ornements
+  for( int i = 0; i < iC.getNumberOfOrnements(); ++i )
+  {
+    vector< NoteLocator > vn;
+    for( int j = 0; j < iC.getNumberOfNotesInOrnement(i); ++j )
+    { vn.push_back( iC.getNoteLocatorFromOrnement(i, j) ); }
+    mOrnements.push_back( Ornement(iC.getOrnementType(i), vn) );
+  }
+  
+  //--- title
+  mpTitleLe->setText( iC.getTitle() );
+  
+  //--- scale
+  mScale.mNotes = iC.getScale();
+  setBarAsDirty( bScale, true );
+  
+  setCurrentBar( 0 );
+  setCurrentNote( - 1 );
+  updateUi();
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::shiftGraceNotes( int iN, int iBar, int iFromIndex )
 {
-  Bar& b = mBars[iBar];
+  Bar& b = getBar(iBar);
   for( int i = 0; i < b.mGraceNotes.size(); ++i )
   {
     if( b.mGraceNotes[i] > iFromIndex )
@@ -1431,9 +1630,20 @@ void PartitionViewer::shiftGraceNotes( int iN, int iBar, int iFromIndex )
   }
 }
 //-----------------------------------------------------------------------------
+/*decale l'index de barre de iN toutes les lignes qui ont un index de barre
+  superieur a iFromIndex*/
+void PartitionViewer::shiftLines( int iN, int iFromIndex )
+{
+  for( int i = 0; i < mLines.size(); ++i )
+  {
+    if( getLineFirstBar(i) > iFromIndex )
+    { mLines[i].mFirstBar += iN; }
+  }
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::shiftMatras( int iN, int iBar, int iFromIndex )
 {
-  Bar& b = mBars[iBar];
+  Bar& b = getBar(iBar);
   for( int i = 0; i < b.mMatraGroups.size(); ++i )
   {
     vector<int>& m = b.mMatraGroups[i];
@@ -1445,6 +1655,22 @@ void PartitionViewer::shiftMatras( int iN, int iBar, int iFromIndex )
   }
 }
 //-----------------------------------------------------------------------------
+/*decale de iN les index de barre superieur a iFromIndex de tous les ornements*/
+void PartitionViewer::shiftOrnements( int iN, int iFromIndex )
+{
+  for( int i = 0; i < mOrnements.size(); ++i )
+  {
+    Ornement& o = mOrnements[i];
+    for( int j = 0; j < o.mNotes.size(); ++j )
+    {
+      if( o.mNotes[j].first > iFromIndex )
+      { o.mNotes[j].first += iN; }
+    }
+  }
+}
+//-----------------------------------------------------------------------------
+/*decale de iN les index de note superieur a iFromIndex des ornements  dans la
+  barre iBarre*/
 void PartitionViewer::shiftOrnements( int iN, int iBar, int iFromIndex )
 {
   for( int i = 0; i < mOrnements.size(); ++i )
@@ -1460,7 +1686,7 @@ void PartitionViewer::shiftOrnements( int iN, int iBar, int iFromIndex )
 //-----------------------------------------------------------------------------
 void PartitionViewer::shiftStrokes( int iN, int iBar, int iFromIndex )
 {
-  Bar& b = mBars[iBar];
+  Bar& b = getBar(iBar);
   for( int i = 0; i < b.mStrokes.size(); ++i )
   {
     vector<int>& vs = b.mStrokes[i].mSpan;
@@ -1553,7 +1779,7 @@ void PartitionViewer::updateBar( int iBar )
   const int kMargin = 2;
   const int kMinBarWidth = 50;
 
-  Bar& b = mBars[ iBar ];
+  Bar& b = getBar(iBar);
   //--- definition des rect contenants les notes
   b.mNotesRect.clear();
   QFontMetrics fm( mBarFont );
@@ -1589,8 +1815,8 @@ void PartitionViewer::updateBar( int iBar )
     for( int j = 0; j < v.size(); ++j )
     {
       int noteIndex = v[j];
-      left = std::min( left, mBars[iBar].getNoteRect(noteIndex).left() );
-      right = std::max( right, mBars[iBar].getNoteRect(noteIndex).right() );
+      left = std::min( left, getBar(iBar).getNoteRect(noteIndex).left() );
+      right = std::max( right, getBar(iBar).getNoteRect(noteIndex).right() );
     }
     b.mMatraGroupsRect.push_back( QRect( QPoint( left, getBarRegion( brMatraGroupY ) ),
       QSize( right - left, kBeatGroupHeight ) ) );
@@ -1600,36 +1826,36 @@ void PartitionViewer::updateBar( int iBar )
 void PartitionViewer::updatePageLayouts()
 {
   //layout des barres spéciale (gamme, accordage tarab, etc...)
-  Bar& b = mBars[ bScale ];
+  Bar& b = mScale;
   b.mPageLayout.clear();
   b.mNotesPageLayout.clear();
   QRect l = b.mRect;
   QPoint sargamScaleTopLeft = getRegion( rSargamScale ).topLeft();
   l.translate( sargamScaleTopLeft );
   b.mPageLayout.push_back( l );
-  //on fait le layout des notes restantes pour cette barre
+  //on fait le layout des notes pour cette barre
   for( int j = 0; j < getNumberOfNotesInBar(bScale); ++j )
   {
     QRect n = b.getNoteRect(j);
     n.translate( sargamScaleTopLeft );
-    b.mNotesPageLayout.push_back( n );
+    b.mNotesPageLayout.push_back(n);
   }
   
   //--- le layout des barres du sargam
   mLayoutCursor = getPageRegion( prBody, 0 ).topLeft();
-  for( int i = bFirstSargamBar; i < getNumberOfBars(); ++i )
+  for( int i = 0; i < getNumberOfBars(); ++i )
   {
-    Bar& b = mBars[i];
+    Bar& b = getBar(i);
     b.mPageLayout.clear();
     b.mNotesPageLayout.clear();
     
     int pageIndex = toPageIndex( mLayoutCursor );
     QRect pageBody = getPageRegion(  prBody, pageIndex );
-    //Si cest le debut d'une ligne, on saute 1.5 ligne, sauf si
+    //Si cest le debut d'une ligne, on saute 1.x ligne, sauf si
     //cest la ligne 0
     if( isStartOfLine( i ) && findLine( i ) != -1)
     {
-      int verticalShift =  findLine( i ) != 0 ? 1.5*kBarHeight : 0;
+      int verticalShift =  findLine( i ) != 0 ? 1.2*kBarHeight : 0;
       if( mLines[ findLine( i ) ].hasText() ||
          mEditingLineIndex == findLine( i ) )
       { verticalShift += QFontMetrics(mLineFont).height(); }
@@ -1725,7 +1951,7 @@ void PartitionViewer::updatePageLayouts()
   for( int i = 0; i < getNumberOfLines(); ++i )
   {
     Line& l = mLines[i];
-    const Bar& b = mBars[ l.getFirstBar() ];
+    const Bar& b = getBar( l.getFirstBar() );
     QRect bl = b.mPageLayout[0];
     QFontMetrics fm(mLineFont);
     
@@ -1786,18 +2012,18 @@ void PartitionViewer::updateOrnement( Ornement* ipM )
       if( ipM->mNotes[j].first == barIndex )
       {
         int noteIndex = ipM->mNotes[j].second;
-        left = std::min( left, mBars[barIndex].getNoteRect(noteIndex).left() );
-        right = std::max( right, mBars[barIndex].getNoteRect(noteIndex).right() );
+        left = std::min( left, getBar(barIndex).getNoteRect(noteIndex).left() );
+        right = std::max( right, getBar(barIndex).getNoteRect(noteIndex).right() );
         
         //quand c'est la derniere note de la barre et que le Ornement dépasse dnas la barre
         //suivante, on prend la fin de la barre...
         if( noteIndex == (getNumberOfNotesInBar(barIndex) - 1) && i < (bi.size() - 1) )
-        { right = mBars[barIndex].mRect.right(); }
+        { right = getBar(barIndex).mRect.right(); }
         
         //quand c'Est la premiere note de la barre et que le Ornement vient de la barre
         //précédente, le left est le début de la barre
         if( noteIndex == 0 && i > 0 )
-        { left = mBars[barIndex].mRect.left(); }
+        { left = getBar(barIndex).mRect.left(); }
       }
     }
     
@@ -1823,16 +2049,16 @@ void PartitionViewer::updateUi()
    Ensuite on place les widgets classiques a l'ecran.
    */
   bool shouldUpdateLayout = false;
-  for( int i = 0; i < getNumberOfBars(); ++i )
+  for( int i = bScale; i < getNumberOfBars(); ++i )
   {
-    Bar& b = mBars[i];
+    Bar& b = getBar(i);
     if( b.mIsDirty )
     { updateBar( i ); }
   }
   
-  for( int i = 0; i < getNumberOfBars(); ++i )
+  for( int i = bScale; i < getNumberOfBars(); ++i )
   {
-    Bar& b = mBars[i];
+    Bar& b = getBar(i);
     if( b.mIsDirty )
     {
       for( int j = 0; j < mOrnements.size(); ++j )
@@ -1867,20 +2093,6 @@ void PartitionViewer::updateUi()
   update();
 }
 //-----------------------------------------------------------------------------
-// --- PARTITIONVIEWER::Stroke
-//-----------------------------------------------------------------------------
-PartitionViewer::Stroke::Stroke( strokeType iSt,
-                                 int iNoteIndex ) :
-mStrokeType( iSt ),
-mSpan( 1, iNoteIndex )
-{}
-//-----------------------------------------------------------------------------
-PartitionViewer::Stroke::Stroke( strokeType iSt,
-                                vector<int> iSpan ) :
-mStrokeType( iSt ),
-mSpan( iSpan )
-{}
-//-----------------------------------------------------------------------------
 // --- PARTITIONVIEWER::Bar (vibhag)
 //-----------------------------------------------------------------------------
 QRect PartitionViewer::Bar::getNoteRect( int iNoteIndex ) const
@@ -1904,6 +2116,13 @@ PartitionViewer::Line::Line( int i, QString s) :
 //-----------------------------------------------------------------------------
 // --- PARTITIONVIEWER::Ornement
 //-----------------------------------------------------------------------------
+PartitionViewer::Ornement::Ornement( ornementType iT,
+                                    const vector<NoteLocator>& iNotes )
+{
+  mOrnementType = iT;
+  for( int i = 0; i < iNotes.size(); ++i )
+  { mNotes.push_back( make_pair( iNotes[i].getBar(), iNotes[i].getIndex() ) ); }
+}
 bool PartitionViewer::Ornement::appliesToBar( int iBar ) const
 {
   bool r = false;
@@ -1950,13 +2169,15 @@ MainDialog::MainDialog() : QMainWindow(),
   //--- la barre de menu
   QMenuBar* pMenuBar = new QMenuBar(pMainWidget);
   QMenu* pFile = pMenuBar->addMenu("File");
-//  pFile->addAction( QString("&Open..."), this, SLOT( openCatalogClicked() ),
-//  	QKeySequence(Qt::CTRL + Qt::Key_O) );
-//  pFile->addAction( QString("&Close"), this, SLOT( closeCatalogClicked() ) );
-//  pFile->addAction( QString("&Save"), this, SLOT( save() ),
-//  	QKeySequence(Qt::CTRL + Qt::Key_S) );
-//  pFile->addAction( QString("Save As..."), this, SLOT( saveAs() ),
-//  	QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_S) );
+  pFile->addAction( QString("&New"), this, SLOT( newFile() ),
+                   QKeySequence::New );
+
+  pFile->addAction( QString("&Open"), this, SLOT( openFile() ),
+                   QKeySequence::Open );
+  pFile->addAction( QString("&Save"), this, SLOT( save() ),
+                   QKeySequence::Save );
+  pFile->addAction( QString("Save As..."), this, SLOT( saveAs() ),
+                   QKeySequence::SaveAs );
 
   //debug action
   QShortcut* pRandomPart = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_G), this );
@@ -1990,7 +2211,7 @@ MainDialog::MainDialog() : QMainWindow(),
   pLyt->addWidget( pScroll );
   
   loadSettings();
-  
+  newFile();
   resize( mpPartitionViewer->width() + 35, 800 );
 }
 //-----------------------------------------------------------------------------
@@ -1999,46 +2220,80 @@ void MainDialog::generateRandomPartition()
 //-----------------------------------------------------------------------------
 void MainDialog::loadSettings()
 {
-//	mSaveAsPath = mSettings.value( "saveAsPath" ).toString();
+	mLastSavePath = mSettings.value( "lastSavePath" ).toString();
 //  mAddTexturePath = mSettings.value( "addTexturePath" ).toString();
 //  mOpenCatalogPath = mSettings.value( "openCatalogPath" ).toString();
 //  mRefreshTexturePath = mSettings.value( "refreshTexturePath" ).toString();
 }
-
+//-----------------------------------------------------------------------------
+void MainDialog::newFile()
+{
+  //check modif and save...
+  mSaveFileName = QString();
+  
+  Composition c;
+  c.setTitle( "Untitled" );
+  c.addBar();
+  c.addLine(0);
+  mpPartitionViewer->setComposition( c );
+  
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+void MainDialog::openFile()
+{
+ 	QString s;
+  s = QFileDialog::getOpenFileName(
+    this, tr("Opem Composition"),
+    mLastSavePath,
+    tr("Sargam file (*.srg)"));
+  
+  if(!s.isEmpty())
+  {
+    mSaveFileName = s;
+    mLastSavePath = QFileInfo(s).absolutePath();
+    Composition c;
+    c.fromBinary( utils::fromFile( s ) );
+    mpPartitionViewer->setComposition(c);
+    saveSettings();
+  }
+}
 //-----------------------------------------------------------------------------
 void MainDialog::save()
 {
-//	if( mSaveFileName.isEmpty() )
-//  { saveAs(); }
-//  else
-//  { utils::toFile( mSaveFileName, mSpriteCatalog.toBinary() ); }
-//  updateUi();
+	if( mSaveFileName.isEmpty() )
+  { saveAs(); }
+  else
+  {
+    utils::toFile( mSaveFileName,
+      mpPartitionViewer->getComposition().toBinary() );
+  }
+  updateUi();
 }
 
 //-----------------------------------------------------------------------------
 void MainDialog::saveAs()
 {
-//	QString s;
-//  s = QFileDialog::getSaveFileName(
-//    this, tr("Save Catalog"),
-//    "/home/untitled.cat",
-//    tr("Sprite Catalog (*.cat)"));
-//      
-//  if(!s.isEmpty())
-//  {
-//  	mSaveFileName = s;
-//  	utils::toFile( mSaveFileName, mSpriteCatalog.toBinary() );
-//    
-//    mSaveAsPath = QFileInfo(s).path();
-//	  saveSettings();
-//  }
-//  updateUi();
+	QString s;
+  s = QFileDialog::getSaveFileName(
+    this, tr("Save Composition"),
+    mLastSavePath + "/untitled.srg",
+    tr("Sargam file (*.srg)"));
+      
+  if(!s.isEmpty())
+  {
+  	mSaveFileName = s;
+    mLastSavePath = QFileInfo(s).absolutePath();
+    saveSettings();
+    save();
+  }
+  updateUi();
 }
 
 //-----------------------------------------------------------------------------
 void MainDialog::saveSettings()
 {
-//	mSettings.setValue( "saveAsPath", mSaveAsPath );
+	mSettings.setValue( "lastSavePath", mLastSavePath );
 //	mSettings.setValue( "addTexturePath", mAddTexturePath );
 //  mSettings.setValue( "openCatalogPath", mOpenCatalogPath );
 //  mSettings.setValue( "refreshTexturePath", mRefreshTexturePath );
