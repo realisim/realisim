@@ -125,6 +125,9 @@ Composition::Line::Line( int iFirstBar, QString iText ):
   mText( iText )
 {}
 //------------------------------------------------------------------------------
+bool Composition::Line::operator<( const Composition::Line& iRhs ) const
+{ return this->mFirstBar < iRhs.mFirstBar; }
+//------------------------------------------------------------------------------
 //--- Composition
 //------------------------------------------------------------------------------
 Composition::Bar Composition::mDummyBar;
@@ -157,7 +160,11 @@ void Composition::addBar( int iBarIndex )
 //------------------------------------------------------------------------------
 /*ajoute un saut de ligne ' la barre iIbarIndex avec le texte iText*/
 void Composition::addLine( int iBarIndex, QString iText /*= QString*/ )
-{ mLines.push_back( Line( iBarIndex, iText ) ); }
+{
+  mLines.push_back( Line( iBarIndex, iText ) );
+  /*les lignes sont trie en ordre croissant de iBarIndex*/
+  sort( mLines.begin(), mLines.end() );
+}
 //------------------------------------------------------------------------------
 void Composition::addMatra( int iBar, std::vector<int> iNoteIndices )
 {
@@ -354,18 +361,22 @@ void Composition::eraseNoteFromMatra( int iBar, int iIndex )
 /*voir eraseNoteFromMatra.*/
 void Composition::eraseNoteFromOrnement( int iBar, int iIndex )
 {
-  for( int i = 0; i < mOrnements.size(); ++i )
+  vector<Ornement>::iterator itOrn = mOrnements.begin();
+  for( ; itOrn != mOrnements.end(); )
   {
-    Ornement& o = mOrnements[i];
-    vector< NoteLocator >::iterator it = o.mNotes.begin();
-    for( ; it != o.mNotes.end(); ++it )
+    vector< NoteLocator >::iterator it = itOrn->mNotes.begin();
+    for( ; it != itOrn->mNotes.end(); ++it )
     {
       if( (*it).getBar() == iBar && (*it).getIndex() == iIndex )
       {
-        it = o.mNotes.erase( it );
+        it = itOrn->mNotes.erase( it );
         break;
       }
     }
+    
+    if( itOrn->mNotes.size() == 0 )
+    { itOrn = mOrnements.erase( itOrn ); }
+    else{ ++itOrn; }
   }
 }
 //------------------------------------------------------------------------------
@@ -449,6 +460,7 @@ int Composition::findStroke( int iBar, int iNoteIndex ) const
 //------------------------------------------------------------------------------
 void Composition::fromBinary( QByteArray iBa )
 {
+  clear();
   QDataStream ds(&iBa, QIODevice::ReadOnly );
   
   qint32 magincHeader, version, lowestSupportedVersion;
@@ -587,6 +599,19 @@ QString Composition::getAndClearLastErrors() const
   return r;
 }
 //------------------------------------------------------------------------------
+vector<int> Composition::getBarsInvolvedByOrnement( int iOrn ) const
+{
+  vector<int> r;
+  if( iOrn >= 0 && iOrn < mOrnements.size() )
+  {
+    const Ornement& o = mOrnements[iOrn];
+    for( int i = 0; i < o.mNotes.size(); ++i )
+    { r.push_back( o.mNotes[i].getBar() ); }
+    r.erase( std::unique( r.begin(), r.end() ), r.end() );
+  }
+  return r;
+}
+//------------------------------------------------------------------------------
 const Composition::Bar& Composition::getBar( int iIndex ) const
 {
   const Bar* b = 0;
@@ -697,6 +722,28 @@ bool Composition::isStartOfLine( int iBar ) const
   for( int i = 0; i < getNumberOfLines(); ++i )
   { if( getLineFirstBar(i) == iBar ) { r = true; break; } }
   return r;
+}
+//------------------------------------------------------------------------------
+bool Composition::ornementAppliesToBar( int iOrn, int iBar ) const
+{
+  bool r = false;
+  const Ornement& o = mOrnements[iOrn];
+  for( int i = 0; i < o.mNotes.size(); ++i )
+  { if( o.mNotes[i].getBar() == iBar ){ r = true; break; } }
+  return r;
+}
+//------------------------------------------------------------------------------
+void Composition::setLineText( int iLineIndex, QString iText )
+{
+  if( iLineIndex >= 0 && iLineIndex < mLines.size() )
+  { mLines[iLineIndex].mText = iText; }
+}
+//------------------------------------------------------------------------------
+void Composition::setNote( int iBar, int iIndex, Note iN )
+{
+  Bar& b = getBar( iBar );
+  if( iIndex >= 0 && iIndex < getNumberOfNotesInBar(iBar) )
+  { b.mNotes[iIndex] = iN; }
 }
 //------------------------------------------------------------------------------
 void Composition::setScale( std::vector<Note> iNote )
