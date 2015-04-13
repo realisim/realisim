@@ -100,7 +100,7 @@ int findOrnement( int, int ) const;
 int findStroke( int, int ) const;
   void fromBinary( QByteArray );
   QString getAndClearLastErrors() const;
-//vector<int> getBarsInvolvedByOrnement( int ) const;
+  std::vector<int> getBarsInvolvedByOrnement( int ) const;
   int getLineFirstBar( int ) const;
   QString getLineText( int ) const;
   Note getNote( int, int ) const;
@@ -128,6 +128,9 @@ bool isGraceNote( int, int) const;
 bool isNoteInMatra( int, int ) const;
 bool isNoteInOrnement( int, int ) const;
 bool isStartOfLine( int ) const;
+bool ornementAppliesToBar( int, int ) const;
+  void setLineText( int, QString );
+  void setNote( int, int, Note );
   void setScale( std::vector<Note> );
   void setTitle( QString );
   QByteArray toBinary() const;
@@ -154,6 +157,7 @@ protected:
   {
     Line();
     Line( int, QString );
+    bool operator<( const Line& ) const;
     
     int mFirstBar;
     QString mText;
@@ -168,7 +172,7 @@ void eraseNoteFromOrnement( int, int );
 
   const Bar& getBar(int) const;
   Bar& getBar( int );
-Note& getNote( int, int );
+  Note& getNoteForModification( int, int );
 void shiftGraceNotes( int, int, int );
 void shiftLines( int, int );
 void shiftMatras(int, int, int);
