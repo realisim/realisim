@@ -11,7 +11,7 @@ using namespace realisim;
 namespace
 {
   const int kMagicHeader = 0x00ABEF54;
-  const int kCurrentVersion = 1;
+  const int kCurrentVersion = 2;
   const int kLowestSupportedVersion = 1;
 }
 
@@ -135,7 +135,7 @@ realisim::sargam::Note Composition::mDummyNote(nvSa);
 
 Composition::Composition()
 {
-  mScale = defaultScale();
+  mScale.mNotes = defaultScale();
 }
 //------------------------------------------------------------------------------
 void Composition::addError( QString iE ) const
@@ -249,7 +249,8 @@ void Composition::addGraceNote( int iBar, int iNoteIndex )
 //------------------------------------------------------------------------------
 void Composition::clear()
 {
-  mScale.clear();
+  mScale = Bar();
+  mTarabTuning = Bar();
   mBars.clear();
   mLines.clear();
   mOrnements.clear();
@@ -589,6 +590,20 @@ void Composition::fromBinary( QByteArray iBa )
     setScale( vn );
     
     //--- tarab tuning
+    if( version >= 2 )
+    {
+      vector<Note> vn;
+      qint32 numNotes;
+      ds >> numNotes;
+      for( int i = 0; i < numNotes; ++i )
+      {
+        qint32 v, m, o;
+        ds >> v; ds >> o; ds >> m;
+        Note n( (noteValue)v, o, (noteModification)m );
+        vn.push_back(n);
+      }
+      setTarabTuning( vn );
+    }
   }
 }
 //------------------------------------------------------------------------------
@@ -615,8 +630,15 @@ vector<int> Composition::getBarsInvolvedByOrnement( int iOrn ) const
 const Composition::Bar& Composition::getBar( int iIndex ) const
 {
   const Bar* b = 0;
-  if( iIndex >=0 && iIndex < mBars.size() )
-  { b = &mBars[iIndex]; }
+  if( iIndex < (int)mBars.size() )
+  {
+    switch (iIndex)
+    {
+      case sbScale: b = &mScale; break;
+      case sbTarabTuning: b = &mTarabTuning; break;
+      default: b = &mBars[iIndex]; break;
+    }
+  }
   else
   {
     QString s;
@@ -689,10 +711,13 @@ ornementType Composition::getOrnementType( int iOrn ) const
 { return mOrnements[iOrn].mOrnementType; }
 //------------------------------------------------------------------------------
 vector<Note> Composition::getScale() const
-{ return mScale; }
+{ return getBar( sbScale ).mNotes; }
 //------------------------------------------------------------------------------
 strokeType Composition::getStrokeType( int iBar, int iStroke ) const
 { return getBar(iBar).mStrokes[iStroke].mStrokeType; }
+//------------------------------------------------------------------------------
+vector<Note> Composition::getTarabTuning() const
+{ return getBar( sbTarabTuning ).mNotes; }
 //------------------------------------------------------------------------------
 QString Composition::getTitle() const
 { return mTitle; }
@@ -747,7 +772,10 @@ void Composition::setNote( int iBar, int iIndex, Note iN )
 }
 //------------------------------------------------------------------------------
 void Composition::setScale( std::vector<Note> iNote )
-{ mScale = iNote; }
+{ mScale.mNotes = iNote; }
+//------------------------------------------------------------------------------
+void Composition::setTarabTuning( std::vector<Note> iNote )
+{ getBar(sbTarabTuning).mNotes = iNote; }
 //------------------------------------------------------------------------------
 void Composition::setTitle( QString iTitle )
 { mTitle = iTitle; }
@@ -928,8 +956,17 @@ QByteArray Composition::toBinary() const
     ds << (qint32)n.getOctave();
     ds << (qint32)n.getModification();
   }
-  //--- tarab tuning
   
+  //--- tarab tuning
+  const vector<Note> tuning = getTarabTuning();
+  ds << (qint32) tuning.size();
+  for( int i = 0; i < tuning.size(); ++i )
+  {
+    Note n = tuning[i];
+    ds << (qint32)n.getValue();
+    ds << (qint32)n.getOctave();
+    ds << (qint32)n.getModification();
+  }
   
   return ba;
 }
