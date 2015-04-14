@@ -4,6 +4,7 @@
 #define MainDialog_hh
 
 #include "data.h"
+#include <QPrinter>
 #include <QtWidgets>
 #include <QSettings>
 #include <vector>
@@ -26,8 +27,9 @@ public:
   int getOctave() const;
   QSizeF getPaperSizeInInch() const;
   bool isDebugging() const;
+  void print( QPrinter* );
   void setAsDebugging( bool );
-  //void setPaperSize( QSizeF );
+  void setPaperSize( QSizeF );
   void setComposition( Composition* );
   
 protected slots:
@@ -36,8 +38,8 @@ protected slots:
   void stopLineTextEdit();
   
 protected:
-  enum bars{ bScale = -1, /*bAscendingScale, bDescendingScale, bTarabTuning*/ };
-  enum region { rPartition, rTitle, rSargamScaleLabel, rSargamScale };
+  enum region { rPartition, rTitle, rSargamScaleLabel, rSargamScale,
+    rTarabTuningLabel, rTarabTuning };
   enum pageRegion { prPage, prBody, prPageFooter };
   enum barRegion { brSeparatorX, brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
     brOrnementY, brMatraGroupY, brGraceNoteTopY };
@@ -103,7 +105,8 @@ protected:
   void clearSelection();
   void createUi();
   int cmToPixel( double ) const;
-  void drawBarContour( QPainter&, int, QColor );
+  void draw( QPaintDevice* iPaintDevice ) const;
+  void drawBarContour( QPainter&, int, QColor ) const;
   void eraseBar(int);
   void eraseOrnement( int );
   Bar& getBar(int);
@@ -137,13 +140,15 @@ protected:
   int toPageIndex( QPoint ) const;
   std::vector<NoteLocator> toNoteLocator( const std::vector< std::pair<int, int> > ) const;
   void updateBar( int );
+  void updateBarsLayout();
   void updateOrnement( int );
-  void updatePageLayouts();
+  void updateLayout();
+  void updateLinesLayout();
+  void updateSpecialBarLayout( specialBar );
   void updateUi();
   
   //--- ui
   QLineEdit* mpTitleLe;
-  QString mSargamScaleLabel;
   QLineEdit* mpLineTextEdit;
   
   //--- data
@@ -156,6 +161,7 @@ protected:
   QFont mLineFont;
   QFont mStrokeFont;
   Bar mScale;
+  Bar mTarabTuning;
   std::vector< Bar > mBars;
   std::vector< Ornement > mOrnements;
   std::vector< Line > mLines;
@@ -186,6 +192,7 @@ public:
 protected slots:
   void newFile();
   void openFile();
+  void print();
   void save();
   void saveAs();
   void generateRandomPartition();

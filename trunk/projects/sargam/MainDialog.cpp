@@ -8,6 +8,8 @@
 #include "math/Point.h"
 #include "math/Vect.h"
 #include "utils/utilities.h"
+#include <QPrintDialog>
+#include <QPrinter>
 #include <set>
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
@@ -30,7 +32,9 @@ namespace
   const int kMeendHeight = 10;
   const int kKrintanHeight = 6;
   const int kBeatGroupHeight = 10;
-
+  
+  const QString kSargamScaleLabel("Scale: ");
+  const QString kTarabTuningLabel("Tarab tuning: ");
 }
 
 realisim::sargam::Composition PartitionViewer::mDummyComposition;
@@ -41,7 +45,6 @@ realisim::sargam::Composition PartitionViewer::mDummyComposition;
 PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   QWidget( ipParent ),
   mpTitleLe(0),
-  mSargamScaleLabel( "no text for sargamScale" ),
   mpLineTextEdit(0),
   mIsDebugging( false),
   mPaperSize( 8.5, 11 ),
@@ -119,6 +122,8 @@ void PartitionViewer::clear()
   mCurrentBar = -1;
   mCurrentNote = -1;
   mSelectedNotes.clear();
+  setBarAsDirty(sbScale, true);
+  setBarAsDirty(sbTarabTuning, true);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::clearSelection()
@@ -424,9 +429,6 @@ void PartitionViewer::createUi()
           this, SLOT( resizeLineEditToContent() ) );
   mpTitleLe->setFont( mTitleFont );
   mpTitleLe->setText( "Untitled" );
-
-  //scale label
-  mSargamScaleLabel = "Scale: ";
   
   //line edit pour titre des lignes
   mpLineTextEdit = new QLineEdit( this->parentWidget() );
@@ -438,9 +440,103 @@ void PartitionViewer::createUi()
           this, SLOT( resizeLineEditToContent() ) );
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::drawBarContour( QPainter& iP, int iBarIndex, QColor iCol )
+void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
 {
-  if( iBarIndex != -1 && hasFocus() )
+  QPainter p( iPaintDevice );
+  p.setBackgroundMode( Qt::OpaqueMode );
+  QBrush b( Qt::white );
+  QPen pen = p.pen();
+  p.setBackground( b );
+  
+  //--- render pages
+  for( int i = 0; i < getNumberOfPages(); ++i)
+  {
+    //on dessine le background blanc de la page
+    p.setPen( Qt::white );
+    p.setBrush( Qt::white );
+    p.drawRect( getPageRegion( prPage, i ) );
+    
+    //--- tout le text de la page
+    p.setPen( Qt::black );
+    p.setBrush( Qt::NoBrush );
+    
+    //on dessine le bas de page
+    //l'indice de page commence à 0, mais on veut que montrer page 1.
+    p.setFont(QFont("Arial", 10));
+    p.drawText( getPageRegion( prPageFooter, i ), Qt::AlignCenter,
+               "page " + QString::number(i) + 1 );
+  }
+  
+  //--- rendu des textes pour barres speciales (sargam scale, tarab tuning...)
+  p.setFont( mBarFont );
+  p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, kSargamScaleLabel );
+  p.drawText( getRegion( rTarabTuningLabel ), Qt::AlignCenter, kTarabTuningLabel );
+  
+  //render bars
+  for( int i = sbScale; i < x->getNumberOfBars(); ++i )
+  {
+    const Bar& b = getBar(i);
+    //on blit le pixmap dans le widget.
+    QRect cut( 0, 0, 0, 0 );
+    for( int j = 0; j < b.mPageLayout.size(); ++j )
+    {
+      cut.setSize( b.mPageLayout[j].size() );
+      p.drawPixmap( b.mPageLayout[j], b.mPixmap, cut );
+      cut.setLeft( cut.width() + 1 );
+      
+      //le curseur dans la barre courante s'il n'y a pas de selection
+      //et que le focus y est
+      pen.setColor( Qt::black );
+      pen.setWidth( 1 );
+      p.setPen( pen );
+      if( !hasSelection() && getCurrentBar() == i && hasFocus() )
+      {
+        QLine l;
+        if( getCurrentNote() >= 0 )
+        {
+          QRect r = b.mNotesPageLayout[getCurrentNote()];
+          l.setPoints( r.topRight(), r.bottomRight() );
+        }
+        else
+        {
+          int x = b.mPageLayout[0].left() + getBarRegion( brNoteStartX );
+          int y = b.mPageLayout[0].top() + getBarRegion( brNoteTopY );
+          int h = getBarRegion( brNoteBottomY ) - getBarRegion( brNoteTopY );
+          l.setPoints( QPoint(x,y) , QPoint( x, y + h ) );
+        }
+        p.drawLine( l );
+      }
+    }
+  }
+  
+  //on dessine le contour de la barre survolee si ce nest pas la courant
+  if( mBarHoverIndex != getCurrentBar() )
+  { drawBarContour( p, mBarHoverIndex, QColor( 125, 125, 125, 120 ) ); }
+  //on dessine le contour de la barre courante
+  drawBarContour( p, getCurrentBar(), QColor( 0, 10, 210, 120 ) );
+  
+  //rendu des lignes, numero et texte
+  for( int i = 0; i < x->getNumberOfLines(); ++i )
+  {
+    pen.setColor( Qt::black );
+    p.setPen( pen );
+    p.setFont( mLineFont );
+    const Line& l = mLines[i];
+    //numero de ligne. les lignes commencent a 1!!!
+    p.drawText( l.mLineNumberRect, QString::number( i + 1 ) );
+    //le hot spot
+    if( mAddLineTextHover == i )
+    {
+      p.drawRect( l.mHotSpot );
+    }
+    //text de la ligne
+    p.drawText( l.mTextRect.bottomLeft(), x->getLineText(i) );
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawBarContour( QPainter& iP, int iBarIndex, QColor iCol ) const
+{
+  if( iBarIndex > sbScale && hasFocus() )
   {
     QPen pen = iP.pen();
     iP.save();
@@ -448,7 +544,7 @@ void PartitionViewer::drawBarContour( QPainter& iP, int iBarIndex, QColor iCol )
     pen.setColor( iCol );
     pen.setWidth( 1 );
     iP.setPen( pen );
-    Bar& b = getBar( iBarIndex );
+    const Bar& b = getBar( iBarIndex );
     for( int i = 0; i < b.mPageLayout.size(); ++i )
     { iP.drawRoundedRect( b.mPageLayout[i], 2, 2 ); }
     iP.restore();
@@ -482,9 +578,9 @@ void PartitionViewer::generateRandomPartition()
 {
   clear();
   const int kNumBars = 52;
-  mBars.resize( kNumBars );
-  for( int i = 0; i < x->getNumberOfBars() - 1; ++i )
+  for( int i = 0; i < kNumBars; ++i )
   {
+    addBar( x->getNumberOfBars() );
     double norm = rand() / (double)RAND_MAX;
     int numNotes = 4 + norm * 16;
     for( int j = 0; j < numNotes; ++j )
@@ -512,7 +608,8 @@ const PartitionViewer::Bar& PartitionViewer::getBar( int iBar ) const
   const Bar* r = 0;
   switch( iBar )
   {
-    case bScale: r = &mScale; break;
+    case sbScale: r = &mScale; break;
+    case sbTarabTuning: r = &mTarabTuning; break;
     default: r = &mBars[iBar]; break;
   }
   return *r;
@@ -590,7 +687,7 @@ QRect PartitionViewer::getPageRegion( pageRegion iR, int iPage /*=0*/ ) const
     case prBody:
     {
       int margin = cmToPixel( kPageMarginInCm );
-      int sargamScaleBottom = iPage == 0 ? getRegion(rSargamScale).bottom() + kSpacing : 0;
+      int sargamScaleBottom = iPage == 0 ? getRegion(rTarabTuning).bottom() + kSpacing : 0;
       int startOfBody = max( margin, sargamScaleBottom );
       int paperWidth = getPaperSizeInInch().width() * logicalDpiX();
       int paperHeight = getPaperSizeInInch().height() * logicalDpiY();
@@ -642,7 +739,7 @@ QRect PartitionViewer::getRegion( region iR ) const
       int margin = cmToPixel( kPageMarginInCm );
       r.setLeft( margin );
       r.setHeight( kBarHeight );
-      r.setWidth( fm.width( mSargamScaleLabel ) );
+      r.setWidth( fm.width( kSargamScaleLabel ) );
     } break;
     case rSargamScale:
     {
@@ -653,6 +750,28 @@ QRect PartitionViewer::getRegion( region iR ) const
       r.translate( 0, t.height() + kSpacing );
       r.setLeft( getRegion( rSargamScaleLabel ).right() );
       r.setRight( t.right() - margin );
+      r.setHeight( kBarHeight );
+    } break;
+    case rTarabTuningLabel:
+    {
+      QFontMetrics fm( mBarFont );
+      QRect t = getRegion( rSargamScaleLabel );
+      r = t;
+      r.translate( 0, t.height() + kSpacing );
+      int margin = cmToPixel( kPageMarginInCm );
+      r.setLeft( margin );
+      r.setHeight( kBarHeight );
+      r.setWidth( fm.width( kTarabTuningLabel ) );
+    } break;
+    case rTarabTuning:
+    {
+      QFontMetrics fm( mBarFont );
+      QRect t = getRegion( rSargamScaleLabel );
+      int margin = cmToPixel( kPageMarginInCm );
+      r = t;
+      r.translate( 0, t.height() + kSpacing );
+      r.setLeft( getRegion( rTarabTuningLabel ).right() );
+      r.setRight( getPaperSizeInInch().width() * logicalDpiX() - margin );
       r.setHeight( kBarHeight );
     } break;
   }
@@ -736,7 +855,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
         { addNoteToSelection( getCurrentBar(), mCurrentNote ); }
         
         mCurrentNote = std::max( --mCurrentNote, -2 );
-        if( getCurrentNote() == -2 && getCurrentBar() > bScale )
+        if( getCurrentNote() == -2 && getCurrentBar() > sbScale )
         {
           setCurrentBar( getCurrentBar() - 1 );
           setCurrentNote( x->getNumberOfNotesInBar( getCurrentBar() ) - 1 );
@@ -910,100 +1029,12 @@ QString PartitionViewer::noteToString( Note iNote ) const
 //-----------------------------------------------------------------------------
 void PartitionViewer::paintEvent( QPaintEvent* ipE )
 {
-  QRect r = ipE->region().boundingRect();
-  QPainter p(this);
-  p.setBackgroundMode( Qt::OpaqueMode );
-  QBrush b( Qt::white );
-  QPen pen = p.pen();
-  p.setBackground( b );
-  
-  //--- render pages
-  for( int i = 0; i < getNumberOfPages(); ++i)
-  {
-    //on dessine le background blanc de la page
-    p.setPen( Qt::white );
-    p.setBrush( Qt::white );
-    p.drawRect( getPageRegion( prPage, i ) );
-   
-    //--- tout le text de la page
-    p.setPen( Qt::black );
-    p.setBrush( Qt::NoBrush );
-    
-    //on dessine le bas de page
-    //l'indice de page commence à 0, mais on veut que montrer page 1.
-    p.setFont(QFont("Arial", 10));
-    p.drawText( getPageRegion( prPageFooter, i ), Qt::AlignCenter,
-               "page " + QString::number(i) + 1 );
-  }
-  
-  //--- rendu des textes pour barres speciales (sargam scale, tarab tuning...)
-  p.setFont( mBarFont );
-  p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, mSargamScaleLabel );
-             
-  //render bars
-  for( int i = bScale; i < x->getNumberOfBars(); ++i )
-  {
-    Bar& b = getBar(i);
-    //on blit le pixmap dans le widget.
-    QRect cut( 0, 0, 0, 0 );
-    for( int j = 0; j < b.mPageLayout.size(); ++j )
-    {
-      cut.setSize( b.mPageLayout[j].size() );
-      p.drawPixmap( b.mPageLayout[j], b.mPixmap, cut );
-      cut.setLeft( cut.width() + 1 );
-      
-      //le curseur dans la barre courante s'il n'y a pas de selection
-      //et que le focus y est
-      pen.setColor( Qt::black );
-      pen.setWidth( 1 );
-      p.setPen( pen );
-      if( !hasSelection() && getCurrentBar() == i && hasFocus() )
-      {
-        QLine l;
-        if( getCurrentNote() >= 0 )
-        {
-          QRect r = b.mNotesPageLayout[getCurrentNote()];
-          l.setPoints( r.topRight(), r.bottomRight() );
-        }
-        else
-        {
-          int x = b.mPageLayout[0].left() + getBarRegion( brNoteStartX );
-          int y = b.mPageLayout[0].top() + getBarRegion( brNoteTopY );
-          int h = getBarRegion( brNoteBottomY ) - getBarRegion( brNoteTopY );
-          l.setPoints( QPoint(x,y) , QPoint( x, y + h ) );
-        }
-        p.drawLine( l );
-      }
-    }
-  }
-  
-  //on dessine le contour de la barre survolee si ce nest pas la courant
-  if( mBarHoverIndex != getCurrentBar() )
-  { drawBarContour( p, mBarHoverIndex, QColor( 125, 125, 125, 120 ) ); }
-  //on dessine le contour de la barre courante
-  drawBarContour( p, getCurrentBar(), QColor( 0, 10, 210, 120 ) );
-  
-  //rendu des lignes, numero et texte
-  for( int i = 0; i < x->getNumberOfLines(); ++i )
-  {
-    pen.setColor( Qt::black );
-    p.setPen( pen );
-    p.setFont( mLineFont );
-    const Line& l = mLines[i];
-    //numero de ligne. les lignes commencent a 1!!!
-    p.drawText( l.mLineNumberRect, QString::number( i + 1 ) );
-    //le hot spot
-    if( mAddLineTextHover == i )
-    {
-      p.drawRect( l.mHotSpot );
-    }
-    //text de la ligne
-    p.drawText( l.mTextRect.bottomLeft(), x->getLineText(i) );
-  }
+  draw( this );
   
   //--- render debug infos
   if( isDebugging() )
   {
+    QPainter p(this);
     p.setFont(QFont("Arial", 10));
     QPen pen = p.pen();
     pen.setColor(Qt::blue);
@@ -1016,6 +1047,8 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
         p.drawRect( getRegion( rTitle ) );
         p.drawRect( getRegion( rSargamScaleLabel ) );
         p.drawRect( getRegion( rSargamScale ) );
+        p.drawRect( getRegion( rTarabTuningLabel ) );
+        p.drawRect( getRegion( rTarabTuning ) );
       }
       p.drawRect( getPageRegion( prBody, i ) );
       p.drawRect( getPageRegion( prPageFooter, i ) );
@@ -1052,12 +1085,22 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
     
     p.setPen(Qt::blue);
     QString s;
+    QRect r = ipE->region().boundingRect();
     s.sprintf("Partition size: %d, %d\n"
               "Region to repaint: %d, %d, %d, %d",
               getRegion( rPartition ).width(), getRegion( rPartition ).height(),
               r.left(), r.top(), r.right(), r.bottom() );
     p.drawText(rect(), Qt::AlignBottom | Qt::AlignRight, s);
   }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::print( QPrinter* iPrinter )
+{
+  QSizeF previousPaperSize = getPaperSizeInInch();
+  QSizeF s = iPrinter->paperRect( QPrinter::Inch ).size();
+  setPaperSize( s );
+  
+  //draw( iPrinter );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::renderBarOffscreen( int iBar )
@@ -1224,12 +1267,17 @@ void PartitionViewer::setComposition(Composition* ipC)
   //--- title
   mpTitleLe->setText( ipC->getTitle() );
   
-  //--- scale
-//  mScale.mNotes = ipC->getScale();
-//  setBarAsDirty( bScale, true );
-  
   setCurrentBar( 0 );
   setCurrentNote( - 1 );
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::setPaperSize( QSizeF s )
+{
+  mPaperSize = s;
+  updateLayout();
+  QRect p = getRegion( rPartition );
+  resize( p.width()+1, p.height()+1 );
   updateUi();
 }
 //-----------------------------------------------------------------------------
@@ -1366,25 +1414,8 @@ void PartitionViewer::updateBar( int iBar )
   }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::updatePageLayouts()
+void PartitionViewer::updateBarsLayout()
 {
-  //layout des barres spéciale (gamme, accordage tarab, etc...)
-  Bar& b = mScale;
-  b.mPageLayout.clear();
-  b.mNotesPageLayout.clear();
-  QRect l = b.mRect;
-  QPoint sargamScaleTopLeft = getRegion( rSargamScale ).topLeft();
-  l.translate( sargamScaleTopLeft );
-  b.mPageLayout.push_back( l );
-  //on fait le layout des notes pour cette barre
-  for( int j = 0; j < x->getScale().size(); ++j )
-  {
-    QRect n = b.getNoteRect(j);
-    n.translate( sargamScaleTopLeft );
-    b.mNotesPageLayout.push_back(n);
-  }
-  
-  //--- le layout des barres du sargam
   mLayoutCursor = getPageRegion( prBody, 0 ).topLeft();
   for( int i = 0; i < x->getNumberOfBars(); ++i )
   {
@@ -1489,9 +1520,24 @@ void PartitionViewer::updatePageLayouts()
       }
     }
   }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::updateLayout()
+{
+  //layout des barres spéciale (gamme, accordage tarab, etc...)
+  updateSpecialBarLayout( sbScale );
+  updateSpecialBarLayout( sbTarabTuning );
+  
+  //--- le layout des barres du sargam
+  updateBarsLayout();
   
   //--- le layout des ligne, il vient apres le layout des barres parce
   //qu'il en est dependant
+  updateLinesLayout();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::updateLinesLayout()
+{
   mLines.clear();
   mLines.resize( x->getNumberOfLines() );
   for( int i = 0; i < x->getNumberOfLines(); ++i )
@@ -1517,21 +1563,21 @@ void PartitionViewer::updatePageLayouts()
     if( hasText || mEditingLineIndex == i )
     {
       QRect r( QPoint(), QSize(
-        std::max( fm.width( x->getLineText(i) ), 50 ), fm.height() ) );
+                               std::max( fm.width( x->getLineText(i) ), 50 ), fm.height() ) );
       r.translate( bl.left(), bl.top() - r.height() - 2 );
       l.mTextRect = r;
     }else { l.mTextRect = QRect(); }
     
     //le rect du numero de ligne
     {
-    QString s = QString::number( i + 1 );
-    QRect r( QPoint(), QSize( fm.width(s), fm.height() ) );
-    // on translate le rect contenant la numero de ligne. La position
-    // finale est 5 pix a gauche de la marge et centre sur la premiere
-    // barre de la ligne.
-    r.translate( bl.left() - r.width() - 5,
-      bl.top() + bl.height() / 2 - r.height() / 2 );
-    l.mLineNumberRect = r;
+      QString s = QString::number( i + 1 );
+      QRect r( QPoint(), QSize( fm.width(s), fm.height() ) );
+      // on translate le rect contenant la numero de ligne. La position
+      // finale est 5 pix a gauche de la marge et centre sur la premiere
+      // barre de la ligne.
+      r.translate( bl.left() - r.width() - 5,
+                  bl.top() + bl.height() / 2 - r.height() / 2 );
+      l.mLineNumberRect = r;
     }
   }
 }
@@ -1587,6 +1633,31 @@ void PartitionViewer::updateOrnement( int iOrn )
   o.mFullOrnement = QRect( QPoint(0, 0), QSize(widthAccum, height) );
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::updateSpecialBarLayout( specialBar barIndex )
+{
+  Bar& b = getBar( barIndex );
+  b.mPageLayout.clear();
+  b.mNotesPageLayout.clear();
+  QRect l = b.mRect;
+  QPoint topLeft;
+  switch (barIndex)
+  {
+    case sbScale: topLeft = getRegion( rSargamScale ).topLeft(); break;
+    case sbTarabTuning: topLeft = getRegion( rTarabTuning ).topLeft(); break;
+    default: break;
+  }
+  
+  l.translate( topLeft );
+  b.mPageLayout.push_back( l );
+  //on fait le layout des notes pour cette barre
+  for( int j = 0; j < x->getNumberOfNotesInBar(barIndex); ++j )
+  {
+    QRect n = b.getNoteRect(j);
+    n.translate( topLeft );
+    b.mNotesPageLayout.push_back(n);
+  }
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::updateUi()
 {
   /*On commence par mettre a jour les dimensions et position des notes de
@@ -1598,14 +1669,14 @@ void PartitionViewer::updateUi()
    Ensuite on place les widgets classiques a l'ecran.
    */
   bool shouldUpdateLayout = false;
-  for( int i = 0; i < x->getNumberOfBars(); ++i )
+  for( int i = sbScale; i < x->getNumberOfBars(); ++i )
   {
     Bar& b = getBar(i);
     if( b.mIsDirty )
     { updateBar( i ); }
   }
   
-  for( int i = 0; i < x->getNumberOfBars(); ++i )
+  for( int i = sbScale; i < x->getNumberOfBars(); ++i )
   {
     Bar& b = getBar(i);
     if( b.mIsDirty )
@@ -1613,14 +1684,14 @@ void PartitionViewer::updateUi()
       for( int j = 0; j < x->getNumberOfOrnements(); ++j )
       {
         if( x->ornementAppliesToBar( j, i ) )
-        { updateOrnement( j/*&mOrnements[j]*/ ); }
+        { updateOrnement( j ); }
       }
       renderBarOffscreen(i);
       setBarAsDirty( i, false );
       shouldUpdateLayout = true;
     }
   }
-  if( shouldUpdateLayout ){ updatePageLayouts(); }
+  if( shouldUpdateLayout ){ updateLayout(); }
   
   //placer le ui l'écran
   //titre
@@ -1686,12 +1757,15 @@ MainDialog::MainDialog() : QMainWindow(),
   pFile->addAction( QString("&New"), this, SLOT( newFile() ),
                    QKeySequence::New );
 
-  pFile->addAction( QString("&Open"), this, SLOT( openFile() ),
+  pFile->addAction( QString("&Open..."), this, SLOT( openFile() ),
                    QKeySequence::Open );
   pFile->addAction( QString("&Save"), this, SLOT( save() ),
                    QKeySequence::Save );
   pFile->addAction( QString("Save As..."), this, SLOT( saveAs() ),
                    QKeySequence::SaveAs );
+  pFile->addSeparator();
+  pFile->addAction( QString("Print..."), this, SLOT( print() ),
+                   QKeySequence::Print );
 
   //debug action
   QShortcut* pRandomPart = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_G), this );
@@ -1771,6 +1845,15 @@ void MainDialog::openFile()
     mpPartitionViewer->setComposition( &mComposition );
     saveSettings();
   }
+}
+//-----------------------------------------------------------------------------
+void MainDialog::print()
+{
+  QPrinter p;
+  //appliquer les configurations de visualisation a l'imprimante
+  QPrintDialog d( &p, this );
+  if (d.exec() == QDialog::Accepted)
+  { mpPartitionViewer->print( &p ); }
 }
 //-----------------------------------------------------------------------------
 void MainDialog::save()
