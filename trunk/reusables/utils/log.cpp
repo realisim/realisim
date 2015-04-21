@@ -43,7 +43,7 @@ void Log::doLog( QString iS ) const
   if( logsToConsole() )
   { printf( "%s\n", toLog.toStdString().c_str() ); }
   if( logsToFile() && mStream.device() )
-  { mStream << toLog << "\n"; }
+  { mStream << toLog << "\n"; mStream.flush(); }
 }
 //-----------------------------------------------------------------------------
 QString Log::getLogPath() const
