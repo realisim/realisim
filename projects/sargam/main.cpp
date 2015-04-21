@@ -2,8 +2,8 @@
 #include <iostream>
 #include "MainDialog.h"
 #include <QApplication>
+#include <QCommonStyle>
 #include <QIcon>
-
 
 int startMainApp()
 {
@@ -21,14 +21,14 @@ int startMainApp()
 
 int main(int argc, char** argv)
 {
-    QApplication app(argc, argv);
-    MainDialog m;
-    m.show();
-	
-    if ( startMainApp() == 0 )
-    {
-        //we are closing!
-    }
-	
-    return 0;
+  QApplication app(argc, argv);
+  MainDialog m;
+  m.show();
+
+  if ( startMainApp() == 0 )
+  {
+      //we are closing!
+  }
+
+  return 0;
 }

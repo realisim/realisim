@@ -170,6 +170,7 @@ protected:
   void addNoteToOrnement( int, int, int );
   void addError( QString ) const;
   std::vector<Note> defaultScale() const;
+  std::vector<Note> defaultTarabTuning() const;
   void eraseNoteFromMatra( int, int );
   void eraseNoteFromOrnement( int, int );
 

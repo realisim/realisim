@@ -136,6 +136,7 @@ realisim::sargam::Note Composition::mDummyNote(nvSa);
 Composition::Composition()
 {
   mScale.mNotes = defaultScale();
+  mTarabTuning.mNotes = defaultTarabTuning();
 }
 //------------------------------------------------------------------------------
 void Composition::addError( QString iE ) const
@@ -161,9 +162,13 @@ void Composition::addBar( int iBarIndex )
 /*ajoute un saut de ligne ' la barre iIbarIndex avec le texte iText*/
 void Composition::addLine( int iBarIndex, QString iText /*= QString*/ )
 {
-  mLines.push_back( Line( iBarIndex, iText ) );
-  /*les lignes sont trie en ordre croissant de iBarIndex*/
-  sort( mLines.begin(), mLines.end() );
+  /*Si la barre n'est pas deja un debut de ligne, on l'ajoute.*/
+  if( !isStartOfLine( iBarIndex ) )
+  {
+    mLines.push_back( Line( iBarIndex, iText ) );
+    /*les lignes sont trie en ordre croissant de iBarIndex*/
+    sort( mLines.begin(), mLines.end() );
+  }
 }
 //------------------------------------------------------------------------------
 void Composition::addMatra( int iBar, std::vector<int> iNoteIndices )
@@ -265,15 +270,44 @@ vector<Note> Composition::defaultScale() const
   return r;
 }
 //------------------------------------------------------------------------------
+vector<Note> Composition::defaultTarabTuning() const
+{
+  vector<Note> r;
+  r.push_back( Note( nvSa ) );
+  r.push_back( Note( nvNi, -1 ) );
+  r.push_back( Note( nvSa ) );
+  r.push_back( Note( nvRe ) );
+  r.push_back( Note( nvGa ) );
+  r.push_back( Note( nvMa ) );
+  r.push_back( Note( nvPa ) );
+  r.push_back( Note( nvPa ) );
+  r.push_back( Note( nvDha ) );
+  r.push_back( Note( nvNi ) );
+  r.push_back( Note( nvSa, 1 ) );
+  r.push_back( Note( nvRe, 1 ) );
+  r.push_back( Note( nvGa, 1 ) );
+  return r;
+}
+//------------------------------------------------------------------------------
 /*Efface la barre iBarIndex. Si la barre est un debut de ligne, la
   ligne sera aussi effacée.*/
 void Composition::eraseBar( int iBarIndex )
 {
   if( iBarIndex >= 0 && iBarIndex < getNumberOfBars() )
   {
-    mBars.erase( mBars.begin() + iBarIndex );
     if( isStartOfLine( iBarIndex ) )
-    { eraseLine( findLine(iBarIndex) ); }
+    {
+      int cl = findLine(iBarIndex);
+      /*Si la barre qui suit est sur la meme ligne, cette barre devient
+       le debut de la ligne.*/
+      if( findLine( iBarIndex + 1 ) == cl )
+      {
+        eraseLine( cl );
+        addLine( iBarIndex + 1 );
+      }
+      else{ eraseLine( cl ); }
+    }
+    mBars.erase( mBars.begin() + iBarIndex );
     shiftLines(-1, iBarIndex);
     shiftOrnements(-1, iBarIndex);
   }
@@ -403,7 +437,8 @@ int Composition::findLine( int iBarIndex ) const
   int r = -1;
   for( int i = 0; i < getNumberOfLines(); ++i )
   {
-    if( iBarIndex >= getLineFirstBar( i ) ) { r = i; }
+    if( iBarIndex >= 0 && iBarIndex < getNumberOfBars() &&
+       iBarIndex >= getLineFirstBar( i ) ) { r = i; }
   }
   return r;
 }
@@ -663,7 +698,12 @@ QString Composition::getLineText( int iLine ) const
 { return mLines[iLine].mText; }
 //------------------------------------------------------------------------------
 Note Composition::getNote( int iBar, int iIndex ) const
-{ return getBar(iBar).mNotes[iIndex]; }
+{
+  Note n(nvSa);
+  if( iIndex >= 0 && iIndex < getNumberOfNotesInBar( iBar ) )
+  { n = getBar( iBar ).mNotes[iIndex]; }
+  return n;
+}
 //------------------------------------------------------------------------------
 int Composition::getNoteIndexFromGraceNote( int iBar, int i ) const
 { return getBar(iBar).mGraceNotes[i]; }

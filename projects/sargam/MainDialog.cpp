@@ -9,7 +9,9 @@
 #include "math/Vect.h"
 #include "utils/utilities.h"
 #include <QPrintDialog>
+#include <QPrintPreviewDialog>
 #include <QPrinter>
+#include <QPrinterInfo>
 #include <set>
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
@@ -17,6 +19,7 @@
 using namespace std;
 using namespace realisim;
   using namespace math;
+  using namespace utils;
   using namespace sargam;
 
 namespace
@@ -32,6 +35,7 @@ namespace
   const int kMeendHeight = 10;
   const int kKrintanHeight = 6;
   const int kBeatGroupHeight = 10;
+  const int kNoBarHover = -5;
   
   const QString kSargamScaleLabel("Scale: ");
   const QString kTarabTuningLabel("Tarab tuning: ");
@@ -44,18 +48,23 @@ realisim::sargam::Composition PartitionViewer::mDummyComposition;
 //-----------------------------------------------------------------------------
 PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   QWidget( ipParent ),
-  mpTitleLe(0),
+  mpTitleEdit(0),
   mpLineTextEdit(0),
   mIsDebugging( false),
-  mPaperSize( 8.5, 11 ),
+  mPageSizeId( QPageSize::Letter ),
+  mLayoutOrientation( QPageLayout::Portrait ),
   mNumberOfPages(0),
   mCurrentBar( -1 ),
   mCurrentNote( -1 ),
   mOctave( 0 ),
   mEditingLineIndex( -1 ),
+  mEditingTitle( false ),
   mAddLineTextHover( -1 ),
-  mBarHoverIndex(-1),
-  x( &mDummyComposition )
+  mBarHoverIndex( kNoBarHover ),
+  x( &mDummyComposition ),
+  mDefaultLog(),
+  mpLog( &mDefaultLog ),
+  mIsVerbose( false )
 {
   setMouseTracking( true );
   setStyleSheet("QLineEdit { border: none }");
@@ -67,7 +76,7 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mGraceNotesFont = QFont( "Arial", 10 );
   mLineFont = QFont( "Arial", 12 );
   mStrokeFont = QFont( "Arial", 10 );
-
+  
   createUi();
   addPage();
   
@@ -106,24 +115,23 @@ void PartitionViewer::addNoteToSelection( int iBar, int iNote )
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::addPage()
-{
-  mNumberOfPages++;
-  QRect p = getRegion( rPartition );
-  resize( p.width()+1, p.height()+1 );
-}
+{ setNumberOfPage( getNumberOfPages() + 1 ); }
 //-----------------------------------------------------------------------------
 void PartitionViewer::clear()
 {
-  mNumberOfPages = 1;
-  mpTitleLe->setText( "Untitled" );
+  setNumberOfPage(1);
   mBars.clear();
   mLines.clear();
+  mBarsPerPage.clear();
   mOrnements.clear();
   mCurrentBar = -1;
   mCurrentNote = -1;
   mSelectedNotes.clear();
   setBarAsDirty(sbScale, true);
   setBarAsDirty(sbTarabTuning, true);
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: clear." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::clearSelection()
@@ -138,17 +146,54 @@ int PartitionViewer::cmToPixel( double iCm ) const
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddBar()
 {
-  addBar( getCurrentBar() );
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  int cb = getCurrentBar();
+  addBar( cb );
   setCurrentNote( -1 );
-  setCurrentBar( getCurrentBar() + 1 );
+  setCurrentBar( cb + 1 );
   clearSelection();
+  setBarAsDirty( getCurrentBar(), true );
   updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandAddBar." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::commandAddBarBefore()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  if( x->isStartOfLine( getCurrentBar() ) )
+  {
+    int cl = x->findLine( getCurrentBar() );
+    QString t = x->getLineText( cl );
+    x->eraseLine( cl );
+    addBar( getCurrentBar() - 1 );
+    x->addLine( getCurrentBar(), t );
+  }
+  else
+  { addBar( getCurrentBar() - 1 ); }
+  
+  setCurrentNote( -1 );
+  setCurrentBar( getCurrentBar() );
+  clearSelection();
+  setBarAsDirty( getCurrentBar(), true );
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandAddBarBefore." ); }
 }
 //-----------------------------------------------------------------------------
 /*Les notes de la selection deviennent des graces notes si elle ne le sont
  pas déjà.*/
 void PartitionViewer::commandAddGraceNotes()
 {
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
   if( hasSelection() )
   {
     for( int i = 0; i < mSelectedNotes.size(); ++i )
@@ -160,19 +205,29 @@ void PartitionViewer::commandAddGraceNotes()
     }
   }
   updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandAddGraceNotes." ); }
 }
-
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddLine()
 {
-  commandAddBar();
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
   x->addLine( getCurrentBar() );
-//  mLines.push_back( Line() );
+  setCurrentNote( -1 );
   setBarAsDirty( getCurrentBar(), true );
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandAddLine." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddMatra()
 {
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
   if( hasSelection() )
   {
     /*On commence par chercher si il y a deja un matra associe aux
@@ -198,6 +253,9 @@ void PartitionViewer::commandAddMatra()
     }
   }
   updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandAddMatra." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddNote( noteValue iN )
@@ -211,10 +269,16 @@ void PartitionViewer::commandAddNote( noteValue iN )
   clearSelection();
   setBarAsDirty(getCurrentBar(), true);
   updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandAddNote." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddOrnement( ornementType iOt )
 {
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
   if( hasSelection() )
   {
     /*On commence par chercher si il y a deja un ornement associe aux
@@ -233,10 +297,16 @@ void PartitionViewer::commandAddOrnement( ornementType iOt )
     setBarAsDirty( x->getBarsInvolvedByOrnement(
       x->findOrnement( mSelectedNotes[0].first, mSelectedNotes[0].second) ), true );
   }
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandAddOrnement." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddStroke( strokeType iSt )
 {
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
   vector< pair<int, int> > v;
   if( hasSelection() )
   {
@@ -270,11 +340,15 @@ void PartitionViewer::commandAddStroke( strokeType iSt )
     setBarAsDirty( bar, true );
   }
   
-  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandAddStroke." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandBreakMatrasFromSelection()
 {
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
   for( int i = 0; i < mSelectedNotes.size(); ++i )
   {
     int bar = mSelectedNotes[i].first;
@@ -286,10 +360,16 @@ void PartitionViewer::commandBreakMatrasFromSelection()
       setBarAsDirty( bar, true );
     }
   }
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandBreakMatrasFromSelection." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandBreakOrnementsFromSelection()
 {
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
   for( int i = 0; i < mSelectedNotes.size(); ++i )
   {
     int bar = mSelectedNotes[i].first;
@@ -298,6 +378,9 @@ void PartitionViewer::commandBreakOrnementsFromSelection()
     if( ornementIndex != -1 )
     { eraseOrnement( ornementIndex ); }
   }
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandBreakOrnementsFromSelection." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandDecreaseOctave()
@@ -318,12 +401,18 @@ void PartitionViewer::commandDecreaseOctave()
     setBarAsDirty( v[i].first, true );
   }
   mOctave = std::max( --mOctave, -1 );
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandDecreaseOctave." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandErase()
 {
   if( hasSelection() )
   {
+    /*On efface les notes en partant de la fin parce que la selection contient
+     les indices des notes, ainsi en commençant par la fin, nous n'avons pas à
+     ajuster les indices.*/
     for( int i = mSelectedNotes.size() - 1; i >= 0; --i )
     {
       int bar = mSelectedNotes[i].first;
@@ -347,18 +436,33 @@ void PartitionViewer::commandErase()
     int cb = getCurrentBar();
     if( x->getNumberOfNotesInBar(cb) > 0 )
     {
-      x->eraseNote( cb, getCurrentNote() );
-      mCurrentNote--;
+      /*On efface la ligne si la note courante est -1 et que la barre est
+        un début de ligne. Par contre, on ne peut pas effacer la ligne 0.*/
+      if( getCurrentNote() == -1 && x->isStartOfLine( cb ) &&
+         x->findLine( cb ) != 0 )
+      { x->eraseLine( x->findLine( cb ) ); }
+      else
+      {
+        x->eraseNote( cb, getCurrentNote() );
+        setCurrentNote( getCurrentNote() - 1 );
+      }
     }
     else
     {
-      x->eraseBar( cb );
-      setCurrentBar( cb - 1 );
-      setCurrentNote( x->getNumberOfNotesInBar( getCurrentBar() ) - 1 );
+      /*On ne peut pas effacer la derniere barre...*/
+      if( x->getNumberOfBars() > 1 )
+      {
+        eraseBar( cb );
+        setCurrentBar( cb - 1 );
+        setCurrentNote( x->getNumberOfNotesInBar( getCurrentBar() ) - 1 );
+      }
     }
-    setBarAsDirty(cb, true);
+    setBarAsDirty( getCurrentBar(), true );
   }
   updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandErase." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandIncreaseOctave()
@@ -379,10 +483,16 @@ void PartitionViewer::commandIncreaseOctave()
     setBarAsDirty( v[i].first, true );
   }
   mOctave = std::min( ++mOctave, 1 );
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandIncreaseOctave." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandRemoveSelectionFromGraceNotes()
 {
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
   for( int i = 0; i < mSelectedNotes.size(); ++i )
   {
     int bar = mSelectedNotes[i].first;
@@ -394,6 +504,9 @@ void PartitionViewer::commandRemoveSelectionFromGraceNotes()
     }
   }
   updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandRemoveSelectionFromGraceNotes." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandShiftNote()
@@ -419,16 +532,23 @@ void PartitionViewer::commandShiftNote()
     setBarAsDirty( bar, true );
   }
   
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandShiftNote." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::createUi()
 {
   //titre
-  mpTitleLe = new QLineEdit( this );
-  connect( mpTitleLe, SIGNAL( textChanged(const QString&)),
+  /* Astuce: les line edit on comme parent le parent du widget... ainsi
+     les touches pesees lors de l'édition* n'interfere jamais avec la
+     méthode keyPressEvent de la classe PartitionViewer. */
+  mpTitleEdit = new QLineEdit( this->parentWidget() );
+  mpTitleEdit->setFont( mTitleFont );
+  mpTitleEdit->hide();
+  connect( mpTitleEdit, SIGNAL( editingFinished() ),
+          this, SLOT( stopTitleEdit() ) );
+  connect( mpTitleEdit, SIGNAL( textChanged(const QString&)),
           this, SLOT( resizeLineEditToContent() ) );
-  mpTitleLe->setFont( mTitleFont );
-  mpTitleLe->setText( "Untitled" );
   
   //line edit pour titre des lignes
   mpLineTextEdit = new QLineEdit( this->parentWidget() );
@@ -449,118 +569,294 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
   p.setBackground( b );
   
   //--- render pages
-  for( int i = 0; i < getNumberOfPages(); ++i)
-  {
-    //on dessine le background blanc de la page
-    p.setPen( Qt::white );
-    p.setBrush( Qt::white );
-    p.drawRect( getPageRegion( prPage, i ) );
-    
-    //--- tout le text de la page
-    p.setPen( Qt::black );
-    p.setBrush( Qt::NoBrush );
-    
-    //on dessine le bas de page
-    //l'indice de page commence à 0, mais on veut que montrer page 1.
-    p.setFont(QFont("Arial", 10));
-    p.drawText( getPageRegion( prPageFooter, i ), Qt::AlignCenter,
-               "page " + QString::number(i) + 1 );
-  }
+  drawPages( &p );
+  
+  //--- titre
+  drawTitle( &p );
   
   //--- rendu des textes pour barres speciales (sargam scale, tarab tuning...)
+  p.setPen( Qt::black );
   p.setFont( mBarFont );
   p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, kSargamScaleLabel );
   p.drawText( getRegion( rTarabTuningLabel ), Qt::AlignCenter, kTarabTuningLabel );
   
   //render bars
-  for( int i = sbScale; i < x->getNumberOfBars(); ++i )
+  drawSpecialBars( &p );
+  for( int i = 0; i < x->getNumberOfBars(); ++i )
   {
-    const Bar& b = getBar(i);
-    //on blit le pixmap dans le widget.
-    QRect cut( 0, 0, 0, 0 );
-    for( int j = 0; j < b.mPageLayout.size(); ++j )
-    {
-      cut.setSize( b.mPageLayout[j].size() );
-      p.drawPixmap( b.mPageLayout[j], b.mPixmap, cut );
-      cut.setLeft( cut.width() + 1 );
-      
-      //le curseur dans la barre courante s'il n'y a pas de selection
-      //et que le focus y est
-      pen.setColor( Qt::black );
-      pen.setWidth( 1 );
-      p.setPen( pen );
-      if( !hasSelection() && getCurrentBar() == i && hasFocus() )
-      {
-        QLine l;
-        if( getCurrentNote() >= 0 )
-        {
-          QRect r = b.mNotesPageLayout[getCurrentNote()];
-          l.setPoints( r.topRight(), r.bottomRight() );
-        }
-        else
-        {
-          int x = b.mPageLayout[0].left() + getBarRegion( brNoteStartX );
-          int y = b.mPageLayout[0].top() + getBarRegion( brNoteTopY );
-          int h = getBarRegion( brNoteBottomY ) - getBarRegion( brNoteTopY );
-          l.setPoints( QPoint(x,y) , QPoint( x, y + h ) );
-        }
-        p.drawLine( l );
-      }
-    }
+    drawBar( &p, i );
+    if( x->isStartOfLine( i ) )
+    { drawLine( &p, x->findLine( i ) ); }
   }
+  
+  drawCursor( &p );
+  drawSelectedNotes( &p );
   
   //on dessine le contour de la barre survolee si ce nest pas la courant
   if( mBarHoverIndex != getCurrentBar() )
-  { drawBarContour( p, mBarHoverIndex, QColor( 125, 125, 125, 120 ) ); }
+  { drawBarContour( &p, mBarHoverIndex, QColor( 125, 125, 125, 120 ) ); }
   //on dessine le contour de la barre courante
-  drawBarContour( p, getCurrentBar(), QColor( 0, 10, 210, 120 ) );
+  drawBarContour( &p, getCurrentBar(), QColor( 0, 10, 210, 120 ) );
   
-  //rendu des lignes, numero et texte
-  for( int i = 0; i < x->getNumberOfLines(); ++i )
-  {
-    pen.setColor( Qt::black );
-    p.setPen( pen );
-    p.setFont( mLineFont );
-    const Line& l = mLines[i];
-    //numero de ligne. les lignes commencent a 1!!!
-    p.drawText( l.mLineNumberRect, QString::number( i + 1 ) );
-    //le hot spot
-    if( mAddLineTextHover == i )
-    {
-      p.drawRect( l.mHotSpot );
-    }
-    //text de la ligne
-    p.drawText( l.mTextRect.bottomLeft(), x->getLineText(i) );
-  }
+  drawPageFooters( &p );
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::drawBarContour( QPainter& iP, int iBarIndex, QColor iCol ) const
+void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
+{
+  iP->save();
+  
+  const Bar& b = getBar( iBar );
+  if( !b.mIsWayTooLong )
+  {
+    QPoint topLeft = b.mScreenLayout.topLeft();
+    QTransform transfo;
+    transfo.translate( topLeft.x(), topLeft.y() );
+    iP->setWorldTransform( transfo, true );
+    
+    iP->setRenderHints( iP->renderHints() | QPainter::Antialiasing );
+    QPen pen = iP->pen();
+    pen.setColor( Qt::black );
+    
+    //les notes
+    for( int j = 0; j < x->getNumberOfNotesInBar( iBar ); ++j )
+    {
+      QString s = noteToString( x->getNote( iBar, j ) );
+      QFont f = x->isGraceNote( iBar, j ) ? mGraceNotesFont : mBarFont;
+      iP->setFont(f);
+      iP->drawText( b.getNoteRect(j), s);
+    }
+    
+    //la barre vertical
+    int x1 = getBarRegion( brSeparatorX );
+    int y1 = 0.15 * kBarHeight;
+    int y2 = getBarRegion( brNoteBottomY );
+    iP->drawLine( x1, y1, x1, y2 );
+    
+    //--- render beat groups
+    for( int i = 0; i < b.mMatraGroupsRect.size(); ++i )
+    {
+      QRect r = b.mMatraGroupsRect[i];
+      iP->drawArc( r, -10 * 16, -170 * 16 );
+    }
+    
+    //--- render Ornements: meends and krintans
+    for( int i = 0; i < x->getNumberOfOrnements(); ++i )
+    {
+      if( x->ornementAppliesToBar( i, iBar ) )
+      {
+        const Ornement& m = mOrnements[i];
+        QRect r =  m.mFullOrnement;
+        
+        iP->save();
+        iP->setClipRect( QRect( QPoint(0, 0), b.mScreenLayout.size() ) );
+        iP->translate( m.getOffset( iBar ), 0 );
+        iP->translate( m.getDestination( iBar ), 0 );
+        if( x->getOrnementType(i) == otMeend )
+        { iP->drawArc( r, 10 * 16, 170 * 16 ); }
+        else //krintan
+        {
+          iP->drawLine( r.bottomLeft(), r.topLeft() );
+          iP->drawLine( r.topLeft(), r.topRight() );
+          iP->drawLine( r.topRight(), r.bottomRight() );
+        }
+        
+        iP->restore();
+      }
+    }
+    
+    //render strokes
+    iP->setFont(mStrokeFont);
+    for( int i = 0; i < x->getNumberOfStrokesInBar(iBar); ++i )
+    {
+      QRect r, r2;
+      for( int j = 0; j < x->getNumberOfNotesInStroke(iBar, i); ++j )
+      {
+        int noteIndex = x->getNoteIndexFromStroke(iBar, i, j);
+        if( r.isNull() )
+        { r = b.getNoteRect( noteIndex ); }
+        else { r = r.united( b.getNoteRect( noteIndex ) ); }
+      }
+      r2.setTop( getBarRegion( brStrokeY ) );
+      r2.setLeft( r.left() );
+      r2.setWidth( r.width() );
+      r2.setHeight( QFontMetrics(mBarFont).height() );
+      QString a = strokeToString( x->getStrokeType(iBar, i) );
+      iP->drawText( r2, Qt::AlignCenter, a );
+    }
+  }
+  else
+  {
+    iP->save();
+    iP->resetTransform();
+    QPen pen = iP->pen();
+    pen.setStyle( Qt::DashLine );
+    pen.setColor( Qt::red );
+    iP->setPen( pen );
+    iP->drawRoundedRect(b.mScreenLayout, 2, 2);
+    iP->drawText(b.mScreenLayout, Qt::AlignCenter, "Multi-lines bar are not "
+                 "supported yet...");
+    iP->restore();
+  }
+  
+  iP->restore();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawBarContour( QPainter* iP, int iBarIndex, QColor iCol ) const
 {
   if( iBarIndex > sbScale && hasFocus() )
   {
-    QPen pen = iP.pen();
-    iP.save();
-    iP.setRenderHints( QPainter::Antialiasing );
+    QPen pen = iP->pen();
+    iP->save();
+    iP->setRenderHints( QPainter::Antialiasing );
     pen.setColor( iCol );
     pen.setWidth( 1 );
-    iP.setPen( pen );
+    iP->setPen( pen );
     const Bar& b = getBar( iBarIndex );
-    for( int i = 0; i < b.mPageLayout.size(); ++i )
-    { iP.drawRoundedRect( b.mPageLayout[i], 2, 2 ); }
-    iP.restore();
+    iP->drawRoundedRect( b.mScreenLayout, 2, 2 );
+    iP->restore();
   }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawCursor( QPainter* iP ) const
+{
+  QPen pen = iP->pen();
+  //le curseur dans la barre courante s'il n'y a pas de selection
+  //et que le focus y est
+  pen.setColor( Qt::black );
+  pen.setWidth( 1 );
+  iP->setPen( pen );
+  if( !hasSelection() && hasFocus() )
+  { iP->drawLine( getCursorLine() ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawLine( QPainter* iP, int iLine ) const
+{
+  QPen pen = iP->pen();
 
+  pen.setColor( Qt::black );
+  iP->setPen( pen );
+  iP->setFont( mLineFont );
+  const Line& l = mLines[ iLine ];
+  //numero de ligne. les lignes commencent a 1!!!
+  iP->drawText( l.mLineNumberRect, QString::number( iLine + 1 ) );
+  //le hot spot
+  if( mAddLineTextHover == iLine )
+  {
+    iP->save();
+    QPen pen = iP->pen();
+    pen.setStyle( Qt::DashLine );
+    pen.setColor( Qt::gray );
+    iP->setPen( pen );
+    iP->drawRoundedRect(l.mHotSpot, 2, 2);
+    iP->restore();
+  }
+  
+  //text de la ligne
+  if( mEditingLineIndex != iLine )
+  { iP->drawText( l.mTextScreenLayout.bottomLeft(), x->getLineText(iLine) ); }
+
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawPages( QPainter* iP ) const
+{
+  for( int i = 0; i < getNumberOfPages(); ++i)
+  {
+    //on dessine le background blanc de la page
+    iP->setPen( Qt::white );
+    iP->setBrush( Qt::white );
+    iP->drawRect( getPageRegion( prPage, i ) );
+    
+    //--- tout le text de la page
+    iP->setPen( Qt::black );
+    iP->setBrush( Qt::NoBrush );
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawPageFooter( QPainter* iP, int i ) const
+{
+  //on dessine le bas de page
+  //l'indice de page commence à 0, mais on veut que montrer page 1.
+  QString text;
+  text.sprintf( "%s: %d out of %d", x->getTitle().toStdString().c_str(),  i + 1,
+    getNumberOfPages() );
+  iP->setFont(QFont("Arial", 10));
+  iP->setPen( Qt::gray );
+  iP->drawText( getPageRegion( prPageFooter, i ), Qt::AlignCenter, text );
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawPageFooters( QPainter* iP ) const
+{
+  for( int i = 0; i < getNumberOfPages(); ++i )
+  { drawPageFooter( iP, i ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawSelectedNotes( QPainter* iP ) const
+{
+  iP->save();
+  iP->setRenderHints( iP->renderHints() | QPainter::Antialiasing );
+  
+  map<int, vector<int> > m = splitPerBar(mSelectedNotes);
+  map<int, vector<int> >::iterator it = m.begin();
+  for( ; it != m.end(); ++it )
+  {
+    QRect r;
+    const Bar& b = getBar( it->first );
+    const vector<int>& vn = it->second;
+    for( int i = 0 ; i < vn.size(); ++i )
+    {
+      int noteIndex = vn[i];
+      if( r.isNull() )
+      { r = b.getNoteRect(noteIndex); }
+      else{ { r = r.united(b.getNoteRect(noteIndex)); } }
+    }
+    
+    QTransform transfo;
+    QPoint topLeft = b.mScreenLayout.topLeft();
+    transfo.translate( topLeft.x(), topLeft.y() );
+    iP->setWorldTransform( transfo );
+    
+    QPen pen = iP->pen();
+    pen.setColor( QColor( 0, 0, 255, 185 ) );
+    iP->setPen( pen );
+    if( !r.isNull() )
+    {
+      r.adjust( -2, -2, 2, 2 );
+      iP->drawRoundedRect( r, 2, 2 );
+    }
+  }
+  
+  iP->restore();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawSpecialBars( QPainter* iP ) const
+{
+  drawBar( iP, sbScale );
+  drawBar( iP, sbTarabTuning );
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::drawTitle( QPainter* iP ) const
+{
+  iP->save();
+  
+  if( !hasTitleEditionPending() )
+  {
+    iP->setFont( mTitleFont );
+    iP->setPen( Qt::black );
+    iP->drawText( mTitleScreenLayout, Qt::AlignCenter, x->getTitle() );
+  }
+  
+  iP->restore();
 }
 //-----------------------------------------------------------------------------
 /*Efface la barre iBar des donnees et des donnees d'affichage.*/
 void PartitionViewer::eraseBar( int iBar )
 {
-  x->eraseBar( iBar );
   if( iBar >= 0 && iBar < x->getNumberOfBars() )
   {
     mBars.erase( mBars.begin() + iBar );
     if( x->getNumberOfBars() > 0 ){ setBarAsDirty(0, true); }
   }
+  x->eraseBar( iBar );
 }
 //-----------------------------------------------------------------------------
 /*Efface l'ornement iIndex de données d'affichage et des données.*/
@@ -615,8 +911,36 @@ const PartitionViewer::Bar& PartitionViewer::getBar( int iBar ) const
   return *r;
 }
 //-----------------------------------------------------------------------------
+vector<int> PartitionViewer::getBarsFromPage( int iPage ) const
+{
+  vector<int> r;
+  if( iPage >= 0 && iPage < getNumberOfPages() )
+  { r = mBarsPerPage.at(iPage); }
+  return r;
+}
+//-----------------------------------------------------------------------------
 Composition PartitionViewer::getComposition() const
 { return *x; }
+//-----------------------------------------------------------------------------
+QLine PartitionViewer::getCursorLine() const
+{
+  QLine l;
+  const Bar& b = getBar( getCurrentBar() );
+  const int cn = getCurrentNote();
+  if( cn >= 0 && cn < b.mNoteScreenLayouts.size() )
+  {
+    QRect r = b.mNoteScreenLayouts[getCurrentNote()];
+    l.setPoints( r.topRight(), r.bottomRight() );
+  }
+  else
+  {
+    int x = b.mScreenLayout.left() + getBarRegion( brNoteStartX );
+    int y = b.mScreenLayout.top() + getBarRegion( brNoteTopY );
+    int h = getBarRegion( brNoteBottomY ) - getBarRegion( brNoteTopY );
+    l.setPoints( QPoint(x,y) , QPoint( x, y + h ) );
+  }
+  return l;
+}
 //-----------------------------------------------------------------------------
 int PartitionViewer::getBarRegion( barRegion br ) const
 {
@@ -647,6 +971,15 @@ int PartitionViewer::getCurrentBar() const
 int PartitionViewer::getCurrentNote() const
 { return mCurrentNote; }
 //-----------------------------------------------------------------------------
+QPageLayout::Orientation PartitionViewer::getLayoutOrientation() const
+{ return mLayoutOrientation; }
+//-----------------------------------------------------------------------------
+const Log& PartitionViewer::getLog() const
+{ return *mpLog; }
+//-----------------------------------------------------------------------------
+Log& PartitionViewer::getLog()
+{ return const_cast<Log&>( const_cast< const PartitionViewer* >(this)->getLog() ); }
+//-----------------------------------------------------------------------------
 int PartitionViewer::getInterNoteSpacing(int iBar, int iIndex1, int iIndex2 ) const
 {
   
@@ -656,7 +989,7 @@ int PartitionViewer::getInterNoteSpacing(int iBar, int iIndex1, int iIndex2 ) co
   //les notes d'un même matra
   if( matra1 == matra2 && matra1 != -1 && matra2 != -1 )
   {
-    r = 2;
+    r = 0;
     //si ce sont des graceNotes
     if( x->isGraceNote( iBar, iIndex1 ) && x->isGraceNote( iBar, iIndex2 ) )
     { r = 1; }
@@ -678,8 +1011,8 @@ QRect PartitionViewer::getPageRegion( pageRegion iR, int iPage /*=0*/ ) const
   {
     case prPage:
     {
-      int w = getPaperSizeInInch().width() * logicalDpiX();
-      int h = getPaperSizeInInch().height() * logicalDpiY();
+      int w = getPageSizeInInch().width() * logicalDpiX();
+      int h = getPageSizeInInch().height() * logicalDpiY();
       int t = iPage * h + iPage * kInterPageGap;
       r.setTop( t );
       r.setWidth( w ); r.setHeight( h );
@@ -689,18 +1022,19 @@ QRect PartitionViewer::getPageRegion( pageRegion iR, int iPage /*=0*/ ) const
       int margin = cmToPixel( kPageMarginInCm );
       int sargamScaleBottom = iPage == 0 ? getRegion(rTarabTuning).bottom() + kSpacing : 0;
       int startOfBody = max( margin, sargamScaleBottom );
-      int paperWidth = getPaperSizeInInch().width() * logicalDpiX();
-      int paperHeight = getPaperSizeInInch().height() * logicalDpiY();
+      int paperWidth = getPageSizeInInch().width() * logicalDpiX();
+      int paperHeight = getPageSizeInInch().height() * logicalDpiY();
       int topOfPage = getPageRegion( prPage, iPage ).top();//iPage * paperHeight + iPage * kInterPageGap;
       r.setLeft( margin );
       r.setWidth( paperWidth - 2*margin );
       r.setTop( topOfPage + startOfBody );
-      r.setBottom( topOfPage + paperHeight - margin );
+      r.setBottom( topOfPage + paperHeight - margin - kPageFooter );
     }break;
     case prPageFooter:
     {
+      int margin = cmToPixel( kPageMarginInCm );
       r = getPageRegion( prPage, iPage );
-      r.setBottom( r.bottom() );
+      r.setBottom( r.bottom() - margin );
       r.setTop( r.bottom() - kPageFooter );
     }break;
   }
@@ -708,8 +1042,18 @@ QRect PartitionViewer::getPageRegion( pageRegion iR, int iPage /*=0*/ ) const
   return r;
 }
 //-----------------------------------------------------------------------------
-QSizeF PartitionViewer::getPaperSizeInInch() const
-{ return mPaperSize; }
+QPageSize::PageSizeId PartitionViewer::getPageSizeId() const
+{ return mPageSizeId; }
+//-----------------------------------------------------------------------------
+QSizeF PartitionViewer::getPageSizeInInch() const
+{
+  QSizeF s = QPageSize::size( mPageSizeId, QPageSize::Inch);
+  
+  if( getLayoutOrientation() == QPageLayout::Landscape )
+  { s = QSizeF( s.height(), s.width() ); }
+  
+  return s;
+}
 //-----------------------------------------------------------------------------
 QRect PartitionViewer::getRegion( region iR ) const
 {
@@ -719,15 +1063,15 @@ QRect PartitionViewer::getRegion( region iR ) const
   {
     case rPartition:
     {
-      int w = getPaperSizeInInch().width() * logicalDpiX();
-      int h = getNumberOfPages() * getPaperSizeInInch().height() * logicalDpiY() +
+      int w = getPageSizeInInch().width() * logicalDpiX();
+      int h = getNumberOfPages() * getPageSizeInInch().height() * logicalDpiY() +
       std::max(getNumberOfPages() - 1, 0) * kInterPageGap;
       r.setWidth( w ); r.setHeight( h );
     }break;
     case rTitle:
     {
-      int w = getPaperSizeInInch().width() * logicalDpiX();
-      int h = mpTitleLe->height();
+      int w = getPageSizeInInch().width() * logicalDpiX();
+      int h = QFontMetrics(mTitleFont).height();
       r.setTop( cmToPixel( kPageMarginInCm ) ); r.setWidth( w ); r.setHeight( h );
     }break;
     case rSargamScaleLabel:
@@ -771,15 +1115,12 @@ QRect PartitionViewer::getRegion( region iR ) const
       r = t;
       r.translate( 0, t.height() + kSpacing );
       r.setLeft( getRegion( rTarabTuningLabel ).right() );
-      r.setRight( getPaperSizeInInch().width() * logicalDpiX() - margin );
+      r.setRight( getPageSizeInInch().width() * logicalDpiX() - margin );
       r.setHeight( kBarHeight );
     } break;
   }
   return r;
 }
-//-----------------------------------------------------------------------------
-QString PartitionViewer::getTitle() const
-{ return mpTitleLe->text(); }
 //-----------------------------------------------------------------------------
 bool PartitionViewer::hasSelection() const
 { return mSelectedNotes.size() > 0; }
@@ -803,6 +1144,10 @@ bool PartitionViewer::hasLineEditionPending() const
 //-----------------------------------------------------------------------------
 void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
 {
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: key %s pressed.", QKeySequence( ipE->key(),
+    QKeySequence::NativeText ).toString().toStdString().c_str() ); }
+  
   switch ( ipE->key() )
   {
     case Qt::Key_1: commandAddNote( nvSa ); break;
@@ -840,66 +1185,130 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
     case Qt::Key_S: commandShiftNote();break;
     case Qt::Key_W: commandAddStroke( stRa ); break;
     case Qt::Key_Left:
-      /*S'il ny a pas de selection ou que shift est pesé, on déplace le
-       curseur vers la gauche. Lorsqu'il atteint -1, on essait de changer
-       de barre si possible et la note courante devient la derniere note
-       de la barre précédente.
-       S'il y avait une selection et que shift n'est plus enfoncé, on
-       enleve la selection et la note courante devient la premieres note
-       de la selection
+    {
+      /* 1. S'il n'y a pas de selection:
+             Shift est enfoncé, donc on selectionne la note courante.
+             Shift n'est pas enfoncé, donc on déplace la note courante
+         2. S'il y a une selection:
+             Shift est enfoncé, on agrandit la selection par la gauche.
+             Shift n'est pas enfoncé, la selection disparait et la note courante
+               devient la premiere note de la selection
        */
-      if( !hasSelection() || (ipE->modifiers() & Qt::ShiftModifier) )
+      bool shiftPressed = (ipE->modifiers() & Qt::ShiftModifier);
+      if( !hasSelection() )
       {
-        //ajoute la note courante a la selection si on pese shift
-        if( ipE->modifiers() & Qt::ShiftModifier )
-        { addNoteToSelection( getCurrentBar(), mCurrentNote ); }
-        
-        mCurrentNote = std::max( --mCurrentNote, -2 );
-        if( getCurrentNote() == -2 && getCurrentBar() > sbScale )
+        if( shiftPressed )
         {
-          setCurrentBar( getCurrentBar() - 1 );
-          setCurrentNote( x->getNumberOfNotesInBar( getCurrentBar() ) - 1 );
+          int bar = getCurrentBar();
+          int index = mCurrentNote;
+          if( index == -1 && (bar - 1) < x->getNumberOfBars() )
+          {
+            bar--;
+            index = x->getNumberOfNotesInBar(bar) - 1;
+          }
+          addNoteToSelection( bar, index );
+        }
+        else
+        {
+          mCurrentNote = std::max( --mCurrentNote, -2 );
+          if( getCurrentNote() == -2 && getCurrentBar() > sbScale )
+          {
+            setCurrentBar( getCurrentBar() - 1 );
+            setCurrentNote( x->getNumberOfNotesInBar( getCurrentBar() ) - 1 );
+          }
         }
       }
       else
       {
-        setCurrentBar( mSelectedNotes[0].first );
-        setCurrentNote( mSelectedNotes[0].second - 1);
-        clearSelection();
+        if( shiftPressed )
+        {
+          //ajoute la note a gauche de la premiere note selectionnee
+          int bar = mSelectedNotes[0].first;
+          int index = mSelectedNotes[0].second;
+          index = max( index - 1, -1 );
+          if( index < 0 && bar > 0 )
+          {
+            bar--;
+            index = x->getNumberOfNotesInBar(bar) - 1;
+          }
+          addNoteToSelection( bar, index );
+        }
+        else
+        {
+          int index = max( -1, mSelectedNotes[0].second - 1 );
+          setCurrentBar( mSelectedNotes[0].first );
+          setCurrentNote( index );
+          clearSelection();
+        }
       }
-      break;
+    } break;
     case Qt::Key_Right:
-      /*S'il ny a pas de selection ou que shift est pesé, on déplace le
-       curseur vers la droite. Lorsqu'il atteint la derniere note de la
-       barre, on essait de changer de barre si possible et la note courante
-       devient la premiere note de la barre suivante.
-       S'il y avait une selection et que shift n'est plus enfoncé, on
-       enleve la selection et la note courante devient la derniere note
-       de la selection */
-      if( !hasSelection() || (ipE->modifiers() & Qt::ShiftModifier) )
+    {
+      /* 
+       1. S'il n'y a pas de selection:
+         Shift est enfoncé, donc on selectionne la note courante.
+         Shift n'est pas enfoncé, donc on déplace la note courante
+       2. S'il y a une selection:
+         Shift est enfoncé, on agrandit la selection par la gauche.
+         Shift n'est pas enfoncé, la selection disparait et la note courante
+           devient la premiere note de la selection */
+      bool shiftPressed = (ipE->modifiers() & Qt::ShiftModifier);
+      if( !hasSelection() )
       {
-        int maxIndex = x->getNumberOfNotesInBar( getCurrentBar() ) - 1;
-        ++mCurrentNote;
-        if( getCurrentNote() > maxIndex &&
-           getCurrentBar() < x->getNumberOfBars() - 1 )
+        int bar = getCurrentBar();
+        int nextNote = mCurrentNote + 1;
+        
+        if( shiftPressed )
         {
-          setCurrentBar( getCurrentBar() + 1 );
-          setCurrentNote( -1 );
+          if( nextNote > x->getNumberOfNotesInBar( bar ) - 1 &&
+             x->getNumberOfBars() > bar + 1 )
+          {
+            bar++;
+            nextNote = 0;
+          }
+          if( x->getNumberOfNotesInBar( bar ) > nextNote )
+          { addNoteToSelection( bar, nextNote ); }
         }
-        else { mCurrentNote = std::min( mCurrentNote, maxIndex ); }
-        //ajoute la note courante a la selection si on pese shift
-        if( ipE->modifiers() & Qt::ShiftModifier )
-        { addNoteToSelection( getCurrentBar(), mCurrentNote ); }
+        else
+        {
+          if( nextNote > x->getNumberOfNotesInBar( bar ) - 1 &&
+             x->getNumberOfBars() > bar + 1 )
+          {
+            bar++;
+            nextNote = -1;
+          }
+          nextNote = min( nextNote, x->getNumberOfNotesInBar( bar ) - 1 );
+          setCurrentBar( bar );
+          setCurrentNote( nextNote );
+        }
       }
       else
       {
-        setCurrentBar( mSelectedNotes[0].first );
-        setCurrentNote( mSelectedNotes[ mSelectedNotes.size() - 1 ].second );
-        clearSelection();
+        int bar = mSelectedNotes[ mSelectedNotes.size() - 1 ].first;
+        int index = mSelectedNotes[ mSelectedNotes.size() - 1 ].second;
+        if( shiftPressed )
+        {
+          index += 1;
+          if( index > x->getNumberOfNotesInBar(bar) - 1 &&
+             x->getNumberOfBars() > bar + 1 )
+          {
+            bar++;
+            index = 0;
+          }
+          addNoteToSelection( bar, index );
+        }
+        else
+        {
+          setCurrentBar( bar );
+          setCurrentNote( index );
+          clearSelection();
+        }
       }
-      break;
+    } break;
     case Qt::Key_Space:
-      commandAddBar();
+      if( (ipE->modifiers() & Qt::ShiftModifier) )
+      { commandAddBarBefore(); }
+      else { commandAddBar(); }
       break;
     case Qt::Key_Backspace: commandErase(); break;
     case Qt::Key_Return: commandAddLine(); break;
@@ -909,6 +1318,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
     default: break;
   }
   updateUi();
+  emit ensureVisible( getCursorLine().p2() );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::keyReleaseEvent( QKeyEvent* ipE )
@@ -936,17 +1346,18 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
   QPoint pos = ipE->pos();
   Qt::CursorShape cs = Qt::ArrowCursor;
   
+  //intersection avec le titre
+  if( mTitleScreenLayout.contains( pos ) )
+  { cs = Qt::IBeamCursor; }
+  
   //intersection avec les barres
   for( int i = 0; i < x->getNumberOfBars(); ++i )
   {
     const Bar& b = getBar(i);
-    for( int j = 0; j < b.mPageLayout.size(); ++j )
-    {
-      if( b.mPageLayout[j].contains( pos ) )
-      { mBarHoverIndex = i; updateUi(); }
-      else if ( mBarHoverIndex == i )
-      { mBarHoverIndex = -1; updateUi(); }
-    }
+    if( b.mScreenLayout.contains( pos ) )
+    { mBarHoverIndex = i; updateUi(); }
+    else if ( mBarHoverIndex == i )
+    { mBarHoverIndex = kNoBarHover; updateUi(); }
   }
   
   //intersection avec les lignes
@@ -957,19 +1368,26 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
     else if(mAddLineTextHover == i)
     { mAddLineTextHover = -1; updateUi(); }
       
-    if( mLines[i].mTextRect.contains( pos ) )
+    if( mLines[i].mTextScreenLayout.contains( pos ) )
     { cs = Qt::IBeamCursor; }
   }
   
   setCursor( cs );
+  
+  if( isDebugging() )
+  { updateUi(); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
 {
   QPoint pos = ipE->pos();
   
+  //intersection avec le titre
+  if( mTitleScreenLayout.contains( pos ) )
+  { startTitleEdit(); }
+  
   //intersection avec les barres
-  if( mBarHoverIndex != -1 )
+  if( mBarHoverIndex != kNoBarHover )
   {
     setCurrentBar( mBarHoverIndex );
     setCurrentNote( x->getNumberOfNotesInBar( mBarHoverIndex ) - 1 );
@@ -986,7 +1404,7 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
       startLineTextEdit( i );
     }
     
-    if( mLines[i].mTextRect.contains( pos ) )
+    if( mLines[i].mTextScreenLayout.contains( pos ) )
     { startLineTextEdit( i ); }
   }
 }
@@ -1036,10 +1454,12 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
   {
     QPainter p(this);
     p.setFont(QFont("Arial", 10));
-    QPen pen = p.pen();
-    pen.setColor(Qt::blue);
-    p.setPen(pen);
     p.setBrush( Qt::NoBrush );
+    
+    p.setPen( Qt::blue );
+    p.drawRect( mTitleScreenLayout );
+    
+    p.setPen( Qt::yellow );
     for( int i = 0; i < getNumberOfPages(); ++i)
     {
       if( i == 0 )
@@ -1057,167 +1477,122 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
     //on dessine le layout des bars...
     for( int i = 0; i < x->getNumberOfBars(); ++i )
     {
+      p.setPen( Qt::green );
       Bar& b = getBar(i);
       //le layput page de la bar
-      for( int j = 0; j < b.mPageLayout.size(); ++j )
-      {
-        p.drawRect( b.mPageLayout[j] );
-        p.drawText( b.mPageLayout[j], Qt::AlignCenter, QString::number(i) );
-        QString s;
-        if( getCurrentBar() == i )
-        { s += QString().sprintf("current note: %d\n", getCurrentNote() ); }
-        s += QString().sprintf("number of notes: %d", x->getNumberOfNotesInBar( i ) );
-        p.drawText( b.mPageLayout[j], Qt::AlignBottom | Qt::AlignRight, s );
-      }
+      p.drawRect( b.mScreenLayout );
+      
       //le layout page des notes
-      for( int j = 0; j < b.mNotesPageLayout.size(); ++j )
-      { p.drawRect( b.mNotesPageLayout[j] ); }
+      for( int j = 0; j < b.mNoteScreenLayouts.size(); ++j )
+      { p.drawRect( b.mNoteScreenLayouts[j] ); }
+      
+      //texte de debuggage
+      p.setPen(Qt::gray);
+      p.drawText( b.mScreenLayout, Qt::AlignCenter, QString::number(i) );
+      QString s;
+      if( getCurrentBar() == i )
+      { s += QString().sprintf("current note: %d\n", getCurrentNote() ); }
+      s += QString().sprintf("number of notes: %d", x->getNumberOfNotesInBar( i ) );
+      p.drawText( b.mScreenLayout, Qt::AlignBottom | Qt::AlignRight, s );
     }
     
+    p.setPen( Qt::blue );
     //layout des lignes
     for( int i = 0; i < x->getNumberOfLines(); ++i )
     {
       const Line& l = mLines[i];
       p.drawRect( l.mLineNumberRect );
       p.drawRect( l.mHotSpot );
-      p.drawRect( l.mTextRect );
+      p.drawRect( l.mTextScreenLayout );
     }
     
-    p.setPen(Qt::blue);
+    //--- different texte...
+    p.setPen(Qt::gray);
+    //posiition de la souris, dans le coin sup gauche...
+    {
+      p.save();
+      QBrush b( Qt::white );
+      p.setBackgroundMode( Qt::OpaqueMode );
+      p.setBackground( b );
+      QRect r = ipE->region().boundingRect();
+      QPoint pos = mapFromGlobal( QCursor::pos() );
+      QString s;
+      s.sprintf( "Mouse pos: %d, %d\n"
+                "Region to repaint: %d, %d, %d, %d",
+                pos.x(), pos.y(),
+                r.left(), r.top(), r.right(), r.bottom() );
+      p.drawText( r.topLeft() + QPoint(10, 10), s );
+      p.restore();
+    }
+    
     QString s;
-    QRect r = ipE->region().boundingRect();
-    s.sprintf("Partition size: %d, %d\n"
-              "Region to repaint: %d, %d, %d, %d",
-              getRegion( rPartition ).width(), getRegion( rPartition ).height(),
-              r.left(), r.top(), r.right(), r.bottom() );
+    s.sprintf("Partition size: %d, %d\n",
+              getRegion( rPartition ).width(),
+              getRegion( rPartition ).height() );
     p.drawText(rect(), Qt::AlignBottom | Qt::AlignRight, s);
+    
+    /*print des barres par pages...*/
+//    for( int i = 0; i < getNumberOfPages(); ++i )
+//    {
+//      vector<int> bars = getBarsFromPage( i );
+//      for( int j = 0; j < bars.size(); ++j )
+//      { printf( "page %d, bar %d\n", i, bars[j] ); }
+//    }
   }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::print( QPrinter* iPrinter )
 {
-  QSizeF previousPaperSize = getPaperSizeInInch();
-  QSizeF s = iPrinter->paperRect( QPrinter::Inch ).size();
-  setPaperSize( s );
+  QPageSize::PageSizeId previousPageSizeId = getPageSizeId();
+  QPageLayout::Orientation previousOrientation = getLayoutOrientation();
   
-  //draw( iPrinter );
-}
-//-----------------------------------------------------------------------------
-void PartitionViewer::renderBarOffscreen( int iBar )
-{
-  Bar& b = getBar( iBar );
-  b.mPixmap = QPixmap( b.mRect.width(), b.mRect.height() );
-  b.mPixmap.fill( Qt::white );
-  QPainter bp( &b.mPixmap );
-  bp.setRenderHints( bp.renderHints() | QPainter::Antialiasing );
-  QPen pen = bp.pen();
+  QPageLayout pl = iPrinter->pageLayout();
+  QMarginsF minMargin = pl.minimumMargins();
+  QMarginsF maxMargin = pl.maximumMargins();
   
-  //les notes
-  /*On utilise la layout lineaire pour dessiner la bar dans le pixmap
-   hors ecran. La soustraction "int tx = noteLinearLayout.left() - barLinear.left();"
-   est pour déplacer le contenu lineaire de la bar à zéro.*/
-  for( int j = 0; j < x->getNumberOfNotesInBar( iBar ); ++j )
-  {
-    QString s = noteToString( x->getNote( iBar, j ) );
-    QFont f = x->isGraceNote( iBar, j ) ? mGraceNotesFont : mBarFont;
-    bp.setFont(f);
-    bp.drawText( b.getNoteRect(j), s);
-  }
-  
-  //la barre vertical
-  int x1 = getBarRegion( brSeparatorX );
-  int y1 = 0.15 * kBarHeight;
-  int y2 = getBarRegion( brNoteBottomY );
-  bp.drawLine( x1, y1, x1, y2 );
-  
-  //b.mPixmap.toImage().save( "bar" + QString::number(i) + ".png", "PNG" );
-  
-  //--- render beat groups
-  for( int i = 0; i < b.mMatraGroupsRect.size(); ++i )
-  {
-    QRect r = b.mMatraGroupsRect[i];
-    bp.drawArc( r, -10 * 16, -170 * 16 );
-  }
-  
-  //--- render Ornements: meends and krintans
-  for( int i = 0; i < x->getNumberOfOrnements(); ++i )
-  {
-    //Ornement& m = mOrnements[i];
-    if( x->ornementAppliesToBar( i, iBar ) )
-    {
-      Ornement& m = mOrnements[i];
-      QPixmap pix( m.mFullOrnement.width(), m.mFullOrnement.height() );
-      pix.fill( QColor( 0, 0, 0, 0 ) );
-      QPainter mp( &pix );
-      mp.setRenderHints( mp.renderHints() | QPainter::Antialiasing );
-      QPen ornementPen;
-      ornementPen.setColor( Qt::black );
-      ornementPen.setWidth( 1 );
-      mp.setPen( ornementPen );
-      mp.setBrush( Qt::NoBrush );
-      if( x->getOrnementType(i) == otMeend )
-      { mp.drawArc( pix.rect(), 10 * 16, 170 * 16 ); }
-      else //krintan
-      {
-        QRect r = pix.rect(); r.adjust( 1, 1, -1, -1 );
-        mp.drawLine( r.bottomLeft(), r.topLeft() );
-        mp.drawLine( r.topLeft(), r.topRight() );
-        mp.drawLine( r.topRight(), r.bottomRight() );
-      }
-//pix.toImage().save( "Ornement.png", "PNG" );
-      //blit dans le rendu pixmap hors écran de la barre.
-      QRect destination = m.getBlit( iBar );
-      QRect source = m.getCut( iBar );
-      destination.translate( 0, getBarRegion( brOrnementY ) );
-      bp.drawPixmap( destination, pix, source );
-    }
-  }
-  
-  //render strokes
-  bp.setFont(mStrokeFont);
-  for( int i = 0; i < x->getNumberOfStrokesInBar(iBar); ++i )
-  {
-    QRect r, r2;
-    for( int j = 0; j < x->getNumberOfNotesInStroke(iBar, i); ++j )
-    {
-      int noteIndex = x->getNoteIndexFromStroke(iBar, i, j);
-      if( r.isNull() )
-      { r = b.getNoteRect( noteIndex ); }
-      else { r = r.united( b.getNoteRect( noteIndex ) ); }
-    }
-    r2.setTop( getBarRegion( brStrokeY ) );
-    r2.setLeft( r.left() );
-    r2.setWidth( r.width() );
-    r2.setHeight( QFontMetrics(mBarFont).height() );
-    QString a = strokeToString( x->getStrokeType(iBar, i) );
-    bp.drawText( r2, Qt::AlignCenter, a );
-  }
-  
-  //render selection
-  {
-    QRect r;
-    for( int i = 0; i < mSelectedNotes.size(); ++i )
-    {
-      int barIndex = mSelectedNotes[i].first;
-      if( barIndex == iBar )
-      {
-        Bar& b = getBar( barIndex );
-        int noteIndex = mSelectedNotes[i].second;
-        if( r.isNull() )
-        { r = b.getNoteRect(noteIndex); }
-        else{ { r = r.united(b.getNoteRect(noteIndex)); } }
-      }
-    }
-    
-    pen.setColor( QColor( 0, 0, 255, 185 ) );
-    bp.setPen( pen );
-    if( !r.isNull() )
-    {
-      r.adjust( -2, -2, 2, 2 );
-      bp.drawRoundedRect( r, 2, 2 );
-    }
-  }
+  setPageSize( pl.pageSize().id() );
+  setLayoutOrientation( pl.orientation() );
 
+  QPainter p( iPrinter );
+  
+  //--- titre
+  drawTitle( &p );
+  
+  //--- rendu des textes pour barres speciales (sargam scale, tarab tuning...)
+  p.setFont( mBarFont );
+  p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, kSargamScaleLabel );
+  p.drawText( getRegion( rTarabTuningLabel ), Qt::AlignCenter, kTarabTuningLabel );
+  
+  drawSpecialBars( &p );
+  
+  for( int i = 0; i < getNumberOfPages(); ++i )
+  {
+    p.save();
+    QTransform pageTransfo;
+    QPoint pageTop = getPageRegion( prPage, i ).topLeft();
+    pageTop.setY( pageTop.y() - i * kInterPageGap );
+    
+    pageTransfo.translate( -pageTop.x(), -pageTop.y() );
+    p.setWorldTransform( pageTransfo );
+    
+    vector<int> bars = getBarsFromPage( i );
+    for( int j = 0; j < bars.size(); ++j )
+    {
+      drawBar( &p, bars[j] );
+      if( x->isStartOfLine( bars[j] ) )
+      { drawLine( &p, x->findLine( bars[j] ) ); }
+    }
+  
+    drawPageFooter( &p, i );
+    
+    p.restore();
+    if( i < getNumberOfPages() - 1 )
+    { iPrinter->newPage(); }
+  }
+  
+  //on remet la taille du papier...
+  setPageSize( previousPageSizeId );
+  setLayoutOrientation( previousOrientation );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::resizeLineEditToContent()
@@ -1228,14 +1603,15 @@ void PartitionViewer::resizeLineEditToContent()
     QFontMetrics fm( le->font() );
     le->resize( std::max( fm.width( le->text() ) * 1.1,
                          (double)fm.width( "short" ) ), le->height() );
+    updateUi();
   }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::restoreFocus()
-{ setFocus(); }
-//-----------------------------------------------------------------------------
 void PartitionViewer::setAsDebugging( bool iD )
 { mIsDebugging = iD; updateUi(); }
+//-----------------------------------------------------------------------------
+void PartitionViewer::setAsVerbose( bool iV )
+{ mIsVerbose = iV; }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setBarAsDirty( int iBar, bool iD )
 { getBar(iBar).mIsDirty = iD; }
@@ -1249,8 +1625,9 @@ void PartitionViewer::setBarAsDirty( vector<int> iV, bool iD )
 void PartitionViewer::setCurrentBar( int iB )
 { mCurrentBar = iB; updateUi(); }
 //-----------------------------------------------------------------------------
+/*La note courante ne doit pas etre inférieur a -1 */
 void PartitionViewer::setCurrentNote( int iN )
-{ mCurrentNote = iN; updateUi(); }
+{ mCurrentNote = max( iN, -1 ); updateUi(); }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setComposition(Composition* ipC)
 {
@@ -1264,27 +1641,46 @@ void PartitionViewer::setComposition(Composition* ipC)
   //--- ornements
   mOrnements.resize( ipC->getNumberOfOrnements() );
   
-  //--- title
-  mpTitleLe->setText( ipC->getTitle() );
-  
   setCurrentBar( 0 );
   setCurrentNote( - 1 );
   updateUi();
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::setPaperSize( QSizeF s )
+void PartitionViewer::setLayoutOrientation( QPageLayout::Orientation iO )
 {
-  mPaperSize = s;
+  mLayoutOrientation = iO;
   updateLayout();
   QRect p = getRegion( rPartition );
   resize( p.width()+1, p.height()+1 );
   updateUi();
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::setLog( Log* ipLog )
+{
+  if( ipLog )
+  {
+    ipLog->takeEntriesFrom( *mpLog );
+    mpLog = ipLog;
+  }
+  else{ ipLog = &mDefaultLog; }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::setPageSize( QPageSize::PageSizeId iId )
+{
+  mPageSizeId = iId;
+  updateLayout();
+  QRect p = getRegion( rPartition );
+  resize( p.width()+1, p.height()+1 );
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::setNumberOfPage( int iN )
+{ mNumberOfPages = iN; }
+//-----------------------------------------------------------------------------
 /*Permet de separer en vecteur de note index par barre une selection iV qui
   contient des notes sur plusieurs barres.*/
 map< int, vector<int> > PartitionViewer::splitPerBar(
-  vector< std::pair<int, int> > iV )
+  vector< std::pair<int, int> > iV ) const
 {
   map< int, vector<int> > r;
   
@@ -1309,10 +1705,17 @@ map< int, vector<int> > PartitionViewer::splitPerBar(
 void PartitionViewer::startLineTextEdit( int iLineIndex )
 {
   mpLineTextEdit->setFocus();
-  const Line& l = mLines[iLineIndex];
-  mpLineTextEdit->setMinimumWidth( l.mTextRect.width() );
   mpLineTextEdit->setText( x->getLineText(iLineIndex) );
   mEditingLineIndex = iLineIndex;
+  updateLayout(); //pour afficher correctement le lineEdit
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::startTitleEdit()
+{
+  mpTitleEdit->setFocus();
+  mpTitleEdit->setText( x->getTitle() );
+  mEditingTitle = true;
   updateUi();
 }
 //-----------------------------------------------------------------------------
@@ -1323,13 +1726,27 @@ void PartitionViewer::stopLineTextEdit()
     x->setLineText( mEditingLineIndex, mpLineTextEdit->text() );
     mEditingLineIndex = -1;
     //on met la barre dirty pour forcer le updatePageLayout
-    setBarAsDirty( x->getLineFirstBar(mEditingLineIndex), true );
+    setBarAsDirty( 0, true );
     updateUi();
     setFocus();
   }
 }
 //-----------------------------------------------------------------------------
-QString PartitionViewer::strokeToString( strokeType iSt )
+void PartitionViewer::stopTitleEdit()
+{
+  if( hasTitleEditionPending() )
+  {
+    x->setTitle( mpTitleEdit->text() );
+    mEditingTitle = false;
+    //on met la barre dirty pour forcer le updatePageLayout
+    setBarAsDirty( 0, true );
+    updateUi();
+    setFocus();
+  }
+}
+
+//-----------------------------------------------------------------------------
+QString PartitionViewer::strokeToString( strokeType iSt ) const
 {
   QString r;
   switch (iSt)
@@ -1414,14 +1831,18 @@ void PartitionViewer::updateBar( int iBar )
   }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::updateBarsLayout()
+void PartitionViewer::updateBarLayout()
 {
+  setNumberOfPage( 1 );
+  mBarsPerPage.clear();
+  
   mLayoutCursor = getPageRegion( prBody, 0 ).topLeft();
   for( int i = 0; i < x->getNumberOfBars(); ++i )
   {
     Bar& b = getBar(i);
-    b.mPageLayout.clear();
-    b.mNotesPageLayout.clear();
+    b.mScreenLayout = QRect();
+    b.mNoteScreenLayouts.clear();
+    b.mIsWayTooLong = false;
     
     int pageIndex = toPageIndex( mLayoutCursor );
     QRect pageBody = getPageRegion(  prBody, pageIndex );
@@ -1430,7 +1851,7 @@ void PartitionViewer::updateBarsLayout()
     if( x->isStartOfLine( i ) && x->findLine( i ) != -1)
     {
       int lineIndex = x->findLine( i );
-      int verticalShift = lineIndex != 0 ? 1.2*kBarHeight : 0;
+      int verticalShift = lineIndex != 0 ? 1.05*kBarHeight : 0;
       if( !(x->getLineText( lineIndex ).isEmpty()) ||
          mEditingLineIndex == lineIndex )
       { verticalShift += QFontMetrics(mLineFont).height(); }
@@ -1440,8 +1861,6 @@ void PartitionViewer::updateBarsLayout()
     
     //--- le layout des bars
     QRect fullLayout = b.mRect;
-    int noteHandledIndex = -1;
-    int layoutWidthConsumed = 0;
     while( fullLayout.width() )
     {
       pageIndex = toPageIndex( mLayoutCursor );
@@ -1449,10 +1868,11 @@ void PartitionViewer::updateBarsLayout()
       
       QRect pageLayout = fullLayout;
       pageLayout.translate( mLayoutCursor );
+      
+      /*Le layout depasse dans le bas de la page... on ajoute une page*/
       if( !pageBody.contains( pageLayout ) &&
          !pageBody.contains( pageLayout.bottomLeft() ) )
       {
-        //on ajoute une page...
         addPage();
         pageIndex++;
         mLayoutCursor = getPageRegion( prBody, pageIndex ).topLeft();
@@ -1466,39 +1886,14 @@ void PartitionViewer::updateBarsLayout()
         mLayoutCursor.setY( mLayoutCursor.y() + kBarHeight );
       }
       //ne rentre pas dans ce qui reste et est trop grand de toute facon...
-      //ilfaut couper le layout.
+      //En ce moment ( 14 avril 2015 ), ce n'est pas supporté, donc on
+      //coupe le layout au bout de la page et on set un flag qui mettra
+      //un message a l'usage lors du rendu ( voir méthode drawBar() ).
       else if( !pageBody.contains( pageLayout ) )
       {
-        //on coupe le layout pour ne pas depasser la page
-        int whereToCut = pageBody.right();
-        
-        //on fait le layout des notes pour cette barre et on s'assure qu'on ne
-        //coupera pas une note en deux
-        for( int j = 0; j < x->getNumberOfNotesInBar(i); ++j )
-        {
-          QRect n = b.getNoteRect(j);
-          n.translate( pageLayout.topLeft() - QPoint( layoutWidthConsumed, 0 ) );
-          if( j > noteHandledIndex )
-          {
-            if( !pageBody.contains( n.topRight() ) )
-            {
-              whereToCut = std::min(n.left() - 2, whereToCut);
-              break;
-            }
-            else{ b.mNotesPageLayout.push_back( n ); noteHandledIndex++; }
-          }
-        }
-        
-        int whatIsLeftOfLayout = pageLayout.right() - whereToCut;
-        layoutWidthConsumed = fullLayout.width() - whatIsLeftOfLayout;
-        
-        //maintenant on coupe et change fullLayout de ligne et on le reaffecte a pageLayout
-        fullLayout.setWidth( whatIsLeftOfLayout );
-        mLayoutCursor.setX( pageBody.left() + getBarRegion( brNoteStartX ) );
-        mLayoutCursor.setY( mLayoutCursor.y() + kBarHeight );
-        
-        pageLayout.setRight( whereToCut );
-        b.mPageLayout.push_back( pageLayout );
+        //on coupe le layout au bout de la page
+        fullLayout.setWidth( pageBody.width() - 1 );
+        b.mIsWayTooLong = true;
       }
       else //le layout de la barre entre à l'écran sans problème
       {
@@ -1506,17 +1901,15 @@ void PartitionViewer::updateBarsLayout()
         for( int j = 0; j < x->getNumberOfNotesInBar(i); ++j )
         {
           QRect n = b.getNoteRect(j);
-          n.translate( pageLayout.topLeft() - QPoint( layoutWidthConsumed, 0 ) );
-          if( j > noteHandledIndex )
-          {
-            b.mNotesPageLayout.push_back( n );
-            noteHandledIndex++;
-          }
+          n.translate( pageLayout.topLeft() );
+          b.mNoteScreenLayouts.push_back( n );
         }
         
         mLayoutCursor += QPoint( fullLayout.width(), 0 );
         fullLayout.setWidth(0);
-        b.mPageLayout.push_back( pageLayout );
+        b.mScreenLayout = pageLayout;
+        
+        mBarsPerPage[ pageIndex ].push_back( i );
       }
     }
   }
@@ -1524,19 +1917,30 @@ void PartitionViewer::updateBarsLayout()
 //-----------------------------------------------------------------------------
 void PartitionViewer::updateLayout()
 {
+  //layout du titre
+  QRect l = QFontMetrics( mTitleFont ).boundingRect( x->getTitle() );
+  QRect titleRegion = getRegion( rTitle );
+  int dx = titleRegion.center().x() - l.width() / 2 ;
+  int dy = titleRegion.center().y() - l.height() / 2 ;
+  mTitleScreenLayout = l;
+  mTitleScreenLayout.translate( QPoint( dx, dy ) - l.topLeft() );
+  
   //layout des barres spéciale (gamme, accordage tarab, etc...)
   updateSpecialBarLayout( sbScale );
   updateSpecialBarLayout( sbTarabTuning );
   
   //--- le layout des barres du sargam
-  updateBarsLayout();
+  updateBarLayout();
+  
+  //--- le layout des ornements
+  updateOrnementLayout();
   
   //--- le layout des ligne, il vient apres le layout des barres parce
   //qu'il en est dependant
-  updateLinesLayout();
+  updateLineLayout();
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::updateLinesLayout()
+void PartitionViewer::updateLineLayout()
 {
   mLines.clear();
   mLines.resize( x->getNumberOfLines() );
@@ -1544,7 +1948,7 @@ void PartitionViewer::updateLinesLayout()
   {
     Line& l = mLines[i];
     const Bar& b = getBar( x->getLineFirstBar(i) );
-    QRect bl = b.mPageLayout[0];
+    QRect bl = b.mScreenLayout;
     QFontMetrics fm(mLineFont);
     
     //le hotSpot pour ajouter le texte
@@ -1563,10 +1967,10 @@ void PartitionViewer::updateLinesLayout()
     if( hasText || mEditingLineIndex == i )
     {
       QRect r( QPoint(), QSize(
-                               std::max( fm.width( x->getLineText(i) ), 50 ), fm.height() ) );
+        std::max( fm.width( x->getLineText(i) ), 50 ), fm.height() ) );
       r.translate( bl.left(), bl.top() - r.height() - 2 );
-      l.mTextRect = r;
-    }else { l.mTextRect = QRect(); }
+      l.mTextScreenLayout = r;
+    }else { l.mTextScreenLayout = QRect(); }
     
     //le rect du numero de ligne
     {
@@ -1582,62 +1986,78 @@ void PartitionViewer::updateLinesLayout()
   }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::updateOrnement( int iOrn )
+/*Cette méthode est un peu tricky, parce que les ornements peuvent dépasser
+  les frontières d'une barre. Puisque le systeme d'affichage est fait pour
+ dessiner une barre à la fois, il faut tenir compte de quelle region de
+ l'ornement sera dessiner dans la barre. 
+ 
+ mFullOrnement: sert à définir la
+   taille totale de l'ornement, c'est dans ce rectangle qu'il sera dessiner.
+ mOffsets: sert a tenir le décalage à appliquer lorsqu'on dessine l'ornement
+   pour une barre donnée.
+ mDestination: sert à tenir la position (en x) à laquelle l'ornement doit
+   être dessiner.
+ */
+void PartitionViewer::updateOrnementLayout()
 {
-  Ornement& o = mOrnements[iOrn];
-  o.mCuts.clear();
-  o.mBlits.clear();
-  o.mFullOrnement = QRect();
-  
-  //update rects...
-  vector<int> bi = x->getBarsInvolvedByOrnement( iOrn );
-  o.mCuts.resize( bi.size() );
-  o.mBlits.resize( bi.size() );
-  int barIndex = -1;
-  int widthAccum = 0;
-  int height = x->getOrnementType(iOrn) == otMeend ? kMeendHeight : kKrintanHeight;
-  for( int i = 0; i < bi.size(); ++i )
+  for( int iOrn = 0; iOrn < x->getNumberOfOrnements(); ++iOrn )
   {
-    barIndex = bi[i];
-    int left = numeric_limits<int>::max();
-    int right = numeric_limits<int>::min();
-    for( int j = 0; j < x->getNumberOfNotesInOrnement(iOrn); ++j )
-    {
-      NoteLocator nl = x->getNoteLocatorFromOrnement(iOrn, j);
-      if( nl.getBar() == barIndex )
-      {
-        int noteIndex = nl.getIndex();
-        left = std::min( left, getBar(barIndex).getNoteRect(noteIndex).left() );
-        right = std::max( right, getBar(barIndex).getNoteRect(noteIndex).right() );
-        
-        //quand c'est la derniere note de la barre et que le Ornement dépasse dnas la barre
-        //suivante, on prend la fin de la barre...
-        if( noteIndex == (x->getNumberOfNotesInBar(barIndex) - 1) && i < (bi.size() - 1) )
-        { right = getBar(barIndex).mRect.right(); }
-        
-        //quand c'Est la premiere note de la barre et que le Ornement vient de la barre
-        //précédente, le left est le début de la barre
-        if( noteIndex == 0 && i > 0 )
-        { left = getBar(barIndex).mRect.left(); }
-      }
-    }
+    Ornement& o = mOrnements[iOrn];
+    o.mOffsets.clear();
+    o.mDestinations.clear();
+    o.mFullOrnement = QRect();
     
-    QRect blit( QPoint( left, 0 ), QSize( right - left, height ) );
-    o.mBlits[i] = make_pair( barIndex, blit );
-    QRect cut( QPoint(0, 0), o.mBlits[i].second.size() );
-    if( i != 0 )
-    { cut.translate( widthAccum, 0); }
-    o.mCuts[i] = make_pair( barIndex, cut );
-    widthAccum += cut.width();
+    //update rects...
+    vector<int> bi = x->getBarsInvolvedByOrnement( iOrn );
+    o.mOffsets.resize( bi.size() );
+    o.mDestinations.resize( bi.size() );
+    int barIndex = -1;
+    int widthAccum = 0;
+    int height = x->getOrnementType(iOrn) == otMeend ? kMeendHeight : kKrintanHeight;
+    for( int i = 0; i < bi.size(); ++i )
+    {
+      barIndex = bi[i];
+      int left = numeric_limits<int>::max();
+      int right = numeric_limits<int>::min();
+      
+      /*Ici, on détermine la taille (left, right) de l'ornement dans la barre
+       i.*/
+      for( int j = 0; j < x->getNumberOfNotesInOrnement(iOrn); ++j )
+      {
+        NoteLocator nl = x->getNoteLocatorFromOrnement(iOrn, j);
+        /*Si les notes de l'ornements s'applique à la barre barIndex, elles
+         contribueront à définir la taille de l'ornement dans la barre barIndex*/
+        if( nl.getBar() == barIndex )
+        {
+          int noteIndex = nl.getIndex();
+          left = std::min( left, getBar(barIndex).getNoteRect(noteIndex).left() );
+          right = std::max( right, getBar(barIndex).getNoteRect(noteIndex).right() );
+          
+          //quand c'est la derniere note de la barre et que le Ornement dépasse dnas la barre
+          //suivante, on prend la fin de la barre...
+          if( noteIndex == (x->getNumberOfNotesInBar(barIndex) - 1) && i < (bi.size() - 1) )
+          { right = getBar(barIndex).mRect.right(); }
+          
+          //quand c'Est la premiere note de la barre et que le Ornement vient de la barre
+          //précédente, le left est le début de la barre
+          if( noteIndex == 0 && i > 0 )
+          { left = getBar(barIndex).mRect.left(); }
+        }
+      }
+      
+      o.mDestinations[i] = make_pair( barIndex, left );
+      o.mOffsets[i] = make_pair( barIndex, -widthAccum );
+      widthAccum += right - left;
+    }
+    o.mFullOrnement = QRect( QPoint(0, getBarRegion( brOrnementY ) ), QSize(widthAccum, height) );
   }
-  o.mFullOrnement = QRect( QPoint(0, 0), QSize(widthAccum, height) );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::updateSpecialBarLayout( specialBar barIndex )
 {
   Bar& b = getBar( barIndex );
-  b.mPageLayout.clear();
-  b.mNotesPageLayout.clear();
+  b.mScreenLayout = QRect();
+  b.mNoteScreenLayouts.clear();
   QRect l = b.mRect;
   QPoint topLeft;
   switch (barIndex)
@@ -1648,46 +2068,28 @@ void PartitionViewer::updateSpecialBarLayout( specialBar barIndex )
   }
   
   l.translate( topLeft );
-  b.mPageLayout.push_back( l );
+  b.mScreenLayout = l;
   //on fait le layout des notes pour cette barre
   for( int j = 0; j < x->getNumberOfNotesInBar(barIndex); ++j )
   {
     QRect n = b.getNoteRect(j);
     n.translate( topLeft );
-    b.mNotesPageLayout.push_back(n);
+    b.mNoteScreenLayouts.push_back(n);
   }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::updateUi()
 {
-  /*On commence par mettre a jour les dimensions et position des notes de
-   chaque nbar via updateBar().
-   Ensuite, si la barre est dirty, on mets a jours les ornements et on fait
-   le rendu hors ecran de cette barre. Ceci invalide aussi le layout qui 
-   devra etre complement recalcule.
-   
-   Ensuite on place les widgets classiques a l'ecran.
+  /*
    */
   bool shouldUpdateLayout = false;
   for( int i = sbScale; i < x->getNumberOfBars(); ++i )
   {
     Bar& b = getBar(i);
     if( b.mIsDirty )
-    { updateBar( i ); }
-  }
-  
-  for( int i = sbScale; i < x->getNumberOfBars(); ++i )
-  {
-    Bar& b = getBar(i);
-    if( b.mIsDirty )
     {
-      for( int j = 0; j < x->getNumberOfOrnements(); ++j )
-      {
-        if( x->ornementAppliesToBar( j, i ) )
-        { updateOrnement( j ); }
-      }
-      renderBarOffscreen(i);
-      setBarAsDirty( i, false );
+      updateBar( i );
+      b.mIsDirty = false;
       shouldUpdateLayout = true;
     }
   }
@@ -1695,20 +2097,34 @@ void PartitionViewer::updateUi()
   
   //placer le ui l'écran
   //titre
-  QRect r = getRegion( rTitle );
-  QPoint c = r.center() - QPoint( mpTitleLe->width() / 2, mpTitleLe->height() / 2 );
-  mpTitleLe->move( c );
+  if( hasTitleEditionPending() )
+  {
+    QRect r = getRegion( rTitle );
+    QPoint c = r.center() - QPoint( mpTitleEdit->width() / 2,
+      mpTitleEdit->height() / 2 );
+    //voir la creation de mpTitleEdit pour explication mapping.
+    c = mapToParent( c );
+    mpTitleEdit->move( c );
+    mpTitleEdit->show();
+  }
+  else{ mpTitleEdit->hide(); }
   
   //place la lineEdit pour les ligne
   if( hasLineEditionPending() )
   {
-    QPoint p = mLines[mEditingLineIndex].mTextRect.topLeft();
+    QPoint p = mLines[mEditingLineIndex].mTextScreenLayout.topLeft();
+    //voir la creation de mpLineTextEdit pour explication mapping.
     p = mapToParent(p);
-    QPoint ajust( 5, 0 );
-    mpLineTextEdit->move( p + ajust );
+    mpLineTextEdit->move( p );
     mpLineTextEdit->show();
   }
   else { mpLineTextEdit->hide(); }
+  
+  
+  /* On redimensionne le widget pour garantir que toutes les pages seront
+     affichees. */
+  QRect p = getRegion( rPartition );
+  resize( p.width()+1, p.height()+1 );
   
   update();
 }
@@ -1725,19 +2141,19 @@ QRect PartitionViewer::Bar::getNoteRect( int iNoteIndex ) const
 //-----------------------------------------------------------------------------
 // --- PARTITIONVIEWER::Ornement
 //-----------------------------------------------------------------------------
-QRect PartitionViewer::Ornement::getBlit( int iBar ) const
+int PartitionViewer::Ornement::getDestination( int iBar ) const
 {
-  QRect r;
-  for( int i = 0; i < mBlits.size(); ++i )
-  { if( mBlits[i].first == iBar ) { r = mBlits[i].second; break; } }
+  int r = 0;
+  for( int i = 0; i < mDestinations.size(); ++i )
+  { if( mDestinations[i].first == iBar ) { r = mDestinations[i].second; break; } }
   return r;
 }
 //-----------------------------------------------------------------------------
-QRect PartitionViewer::Ornement::getCut( int iBar ) const
+int PartitionViewer::Ornement::getOffset( int iBar ) const
 {
-  QRect r;
-  for( int i = 0; i < mCuts.size(); ++i )
-  { if( mCuts[i].first == iBar ) { r = mCuts[i].second; break; } }
+  int r = 0;
+  for( int i = 0; i < mOffsets.size(); ++i )
+  { if( mOffsets[i].first == iBar ) { r = mOffsets[i].second; break; } }
   return r;
 }
 
@@ -1745,18 +2161,55 @@ QRect PartitionViewer::Ornement::getCut( int iBar ) const
 // --- MAIN WINDOW
 //-----------------------------------------------------------------------------
 MainDialog::MainDialog() : QMainWindow(),
+  mpScrollArea(0),
   mpPartitionViewer(0),
-  mSettings( QSettings::UserScope, "Realisim", "Sargam" )
+  mSettings( QSettings::UserScope, "Realisim", "Sargam" ),
+  mLog(),
+  mIsVerbose( false )
+{
+  createUi();
+  
+  //--- init log
+  QDir logDir( "./logs" );
+  bool canLogToFile = true;
+  if( !logDir.exists() )
+  {
+    canLogToFile = QDir(".").mkdir( "logs" );
+  }
+  if( canLogToFile )
+  {
+    mLog.logToFile( true, "logs/" + QDateTime::currentDateTime().toString(
+      "yyyy-MM-dd_hh_mm_ss" ) + ".txt" );
+  }
+  else
+  {
+    getLog().log( "Impossible to log to file. Could not create directory "
+                     "'logs'. Try creating it manually beside the executables." );
+  }
+  mLog.log( "Sargam started. version %d", getVersion() );
+  mpPartitionViewer->setLog( &mLog );
+
+//!!! pour le beta, on met a verbose...
+setAsVerbose( true );
+  
+  //--- init viewer
+  loadSettings();
+  newFile();
+  resize( mpPartitionViewer->width() + 35, 800 );
+}
+//-----------------------------------------------------------------------------
+void MainDialog::createUi()
 {
   QWidget* pMainWidget = new QWidget( this );
   setCentralWidget(pMainWidget);
   
   //--- la barre de menu
-  QMenuBar* pMenuBar = new QMenuBar(pMainWidget);
+  //--- file
+  QMenuBar* pMenuBar = new QMenuBar(this);
   QMenu* pFile = pMenuBar->addMenu("File");
   pFile->addAction( QString("&New"), this, SLOT( newFile() ),
                    QKeySequence::New );
-
+  
   pFile->addAction( QString("&Open..."), this, SLOT( openFile() ),
                    QKeySequence::Open );
   pFile->addAction( QString("&Save"), this, SLOT( save() ),
@@ -1766,11 +2219,16 @@ MainDialog::MainDialog() : QMainWindow(),
   pFile->addSeparator();
   pFile->addAction( QString("Print..."), this, SLOT( print() ),
                    QKeySequence::Print );
-
+  pFile->addAction( QString("Print preview..."), this, SLOT( printPreview() ) );
+  
+  //--- view
+  QMenu* pPreferences = pMenuBar->addMenu("pPreferences");
+  pPreferences->addAction( "Options...", this, SLOT( preferences() ) );
+  
   //debug action
   QShortcut* pRandomPart = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_G), this );
   connect( pRandomPart, SIGNAL(activated()), this, SLOT(generateRandomPartition()) );
-
+  
   QShortcut* pDebugS = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_D), this );
   connect( pDebugS, SIGNAL(activated()), this, SLOT(toggleDebugging()) );
   
@@ -1778,33 +2236,61 @@ MainDialog::MainDialog() : QMainWindow(),
   
   //--- le reste du Ui
   QHBoxLayout* pLyt = new QHBoxLayout(pMainWidget);
-  pLyt->setMargin(5);
-  pLyt->setSpacing(5);
+  pLyt->setMargin(0);
+  pLyt->setSpacing(0);
   
-  QScrollArea* pScroll = new QScrollArea( pMainWidget );
+  mpScrollArea = new QScrollArea( pMainWidget );
+  mpScrollArea->setAlignment( Qt::AlignHCenter );
   {
-//    QFrame* pFrame = new QFrame( pMainWidget );
-//    QHBoxLayout* pHLyt = new QHBoxLayout( pFrame );
-//    {
-//      mpPartitionViewer = new PartitionViewer( pFrame );
-//      mpPartitionViewer->setAsDebugging( true );
-//      pHLyt->addWidget( mpPartitionViewer );
-//    }
-//    pScroll->setWidget( pFrame );
-    
     mpPartitionViewer = new PartitionViewer( pMainWidget );
     mpPartitionViewer->setAsDebugging( true );
-    pScroll->setWidget( mpPartitionViewer );
+    mpPartitionViewer->setFocus();
+    connect( mpPartitionViewer, SIGNAL( ensureVisible(QPoint) ),
+            this, SLOT( ensureVisible(QPoint) ) );
+    
+    mpScrollArea->setWidget( mpPartitionViewer );
   }
-  pLyt->addWidget( pScroll );
-  
-  loadSettings();
-  newFile();
-  resize( mpPartitionViewer->width() + 35, 800 );
+  pLyt->addWidget( mpScrollArea );
 }
 //-----------------------------------------------------------------------------
+void MainDialog::ensureVisible( QPoint p )
+{ mpScrollArea->ensureVisible( p.x(), p.y() ); }
+//-----------------------------------------------------------------------------
+void MainDialog::fillPageSizeCombo( QComboBox* ipC )
+{
+  mAvailablePageSizeIds.clear();
+  //ajout de letter par defaut...
+  mAvailablePageSizeIds.push_back( QPageSize::Letter );
+  
+  QList<QPrinterInfo> pis = QPrinterInfo::availablePrinters();
+  for( int i = 0; i < pis.size(); ++i )
+  {
+    QList<QPageSize> lps = pis.at(i).supportedPageSizes();
+    for( int j = 0; j < lps.size(); ++j )
+    { mAvailablePageSizeIds.push_back( lps.at(j).id() ); }
+  }
+  
+  sort( mAvailablePageSizeIds.begin(), mAvailablePageSizeIds.end() );
+  mAvailablePageSizeIds.erase( unique( mAvailablePageSizeIds.begin(),
+    mAvailablePageSizeIds.end() ), mAvailablePageSizeIds.end() );
+  
+  for( int i = 0; i < mAvailablePageSizeIds.size(); ++i )
+  { ipC->insertItem(i, QPageSize::name( mAvailablePageSizeIds[i] ) ); }
+}
+//-----------------------------------------------------------------------------
+void MainDialog::generatePrintPreview( QPrinter* iP )
+{ mpPartitionViewer->print( iP ); }
+//-----------------------------------------------------------------------------
 void MainDialog::generateRandomPartition()
-{ mpPartitionViewer->generateRandomPartition(); }
+{
+  mpPartitionViewer->generateRandomPartition();
+  
+  if( isVerbose() )
+  { getLog().log( "MainDialog: random partition generated." ); }
+}
+//-----------------------------------------------------------------------------
+bool MainDialog::isVerbose() const
+{ return mIsVerbose; }
 //-----------------------------------------------------------------------------
 void MainDialog::loadSettings()
 {
@@ -1812,6 +2298,8 @@ void MainDialog::loadSettings()
 //  mAddTexturePath = mSettings.value( "addTexturePath" ).toString();
 //  mOpenCatalogPath = mSettings.value( "openCatalogPath" ).toString();
 //  mRefreshTexturePath = mSettings.value( "refreshTexturePath" ).toString();
+  if( isVerbose() )
+  { getLog().log( "MainDialog: settings loaded." ); }
 }
 //-----------------------------------------------------------------------------
 void MainDialog::newFile()
@@ -1827,6 +2315,9 @@ void MainDialog::newFile()
   mpPartitionViewer->setComposition( &mComposition );
   
   updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "MainDialog: new file." ); }
 }
 //-----------------------------------------------------------------------------
 void MainDialog::openFile()
@@ -1844,7 +2335,92 @@ void MainDialog::openFile()
     mComposition.fromBinary( utils::fromFile( s ) );
     mpPartitionViewer->setComposition( &mComposition );
     saveSettings();
+    
+    if( mComposition.hasError() )
+    {
+      getLog().log( "Errors while opening file %s: %s.", s.toStdString().c_str(),
+        mComposition.getAndClearLastErrors().toStdString().c_str() );
+    }
   }
+  
+  if( isVerbose() )
+  { getLog().log( "MainDialog: file %s opened.", s.toStdString().c_str() ); }
+}
+//-----------------------------------------------------------------------------
+void MainDialog::preferences()
+{
+  QDialog d( this );
+  QComboBox* pPageSizeCombo = new QComboBox(&d);
+  QButtonGroup* pOrientation = new QButtonGroup( &d );
+  
+  QVBoxLayout* pMainLyt = new QVBoxLayout( &d );
+  pMainLyt->setMargin(2); pMainLyt->setSpacing(2);
+  {
+    //--- taille du papier
+    QHBoxLayout* pPaperLyt = new QHBoxLayout();
+    {
+      pPaperLyt->setMargin(2); pPaperLyt->setSpacing(2);
+      QLabel* pLabel = new QLabel( "Page size: ", &d );
+      
+      fillPageSizeCombo( pPageSizeCombo );
+      int currrentIndex = distance( mAvailablePageSizeIds.begin(),
+            std::find( mAvailablePageSizeIds.begin(), mAvailablePageSizeIds.end(),
+              mpPartitionViewer->getPageSizeId() ) );
+      pPageSizeCombo->setCurrentIndex( currrentIndex );
+      
+      pPaperLyt->addWidget(pLabel);
+      pPaperLyt->addWidget(pPageSizeCombo);
+    }
+    
+    //--- Portrait, landscape
+    QHBoxLayout* pOrientationLyt = new QHBoxLayout();
+    {
+      QCheckBox* pPortrait = new QCheckBox( "Portrait", &d );
+      QCheckBox* pLandscape = new QCheckBox( "Landscape", &d );
+      pOrientation->addButton( pPortrait, 0 );
+      pOrientation->addButton( pLandscape, 1 );
+      
+      if( mpPartitionViewer->getLayoutOrientation() == QPageLayout::Portrait )
+      { pPortrait->setCheckState( Qt::Checked ); }
+      else{ pLandscape->setCheckState( Qt::Checked ); }
+      
+      pOrientationLyt->addStretch(1);
+      pOrientationLyt->addWidget(pPortrait);
+      pOrientationLyt->addWidget(pLandscape);
+    }
+    
+    //--- ok, Cancel
+    QHBoxLayout* pBottomButLyt = new QHBoxLayout();
+    pBottomButLyt->setMargin(2); pBottomButLyt->setSpacing(2);
+    {
+      QPushButton* pOk = new QPushButton( "Ok", &d );
+      connect( pOk, SIGNAL( clicked() ), &d, SLOT( accept() ) );
+      
+      QPushButton* pCancel = new QPushButton( "Cancel", &d );
+      connect( pCancel, SIGNAL( clicked() ), &d, SLOT( reject() ) );
+      
+      pBottomButLyt->addStretch(1);
+      pBottomButLyt->addWidget(pOk);
+      pBottomButLyt->addWidget(pCancel);
+    }
+    pMainLyt->addLayout( pPaperLyt );
+    pMainLyt->addLayout( pOrientationLyt );
+    pMainLyt->addStretch(1);
+    pMainLyt->addLayout( pBottomButLyt );
+  }
+  
+  if (d.exec() == QDialog::Accepted)
+  {
+    mpPartitionViewer->setPageSize( mAvailablePageSizeIds[ pPageSizeCombo->currentIndex() ] );
+    
+    QPageLayout::Orientation o;
+    if( pOrientation->checkedId() == 0 ){ o = QPageLayout::Portrait; }
+    else{ o = QPageLayout::Landscape; }
+    mpPartitionViewer->setLayoutOrientation( o );
+  }
+  
+  if( isVerbose() )
+  { getLog().log( "MainDialog: view options closed." ); }
 }
 //-----------------------------------------------------------------------------
 void MainDialog::print()
@@ -1854,6 +2430,25 @@ void MainDialog::print()
   QPrintDialog d( &p, this );
   if (d.exec() == QDialog::Accepted)
   { mpPartitionViewer->print( &p ); }
+  
+  if( isVerbose() )
+  { getLog().log( "MainDialog: print."); }
+}
+//-----------------------------------------------------------------------------
+void MainDialog::printPreview()
+{
+  QPrinter p;
+  //appliquer les configurations de visualisation a l'imprimante
+  QPrintPreviewDialog d( &p, this );
+  connect( &d, SIGNAL( paintRequested(QPrinter*) ),
+          this, SLOT( generatePrintPreview(QPrinter*) ) );
+  if (d.exec() == QDialog::Accepted)
+  { mpPartitionViewer->print( &p ); }
+  disconnect(&d, SIGNAL( paintRequested(QPrinter*) ),
+             this, SLOT( generatePrintPreview(QPrinter*) ) );
+  
+  if( isVerbose() )
+  { getLog().log( "MainDialog: print preview."); }
 }
 //-----------------------------------------------------------------------------
 void MainDialog::save()
@@ -1866,6 +2461,9 @@ void MainDialog::save()
       mpPartitionViewer->getComposition().toBinary() );
   }
   updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "MainDialog: saved." ); }
 }
 
 //-----------------------------------------------------------------------------
@@ -1885,8 +2483,10 @@ void MainDialog::saveAs()
     save();
   }
   updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "MainDialog: save as %s.", mSaveFileName.toStdString().c_str() ); }
 }
-
 //-----------------------------------------------------------------------------
 void MainDialog::saveSettings()
 {
@@ -1894,14 +2494,28 @@ void MainDialog::saveSettings()
 //	mSettings.setValue( "addTexturePath", mAddTexturePath );
 //  mSettings.setValue( "openCatalogPath", mOpenCatalogPath );
 //  mSettings.setValue( "refreshTexturePath", mRefreshTexturePath );
+  if( isVerbose() )
+  { getLog().log( "MainDialog: save settings." ); }
 }
-
+//-----------------------------------------------------------------------------
+void MainDialog::setAsVerbose( bool iV )
+{
+  mIsVerbose = iV;
+  mpPartitionViewer->setAsVerbose( iV );
+  
+  getLog().log( "verbose set to: %s", iV?"true":"false" );
+}
 //-----------------------------------------------------------------------------
 void MainDialog::toggleDebugging()
-{ mpPartitionViewer->setAsDebugging( !mpPartitionViewer->isDebugging() ); }
-
+{
+  mpPartitionViewer->setAsDebugging( !mpPartitionViewer->isDebugging() );
+  
+  if( isVerbose() )
+  { getLog().log( "MainDialog: debugging toggled to %s.", mpPartitionViewer->isDebugging()?"true":"false" ); }
+}
 //-----------------------------------------------------------------------------
 void MainDialog::updateUi()
 {
+  
 }
 
