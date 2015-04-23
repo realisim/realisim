@@ -13,3 +13,26 @@ créer le dock icone pour mac:
 https://developer.apple.com/library/mac/documentation/GraphicsAnimation/Conceptual/HighResolutionOSX/Optimizing/Optimizing.html#//apple_ref/doc/uid/TP40012302-CH7-SW2
 http://doc.qt.io/qt-4.8/appicon.html#setting-the-application-icon-on-mac-os-x
 http://stackoverflow.com/questions/22745728/cmake-set-icon-for-a-mac-osx-app
+
+
+//-----------------------------------------------------------------------------
+//--- commandes
+//-----------------------------------------------------------------------------
+add bar (space)
+add bar efore (shift space)
+add grace note (g)
+add line (enter)
+add note (1-7)
+add matra (selection)(m)
+add ornement (selection)(k)|(b)
+add stroke (q)|(w)|(e)
+break matra (selection)(shift + m)
+break ornement (selection)(shift + k)|(shift + b)
+dec octove (-)
+erase (backspace)
+  efface une note quand le curseur est sur une note
+  efface la barre quand la barre est vide
+  efface la ligne quand le curseur est au début de la bare et que la barre est en debut de ligne
+inc octave (+)
+remove grace note (selection)(shift+g)
+shift note (s)

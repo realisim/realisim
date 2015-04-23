@@ -29,6 +29,7 @@ public:
   QPageLayout::Orientation getLayoutOrientation() const;
   const utils::Log& getLog() const;
   QPageSize::PageSizeId getPageSizeId() const;
+  bool hasLogTiming() const { return mHasLogTiming; }
   bool isDebugging() const;
   bool isVerbose() const {return mIsVerbose;}
   void print( QPrinter* );
@@ -38,12 +39,14 @@ public:
   void setAsVerbose( bool );
   void setComposition( Composition* );
   void setLog( utils::Log* );
+  void setLogTiming( bool iL ) {mHasLogTiming = iL;}
   
 signals:
   void ensureVisible( QPoint );
   
 protected slots:
   void resizeLineEditToContent();
+  void stopBarTextEdit();
   void stopLineTextEdit();
   void stopTitleEdit();
   
@@ -52,7 +55,8 @@ protected:
     rTarabTuningLabel, rTarabTuning };
   enum pageRegion { prPage, prBody, prPageFooter };
   enum barRegion { brSeparatorX, brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
-    brOrnementY, brMatraGroupY, brGraceNoteTopY };
+    brOrnementY, brMatraGroupY, brGraceNoteTopY, brTextX, brTextY };
+  enum colors{ cHover, cSelection };
   
   struct Bar
   {
@@ -72,6 +76,9 @@ protected:
     std::vector< QRect > mMatraGroupsRect;
     QRect mScreenLayout;
     std::vector< QRect > mNoteScreenLayouts;
+    QRect mTextRect; //bar coord.
+    QRect mTextScreenLayout;
+    
 
     bool mIsDirty;
     bool mIsWayTooLong;
@@ -146,6 +153,7 @@ protected:
   const Bar& getBar(int) const;
   int getBarRegion( barRegion ) const;
   std::vector<int> getBarsFromPage( int ) const;
+  QColor getColor( colors ) const;
   int getCurrentBar() const;
   int getCurrentNote() const;
   QLine getCursorLine() const;
@@ -156,6 +164,7 @@ protected:
   QRect getPageRegion( pageRegion, int ) const;
   QSizeF getPageSizeInInch() const;
   QRect getRegion( region ) const;
+  bool hasBarTextEditionPending() const;
   bool hasLineEditionPending() const;
   bool hasSelection() const;
   bool hasTitleEditionPending() const {return mEditingTitle;}
@@ -173,6 +182,7 @@ protected:
   void setCurrentNote(int);
   void setNumberOfPage(int);
   std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > ) const;
+  void startBarTextEdit( int );
   void startLineTextEdit( int );
   void startTitleEdit();
   QString strokeToString( strokeType ) const;
@@ -189,6 +199,7 @@ protected:
   //--- ui
   QLineEdit* mpTitleEdit;
   QLineEdit* mpLineTextEdit;
+  QLineEdit* mpBarTextEdit;
   
   //--- data
   bool mIsDebugging;
@@ -198,6 +209,7 @@ protected:
   int mNumberOfPages;
   QFont mTitleFont;
   QFont mBarFont;
+  QFont mBarTextFont;
   QFont mGraceNotesFont;
   QFont mLineFont;
   QFont mStrokeFont;
@@ -212,15 +224,18 @@ protected:
   QPoint mLayoutCursor;
   int mOctave;
   std::vector< std::pair<int, int> > mSelectedNotes; //bar, index
+  int mEditingBarText;
   int mEditingLineIndex;
   bool mEditingTitle;
   int mAddLineTextHover;
   int mBarHoverIndex;
+  int mBarTextHover;
   static Composition mDummyComposition;
   Composition* x; //jamais null...
   utils::Log mDefaultLog;
   utils::Log *mpLog; //jamais null
   bool mIsVerbose;
+  bool mHasLogTiming;
 };
 
   
@@ -252,8 +267,10 @@ protected slots:
   void save();
   void saveAs();
   void toggleDebugging();
+  void toggleLogTiming();
   
 protected:
+  void applyPrinterOptions( QPrinter* );
   void createUi();
   void loadSettings();
   void fillPageSizeCombo( QComboBox* );

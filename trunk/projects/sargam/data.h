@@ -101,6 +101,7 @@ public:
   int findStroke( int, int ) const;
   void fromBinary( QByteArray );
   QString getAndClearLastErrors() const;
+  QString getBarText( int ) const;
   std::vector<int> getBarsInvolvedByOrnement( int ) const;
   int getLineFirstBar( int ) const;
   QString getLineText( int ) const;
@@ -125,12 +126,14 @@ public:
   std::vector<Note> getTarabTuning() const;
   QString getTitle() const;
   bool hasError() const;
+  bool hasBarText( int ) const;
   bool hasStroke( int, int ) const;
   bool isGraceNote( int, int) const;
   bool isNoteInMatra( int, int ) const;
   bool isNoteInOrnement( int, int ) const;
   bool isStartOfLine( int ) const;
   bool ornementAppliesToBar( int, int ) const;
+  void setBarText( int, QString );
   void setLineText( int, QString );
   void setNote( int, int, Note );
   void setScale( std::vector<Note> );
@@ -145,6 +148,7 @@ protected:
     std::vector< std::vector<int> > mMatras;
     std::vector<int> mGraceNotes;
     std::vector<Stroke> mStrokes;
+    QString mText;
   };
   
   struct Ornement

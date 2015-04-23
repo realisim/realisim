@@ -11,8 +11,14 @@ using namespace realisim;
 namespace
 {
   const int kMagicHeader = 0x00ABEF54;
-  const int kCurrentVersion = 2;
-  const int kLowestSupportedVersion = 1;
+  
+  const int kCurrentVersion = 3;
+  /*version 3: ajout du texte sur les barres.*/
+  
+  /*kLowestSupportedVersion indique la plus basse version de logiciel capable
+    de lire ce format de fichier. C'est pour les vielles versions, il est
+   possible, qu'une vielle version puisse lire le nouveau format. */
+  const int kLowestSupportedVersion = 3;
 }
 
 //------------------------------------------------------------------------------
@@ -579,6 +585,12 @@ void Composition::fromBinary( QByteArray iBa )
         addStroke(i, strokeType(st), vn);
       }
       
+      if( version > 2 )
+      {
+        QString s;
+        ds >> s;
+        setBarText(i, s);
+      }
     }
    
     //--- lignes
@@ -691,6 +703,9 @@ Composition::Bar& Composition::getBar( int iIndex )
     const_cast<const Composition*>(this)->getBar( iIndex ) );
 }
 //------------------------------------------------------------------------------
+QString Composition::getBarText( int iBar ) const
+{ return getBar(iBar).mText; }
+//------------------------------------------------------------------------------
 int Composition::getLineFirstBar( int iLine ) const
 { return mLines[iLine].mFirstBar; }
 //------------------------------------------------------------------------------
@@ -762,8 +777,11 @@ vector<Note> Composition::getTarabTuning() const
 QString Composition::getTitle() const
 { return mTitle; }
 //------------------------------------------------------------------------------
+bool Composition::hasBarText( int iBar ) const
+{ return !getBarText(iBar).isEmpty(); }
+//------------------------------------------------------------------------------
 bool Composition::hasError() const
-{ return mErrors.isEmpty(); }
+{ return !mErrors.isEmpty(); }
 //------------------------------------------------------------------------------
 bool Composition::hasStroke( int iBar, int iNoteIndex ) const
 { return findStroke( iBar, iNoteIndex) != -1; }
@@ -797,6 +815,9 @@ bool Composition::ornementAppliesToBar( int iOrn, int iBar ) const
   { if( o.mNotes[i].getBar() == iBar ){ r = true; break; } }
   return r;
 }
+//------------------------------------------------------------------------------
+void Composition::setBarText( int iBar, QString iText )
+{ getBar(iBar).mText = iText; }
 //------------------------------------------------------------------------------
 void Composition::setLineText( int iLineIndex, QString iText )
 {
@@ -960,6 +981,8 @@ QByteArray Composition::toBinary() const
       { ds << getNoteIndexFromStroke(i, j, k); }
     }
     
+    //--- texte
+    ds << getBarText(i);
   }// fin des barres
   
   //--- lignes

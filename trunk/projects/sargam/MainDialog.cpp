@@ -24,21 +24,25 @@ using namespace realisim;
 
 namespace
 {
+  //--- pour PartitionViewer
   const int kSpacing = 5;
   //page
   const int kInterPageGap = 15;
-  const double kPageMarginInCm = 2.0;
+  const double kPageMarginInCm = 1.5;
   const int kPageFooter = 15;
   //bar
   const int kBarHeight = 60;
-  const int kInterNoteGap = 8;
+  const int kInterNoteGap = 5;
   const int kMeendHeight = 10;
   const int kKrintanHeight = 6;
   const int kBeatGroupHeight = 10;
-  const int kNoBarHover = -5;
+  const int kNoBarIndex = -5;
   
   const QString kSargamScaleLabel("Scale: ");
   const QString kTarabTuningLabel("Tarab tuning: ");
+  
+  //--- pour mainWindow
+  const int kSettingVersion = 1;
 }
 
 realisim::sargam::Composition PartitionViewer::mDummyComposition;
@@ -57,22 +61,25 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mCurrentBar( -1 ),
   mCurrentNote( -1 ),
   mOctave( 0 ),
+  mEditingBarText( -1 ),
   mEditingLineIndex( -1 ),
   mEditingTitle( false ),
   mAddLineTextHover( -1 ),
-  mBarHoverIndex( kNoBarHover ),
+  mBarHoverIndex( kNoBarIndex ),
+  mBarTextHover( -1 ),
   x( &mDummyComposition ),
   mDefaultLog(),
   mpLog( &mDefaultLog ),
-  mIsVerbose( false )
+  mIsVerbose( false ),
+  mHasLogTiming( false )
 {
   setMouseTracking( true );
-  setStyleSheet("QLineEdit { border: none }");
   setFocusPolicy( Qt::StrongFocus );
   srand( time(NULL) );
   mTitleFont = QFont( "Arial", 24 );
   mTitleFont.setBold( true );
   mBarFont = QFont( "Arial", 14 );
+  mBarTextFont = QFont( "Arial", 10 );
   mGraceNotesFont = QFont( "Arial", 10 );
   mLineFont = QFont( "Arial", 12 );
   mStrokeFont = QFont( "Arial", 10 );
@@ -80,7 +87,6 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   createUi();
   addPage();
   
-  //generateRandomPartition();
   updateUi();
 }
 
@@ -558,10 +564,22 @@ void PartitionViewer::createUi()
           this, SLOT( stopLineTextEdit() ) );
   connect( mpLineTextEdit, SIGNAL( textChanged(const QString&)),
           this, SLOT( resizeLineEditToContent() ) );
+  
+  //ligne pour le texte des barres
+  mpBarTextEdit = new QLineEdit( this->parentWidget() );
+  mpBarTextEdit->setFont( mBarTextFont );
+  mpBarTextEdit->hide();
+  connect( mpBarTextEdit, SIGNAL( editingFinished() ),
+          this, SLOT( stopBarTextEdit() ) );
+  connect( mpBarTextEdit, SIGNAL( textChanged(const QString&)),
+          this, SLOT( resizeLineEditToContent() ) );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
 {
+  QElapsedTimer _timer;
+  _timer.start();
+  
   QPainter p( iPaintDevice );
   p.setBackgroundMode( Qt::OpaqueMode );
   QBrush b( Qt::white );
@@ -594,11 +612,27 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
   
   //on dessine le contour de la barre survolee si ce nest pas la courant
   if( mBarHoverIndex != getCurrentBar() )
-  { drawBarContour( &p, mBarHoverIndex, QColor( 125, 125, 125, 120 ) ); }
+  { drawBarContour( &p, mBarHoverIndex, getColor( cHover ) ); }
+  
   //on dessine le contour de la barre courante
-  drawBarContour( &p, getCurrentBar(), QColor( 0, 10, 210, 120 ) );
+  drawBarContour( &p, getCurrentBar(), getColor( cSelection ) );
+  
+  //on dessine le bar text Hover.
+  if( mBarTextHover != -1 )
+  {
+    p.save();
+    QPen pen = p.pen();
+    pen.setStyle( Qt::DashLine );
+    pen.setColor( getColor( cHover ) );
+    p.setPen(pen);
+    p.drawRoundedRect( getBar( mBarTextHover ).mTextScreenLayout, 2, 2 );
+    p.restore();
+  }
   
   drawPageFooters( &p );
+  
+  if( hasLogTiming() )
+  { getLog().log("PartitionViewer::draw: %.3f ms", _timer.nsecsElapsed() / 1000000.0 ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
@@ -683,6 +717,12 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
       QString a = strokeToString( x->getStrokeType(iBar, i) );
       iP->drawText( r2, Qt::AlignCenter, a );
     }
+    
+    //render text
+    iP->setFont(mBarTextFont);
+    {
+      iP->drawText( b.mTextRect, Qt::AlignCenter, x->getBarText(iBar) );
+    }
   }
   else
   {
@@ -703,7 +743,7 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
 //-----------------------------------------------------------------------------
 void PartitionViewer::drawBarContour( QPainter* iP, int iBarIndex, QColor iCol ) const
 {
-  if( iBarIndex > sbScale && hasFocus() )
+  if( iBarIndex >= sbScale && hasFocus() )
   {
     QPen pen = iP->pen();
     iP->save();
@@ -816,7 +856,7 @@ void PartitionViewer::drawSelectedNotes( QPainter* iP ) const
     iP->setWorldTransform( transfo );
     
     QPen pen = iP->pen();
-    pen.setColor( QColor( 0, 0, 255, 185 ) );
+    pen.setColor( getColor( cSelection ) );
     iP->setPen( pen );
     if( !r.isNull() )
     {
@@ -919,6 +959,19 @@ vector<int> PartitionViewer::getBarsFromPage( int iPage ) const
   return r;
 }
 //-----------------------------------------------------------------------------
+QColor PartitionViewer::getColor( colors iC ) const
+{
+  QColor r;
+  switch( iC )
+  {
+    case cHover: r = QColor( 125, 125, 125, 120 ); break;
+    case cSelection: r = QColor( 0, 10, 210, 120 ); break;
+    default: break;
+  }
+  
+  return r;
+}
+//-----------------------------------------------------------------------------
 Composition PartitionViewer::getComposition() const
 { return *x; }
 //-----------------------------------------------------------------------------
@@ -953,13 +1006,15 @@ int PartitionViewer::getBarRegion( barRegion br ) const
     case brNoteTopY: r = kBarHeight / 2 - fm.height() / 2; break;
     case brNoteBottomY: r = kBarHeight / 2 + fm.height() / 2; break;
     case brStrokeY: r = kBarHeight - fm.height(); break;
-    case brOrnementY: r = getBarRegion(brGraceNoteTopY) - 8; break;
+    case brOrnementY: r = getBarRegion(brGraceNoteTopY) - 5; break;
     case brMatraGroupY: r = getBarRegion(brNoteBottomY) - 4; break;
     case brGraceNoteTopY:
     {
       QFontMetrics fm(mGraceNotesFont);
-      r = getBarRegion( brNoteTopY ) - fm.height() / 2;
+      r = getBarRegion( brNoteTopY ) - fm.height() / 4;
     } break;
+    case brTextX: r = getBarRegion(brNoteStartX); break;
+    case brTextY: r = 2; break;
     default: break;
   }
   return r;
@@ -989,7 +1044,7 @@ int PartitionViewer::getInterNoteSpacing(int iBar, int iIndex1, int iIndex2 ) co
   //les notes d'un même matra
   if( matra1 == matra2 && matra1 != -1 && matra2 != -1 )
   {
-    r = 0;
+    r = 1;
     //si ce sont des graceNotes
     if( x->isGraceNote( iBar, iIndex1 ) && x->isGraceNote( iBar, iIndex2 ) )
     { r = 1; }
@@ -1138,6 +1193,9 @@ bool PartitionViewer::isNoteSelected(int iBar, int iNoteIndex ) const
   }
   return r;
 }
+//-----------------------------------------------------------------------------
+bool PartitionViewer::hasBarTextEditionPending() const
+{ return mEditingBarText != -1; }
 //-----------------------------------------------------------------------------
 bool PartitionViewer::hasLineEditionPending() const
 { return mEditingLineIndex != -1; }
@@ -1343,39 +1401,72 @@ Note PartitionViewer::makeNoteFromScale( noteValue iN ) const
 //-----------------------------------------------------------------------------
 void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
 {
+  QElapsedTimer _timer;
+  _timer.start();
+  
   QPoint pos = ipE->pos();
   Qt::CursorShape cs = Qt::ArrowCursor;
+  bool shouldUpdate = false;
   
   //intersection avec le titre
   if( mTitleScreenLayout.contains( pos ) )
   { cs = Qt::IBeamCursor; }
   
+  //intersection avec le text de la barre courante
+  const Bar& b = getBar( getCurrentBar() );
+  if( b.mTextScreenLayout.contains( pos ) )
+  {
+    shouldUpdate |= mBarTextHover != getCurrentBar();
+    mBarTextHover = getCurrentBar();
+    if( x->hasBarText( getCurrentBar() ) )
+    { cs = Qt::IBeamCursor; }
+  }
+  else if( mBarTextHover != -1 )
+  {
+    mBarTextHover = -1;
+    shouldUpdate |= true;
+  }
+
   //intersection avec les barres
-  for( int i = 0; i < x->getNumberOfBars(); ++i )
+  for( int i = sbScale; i < x->getNumberOfBars(); ++i )
   {
     const Bar& b = getBar(i);
     if( b.mScreenLayout.contains( pos ) )
-    { mBarHoverIndex = i; updateUi(); }
+    {
+      shouldUpdate |= mBarHoverIndex != i;
+      mBarHoverIndex = i;
+    }
     else if ( mBarHoverIndex == i )
-    { mBarHoverIndex = kNoBarHover; updateUi(); }
+    {
+      mBarHoverIndex = kNoBarIndex;
+      shouldUpdate |= true; }
   }
   
   //intersection avec les lignes
   for( int i = 0; i < x->getNumberOfLines(); ++i )
   {
     if( mLines[i].mHotSpot.contains( pos ) )
-    { mAddLineTextHover = i; updateUi(); }
+    {
+      shouldUpdate |= mAddLineTextHover != i;
+      mAddLineTextHover = i;
+    }
     else if(mAddLineTextHover == i)
-    { mAddLineTextHover = -1; updateUi(); }
+    {
+      mAddLineTextHover = -1;
+      shouldUpdate |= true;
+    }
       
     if( mLines[i].mTextScreenLayout.contains( pos ) )
     { cs = Qt::IBeamCursor; }
   }
   
+  if( shouldUpdate ) {updateUi();}
   setCursor( cs );
   
-  if( isDebugging() )
-  { updateUi(); }
+  if( hasLogTiming() )
+  {
+    getLog().log("PartitionViewer::mouseMove: %.3f ms", _timer.nsecsElapsed() / 1000000.0 );
+  }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
@@ -1386,8 +1477,16 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   if( mTitleScreenLayout.contains( pos ) )
   { startTitleEdit(); }
   
+  //intersection avec le text de la barre courante
+  const Bar& b = getBar( getCurrentBar() );
+  if( b.mTextScreenLayout.contains( pos ) )
+  {
+    mBarTextHover = -1;
+    startBarTextEdit( getCurrentBar() );
+  }
+  
   //intersection avec les barres
-  if( mBarHoverIndex != kNoBarHover )
+  if( mBarHoverIndex != kNoBarIndex )
   {
     setCurrentBar( mBarHoverIndex );
     setCurrentNote( x->getNumberOfNotesInBar( mBarHoverIndex ) - 1 );
@@ -1454,6 +1553,7 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
   {
     QPainter p(this);
     p.setFont(QFont("Arial", 10));
+    p.setBackgroundMode( Qt::OpaqueMode );
     p.setBrush( Qt::NoBrush );
     
     p.setPen( Qt::blue );
@@ -1481,6 +1581,8 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       Bar& b = getBar(i);
       //le layput page de la bar
       p.drawRect( b.mScreenLayout );
+      //layout du text
+      p.drawRect( b.mTextScreenLayout );
       
       //le layout page des notes
       for( int j = 0; j < b.mNoteScreenLayouts.size(); ++j )
@@ -1547,8 +1649,6 @@ void PartitionViewer::print( QPrinter* iPrinter )
   QPageLayout::Orientation previousOrientation = getLayoutOrientation();
   
   QPageLayout pl = iPrinter->pageLayout();
-  QMarginsF minMargin = pl.minimumMargins();
-  QMarginsF maxMargin = pl.maximumMargins();
   
   setPageSize( pl.pageSize().id() );
   setLayoutOrientation( pl.orientation() );
@@ -1702,6 +1802,14 @@ map< int, vector<int> > PartitionViewer::splitPerBar(
   return r;
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::startBarTextEdit( int iBar )
+{
+  mpBarTextEdit->setFocus();
+  mpBarTextEdit->setText( x->getBarText( iBar ) );
+  mEditingBarText = iBar;
+  updateUi();
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::startLineTextEdit( int iLineIndex )
 {
   mpLineTextEdit->setFocus();
@@ -1717,6 +1825,18 @@ void PartitionViewer::startTitleEdit()
   mpTitleEdit->setText( x->getTitle() );
   mEditingTitle = true;
   updateUi();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::stopBarTextEdit()
+{
+  if( hasBarTextEditionPending() )
+  {
+    x->setBarText( mEditingBarText, mpBarTextEdit->text() );
+    setBarAsDirty( mEditingBarText, true );
+    mEditingBarText = -1;
+    updateUi();
+    setFocus();
+  }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::stopLineTextEdit()
@@ -1762,7 +1882,7 @@ QString PartitionViewer::strokeToString( strokeType iSt ) const
 //-----------------------------------------------------------------------------
 int PartitionViewer::toPageIndex( QPoint iP ) const
 {
-  int r = 0;
+  int r = -1;
   for( int i = 0; i < getNumberOfPages(); ++i )
   {
     if( getPageRegion( prBody, i ).contains( iP ) )
@@ -1829,6 +1949,17 @@ void PartitionViewer::updateBar( int iBar )
     b.mMatraGroupsRect.push_back( QRect( QPoint( left, getBarRegion( brMatraGroupY ) ),
       QSize( right - left, kBeatGroupHeight ) ) );
   }
+  
+  //--- le text
+  fm = QFontMetrics( mBarTextFont );
+  QRect rect = fm.boundingRect( "+" );
+  int w = max( rect.width(), rect.height() );
+  rect.setTopLeft( QPoint(0, 0) );
+  rect.setSize( QSize(w, w) );
+  if( !x->getBarText(iBar).isEmpty() )
+  { rect.setSize( fm.boundingRect( x->getBarText( iBar ) ).size() ); }
+  rect.translate( getBarRegion( brTextX ), getBarRegion( brTextY ) );
+  b.mTextRect = rect;
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::updateBarLayout()
@@ -1905,9 +2036,16 @@ void PartitionViewer::updateBarLayout()
           b.mNoteScreenLayouts.push_back( n );
         }
         
-        mLayoutCursor += QPoint( fullLayout.width(), 0 );
+        /*Il faut mettre le -1 sur le layout.width() parce que width()
+         retourne 1 de plus que la coordonnée bottomRight. Donc, un point
+         qui peut etre a l'extérieur de pageBody...*/
+        mLayoutCursor += QPoint( fullLayout.width() - 1, 0 );
         fullLayout.setWidth(0);
         b.mScreenLayout = pageLayout;
+        
+        //textScreenLayout.
+        b.mTextScreenLayout = b.mTextRect;
+        b.mTextScreenLayout.translate( b.mScreenLayout.topLeft() );
         
         mBarsPerPage[ pageIndex ].push_back( i );
       }
@@ -1917,6 +2055,9 @@ void PartitionViewer::updateBarLayout()
 //-----------------------------------------------------------------------------
 void PartitionViewer::updateLayout()
 {
+  QElapsedTimer _timer;
+  _timer.start();
+  
   //layout du titre
   QRect l = QFontMetrics( mTitleFont ).boundingRect( x->getTitle() );
   QRect titleRegion = getRegion( rTitle );
@@ -1938,6 +2079,9 @@ void PartitionViewer::updateLayout()
   //--- le layout des ligne, il vient apres le layout des barres parce
   //qu'il en est dependant
   updateLineLayout();
+  
+  if( hasLogTiming() )
+  { getLog().log("PartitionViewer::updateLayout: %.3f ms", _timer.nsecsElapsed() / 1000000.0 ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::updateLineLayout()
@@ -2109,6 +2253,16 @@ void PartitionViewer::updateUi()
   }
   else{ mpTitleEdit->hide(); }
   
+  //place le line edit pour les barres
+  if( hasBarTextEditionPending() )
+  {
+    QPoint p = getBar(mEditingBarText).mTextScreenLayout.topLeft();
+    //voir la creation de mpLineTextEdit pour explication mapping.
+    p = mapToParent(p);
+    mpBarTextEdit->move( p );
+    mpBarTextEdit->show();
+  }else { mpBarTextEdit->hide(); }
+  
   //place la lineEdit pour les ligne
   if( hasLineEditionPending() )
   {
@@ -2188,14 +2342,36 @@ MainDialog::MainDialog() : QMainWindow(),
   }
   mLog.log( "Sargam started. version %d", getVersion() );
   mpPartitionViewer->setLog( &mLog );
-
-//!!! pour le beta, on met a verbose...
-setAsVerbose( true );
   
   //--- init viewer
   loadSettings();
   newFile();
+  
+  //!!! pour le beta, on met a verbose...
+  setAsVerbose( true );
+  
   resize( mpPartitionViewer->width() + 35, 800 );
+}
+//-----------------------------------------------------------------------------
+void MainDialog::applyPrinterOptions( QPrinter* iP )
+{
+  //appliquer les configurations de visualisation a l'imprimante
+  QPageSize ps = QPageSize( mpPartitionViewer->getPageSizeId() );
+  bool pageSizeAccepted = iP->setPageSize( ps );
+  
+  QPageLayout::Orientation o = mpPartitionViewer->getLayoutOrientation();
+  /*la marge ici sert a definir la region imprimable. 12 points correspond
+   environs a 5 mm. Il est nécessaire de mettre une marge valide pour que
+   setPageLayout fonctionne. Cette marge n'est pas très importante car le
+   widget PartitionViewer s'occupe de mettre une marge.*/
+  QMarginsF margins( 12, 12, 12, 12 );
+  QPageLayout pl( ps, o, margins, QPageLayout::Point );
+  bool pageLayoutAccepted = iP->setPageLayout( pl );
+  
+  if( !pageSizeAccepted )
+  { getLog().log( "Page size could not be accepted by current printer." ); }
+  if( !pageLayoutAccepted )
+  { getLog().log( "Page layout could not be accepted by current printer."); }
 }
 //-----------------------------------------------------------------------------
 void MainDialog::createUi()
@@ -2229,9 +2405,11 @@ void MainDialog::createUi()
   QShortcut* pRandomPart = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_G), this );
   connect( pRandomPart, SIGNAL(activated()), this, SLOT(generateRandomPartition()) );
   
-  QShortcut* pDebugS = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_D), this );
-  connect( pDebugS, SIGNAL(activated()), this, SLOT(toggleDebugging()) );
-  
+  QShortcut* pDebugD = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_D), this );
+  connect( pDebugD, SIGNAL(activated()), this, SLOT(toggleDebugging()) );
+  QShortcut* pDebugT = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_T), this );
+  connect( pDebugT, SIGNAL(activated()), this, SLOT(toggleLogTiming()) );
+
   setMenuBar( pMenuBar );
   
   //--- le reste du Ui
@@ -2294,10 +2472,19 @@ bool MainDialog::isVerbose() const
 //-----------------------------------------------------------------------------
 void MainDialog::loadSettings()
 {
+  int version = mSettings.value( "version", 1 ).toInt();
 	mLastSavePath = mSettings.value( "lastSavePath" ).toString();
-//  mAddTexturePath = mSettings.value( "addTexturePath" ).toString();
-//  mOpenCatalogPath = mSettings.value( "openCatalogPath" ).toString();
-//  mRefreshTexturePath = mSettings.value( "refreshTexturePath" ).toString();
+  
+  //---view
+  int psi = mSettings.value( "view/pageSizeId", QPageSize::Letter ).toInt();
+  int plo = mSettings.value( "view/pageLayoutOrientation", QPageLayout::Portrait ).toInt();
+  mpPartitionViewer->setPageSize( (QPageSize::PageSizeId)psi );
+  mpPartitionViewer->setLayoutOrientation( (QPageLayout::Orientation)plo );
+  
+  //--- log
+  bool v = mSettings.value( "verboseLog", false ).toBool();
+  setAsVerbose( v );
+  
   if( isVerbose() )
   { getLog().log( "MainDialog: settings loaded." ); }
 }
@@ -2333,65 +2520,84 @@ void MainDialog::openFile()
     mSaveFileName = s;
     mLastSavePath = QFileInfo(s).absolutePath();
     mComposition.fromBinary( utils::fromFile( s ) );
-    mpPartitionViewer->setComposition( &mComposition );
     saveSettings();
     
-    if( mComposition.hasError() )
+    if( !mComposition.hasError() )
+    {
+      mpPartitionViewer->setComposition( &mComposition );
+      
+      if( isVerbose() )
+      { getLog().log( "MainDialog: file %s opened.", s.toStdString().c_str() ); }
+    }
+    else
     {
       getLog().log( "Errors while opening file %s: %s.", s.toStdString().c_str(),
         mComposition.getAndClearLastErrors().toStdString().c_str() );
+      newFile();
     }
   }
-  
-  if( isVerbose() )
-  { getLog().log( "MainDialog: file %s opened.", s.toStdString().c_str() ); }
 }
 //-----------------------------------------------------------------------------
 void MainDialog::preferences()
 {
   QDialog d( this );
-  QComboBox* pPageSizeCombo = new QComboBox(&d);
-  QButtonGroup* pOrientation = new QButtonGroup( &d );
+  QComboBox* pPageSizeCombo;
+  QButtonGroup* pOrientation;
+  QCheckBox* pVerboseChkBx;
   
   QVBoxLayout* pMainLyt = new QVBoxLayout( &d );
-  pMainLyt->setMargin(2); pMainLyt->setSpacing(2);
   {
-    //--- taille du papier
-    QHBoxLayout* pPaperLyt = new QHBoxLayout();
+    QGroupBox* pVisualizationGrp = new QGroupBox( "Visualization", &d );
     {
-      pPaperLyt->setMargin(2); pPaperLyt->setSpacing(2);
-      QLabel* pLabel = new QLabel( "Page size: ", &d );
-      
-      fillPageSizeCombo( pPageSizeCombo );
-      int currrentIndex = distance( mAvailablePageSizeIds.begin(),
-            std::find( mAvailablePageSizeIds.begin(), mAvailablePageSizeIds.end(),
-              mpPartitionViewer->getPageSizeId() ) );
-      pPageSizeCombo->setCurrentIndex( currrentIndex );
-      
-      pPaperLyt->addWidget(pLabel);
-      pPaperLyt->addWidget(pPageSizeCombo);
-    }
+      QVBoxLayout* pVLyt = new QVBoxLayout();
+      {
+        //--- taille du papier
+        QHBoxLayout* pPaperLyt = new QHBoxLayout();
+        {
+          QLabel* pLabel = new QLabel( "Page size: ", &d );
+          
+          pPageSizeCombo = new QComboBox(&d);
+          fillPageSizeCombo( pPageSizeCombo );
+          int currrentIndex = distance( mAvailablePageSizeIds.begin(),
+                                       std::find( mAvailablePageSizeIds.begin(), mAvailablePageSizeIds.end(),
+                                                 mpPartitionViewer->getPageSizeId() ) );
+          pPageSizeCombo->setCurrentIndex( currrentIndex );
+          
+          pPaperLyt->addWidget(pLabel);
+          pPaperLyt->addWidget(pPageSizeCombo);
+        }
+        
+        //--- Portrait, landscape
+        QHBoxLayout* pOrientationLyt = new QHBoxLayout();
+        {
+          pOrientation = new QButtonGroup( &d );
+          QCheckBox* pPortrait = new QCheckBox( "Portrait", &d );
+          QCheckBox* pLandscape = new QCheckBox( "Landscape", &d );
+          pOrientation->addButton( pPortrait, 0 );
+          pOrientation->addButton( pLandscape, 1 );
+          
+          if( mpPartitionViewer->getLayoutOrientation() == QPageLayout::Portrait )
+          { pPortrait->setCheckState( Qt::Checked ); }
+          else{ pLandscape->setCheckState( Qt::Checked ); }
+          
+          pOrientationLyt->addStretch(1);
+          pOrientationLyt->addWidget(pPortrait);
+          pOrientationLyt->addWidget(pLandscape);
+        }
+        
+        pVLyt->addLayout( pPaperLyt );
+        pVLyt->addLayout( pOrientationLyt );
+      } //vLyt
+
+      pVisualizationGrp->setLayout(pVLyt);
+    } //groupbox
     
-    //--- Portrait, landscape
-    QHBoxLayout* pOrientationLyt = new QHBoxLayout();
-    {
-      QCheckBox* pPortrait = new QCheckBox( "Portrait", &d );
-      QCheckBox* pLandscape = new QCheckBox( "Landscape", &d );
-      pOrientation->addButton( pPortrait, 0 );
-      pOrientation->addButton( pLandscape, 1 );
-      
-      if( mpPartitionViewer->getLayoutOrientation() == QPageLayout::Portrait )
-      { pPortrait->setCheckState( Qt::Checked ); }
-      else{ pLandscape->setCheckState( Qt::Checked ); }
-      
-      pOrientationLyt->addStretch(1);
-      pOrientationLyt->addWidget(pPortrait);
-      pOrientationLyt->addWidget(pLandscape);
-    }
+    //--- log
+    pVerboseChkBx = new QCheckBox( "Verbose log", &d);
+    pVerboseChkBx->setChecked( isVerbose() );
     
     //--- ok, Cancel
     QHBoxLayout* pBottomButLyt = new QHBoxLayout();
-    pBottomButLyt->setMargin(2); pBottomButLyt->setSpacing(2);
     {
       QPushButton* pOk = new QPushButton( "Ok", &d );
       connect( pOk, SIGNAL( clicked() ), &d, SLOT( accept() ) );
@@ -2403,20 +2609,28 @@ void MainDialog::preferences()
       pBottomButLyt->addWidget(pOk);
       pBottomButLyt->addWidget(pCancel);
     }
-    pMainLyt->addLayout( pPaperLyt );
-    pMainLyt->addLayout( pOrientationLyt );
+    
+    pMainLyt->addWidget( pVisualizationGrp );
+    pMainLyt->addWidget( pVerboseChkBx );
     pMainLyt->addStretch(1);
     pMainLyt->addLayout( pBottomButLyt );
   }
   
   if (d.exec() == QDialog::Accepted)
   {
+    //pageSize
     mpPartitionViewer->setPageSize( mAvailablePageSizeIds[ pPageSizeCombo->currentIndex() ] );
     
+    //layout orientation
     QPageLayout::Orientation o;
     if( pOrientation->checkedId() == 0 ){ o = QPageLayout::Portrait; }
     else{ o = QPageLayout::Landscape; }
     mpPartitionViewer->setLayoutOrientation( o );
+    
+    //log
+    setAsVerbose( pVerboseChkBx->isChecked() );
+    
+    saveSettings();
   }
   
   if( isVerbose() )
@@ -2426,7 +2640,8 @@ void MainDialog::preferences()
 void MainDialog::print()
 {
   QPrinter p;
-  //appliquer les configurations de visualisation a l'imprimante
+  applyPrinterOptions( &p );
+  
   QPrintDialog d( &p, this );
   if (d.exec() == QDialog::Accepted)
   { mpPartitionViewer->print( &p ); }
@@ -2438,7 +2653,8 @@ void MainDialog::print()
 void MainDialog::printPreview()
 {
   QPrinter p;
-  //appliquer les configurations de visualisation a l'imprimante
+  applyPrinterOptions( &p );
+  
   QPrintPreviewDialog d( &p, this );
   connect( &d, SIGNAL( paintRequested(QPrinter*) ),
           this, SLOT( generatePrintPreview(QPrinter*) ) );
@@ -2490,10 +2706,16 @@ void MainDialog::saveAs()
 //-----------------------------------------------------------------------------
 void MainDialog::saveSettings()
 {
+  mSettings.setValue( "version", kSettingVersion );
 	mSettings.setValue( "lastSavePath", mLastSavePath );
-//	mSettings.setValue( "addTexturePath", mAddTexturePath );
-//  mSettings.setValue( "openCatalogPath", mOpenCatalogPath );
-//  mSettings.setValue( "refreshTexturePath", mRefreshTexturePath );
+  
+  //---view options
+	mSettings.setValue( "view/pageSizeId", mpPartitionViewer->getPageSizeId() );
+  mSettings.setValue( "view/pageLayoutOrientation", mpPartitionViewer->getLayoutOrientation() );
+
+  //--- log
+  mSettings.setValue( "verboseLog", isVerbose() );
+  
   if( isVerbose() )
   { getLog().log( "MainDialog: save settings." ); }
 }
@@ -2509,10 +2731,13 @@ void MainDialog::setAsVerbose( bool iV )
 void MainDialog::toggleDebugging()
 {
   mpPartitionViewer->setAsDebugging( !mpPartitionViewer->isDebugging() );
-  
-  if( isVerbose() )
-  { getLog().log( "MainDialog: debugging toggled to %s.", mpPartitionViewer->isDebugging()?"true":"false" ); }
+  getLog().log( "MainDialog: debugging toggled to %s.", mpPartitionViewer->isDebugging()?"true":"false" );
 }
+//-----------------------------------------------------------------------------
+void MainDialog::toggleLogTiming()
+{
+  mpPartitionViewer->setLogTiming( !mpPartitionViewer->hasLogTiming() );
+  getLog().log( "MainDialog: logTiming toggled to %s.", mpPartitionViewer->hasLogTiming()?"true":"false" );}
 //-----------------------------------------------------------------------------
 void MainDialog::updateUi()
 {
