@@ -18,21 +18,27 @@ http://stackoverflow.com/questions/22745728/cmake-set-icon-for-a-mac-osx-app
 //-----------------------------------------------------------------------------
 //--- commandes
 //-----------------------------------------------------------------------------
-add bar (space)
-add bar efore (shift space)
-add grace note (g)
-add line (enter)
+add bar (space)                        *
+add bar efore (shift space)            *
+add grace note (selection)(g)          *
+remove grace note (selection)(shift+g) *
+add line (enter)                       *
 add note (1-7)
-add matra (selection)(m)
-add ornement (selection)(k)|(b)
-add stroke (q)|(w)|(e)
-break matra (selection)(shift + m)
-break ornement (selection)(shift + k)|(shift + b)
-dec octove (-)
+add matra (selection)(m)               *
+break matra (selection)(shift + m)     *
+add ornement (selection)(k)|(b)        *
+break ornement (selection)(shift + k)|(shift + b) *
+add stroke (q)|(w)|(e)                 *
+  da
+  ra
+  diri
+dec octove (-)                         *
 erase (backspace)
   efface une note quand le curseur est sur une note
   efface la barre quand la barre est vide
   efface la ligne quand le curseur est au début de la bare et que la barre est en debut de ligne
-inc octave (+)
-remove grace note (selection)(shift+g)
-shift note (s)
+inc octave (+)                         *
+shift note (s)                         *
+	komal
+	shuddh
+	tivra
