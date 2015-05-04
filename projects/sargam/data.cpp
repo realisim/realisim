@@ -179,8 +179,11 @@ void Composition::addLine( int iBarIndex, QString iText /*= QString*/ )
 //------------------------------------------------------------------------------
 void Composition::addMatra( int iBar, std::vector<int> iNoteIndices )
 {
-  Bar& b = getBar( iBar );
-  b.mMatras.push_back( iNoteIndices );
+  if( !iNoteIndices.empty() )
+  {
+    Bar& b = getBar( iBar );
+    b.mMatras.push_back( iNoteIndices );
+  }
 }
 //------------------------------------------------------------------------------
 /*Ajoute une note à la fin de la bar iBarIndex*/
@@ -313,6 +316,11 @@ void Composition::eraseBar( int iBarIndex )
       }
       else{ eraseLine( cl ); }
     }
+    /*on efface toutes les notes de la barres afin de bien nettoyer
+     les ornements...*/
+    for( int i = getNumberOfNotesInBar(iBarIndex) - 1; i >=0 ; --i )
+    { eraseNote(iBarIndex, i); }
+    
     mBars.erase( mBars.begin() + iBarIndex );
     shiftLines(-1, iBarIndex);
     shiftOrnements(-1, iBarIndex);
@@ -383,41 +391,32 @@ void Composition::eraseNote( int iBar, int iIndex )
 void Composition::eraseNoteFromMatra( int iBar, int iIndex )
 {
   Bar& b = getBar( iBar );
-  //on enleve iNoteIndex de tous les matra de la barre iBar
-  for( int i = 0; i < getNumberOfMatraInBar(iBar); ++i )
+  int i = findMatra(iBar, iIndex);
+  if( i >= 0 )
   {
-    vector<int>& bg = b.mMatras[i];
-    vector<int>::iterator it = bg.begin();
-    for( ; it != bg.end(); ++it )
-    {
-      if( *it == iIndex )
-      {
-        it = bg.erase( it );
-        break;
-      }
-    }
+    vector<int>& m = b.mMatras[i];
+    m.erase( find( m.begin(), m.end(), iIndex ) );
+    if( m.empty() ){ eraseMatra(iBar, i); }
   }
 }
 //------------------------------------------------------------------------------
 /*voir eraseNoteFromMatra.*/
 void Composition::eraseNoteFromOrnement( int iBar, int iIndex )
 {
-  vector<Ornement>::iterator itOrn = mOrnements.begin();
-  for( ; itOrn != mOrnements.end(); )
+  int i = findOrnement(iBar, iIndex);
+  if( i >= 0 )
   {
-    vector< NoteLocator >::iterator it = itOrn->mNotes.begin();
-    for( ; it != itOrn->mNotes.end(); ++it )
+    Ornement& o = mOrnements[i];
+    vector< NoteLocator >::iterator it = o.mNotes.begin();
+    for( ; it != o.mNotes.end(); ++it )
     {
       if( (*it).getBar() == iBar && (*it).getIndex() == iIndex )
       {
-        it = itOrn->mNotes.erase( it );
+        o.mNotes.erase( it );
         break;
       }
     }
-    
-    if( itOrn->mNotes.size() == 0 )
-    { itOrn = mOrnements.erase( itOrn ); }
-    else{ ++itOrn; }
+    if( o.mNotes.empty() ) { eraseOrnement( i ); }
   }
 }
 //------------------------------------------------------------------------------

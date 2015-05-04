@@ -22,11 +22,12 @@ public:
 	~MainDialog(){};
 
   const realisim::utils::Log& getLog() const {return mLog;}
-  int getVersion() const { return 1; }
+  int getVersion() const { return 2; }
   bool isVerbose() const;
   void setAsVerbose( bool );
   
 protected slots:
+  void about();
   void ensureVisible( QPoint );
   void generatePrintPreview(QPrinter*);
   void generateRandomPartition();
@@ -43,9 +44,9 @@ protected slots:
   void updateUi();
   
 protected:
-  enum action{ aAddBar, aAddPreviousBar, aLineJump, aAddMatra, aRemoveMatra, aAddKrintan,
-    aAddMeend, aRemoveOrnement, aAddGraceNote, aRemoveGraceNote,
-    aDecreaseOctave, aIncreaseOctave, aTivra, aShuddh, aKomal,
+  enum action{ aAddBar, aLineJump, aAddMatra, aRemoveMatra, aAddKrintan,
+    aAddMeend, aAddGamak, aRemoveOrnement, aAddGraceNote, aRemoveGraceNote,
+    aDecreaseOctave, aIncreaseOctave, aRest, aChik, aPhrasing, aTivra, aShuddh, aKomal,
     aDa, aRa, aDiri, aRemoveStroke, aUnknown };
   
   void applyPrinterOptions( QPrinter* );

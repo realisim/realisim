@@ -24,7 +24,6 @@ public:
   ~PartitionViewer();
   
   void commandAddBar();
-  void commandAddPreviousBar();
   void commandAddGraceNotes();
   void commandAddLine();
   void commandAddNote( noteValue );
@@ -178,6 +177,14 @@ protected:
   Note makeNoteFromScale( noteValue ) const;
   virtual void mouseMoveEvent( QMouseEvent* );
   virtual void mouseReleaseEvent( QMouseEvent* );
+  void moveGraceNoteBackward( int, int );
+  void moveGraceNoteForward( int, int );
+  void moveMatraBackward( int, int );
+  void moveMatraForward( int, int );
+  void moveOrnementBackward( int, int );
+  void moveOrnementForward( int, int );
+  void moveStrokeBackward( int, int );
+  void moveStrokeForward( int, int );
   QString noteToString( Note ) const;
   virtual void paintEvent(QPaintEvent*);
   void setBarAsDirty( int, bool );
