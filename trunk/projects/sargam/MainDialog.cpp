@@ -108,13 +108,15 @@ void MainDialog::createUi()
   pFile->addAction( QString("Print..."), this, SLOT( print() ),
                    QKeySequence::Print );
   pFile->addAction( QString("Print preview..."), this, SLOT( printPreview() ) );
+  pFile->addAction( QString("About..."), this, SLOT( about() ) );
   
   //--- tool bar
   createToolBar();
   
-  //--- view
+  //--- preferences
   QMenu* pPreferences = pMenuBar->addMenu("pPreferences");
   pPreferences->addAction( "Options...", this, SLOT( preferences() ) );
+  
   
   //debug action
   QShortcut* pRandomPart = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_G), this );
@@ -135,7 +137,6 @@ void MainDialog::createUi()
   mpScrollArea->setAlignment( Qt::AlignHCenter );
   {
     mpPartitionViewer = new PartitionViewer( pMainWidget );
-    mpPartitionViewer->setAsDebugging( true );
     mpPartitionViewer->setFocus();
     connect( mpPartitionViewer, SIGNAL( ensureVisible(QPoint) ),
             this, SLOT( ensureVisible(QPoint) ) );
@@ -145,6 +146,51 @@ void MainDialog::createUi()
     mpScrollArea->setWidget( mpPartitionViewer );
   }
   pLyt->addWidget( mpScrollArea );
+}
+//-----------------------------------------------------------------------------
+void MainDialog::about()
+{
+  QDialog d( this );
+  
+  QVBoxLayout* pMainLyt = new QVBoxLayout( &d );
+  pMainLyt->setMargin(2); pMainLyt->setSpacing(2);
+  {
+    //Verbatim
+    QString s;
+    s.sprintf(
+      "<div align='center'> <b>Sargam</b> </div>"
+      "Version: %d"
+      "<p>The intention behind this product is to ease learning and sharing of the<br>"
+      "sitar. Please share your compositions/transcriptions.</p>"
+      "<p>Original idea and design by Pierre-Olivier Beaudoin (no, I am not the<br>"
+      "male model you will find googling!).</p>"
+      "Many thanks to the following contributors:"
+      "<ul>"
+        "<li>Lars Jacobsen</li>"
+        "<li>www.reddit.com/r/sitar</li>"
+      "</ul>"
+      "For any information regarding the software contact us at "
+      "sargam.software@gmail.com\n\n", getVersion() );
+    
+    QLabel* pVerbatim = new QLabel(this);
+    pVerbatim->setText(s);
+    
+    //--- close
+    QHBoxLayout* pBottomButLyt = new QHBoxLayout();
+    {
+      QPushButton* pClose = new QPushButton( "Close", &d );
+      connect( pClose, SIGNAL( clicked() ), &d, SLOT( accept() ) );
+      
+      pBottomButLyt->addStretch(1);
+      pBottomButLyt->addWidget(pClose);
+    }
+    
+    pMainLyt->addWidget(pVerbatim);
+    pMainLyt->addStretch(1);
+    pMainLyt->addLayout( pBottomButLyt );
+  }
+  
+  d.exec();
 }
 //-----------------------------------------------------------------------------
 void MainDialog::createToolBar()
@@ -163,13 +209,6 @@ void MainDialog::createToolBar()
                   "<B>(spacebar)</B>");
     mActions[ aAddBar ] = a;
     mpToolBar->addAction( mActions[aAddBar] );
-  }
-  {
-    QAction* a = new QAction( "add previous bar", this );
-    a->setToolTip("Adds a bar before the current bar.<br>"
-                  "<B>(shift+spaceba)</B>");
-    mActions[ aAddPreviousBar ] = a;
-    mpToolBar->addAction( mActions[aAddPreviousBar] );
   }
   {
     QAction* a = new QAction( "line jump", this );
@@ -201,10 +240,17 @@ void MainDialog::createToolBar()
   }
   {
     QAction* a = new QAction( "meend", this );
-    a->setToolTip("Adds a meed over the selection.<br>"
+    a->setToolTip("Adds a meend over the selection.<br>"
                   "<B>(K)</B>");
     mActions[ aAddMeend ] = a;
     mpToolBar->addAction( mActions[aAddMeend] );
+  }
+  {
+    QAction* a = new QAction( "gamak", this );
+    a->setToolTip("Adds a gamak over the selection.<br>"
+                  "<B>(N)</B>");
+    mActions[ aAddGamak ] = a;
+    mpToolBar->addAction( mActions[aAddGamak] );
   }
   {
     QAction* a = new QAction( "remove ornement", this );
@@ -240,6 +286,27 @@ void MainDialog::createToolBar()
                   "<B>(-)</B>");
     mActions[ aDecreaseOctave ] = a;
     mpToolBar->addAction( mActions[aDecreaseOctave] );
+  }
+  {
+    QAction* a = new QAction( "rest", this );
+    a->setToolTip("Inserts a rest.<br>"
+                  "<B>(R)</B>");
+    mActions[ aRest ] = a;
+    mpToolBar->addAction( mActions[aRest] );
+  }
+  {
+    QAction* a = new QAction( "chik", this );
+    a->setToolTip("Inserts a chik.<br>"
+                  "<B>(C)</B>");
+    mActions[ aChik ] = a;
+    mpToolBar->addAction( mActions[aChik] );
+  }
+  {
+    QAction* a = new QAction( "phrasing", this );
+    a->setToolTip("Inserts a comma for phrasing.<br>"
+                  "<B>(,)</B>");
+    mActions[ aPhrasing ] = a;
+    mpToolBar->addAction( mActions[aPhrasing] );
   }
   {
     QAction* a = new QAction( "komal", this );
@@ -634,17 +701,20 @@ void MainDialog::toolActionTriggered(QAction* ipA)
   switch (a)
   {
     case aAddBar: mpPartitionViewer->commandAddBar(); break;
-    case aAddPreviousBar: mpPartitionViewer->commandAddPreviousBar(); break;
     case aLineJump: mpPartitionViewer->commandAddLine(); break;
     case aAddMatra: mpPartitionViewer->commandAddMatra(); break;
     case aRemoveMatra: mpPartitionViewer->commandBreakMatrasFromSelection(); break;
     case aAddKrintan: mpPartitionViewer->commandAddOrnement( otKrintan ); break;
     case aAddMeend: mpPartitionViewer->commandAddOrnement( otMeend ); break;
+    case aAddGamak: mpPartitionViewer->commandAddOrnement( otGamak ); break;
     case aRemoveOrnement: mpPartitionViewer->commandBreakOrnementsFromSelection(); break;
     case aAddGraceNote: mpPartitionViewer->commandAddGraceNotes(); break;
     case aRemoveGraceNote: mpPartitionViewer->commandRemoveSelectionFromGraceNotes(); break;
     case aDecreaseOctave: mpPartitionViewer->commandDecreaseOctave(); break;
     case aIncreaseOctave: mpPartitionViewer->commandIncreaseOctave(); break;
+    case aRest: mpPartitionViewer->commandAddNote( nvRest ); break;
+    case aChik: mpPartitionViewer->commandAddNote( nvChik ); break;
+    case aPhrasing: mpPartitionViewer->commandAddNote( nvComma ); break;
     case aTivra: mpPartitionViewer->commandShiftNote(); break;
     case aShuddh: mpPartitionViewer->commandShiftNote(); break;
     case aKomal: mpPartitionViewer->commandShiftNote(); break;
@@ -672,8 +742,10 @@ void MainDialog::updateUi()
   if( x->getCurrentBar() >= 0 )
   {
     mActions[aAddBar]->setEnabled(true);
-    mActions[aAddPreviousBar]->setEnabled(true);
     mActions[aLineJump]->setEnabled(true);
+    mActions[aRest]->setEnabled(true);
+    mActions[aChik]->setEnabled(true);
+    mActions[aPhrasing]->setEnabled(true);
     if( x->hasSelection() )
     {
       //matras
@@ -696,6 +768,7 @@ void MainDialog::updateUi()
       mActions[aRemoveOrnement]->setEnabled(canBreakOrnement);
       mActions[aAddKrintan]->setEnabled(!canBreakOrnement);
       mActions[aAddMeend]->setEnabled(!canBreakOrnement);
+      mActions[aAddGamak]->setEnabled(!canBreakOrnement);
       
       //graceNote
       bool canRemoveGraceNote = true;

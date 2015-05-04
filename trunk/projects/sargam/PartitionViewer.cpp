@@ -1,4 +1,4 @@
-/* */
+	/* */
 
 #include "MainDialog.h"
 #include "PartitionViewer.h"
@@ -29,6 +29,7 @@ namespace
   const int kInterNoteGap = 5;
   const int kMeendHeight = 10;
   const int kKrintanHeight = 6;
+  const int kGamakHeight = 4;
   const int kBeatGroupHeight = 10;
   const int kNoBarIndex = -5;
   
@@ -140,48 +141,76 @@ void PartitionViewer::clearSelection()
 int PartitionViewer::cmToPixel( double iCm ) const
 { return logicalDpiX() * iCm / 2.54; }
 //-----------------------------------------------------------------------------
+/*Ajoute une barre apres la barre courante, les notes suivant le curseur sont
+  ajoutées à la nouvelle barre*/
 void PartitionViewer::commandAddBar()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
   if( getCurrentBar() < 0 ){ return; }
   
+  // ajout de la barre
   int cb = getCurrentBar();
   addBar( cb );
+  clearSelection();
+  
+  //déplacement des notes dans la nouvelle barre. Le + 1 dans la boucle est pour
+  //déplacer les notes qui suivent le curseur.
+  vector<NoteLocator> vn;
+  int moveFromIndex = getCurrentNote() + 1;
+  for( int i = moveFromIndex; i < x->getNumberOfNotesInBar(cb); ++i )
+  {
+    vn.push_back( NoteLocator( cb, i) );
+    x->addNote( cb+1, x->getNote(cb, i) );
+  }
+  
+  //deplace les matras
+  moveMatraForward( cb, moveFromIndex );
+  //deplace les ornements
+  moveOrnementForward( cb, moveFromIndex );
+  //déplace les strokes
+  moveStrokeForward( cb, moveFromIndex );
+  //déplace note de grace
+  moveGraceNoteForward(cb, moveFromIndex);
+  
+  //efface le note de la barre courrante
+  for( int i = vn.size() - 1; i >= 0; --i )
+  { x->eraseNote( vn[i].getBar(), vn[i].getIndex() ); }
+  
+  setBarAsDirty( cb, true );
+  setBarAsDirty( cb + 1, true );
   setCurrentNote( -1 );
   setCurrentBar( cb + 1 );
-  clearSelection();
-  setBarAsDirty( getCurrentBar(), true );
   updateUi();
   
   if( isVerbose() )
   { getLog().log( "PartitionViewer: commandAddBar." ); }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::commandAddPreviousBar()
-{
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  if( x->isStartOfLine( getCurrentBar() ) )
-  {
-    int cl = x->findLine( getCurrentBar() );
-    QString t = x->getLineText( cl );
-    x->eraseLine( cl );
-    addBar( getCurrentBar() - 1 );
-    x->addLine( getCurrentBar(), t );
-  }
-  else
-  { addBar( getCurrentBar() - 1 ); }
-  
-  setCurrentNote( -1 );
-  setCurrentBar( getCurrentBar() );
-  clearSelection();
-  setBarAsDirty( getCurrentBar(), true );
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandAddPreviousBar." ); }
-}
+//void PartitionViewer::commandAddPreviousBar()
+//{
+//  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+//  if( getCurrentBar() < 0 ){ return; }
+//  
+//  if( x->isStartOfLine( getCurrentBar() ) )
+//  {
+//    int cl = x->findLine( getCurrentBar() );
+//    QString t = x->getLineText( cl );
+//    x->eraseLine( cl );
+//    addBar( getCurrentBar() - 1 );
+//    x->addLine( getCurrentBar(), t );
+//  }
+//  else
+//  { addBar( getCurrentBar() - 1 ); }
+//  
+//  setCurrentNote( -1 );
+//  setCurrentBar( getCurrentBar() );
+//  clearSelection();
+//  setBarAsDirty( getCurrentBar(), true );
+//  updateUi();
+//  
+//  if( isVerbose() )
+//  { getLog().log( "PartitionViewer: commandAddPreviousBar." ); }
+//}
 //-----------------------------------------------------------------------------
 /*Les notes de la selection deviennent des graces notes si elle ne le sont
  pas déjà.*/
@@ -211,6 +240,7 @@ void PartitionViewer::commandAddLine()
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
   if( getCurrentBar() < 0 ){ return; }
   
+  commandAddBar();
   x->addLine( getCurrentBar() );
   setCurrentNote( -1 );
   setBarAsDirty( getCurrentBar(), true );
@@ -434,27 +464,24 @@ void PartitionViewer::commandErase()
   else
   {
     int cb = getCurrentBar();
-    if( x->getNumberOfNotesInBar(cb) > 0 )
+    if( getCurrentNote() != -1 )
     {
-      /*On efface la ligne si la note courante est -1 et que la barre est
-        un début de ligne. Par contre, on ne peut pas effacer la ligne 0.*/
-      if( getCurrentNote() == -1 && x->isStartOfLine( cb ) &&
-         x->findLine( cb ) != 0 )
-      { x->eraseLine( x->findLine( cb ) ); }
-      else
-      {
-        x->eraseNote( cb, getCurrentNote() );
-        setCurrentNote( getCurrentNote() - 1 );
-      }
+      x->eraseNote( cb, getCurrentNote() );
+      setCurrentNote( getCurrentNote() - 1 );
     }
     else
     {
+      /*On efface la ligne si la note courante est -1 et que la barre est
+       un début de ligne. Par contre, on ne peut pas effacer la ligne 0.*/
+      if( x->isStartOfLine( cb ) && x->findLine( cb ) != 0 )
+      { x->eraseLine( x->findLine( cb ) ); }
       /*On ne peut pas effacer la derniere barre...*/
       if( x->getNumberOfBars() > 1 )
       {
+        int i = x->getNumberOfNotesInBar( cb - 1 ) - 1;
         eraseBar( cb );
         setCurrentBar( cb - 1 );
-        setCurrentNote( x->getNumberOfNotesInBar( getCurrentBar() ) - 1 );
+        setCurrentNote( i );
       }
     }
     setBarAsDirty( getCurrentBar(), true );
@@ -708,13 +735,38 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
         iP->setClipRect( QRect( QPoint(0, 0), b.mScreenLayout.size() ) );
         iP->translate( m.getOffset( iBar ), 0 );
         iP->translate( m.getDestination( iBar ), 0 );
-        if( x->getOrnementType(i) == otMeend )
-        { iP->drawArc( r, 10 * 16, 170 * 16 ); }
-        else //krintan
+        ornementType ot = x->getOrnementType(i);
+        switch (ot)
         {
-          iP->drawLine( r.bottomLeft(), r.topLeft() );
-          iP->drawLine( r.topLeft(), r.topRight() );
-          iP->drawLine( r.topRight(), r.bottomRight() );
+          case otMeend:
+            { iP->drawArc( r, 10 * 16, 170 * 16 ); } break;
+          case otKrintan:
+          {
+            iP->drawLine( r.bottomLeft(), r.topLeft() );
+            iP->drawLine( r.topLeft(), r.topRight() );
+            iP->drawLine( r.topRight(), r.bottomRight() );
+          } break;
+          case otGamak:
+          {
+            iP->save();
+            iP->translate( r.topLeft() );
+            QFontMetrics fm(mBarFont);
+            QPainterPath pp;
+            //20 point par 2*Pi.
+            //3*Pi par 2 notes -> 1.5Pi par notes
+            //combien de pi à faire...
+            const double numPointsPer2Pi = 20.0;
+            const double pi = 3.1415629;
+            const float nbPi = r.width() * 1.5 / fm.width("S ");
+            const double numIter = nbPi * numPointsPer2Pi / 2.0;
+            const double incPerIter = 2*pi / numPointsPer2Pi;
+            double eval = 0;
+            for( double i = 0; i < numIter; i ++, eval += incPerIter )
+            { pp.lineTo( i / numIter * r.width(), -sin(eval)/2 * r.height() ); }
+            iP->drawPath( pp );
+            iP->restore();
+          } break;
+          default:break;
         }
         
         iP->restore();
@@ -911,14 +963,31 @@ void PartitionViewer::drawTitle( QPainter* iP ) const
   iP->restore();
 }
 //-----------------------------------------------------------------------------
-/*Efface la barre iBar des donnees et des donnees d'affichage.*/
+/*Efface la barre iBar des donnees et des donnees d'affichage. Si la barre 
+  contient des notes, ces notes sont transférées à la barre précédente*/
 void PartitionViewer::eraseBar( int iBar )
 {
+  int moveToIndex = x->getNumberOfNotesInBar( iBar - 1 );
+  //transfer des notes dans la barre précédente
+  for( int i = 0; i < x->getNumberOfNotesInBar( iBar ); ++i )
+  { x->addNote(iBar - 1, x->getNote( iBar, i ) ); }
+  
+  //transfert des matra
+  moveMatraBackward(iBar, moveToIndex);
+  //transfert des ornements
+  moveOrnementBackward(iBar, moveToIndex);
+  //transfert des strokes
+  moveStrokeBackward(iBar, moveToIndex);
+  //transfert des notes de grace
+  moveGraceNoteBackward(iBar, moveToIndex);
+  
+  //efface des données d'affichage
   if( iBar >= 0 && iBar < x->getNumberOfBars() )
   {
     mBars.erase( mBars.begin() + iBar );
     if( x->getNumberOfBars() > 0 ){ setBarAsDirty(0, true); }
   }
+  //efface les données
   x->eraseBar( iBar );
 }
 //-----------------------------------------------------------------------------
@@ -1242,7 +1311,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
     case Qt::Key_6: commandAddNote( nvDha );  break;
     case Qt::Key_7: commandAddNote( nvNi );  break;
     case Qt::Key_Comma: commandAddNote( nvComma ); break;
-    case Qt::Key_C: commandAddNote( nvChick ); break;
+    case Qt::Key_C: commandAddNote( nvChik ); break;
     case Qt::Key_B: //Bend - meend
       if( (ipE->modifiers() & Qt::ShiftModifier) )
       { commandBreakOrnementsFromSelection(); }
@@ -1267,6 +1336,11 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
       if( (ipE->modifiers() & Qt::ShiftModifier) )
       { commandBreakMatrasFromSelection(); }
       else{ commandAddMatra(); }
+      break;
+    case Qt::Key_N: //gamak
+      if( (ipE->modifiers() & Qt::ShiftModifier) )
+      { commandBreakOrnementsFromSelection(); }
+      else{ commandAddOrnement( otGamak ); }
       break;
     case Qt::Key_Q:
       if( (ipE->modifiers() & Qt::ShiftModifier) )
@@ -1401,11 +1475,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
         }
       }
     } break;
-    case Qt::Key_Space:
-      if( (ipE->modifiers() & Qt::ShiftModifier) )
-      { commandAddPreviousBar(); }
-      else { commandAddBar(); }
-      break;
+    case Qt::Key_Space: commandAddBar(); break;
     case Qt::Key_Backspace: commandErase(); break;
     case Qt::Key_Return: commandAddLine(); break;
     case Qt::Key_Plus: commandIncreaseOctave(); break;
@@ -1549,6 +1619,168 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   emit interactionOccured();
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::moveGraceNoteBackward(int iFromBar, int iToIndex)
+{
+  for( int i = 0; i < x->getNumberOfGraceNotesInBar(iFromBar); ++i )
+  {
+    int ni = x->getNoteIndexFromGraceNote(iFromBar, i) + iToIndex;
+    { addNoteToSelection(iFromBar-1, ni); }
+    commandAddGraceNotes();
+    clearSelection();
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::moveGraceNoteForward(int iFromBar, int iFromIndex)
+{
+  for( int i = 0; i < x->getNumberOfGraceNotesInBar(iFromBar); ++i )
+  {
+    int ni = x->getNoteIndexFromGraceNote(iFromBar, i) - iFromIndex;
+    if( ni >= 0 )
+    { addNoteToSelection(iFromBar+1, ni); }
+    commandAddGraceNotes();
+    clearSelection();
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::moveMatraBackward(int iFromBar, int iToIndex)
+{
+  for( int i = 0; i < x->getNumberOfMatraInBar(iFromBar); ++i )
+  {
+    for( int j = 0; j < x->getNumberOfNotesInMatra(iFromBar, i); ++j )
+    {
+      int ni = x->getNoteIndexFromMatra(iFromBar, i, j) + iToIndex;
+      { addNoteToSelection(iFromBar - 1, ni ); }
+    }
+    commandAddMatra();
+    clearSelection();
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::moveMatraForward(int iFromBar, int iFromIndex)
+{
+  for( int i = 0; i < x->getNumberOfMatraInBar(iFromBar); ++i )
+  {
+    for( int j = 0; j < x->getNumberOfNotesInMatra(iFromBar, i); ++j )
+    {
+      int ni = x->getNoteIndexFromMatra(iFromBar, i, j) - iFromIndex;
+      if( ni >= 0 )
+      { addNoteToSelection(iFromBar+1, ni ); }
+    }
+    commandAddMatra();
+    clearSelection();
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::moveOrnementBackward(int iFromBar, int iToIndex)
+{
+  /*ramasse toutes les notes de la bar iFromBar*/
+  vector<NoteLocator> vn;
+  for( int i = 0; i < x->getNumberOfNotesInBar(iFromBar); ++i )
+  { vn.push_back( NoteLocator( iFromBar, i) ); }
+  
+  //ramasse tous les ornements à déplacer
+  set<int> ornToMove;
+  for( int i = 0; i < vn.size(); ++i )
+  {
+    int ornIndex = x->findOrnement( vn[i].getBar(), vn[i].getIndex() );
+    if( ornIndex >= 0 ) { ornToMove.insert( ornIndex ); }
+  }
+  
+  /*pour chaque ornement, si la barre du noteLocator est égale à iFromBar
+    on décremente la barre puisqu'on veut déplacer la note dans la barre
+   précédente et on ajoute ce NoteLocator à la selection. Il faut imaginer
+   cette opération comme si on la faisait à bras. On commencerait par mettre
+   les notes de la barre courante dans la barre précedente, ensuite on
+   selectionnerait le note pour refaire le même ornement et ensuite on
+   effacerait la barre voulue.*/
+  set<int>::iterator it = ornToMove.begin();
+  for( ; it != ornToMove.end(); ++it )
+  {
+    ornementType ot = x->getOrnementType( *it );
+    for(int i = 0; i < x->getNumberOfNotesInOrnement( *it ); ++i )
+    {
+      NoteLocator nl = x->getNoteLocatorFromOrnement( *it, i);
+      int bar = nl.getBar();
+      int index = nl.getIndex();
+      if( bar == iFromBar )
+      { bar--; index = index + iToIndex; }
+      addNoteToSelection(bar, index);
+    }
+    commandAddOrnement(ot);
+    clearSelection();
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::moveOrnementForward(int iFromBar, int iFromIndex)
+{
+  vector<NoteLocator> vn;
+  for( int i = iFromIndex; i < x->getNumberOfNotesInBar(iFromBar); ++i )
+  { vn.push_back( NoteLocator( iFromBar, i) ); }
+  
+  set<int> ornToMove;
+  for( int i = 0; i < vn.size(); ++i )
+  {
+    int ornIndex = x->findOrnement( vn[i].getBar(), vn[i].getIndex() );
+    if( ornIndex >= 0 ) { ornToMove.insert( ornIndex ); }
+  }
+  set<int>::iterator it = ornToMove.begin();
+  for( ; it != ornToMove.end(); ++it )
+  {
+    ornementType ot = x->getOrnementType( *it );
+    for(int i = 0; i < x->getNumberOfNotesInOrnement( *it ); ++i )
+    {
+      NoteLocator nl = x->getNoteLocatorFromOrnement( *it, i);
+      int bar = nl.getBar();
+      int index = nl.getIndex();
+      if( bar == iFromBar && index >= iFromIndex )
+      {
+        bar++;
+        index -= iFromIndex;
+      }
+      addNoteToSelection(bar, index);
+    }
+    commandAddOrnement(ot);
+    clearSelection();
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::moveStrokeBackward(int iFromBar, int iToIndex)
+{
+  for( int i = 0; i < x->getNumberOfStrokesInBar(iFromBar); ++i )
+  {
+    strokeType st = x->getStrokeType(iFromBar, i);
+    for( int j = 0; j < x->getNumberOfNotesInStroke(iFromBar, i); ++j )
+    {
+      int ni = x->getNoteIndexFromStroke(iFromBar, i, j) + iToIndex;
+      { addNoteToSelection(iFromBar - 1, ni ); }
+    }
+    if( hasSelection() )
+    {
+      commandAddStroke(st);
+      clearSelection();
+    }
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::moveStrokeForward(int iFromBar, int iFromIndex)
+{
+  for( int i = 0; i < x->getNumberOfStrokesInBar(iFromBar); ++i )
+  {
+    strokeType st = x->getStrokeType(iFromBar, i);
+    for( int j = 0; j < x->getNumberOfNotesInStroke(iFromBar, i); ++j )
+    {
+      int ni = x->getNoteIndexFromStroke(iFromBar, i, j) - iFromIndex;
+      if( ni >= 0 )
+      { addNoteToSelection(iFromBar+1, ni ); }
+    }
+    if( hasSelection() )
+    {
+      commandAddStroke(st);
+      clearSelection();
+    }
+  }
+}
+//-----------------------------------------------------------------------------
 QString PartitionViewer::noteToString( Note iNote ) const
 {
   int note = iNote.getValue();
@@ -1565,14 +1797,14 @@ QString PartitionViewer::noteToString( Note iNote ) const
     case nvPa: r = "P"; break;
     case nvDha: if(nm == nmKomal){r = "d";}else {r = "D";} break;
     case nvNi: if(nm == nmKomal){r = "n";}else {r = "N";} break;
-    case nvChick: r = "\xE2\x9c\x93"; break; //check
+    case nvChik: r = "\xE2\x9c\x93"; break; //check
     case nvRest: r = "\xE2\x80\x94"; break; //barre horizontale
     case nvComma: r = ","; break;
     default: break;
   }
   
   //ajout de la notation octave
-  if( note != nvChick && note != nvRest && note != nvComma )
+  if( note != nvChik && note != nvRest && note != nvComma )
   {
     switch (octave)
     {
@@ -2198,7 +2430,14 @@ void PartitionViewer::updateOrnementLayout()
     o.mDestinations.resize( bi.size() );
     int barIndex = -1;
     int widthAccum = 0;
-    int height = x->getOrnementType(iOrn) == otMeend ? kMeendHeight : kKrintanHeight;
+    int height = 10;
+    switch (x->getOrnementType(iOrn) )
+    {
+      case otMeend: height = kMeendHeight; break;
+      case otKrintan: height = kKrintanHeight; break;
+      case otGamak: height = kGamakHeight; break;
+      default: break;
+    }
     for( int i = 0; i < bi.size(); ++i )
     {
       barIndex = bi[i];

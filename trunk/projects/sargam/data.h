@@ -12,7 +12,7 @@ namespace realisim
 namespace sargam
 {
 
-enum noteValue{ nvSa = 1, nvRe, nvGa, nvMa, nvPa, nvDha, nvNi, nvComma, nvChick,
+enum noteValue{ nvSa = 1, nvRe, nvGa, nvMa, nvPa, nvDha, nvNi, nvComma, nvChik,
   nvRest };
 enum ornementType{ otMeend, otKrintan, otAndolan, otGamak };
 enum noteModification{ nmKomal, nmShuddh, nmTivra };
