@@ -155,7 +155,7 @@ void Composition::addBar()
 /*Ajoute une barre immédiatement après iBarIndex*/
 void Composition::addBar( int iBarIndex )
 {
-  vector<Bar>::iterator it = mBars.begin() + iBarIndex + 1;
+  vector<Bar>::iterator it = iBarIndex == mBars.size() ? mBars.end() : mBars.begin() + iBarIndex + 1;
   if( it < mBars.end() )
   {
     mBars.insert(it, Bar());

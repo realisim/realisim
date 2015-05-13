@@ -114,7 +114,7 @@ void MainDialog::createUi()
   createToolBar();
   
   //--- preferences
-  QMenu* pPreferences = pMenuBar->addMenu("pPreferences");
+  QMenu* pPreferences = pMenuBar->addMenu("Preferences");
   pPreferences->addAction( "Options...", this, SLOT( preferences() ) );
   
   
