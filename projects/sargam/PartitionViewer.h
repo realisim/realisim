@@ -246,6 +246,7 @@ protected:
   utils::Log *mpLog; //jamais null
   bool mIsVerbose;
   bool mHasLogTiming;
+  static Bar mDummyBar;
 };
 
   

@@ -38,6 +38,7 @@ namespace
 }
 
 realisim::sargam::Composition PartitionViewer::mDummyComposition;
+PartitionViewer::Bar PartitionViewer::mDummyBar;
 
 //-----------------------------------------------------------------------------
 // --- partition viewer
@@ -67,13 +68,43 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   setMouseTracking( true );
   setFocusPolicy( Qt::StrongFocus );
   srand( time(NULL) );
-  mTitleFont = QFont( "Arial", 24 );
+  
+  QString fontFamily( "Arial" );
+
+  /*Mac et windows ne font pas le rendu des police de la meme facon...
+  pour faire une histoire courte; Sous mac, le dpi est de 72 et sous windows de
+  96. Donc une police de 12 points aurait 12/72 de pouce (donc 1/6 de pouce) de
+  haut et à l'écran aurait 12 pixels sous mac et 16 pixels sous windows. C'est
+  pourquoi on change les tailles de polices...
+
+  details: http://www.rfwilmut.clara.net/about/fonts.html
+  */
+
+#ifdef _WIN32
+  int titleSize = 24;
+  int barFontSize = 11;
+  int barTextSize = 8;
+  int graceNoteSize = 8;
+  int lineFontSize = 10;
+  int strokeFontSize = 8;
+#endif
+
+#ifdef __APPLE__
+  int titleSize = 24;
+  int barFontSize = 14;
+  int barTextSize = 10;
+  int graceNoteSize = 10;
+  int lineFontSize = 12;
+  int strokeFontSize = 10;
+#endif
+
+  mTitleFont = QFont( fontFamily, titleSize );
   mTitleFont.setBold( true );
-  mBarFont = QFont( "Arial", 14 );
-  mBarTextFont = QFont( "Arial", 10 );
-  mGraceNotesFont = QFont( "Arial", 10 );
-  mLineFont = QFont( "Arial", 12 );
-  mStrokeFont = QFont( "Arial", 10 );
+  mBarFont = QFont( fontFamily, barFontSize );
+  mBarTextFont = QFont( fontFamily, barTextSize );
+  mGraceNotesFont = QFont( fontFamily, graceNoteSize );
+  mLineFont = QFont( fontFamily, lineFontSize );
+  mStrokeFont = QFont( fontFamily, strokeFontSize );
   
   createUi();
   addPage();
@@ -1033,13 +1064,17 @@ PartitionViewer::Bar& PartitionViewer::getBar( int iBar )
 //-----------------------------------------------------------------------------
 const PartitionViewer::Bar& PartitionViewer::getBar( int iBar ) const
 {
-  const Bar* r = 0;
-  switch( iBar )
+  const Bar* r = &mDummyBar;
+
+  if( iBar >= sbScale && iBar < (int)mBars.size() )
   {
-    case sbScale: r = &mScale; break;
-    case sbTarabTuning: r = &mTarabTuning; break;
-    default: r = &mBars[iBar]; break;
-  }
+     switch( iBar )
+     {
+       case sbScale: r = &mScale; break;
+       case sbTarabTuning: r = &mTarabTuning; break;
+       default: r = &mBars[iBar]; break;
+     }
+  }  
   return *r;
 }
 //-----------------------------------------------------------------------------
