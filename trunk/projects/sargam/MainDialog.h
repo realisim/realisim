@@ -22,7 +22,7 @@ public:
 	~MainDialog(){};
 
   const realisim::utils::Log& getLog() const {return mLog;}
-  int getVersion() const { return 2; }
+  int getVersion() const { return 179; } //svn revision
   bool isVerbose() const;
   void setAsVerbose( bool );
   

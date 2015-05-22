@@ -80,31 +80,36 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   details: http://www.rfwilmut.clara.net/about/fonts.html
   */
 
+  float titleSize = 24;
+  float barFontSize = 14;
+  float barTextSize = 10;
+  float graceNoteSize = 10;
+  float lineFontSize = 12;
+  float strokeFontSize = 10;
+
 #ifdef _WIN32
-  int titleSize = 24;
-  int barFontSize = 11;
-  int barTextSize = 8;
-  int graceNoteSize = 8;
-  int lineFontSize = 10;
-  int strokeFontSize = 8;
+  float f = 72/96.0f;
+  titleSize *= f;
+  barFontSize *= f;
+  barTextSize *= f;
+  graceNoteSize *= f;
+  lineFontSize *= f;
+  strokeFontSize *= f;
 #endif
 
-#ifdef __APPLE__
-  int titleSize = 24;
-  int barFontSize = 14;
-  int barTextSize = 10;
-  int graceNoteSize = 10;
-  int lineFontSize = 12;
-  int strokeFontSize = 10;
-#endif
-
-  mTitleFont = QFont( fontFamily, titleSize );
+  mTitleFont = QFont( fontFamily );
   mTitleFont.setBold( true );
-  mBarFont = QFont( fontFamily, barFontSize );
-  mBarTextFont = QFont( fontFamily, barTextSize );
-  mGraceNotesFont = QFont( fontFamily, graceNoteSize );
-  mLineFont = QFont( fontFamily, lineFontSize );
-  mStrokeFont = QFont( fontFamily, strokeFontSize );
+  mTitleFont.setPointSizeF( titleSize );
+  mBarFont = QFont( fontFamily );
+  mBarFont.setPointSizeF( barFontSize );
+  mBarTextFont = QFont( fontFamily );
+  mBarTextFont.setPointSizeF( barTextSize );
+  mGraceNotesFont = QFont( fontFamily );
+  mGraceNotesFont.setPointSizeF( graceNoteSize );
+  mLineFont = QFont( fontFamily );
+  mLineFont.setPointSizeF( lineFontSize );
+  mStrokeFont = QFont( fontFamily );
+  mStrokeFont.setPointSizeF( strokeFontSize );
   
   createUi();
   addPage();

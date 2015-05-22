@@ -12,4 +12,8 @@ IF(APPLE)
   ADD_MAC_ICON( "./artwork/" "dockIcon.icns" )
 ENDIF(APPLE)
 
+IF(WIN32)
+  ADD_WIN_ICON( "sargam.rc" )
+ENDIF(WIN32)
+
 GENERATE_EXE( ${PROJECT_NAME} )
