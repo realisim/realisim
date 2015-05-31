@@ -29,6 +29,7 @@ public:
   void commandAddNote( noteValue );
   void commandAddMatra();
   void commandAddOrnement( ornementType );
+void commandAddParenthesis( int );
   void commandAddStroke( strokeType );
   void commandBreakMatrasFromSelection();
   void commandBreakOrnementsFromSelection();
@@ -78,6 +79,13 @@ protected:
   enum barRegion { brSeparatorX, brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
     brOrnementY, brMatraGroupY, brGraceNoteTopY, brTextX, brTextY };
   enum colors{ cHover, cSelection };
+  
+//  class Bar
+//  {};
+//  class EditionBar : public Bar
+//  {};
+//  class SpecialBar : public Bar
+//  {};
   
   struct Bar
   {
@@ -134,6 +142,18 @@ protected:
     QRect mTextScreenLayout;
     QRect mHotSpot;
   };
+  
+  struct Parenthesis
+  {
+    Parenthesis() {;}
+    
+    QRectF mOpening; //coordonnee bar
+    QRectF mClosing; //coordonnee bar
+    QRectF mText; //coordonnee bar
+    QRectF mOpeningScreenLayout; //coordonnee ecran
+    QRectF mClosingScreenLayout; //coordonnee ecran
+    QRectF mTextScreenLayout; //coordonnee ecran
+  };
 
   void addBar( int );
   void addNoteToSelection( int, int );
@@ -146,6 +166,7 @@ protected:
   void drawBar( QPainter*, int ) const;
   void drawBarContour( QPainter*, int, QColor ) const;
   void drawCursor( QPainter* ) const;
+  void drawGamak( QPainter*, QRect, double ) const;
   void drawLine( QPainter*, int ) const;
   void drawPages( QPainter* ) const;
   void drawPageFooter( QPainter*, int ) const;
@@ -161,13 +182,17 @@ protected:
   std::vector<int> getBarsFromPage( int ) const;
   QColor getColor( colors ) const;
   QLine getCursorLine() const;
-  int getInterNoteSpacing(int, int, int) const;
+  int getInterNoteSpacing(NoteLocator, NoteLocator) const;
   utils::Log& getLog();
+  NoteLocator getNext( const NoteLocator& ) const;
   int getNumberOfPages() const;
   QRect getPageRegion( pageRegion ) const;
   QRect getPageRegion( pageRegion, int ) const;
   QSizeF getPageSizeInInch() const;
+  NoteLocator getPrevious(const NoteLocator&) const;
   QRect getRegion( region ) const;
+  QString getParenthesisText( int ) const;
+  int getParenthesisTextWidth( int ) const;
   bool hasBarTextEditionPending() const;
   bool hasLineEditionPending() const;
   bool hasTitleEditionPending() const {return mEditingTitle;}
@@ -183,6 +208,8 @@ protected:
   void moveMatraForward( int, int );
   void moveOrnementBackward( int, int );
   void moveOrnementForward( int, int );
+  void moveParenthesisBackward( int, int );
+  void moveParenthesisForward( int, int );
   void moveStrokeBackward( int, int );
   void moveStrokeForward( int, int );
   QString noteToString( Note ) const;
@@ -202,6 +229,7 @@ protected:
   void updateBar( int );
   void updateBarLayout();
   void updateOrnementLayout();
+  void updateParenthesisLayout();
   void updateLayout();
   void updateLineLayout();
   void updateSpecialBarLayout( specialBar );
@@ -224,12 +252,15 @@ protected:
   QFont mGraceNotesFont;
   QFont mLineFont;
   QFont mStrokeFont;
+  QFont mParenthesisFont;
+  QRectF mBaseParenthesisRect;
   Bar mScale;
   Bar mTarabTuning;
   std::vector< Bar > mBars;
   std::vector< Ornement > mOrnements;
   std::vector< Line > mLines;
   std::map< int, std::vector<int> > mBarsPerPage;
+  std::vector< Parenthesis > mParenthesis;
   int mCurrentBar;
   int mCurrentNote;
   QPoint mLayoutCursor;

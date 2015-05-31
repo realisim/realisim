@@ -113,6 +113,12 @@ bool NoteLocator::operator<( const NoteLocator& iRhs ) const
   return r;
 }
 //------------------------------------------------------------------------------
+bool NoteLocator::operator==( const NoteLocator& iRhs ) const
+{ return getBar() == iRhs.getBar() && getIndex() == iRhs.getIndex(); }
+//------------------------------------------------------------------------------
+bool NoteLocator::operator!=( const NoteLocator& iRhs ) const
+{ return !operator==(iRhs); }
+//------------------------------------------------------------------------------
 //--- Composition :: Ornement
 //------------------------------------------------------------------------------
 Composition::Ornement::Ornement()
@@ -133,6 +139,15 @@ Composition::Line::Line( int iFirstBar, QString iText ):
 //------------------------------------------------------------------------------
 bool Composition::Line::operator<( const Composition::Line& iRhs ) const
 { return this->mFirstBar < iRhs.mFirstBar; }
+//------------------------------------------------------------------------------
+//--- Composition :: Parenthesis
+//------------------------------------------------------------------------------
+Composition::Parenthesis::Parenthesis() : mNumber( 1 )
+{}
+Composition::Parenthesis::Parenthesis( vector<NoteLocator> iNotes, int iN ) :
+mNotes( iNotes ),
+mNumber( iN )
+{}
 //------------------------------------------------------------------------------
 //--- Composition
 //------------------------------------------------------------------------------
@@ -161,6 +176,7 @@ void Composition::addBar( int iBarIndex )
     mBars.insert(it, Bar());
     shiftLines( 1, iBarIndex );
     shiftOrnements( 1, iBarIndex );
+    shiftParenthesis(1, iBarIndex );
   }
   else{ mBars.push_back( Bar() ); }
 }
@@ -211,7 +227,7 @@ void Composition::addNote( int iBar, int iNoteIndex, Note iNote )
   int matra1 = findMatra( iBar, iNoteIndex );
   int matra2 = findMatra( iBar, iNoteIndex + 2 );
   if( matra1 != -1 && matra1 == matra2 )
-  { addNoteToMatra( findMatra( iBar, iNoteIndex ), iBar, insertIndex ); }
+  { addNoteToMatra( matra1, iBar, insertIndex ); }
   
   //on shift les ornements de 1
   shiftOrnements( 1, iBar, iNoteIndex );
@@ -220,7 +236,18 @@ void Composition::addNote( int iBar, int iNoteIndex, Note iNote )
   int ornm1 = findOrnement( iBar, iNoteIndex );
   int ornm2 = findOrnement( iBar, iNoteIndex + 2 );
   if( ornm1 != -1 && ornm1 == ornm2 )
-  { addNoteToOrnement( findOrnement( iBar, iNoteIndex ), iBar, insertIndex ); }
+  { addNoteToOrnement( ornm1, iBar, insertIndex ); }
+  
+  
+  //shift les Parenthesis de 1
+  shiftParenthesis( 1, iBar, iNoteIndex );
+  //Si la note au curseur, ainsi que la suivante, sont dans larep, la
+  //nouvelle note devra aussi etre dans la rep.
+  int rep1 = findParenthesis( iBar, iNoteIndex );
+  int rep2 = findParenthesis( iBar, iNoteIndex + 2 );
+  if( rep1 != -1 && rep1 == rep2  )
+  { addNoteToParenthesis( rep1, iBar, insertIndex ); }
+  
   
   //on shift les graces notes
   shiftGraceNotes( 1, iBar, iNoteIndex );
@@ -249,8 +276,19 @@ void Composition::addNoteToOrnement( int iOrn, int iBar, int iIndex )
   sort( o.mNotes.begin(), o.mNotes.end() );
 }
 //------------------------------------------------------------------------------
+/*Ajoute l'index (iBar,iIndex) dans lornement iOrn.*/
+void Composition::addNoteToParenthesis( int iRep, int iBar, int iIndex )
+{
+  vector<NoteLocator>& vnl = mParenthesis[iRep].mNotes;
+  vnl.push_back( NoteLocator( iBar, iIndex ) );
+  sort( vnl.begin(),vnl.end() );
+}
+//------------------------------------------------------------------------------
 void Composition::addOrnement( ornementType iOt, std::vector<NoteLocator> iNotes )
 { mOrnements.push_back( Ornement( iOt, iNotes ) ); }
+//------------------------------------------------------------------------------
+void Composition::addParenthesis( vector<NoteLocator> iNotes )
+{ mParenthesis.push_back( Parenthesis( iNotes, 2 ) ); }
 //------------------------------------------------------------------------------
 void Composition::addStroke( int iBar, strokeType iSt, vector<int> iNoteIndices )
 {
@@ -324,6 +362,7 @@ void Composition::eraseBar( int iBarIndex )
     mBars.erase( mBars.begin() + iBarIndex );
     shiftLines(-1, iBarIndex);
     shiftOrnements(-1, iBarIndex);
+    shiftParenthesis(-1, iBarIndex );
   }
 }
 //------------------------------------------------------------------------------
@@ -375,6 +414,10 @@ void Composition::eraseNote( int iBar, int iIndex )
     { eraseNoteFromOrnement( iBar, iIndex ); }
     shiftOrnements( -1, iBar, iIndex );
     
+    if( isNoteInParenthesis( iBar, iIndex ) )
+    { eraseNoteFromParenthesis( iBar, iIndex ); }
+    shiftParenthesis( -1, iBar, iIndex );
+    
     //on eneleve les graceNotes
     if( isGraceNote( iBar, iIndex ) )
     { eraseGraceNote( iBar, iIndex ); }
@@ -420,11 +463,34 @@ void Composition::eraseNoteFromOrnement( int iBar, int iIndex )
   }
 }
 //------------------------------------------------------------------------------
+/*Efface la note iIndex de la barre iBar de la répétition qui la contient. Si 
+ aucune répétition ne la contient, il ne se passe rien.*/
+void Composition::eraseNoteFromParenthesis( int iBar, int iIndex )
+{
+  int rep = findParenthesis(iBar, iIndex);
+
+  vector<NoteLocator>& vnl = mParenthesis[ rep ].mNotes;
+  vector<NoteLocator>::iterator it = vnl.begin();
+  for( ; it != vnl.end(); ++it )
+  {
+    if( it->getBar() == iBar && it->getIndex() == iIndex )
+    { it = vnl.erase( it ); break; }
+  }
+  if( vnl.empty() ) { eraseParenthesis(rep); }
+}
+//------------------------------------------------------------------------------
 /*Efface l'ornement a l'index iIndex */
 void Composition::eraseOrnement( int iIndex )
 {
   if( iIndex >= 0 && iIndex < getNumberOfOrnements() )
   { mOrnements.erase( mOrnements.begin() + iIndex ); }
+}
+//------------------------------------------------------------------------------
+/*Efface l'ornement a l'index iIndex */
+void Composition::eraseParenthesis( int iIndex )
+{
+  if( iIndex >= 0 && iIndex < getNumberOfParenthesis() )
+  { mParenthesis.erase( mParenthesis.begin() + iIndex ); }
 }
 //------------------------------------------------------------------------------
 /*Efface le stroke iStrokeIndex de la barre iBar*/
@@ -477,6 +543,21 @@ int Composition::findOrnement( int iBar, int iNoteIndex ) const
     {
       if( o.mNotes[j].getBar() == iBar && o.mNotes[j].getIndex() == iNoteIndex )
       { r = i; break; }
+    }
+  }
+  return r;
+}
+//------------------------------------------------------------------------------
+int Composition::findParenthesis( int iBar, int iNoteIndex ) const
+{
+  int r = -1;
+  for( int i = 0; i < getNumberOfParenthesis(); ++i )
+  {
+    const vector<NoteLocator>& vnl = mParenthesis[i].mNotes;
+    for( int j = 0; j < (int)vnl.size(); ++j && i == -1 )
+    {
+      if( vnl[j].getBar() == iBar && vnl[j].getIndex() == iNoteIndex )
+      { r = i; }
     }
   }
   return r;
@@ -673,6 +754,19 @@ vector<int> Composition::getBarsInvolvedByOrnement( int iOrn ) const
   return r;
 }
 //------------------------------------------------------------------------------
+vector<int> Composition::getBarsInvolvedByParenthesis( int iRep ) const
+{
+  vector<int> r;
+  if( iRep >= 0 && iRep < mParenthesis.size() )
+  {
+    const Parenthesis& reps = mParenthesis[iRep];
+    for( int i = 0; i < reps.mNotes.size(); ++i )
+    { r.push_back( reps.mNotes[i].getBar() ); }
+    r.erase( std::unique( r.begin(), r.end() ), r.end() );
+  }
+  return r;
+}
+//------------------------------------------------------------------------------
 const Composition::Bar& Composition::getBar( int iIndex ) const
 {
   const Bar* b = 0;
@@ -728,6 +822,9 @@ int Composition::getNoteIndexFromMatra( int iBar, int iMatra, int i ) const
 int Composition::getNoteIndexFromStroke( int iBar, int iStroke, int i ) const
 { return getBar(iBar).mStrokes[iStroke].mSpan[i]; }
 //------------------------------------------------------------------------------
+NoteLocator Composition::getNoteLocatorFromParenthesis( int iO, int i ) const
+{ return mParenthesis[iO].mNotes[i]; }
+//------------------------------------------------------------------------------
 NoteLocator Composition::getNoteLocatorFromOrnement( int iO, int i ) const
 { return mOrnements[iO].mNotes[i]; }
 //------------------------------------------------------------------------------
@@ -752,11 +849,20 @@ int Composition::getNumberOfNotesInMatra( int iBar, int iMatra ) const
 int Composition::getNumberOfNotesInOrnement( int iOrn ) const
 { return mOrnements[iOrn].mNotes.size(); }
 //------------------------------------------------------------------------------
+int Composition::getNumberOfNotesInParenthesis( int iRep ) const
+{ return mParenthesis[iRep].mNotes.size(); }
+//------------------------------------------------------------------------------
 int Composition::getNumberOfNotesInStroke( int iBar, int iStroke ) const
 { return getBar(iBar).mStrokes[iStroke].mSpan.size(); }
 //------------------------------------------------------------------------------
 int Composition::getNumberOfOrnements() const
 { return mOrnements.size(); }
+//------------------------------------------------------------------------------
+int Composition::getNumberOfParenthesis() const
+{ return mParenthesis.size(); }
+//------------------------------------------------------------------------------
+int Composition::getNumberOfRepetitionsForParenthesis( int iRep ) const
+{ return mParenthesis[iRep].mNumber; }
 //------------------------------------------------------------------------------
 int Composition::getNumberOfStrokesInBar( int iBar ) const
 { return getBar(iBar).mStrokes.size(); }
@@ -798,6 +904,9 @@ bool Composition::isNoteInMatra( int iBar, int iNoteIndex ) const
 bool Composition::isNoteInOrnement( int iBar, int iNoteIndex ) const
 { return findOrnement( iBar, iNoteIndex) != -1; }
 //------------------------------------------------------------------------------
+bool Composition::isNoteInParenthesis( int iBar, int iNoteIndex ) const
+{ return findParenthesis( iBar, iNoteIndex) != -1 ; }
+//------------------------------------------------------------------------------
 bool Composition::isStartOfLine( int iBar ) const
 {
   bool r = false;
@@ -812,6 +921,15 @@ bool Composition::ornementAppliesToBar( int iOrn, int iBar ) const
   const Ornement& o = mOrnements[iOrn];
   for( int i = 0; i < o.mNotes.size(); ++i )
   { if( o.mNotes[i].getBar() == iBar ){ r = true; break; } }
+  return r;
+}
+//------------------------------------------------------------------------------
+bool Composition::parenthesisAppliesToBar( int iRep, int iBar ) const
+{
+  bool r = false;
+  const Parenthesis& p = mParenthesis[iRep];
+  for( int i = 0; i < (int)p.mNotes.size(); ++i )
+  { if( p.mNotes[i].getBar() == iBar ){ r = true; break; } }
   return r;
 }
 //------------------------------------------------------------------------------
@@ -905,6 +1023,39 @@ void Composition::shiftOrnements(int iN, int iBar, int iFromIndex)
       const NoteLocator nl = getNoteLocatorFromOrnement(i, j);
       if( nl.getBar() == iBar && nl.getIndex() > iFromIndex )
       { o.mNotes[j] = NoteLocator( nl.getBar(), nl.getIndex() + iN ); }
+    }
+  }
+}
+//------------------------------------------------------------------------------
+/*Incrémente de iN l'index de barre des ornements qui ont un index de barre
+ supérieur à iFromIndex. */
+void Composition::shiftParenthesis(int iN, int iFromIndex)
+{
+  for( int i = 0; i < getNumberOfParenthesis(); ++i )
+  {
+    vector<NoteLocator>& vnl = mParenthesis[i].mNotes;
+    for( int j = 0; j < getNumberOfNotesInParenthesis(i); ++j )
+    {
+      const NoteLocator nl = vnl[j];
+      if( nl.getBar() > iFromIndex )
+      { vnl[j] = NoteLocator( nl.getBar() + iN, nl.getIndex() ); }
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
+/*Incrémente de iN l'index des notes qui sont supérieur à iFromIndex dans la
+ barre iBar*/
+void Composition::shiftParenthesis(int iN, int iBar, int iFromIndex)
+{
+  for( int i = 0; i < getNumberOfParenthesis(); ++i )
+  {
+    vector<NoteLocator>& vnl = mParenthesis[i].mNotes;
+    for( int j = 0; j < getNumberOfNotesInParenthesis(i); ++j )
+    {
+      const NoteLocator nl = vnl[j];
+      if( nl.getBar() == iBar && nl.getIndex() > iFromIndex )
+      { vnl[j] = NoteLocator( nl.getBar(), nl.getIndex() + iN ); }
     }
   }
 }

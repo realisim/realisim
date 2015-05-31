@@ -56,6 +56,8 @@ public:
   NoteLocator();
   NoteLocator( int, int );
   bool operator<( const NoteLocator& ) const;
+  bool operator==( const NoteLocator& ) const;
+  bool operator!=( const NoteLocator& ) const;
   
   int getBar() const;
   int getIndex() const;
@@ -85,6 +87,7 @@ public:
   void addNote( int, Note );
   void addNote( int, int, Note );
   void addOrnement( ornementType, std::vector<NoteLocator> );
+  void addParenthesis( std::vector<NoteLocator> );
   void addStroke( int, strokeType, std::vector<int> );
   void addGraceNote( int, int );
   void clear();
@@ -94,15 +97,18 @@ public:
   void eraseMatra( int, int );
   void eraseNote( int, int );
   void eraseOrnement( int );
+  void eraseParenthesis( int );
   void eraseStroke( int, int );
   int findLine( int ) const;
   int findMatra( int, int ) const;
   int findOrnement( int, int ) const;
+  int findParenthesis( int, int ) const;
   int findStroke( int, int ) const;
   void fromBinary( QByteArray );
   QString getAndClearLastErrors() const;
   QString getBarText( int ) const;
   std::vector<int> getBarsInvolvedByOrnement( int ) const;
+  std::vector<int> getBarsInvolvedByParenthesis( int ) const;
   int getLineFirstBar( int ) const;
   QString getLineText( int ) const;
   Note getNote( int, int ) const;
@@ -110,6 +116,7 @@ public:
   int getNoteIndexFromMatra( int iBar, int iMatra, int i ) const;
   int getNoteIndexFromStroke( int iBar, int iStroke, int i ) const;
   NoteLocator getNoteLocatorFromOrnement( int iO, int i ) const;
+  NoteLocator getNoteLocatorFromParenthesis( int iO, int i ) const;
   int getNumberOfBars() const;
   int getNumberOfLines() const;
   int getNumberOfGraceNotesInBar( int ) const;
@@ -117,8 +124,11 @@ public:
   int getNumberOfNotesInBar( int ) const;
   int getNumberOfNotesInMatra( int, int ) const;
   int getNumberOfNotesInOrnement( int ) const;
+  int getNumberOfNotesInParenthesis( int ) const;
   int getNumberOfNotesInStroke( int, int) const;
   int getNumberOfOrnements() const;
+  int getNumberOfParenthesis() const;
+  int getNumberOfRepetitionsForParenthesis( int ) const;
   int getNumberOfStrokesInBar( int ) const;
   ornementType getOrnementType( int ) const;
   std::vector<Note> getScale() const;
@@ -131,8 +141,10 @@ public:
   bool isGraceNote( int, int) const;
   bool isNoteInMatra( int, int ) const;
   bool isNoteInOrnement( int, int ) const;
+  bool isNoteInParenthesis(int, int) const;
   bool isStartOfLine( int ) const;
   bool ornementAppliesToBar( int, int ) const;
+  bool parenthesisAppliesToBar( int, int ) const;
   void setBarText( int, QString );
   void setLineText( int, QString );
   void setNote( int, int, Note );
@@ -170,13 +182,24 @@ protected:
     QString mText;
   };
   
+  struct Parenthesis
+  {
+    Parenthesis();
+    Parenthesis( std::vector<NoteLocator>, int );
+    
+    std::vector<NoteLocator> mNotes;
+    int mNumber;
+  };
+  
   void addNoteToMatra( int, int, int );
   void addNoteToOrnement( int, int, int );
+  void addNoteToParenthesis( int, int, int );
   void addError( QString ) const;
   std::vector<Note> defaultScale() const;
   std::vector<Note> defaultTarabTuning() const;
   void eraseNoteFromMatra( int, int );
   void eraseNoteFromOrnement( int, int );
+  void eraseNoteFromParenthesis( int, int );
 
   const Bar& getBar(int) const;
   Bar& getBar( int );
@@ -186,6 +209,8 @@ protected:
   void shiftMatras(int, int, int);
   void shiftOrnements(int, int);
   void shiftOrnements(int, int, int);
+  void shiftParenthesis(int, int);
+  void shiftParenthesis(int, int, int);
   void shiftStrokes( int, int, int );
 
   //-- data
@@ -199,6 +224,7 @@ protected:
   std::vector<Bar> mBars;
   std::vector<Line> mLines;
   std::vector<Ornement> mOrnements;
+  std::vector< Parenthesis > mParenthesis;
   mutable QString mErrors;
 };
   

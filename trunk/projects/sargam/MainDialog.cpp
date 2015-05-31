@@ -253,6 +253,13 @@ void MainDialog::createToolBar()
     mpToolBar->addAction( mActions[aAddGamak] );
   }
   {
+    QAction* a = new QAction( "andolan", this );
+    a->setToolTip("Adds an andolan over the selection.<br>"
+                  "<B>(A)</B>");
+    mActions[ aAddAndolan ] = a;
+    mpToolBar->addAction( mActions[aAddAndolan] );
+  }
+  {
     QAction* a = new QAction( "remove ornement", this );
     a->setToolTip("Removes krintan|meend from the selection.<br>"
                   "<B>(shift+K or shift+M)</B>");
@@ -453,7 +460,7 @@ void MainDialog::openFile()
 {
  	QString s;
   s = QFileDialog::getOpenFileName(
-    this, tr("Opem Composition"),
+    this, tr("Open Composition"),
     mLastSavePath,
     tr("Sargam file (*.srg)"));
   
@@ -707,6 +714,7 @@ void MainDialog::toolActionTriggered(QAction* ipA)
     case aAddKrintan: mpPartitionViewer->commandAddOrnement( otKrintan ); break;
     case aAddMeend: mpPartitionViewer->commandAddOrnement( otMeend ); break;
     case aAddGamak: mpPartitionViewer->commandAddOrnement( otGamak ); break;
+    case aAddAndolan: mpPartitionViewer->commandAddOrnement( otAndolan ); break;
     case aRemoveOrnement: mpPartitionViewer->commandBreakOrnementsFromSelection(); break;
     case aAddGraceNote: mpPartitionViewer->commandAddGraceNotes(); break;
     case aRemoveGraceNote: mpPartitionViewer->commandRemoveSelectionFromGraceNotes(); break;
@@ -769,6 +777,7 @@ void MainDialog::updateUi()
       mActions[aAddKrintan]->setEnabled(!canBreakOrnement);
       mActions[aAddMeend]->setEnabled(!canBreakOrnement);
       mActions[aAddGamak]->setEnabled(!canBreakOrnement);
+      mActions[aAddAndolan]->setEnabled(!canBreakOrnement);
       
       //graceNote
       bool canRemoveGraceNote = true;
