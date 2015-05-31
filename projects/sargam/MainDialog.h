@@ -45,7 +45,7 @@ protected slots:
   
 protected:
   enum action{ aAddBar, aLineJump, aAddMatra, aRemoveMatra, aAddKrintan,
-    aAddMeend, aAddGamak, aRemoveOrnement, aAddGraceNote, aRemoveGraceNote,
+    aAddMeend, aAddGamak, aAddAndolan, aRemoveOrnement, aAddGraceNote, aRemoveGraceNote,
     aDecreaseOctave, aIncreaseOctave, aRest, aChik, aPhrasing, aTivra, aShuddh, aKomal,
     aDa, aRa, aDiri, aRemoveStroke, aUnknown };
   

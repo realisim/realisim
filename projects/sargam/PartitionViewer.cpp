@@ -86,6 +86,7 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   float graceNoteSize = 10;
   float lineFontSize = 12;
   float strokeFontSize = 10;
+  float parenthesisFontSize = 9;
 
 #ifdef _WIN32
   float f = 72/96.0f;
@@ -95,6 +96,7 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   graceNoteSize *= f;
   lineFontSize *= f;
   strokeFontSize *= f;
+  parenthesisFontSize *= f;
 #endif
 
   mTitleFont = QFont( fontFamily );
@@ -110,7 +112,12 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mLineFont.setPointSizeF( lineFontSize );
   mStrokeFont = QFont( fontFamily );
   mStrokeFont.setPointSizeF( strokeFontSize );
-  
+  mParenthesisFont = QFont( fontFamily );
+  mParenthesisFont.setPointSizeF( parenthesisFontSize );
+
+  mBaseParenthesisRect = QRectF( QPoint(0, 0),
+    QSize(8, QFontMetrics(mBarFont).height() * 1.8) );
+
   createUi();
   addPage();
   
@@ -207,6 +214,8 @@ void PartitionViewer::commandAddBar()
   moveStrokeForward( cb, moveFromIndex );
   //déplace note de grace
   moveGraceNoteForward(cb, moveFromIndex);
+  //déplace parentheses
+  moveParenthesisForward( cb, moveFromIndex );
   
   //efface le note de la barre courrante
   for( int i = vn.size() - 1; i >= 0; --i )
@@ -221,32 +230,6 @@ void PartitionViewer::commandAddBar()
   if( isVerbose() )
   { getLog().log( "PartitionViewer: commandAddBar." ); }
 }
-//-----------------------------------------------------------------------------
-//void PartitionViewer::commandAddPreviousBar()
-//{
-//  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-//  if( getCurrentBar() < 0 ){ return; }
-//  
-//  if( x->isStartOfLine( getCurrentBar() ) )
-//  {
-//    int cl = x->findLine( getCurrentBar() );
-//    QString t = x->getLineText( cl );
-//    x->eraseLine( cl );
-//    addBar( getCurrentBar() - 1 );
-//    x->addLine( getCurrentBar(), t );
-//  }
-//  else
-//  { addBar( getCurrentBar() - 1 ); }
-//  
-//  setCurrentNote( -1 );
-//  setCurrentBar( getCurrentBar() );
-//  clearSelection();
-//  setBarAsDirty( getCurrentBar(), true );
-//  updateUi();
-//  
-//  if( isVerbose() )
-//  { getLog().log( "PartitionViewer: commandAddPreviousBar." ); }
-//}
 //-----------------------------------------------------------------------------
 /*Les notes de la selection deviennent des graces notes si elle ne le sont
  pas déjà.*/
@@ -363,6 +346,39 @@ void PartitionViewer::commandAddOrnement( ornementType iOt )
   
   if( isVerbose() )
   { getLog().log( "PartitionViewer: commandAddOrnement." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::commandAddParenthesis( int iNumber )
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  if( hasSelection() )
+  {
+    /*On commence par chercher si il y a deja une parenthese associée aux
+     note de la parenthese qu'on est en train d'ajouter. Si oui, on enleve la
+     parenthese deja existante.*/
+    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    {
+      int bar = mSelectedNotes[i].first;
+      int noteIndex = mSelectedNotes[i].second;
+      int p = x->findParenthesis( bar, noteIndex );
+      if( p != -1 )
+      { x->eraseParenthesis( p ); }
+    }
+    
+    x->addParenthesis( toNoteLocator( mSelectedNotes ) );
+    
+    //dirty sur toutes les barres impliquées.
+    map< int, vector<int> > m = splitPerBar( mSelectedNotes );
+    map< int, vector<int> >::const_iterator it = m.begin();
+    for( ; it != m.end(); ++it )
+    { setBarAsDirty(it->first, true); }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandAddParenthesis." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddStroke( strokeType iSt )
@@ -703,7 +719,7 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
   //on dessine le contour de la barre courante
   drawBarContour( &p, getCurrentBar(), getColor( cSelection ) );
   
-  //on dessine le bar text Hover.
+  //on dessine le bar text hot spot de la barre courante.
   if( mBarTextHover != -1 )
   {
     p.save();
@@ -712,6 +728,22 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
     pen.setColor( getColor( cHover ) );
     p.setPen(pen);
     p.drawRoundedRect( getBar( mBarTextHover ).mTextScreenLayout, 2, 2 );
+    p.restore();
+  }
+  
+  //on dessine le hot spot des lignes
+  int currentLine = x->findLine( getCurrentBar() );
+  if(  currentLine != -1 && !hasLineEditionPending() )
+  {
+    const Line& l = mLines[ currentLine ];
+    p.save();
+    p.setFont(mLineFont);
+    QPen pen = p.pen();
+    pen.setStyle( Qt::DashLine );
+    pen.setColor( Qt::gray );
+    p.setPen( pen );
+    p.drawText(l.mHotSpot, Qt::AlignCenter, "+");
+    p.drawRoundedRect( l.mHotSpot, 2, 2 );
     p.restore();
   }
   
@@ -743,13 +775,13 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
       QString s = noteToString( x->getNote( iBar, j ) );
       QFont f = x->isGraceNote( iBar, j ) ? mGraceNotesFont : mBarFont;
       iP->setFont(f);
-      iP->drawText( b.getNoteRect(j), s);
+      iP->drawText( b.getNoteRect(j).bottomLeft(), s);
     }
     
-    //la barre vertical
-    int x1 = getBarRegion( brSeparatorX );
+    //la barre vertical à la fin de la barre
+    int x1 = b.mRect.right() + getBarRegion( brSeparatorX );
     int y1 = 0.15 * kBarHeight;
-    int y2 = getBarRegion( brNoteBottomY );
+    int y2 = getBarRegion( brStrokeY );
     iP->drawLine( x1, y1, x1, y2 );
     
     //--- render beat groups
@@ -782,26 +814,10 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
             iP->drawLine( r.topLeft(), r.topRight() );
             iP->drawLine( r.topRight(), r.bottomRight() );
           } break;
+          case otAndolan:
+          { drawGamak( iP, r, 2 ); } break;
           case otGamak:
-          {
-            iP->save();
-            iP->translate( r.topLeft() );
-            QFontMetrics fm(mBarFont);
-            QPainterPath pp;
-            //20 point par 2*Pi.
-            //3*Pi par 2 notes -> 1.5Pi par notes
-            //combien de pi à faire...
-            const double numPointsPer2Pi = 20.0;
-            const double pi = 3.1415629;
-            const float nbPi = r.width() * 1.5 / fm.width("S ");
-            const double numIter = nbPi * numPointsPer2Pi / 2.0;
-            const double incPerIter = 2*pi / numPointsPer2Pi;
-            double eval = 0;
-            for( double i = 0; i < numIter; i ++, eval += incPerIter )
-            { pp.lineTo( i / numIter * r.width(), -sin(eval)/2 * r.height() ); }
-            iP->drawPath( pp );
-            iP->restore();
-          } break;
+          { drawGamak( iP, r, 3 ); } break;
           default:break;
         }
         
@@ -810,6 +826,7 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
     }
     
     //render strokes
+    iP->save();
     iP->setFont(mStrokeFont);
     for( int i = 0; i < x->getNumberOfStrokesInBar(iBar); ++i )
     {
@@ -828,12 +845,37 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
       QString a = strokeToString( x->getStrokeType(iBar, i) );
       iP->drawText( r2, Qt::AlignCenter, a );
     }
+    iP->restore();
     
     //render text
-    iP->setFont(mBarTextFont);
     {
-      iP->drawText( b.mTextRect, Qt::AlignCenter, x->getBarText(iBar) );
+      iP->save();
+      iP->setFont(mBarTextFont);
+      iP->drawText( b.mTextRect.bottomLeft(), x->getBarText(iBar) );
+      iP->restore();
     }
+    
+    //render Parenthesis
+    iP->save();
+    iP->setFont( mParenthesisFont );
+    for( int i = 0; i < x->getNumberOfParenthesis(); ++i )
+    {
+      if( x->parenthesisAppliesToBar(i, iBar) )
+      {
+        const Parenthesis& p = mParenthesis[i];
+        NoteLocator first = x->getNoteLocatorFromParenthesis(i, 0);
+        NoteLocator last = x->getNoteLocatorFromParenthesis(i,
+          x->getNumberOfNotesInParenthesis(i) - 1);
+        if( first.getBar() == iBar )
+        { iP->drawArc( p.mOpening, 90 * 16, 169 * 16 ); }
+        if( last.getBar() == iBar )
+        {
+          iP->drawArc( p.mClosing, 80 * 16, -169 * 16 );
+          iP->drawText( p.mText.bottomLeft(), getParenthesisText(i) );
+        }
+      }
+    }
+    iP->restore();
   }
   else
   {
@@ -880,6 +922,27 @@ void PartitionViewer::drawCursor( QPainter* iP ) const
   { iP->drawLine( getCursorLine() ); }
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::drawGamak( QPainter* iP, QRect iR, double iNumPi ) const
+{
+  iP->save();
+  iP->translate( iR.topLeft() );
+  QFontMetrics fm(mBarFont);
+  QPainterPath pp;
+  //20 point par 2*Pi.
+  //iNumPi par 2 notes -> iNumPi/2 par notes
+  //combien de pi à faire...
+  const double numPointsPer2Pi = 20.0;
+  const double pi = 3.1415629;
+  const float nbPi = iR.width() * iNumPi/2.0 / fm.width("S ");
+  const double numIter = nbPi * numPointsPer2Pi / 2.0;
+  const double incPerIter = 2*pi / numPointsPer2Pi;
+  double eval = 0;
+  for( double i = 0; i < numIter; i ++, eval += incPerIter )
+  { pp.lineTo( i / numIter * iR.width(), -sin(eval)/2 * iR.height() ); }
+  iP->drawPath( pp );
+  iP->restore();
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::drawLine( QPainter* iP, int iLine ) const
 {
   QPen pen = iP->pen();
@@ -889,18 +952,8 @@ void PartitionViewer::drawLine( QPainter* iP, int iLine ) const
   iP->setFont( mLineFont );
   const Line& l = mLines[ iLine ];
   //numero de ligne. les lignes commencent a 1!!!
-  iP->drawText( l.mLineNumberRect, QString::number( iLine + 1 ) );
-  //le hot spot
-  if( mAddLineTextHover == iLine )
-  {
-    iP->save();
-    QPen pen = iP->pen();
-    pen.setStyle( Qt::DashLine );
-    pen.setColor( Qt::gray );
-    iP->setPen( pen );
-    iP->drawRoundedRect(l.mHotSpot, 2, 2);
-    iP->restore();
-  }
+  iP->drawText( l.mLineNumberRect.bottomLeft(),
+               QString::number( iLine + 1 ) + ")" );
   
   //text de la ligne
   if( mEditingLineIndex != iLine )
@@ -993,7 +1046,7 @@ void PartitionViewer::drawTitle( QPainter* iP ) const
   {
     iP->setFont( mTitleFont );
     iP->setPen( Qt::black );
-    iP->drawText( mTitleScreenLayout, Qt::AlignCenter, x->getTitle() );
+    iP->drawText( mTitleScreenLayout.bottomLeft(), x->getTitle() );
   }
   
   iP->restore();
@@ -1016,6 +1069,8 @@ void PartitionViewer::eraseBar( int iBar )
   moveStrokeBackward(iBar, moveToIndex);
   //transfert des notes de grace
   moveGraceNoteBackward(iBar, moveToIndex);
+  //transfert des parenthses
+  moveParenthesisBackward(iBar, moveToIndex);
   
   //efface des données d'affichage
   if( iBar >= 0 && iBar < x->getNumberOfBars() )
@@ -1133,8 +1188,8 @@ int PartitionViewer::getBarRegion( barRegion br ) const
   QFontMetrics fm(mBarFont);
   switch( br )
   {
-    case brSeparatorX: r = 5; break;
-    case brNoteStartX: r = 10; break;
+    case brSeparatorX: r = -1; break;
+    case brNoteStartX: r = 5; break;
     case brNoteTopY: r = kBarHeight / 2 - fm.height() / 2; break;
     case brNoteBottomY: r = kBarHeight / 2 + fm.height() / 2; break;
     case brStrokeY: r = kBarHeight - fm.height(); break;
@@ -1167,21 +1222,53 @@ const Log& PartitionViewer::getLog() const
 Log& PartitionViewer::getLog()
 { return const_cast<Log&>( const_cast< const PartitionViewer* >(this)->getLog() ); }
 //-----------------------------------------------------------------------------
-int PartitionViewer::getInterNoteSpacing(int iBar, int iIndex1, int iIndex2 ) const
+int PartitionViewer::getInterNoteSpacing( NoteLocator n1, NoteLocator n2 ) const
 {
-  
   int r = kInterNoteGap;
-  int matra1 = x->findMatra( iBar, iIndex1 );
-  int matra2 = x->findMatra( iBar, iIndex2 );
-  //les notes d'un même matra
-  if( matra1 == matra2 && matra1 != -1 && matra2 != -1 )
+  //if( n1.getBar() == n2.getBar() )
   {
-    r = 1;
-    //si ce sont des graceNotes
-    if( x->isGraceNote( iBar, iIndex1 ) && x->isGraceNote( iBar, iIndex2 ) )
+    int matra1 = x->findMatra( n1.getBar(), n1.getIndex() );
+    int matra2 = x->findMatra( n2.getBar(), n2.getIndex() );
+    //les notes d'un même matra
+    if( matra1 == matra2 && matra1 != -1 && matra2 != -1 )
+    {
+      r = 1;
+    }
+    
+    //si la note iIndex 1 est une note de grace
+    if( x->isGraceNote( n1.getBar(), n1.getIndex() ) )
     { r = 1; }
+    
+    //les répetitions
+    /*On ajoute n*mParenthesisWidth entre 2 notes */
+    int p1 = x->findParenthesis( n1.getBar(), n1.getIndex() );
+    int p2 = x->findParenthesis( n2.getBar(), n2.getIndex() );
+    if( p1 == -1 && p2 != -1 ) //ouverture
+    { r += mBaseParenthesisRect.width(); }
+    if( p1 != -1 && p2 == -1 ) //fermeture
+    {
+      r = mBaseParenthesisRect.width() +
+      getParenthesisTextWidth( x->findParenthesis( n1.getBar(), n1.getIndex() ) );
+    }
+    if( p1 != -1 && p2 != -1 && p1 != p2 ) //ouverture et fermeture
+    {
+      r = 2*mBaseParenthesisRect.width() +
+      getParenthesisTextWidth( x->findParenthesis( n1.getBar(), n1.getIndex() ) );
+    }
   }
   return r;
+}
+//-----------------------------------------------------------------------------
+NoteLocator PartitionViewer::getNext( const NoteLocator& iC ) const
+{
+  int bar = iC.getBar(), index = 0;
+  if( iC.getIndex() == x->getNumberOfNotesInBar( iC.getBar() ) - 1 )
+  {
+    bar = iC.getBar() + 1;
+    index = 0;
+  }
+  else{ index = iC.getIndex() + 1; }
+  return NoteLocator( bar, index );
 }
 //-----------------------------------------------------------------------------
 int PartitionViewer::getNumberOfPages() const
@@ -1240,6 +1327,19 @@ QSizeF PartitionViewer::getPageSizeInInch() const
   { s = QSizeF( s.height(), s.width() ); }
   
   return s;
+}
+//-----------------------------------------------------------------------------
+NoteLocator PartitionViewer::getPrevious( const NoteLocator& iC ) const
+{
+  int bar = 0, index = 0;
+  if (iC.getIndex() > 0)
+  { index = iC.getIndex() - 1; }
+  else
+  {
+    bar = iC.getBar() - 1;
+    index = x->getNumberOfNotesInBar( bar ) - 1;
+  }
+  return NoteLocator( bar, index );
 }
 //-----------------------------------------------------------------------------
 QRect PartitionViewer::getRegion( region iR ) const
@@ -1309,6 +1409,19 @@ QRect PartitionViewer::getRegion( region iR ) const
   return r;
 }
 //-----------------------------------------------------------------------------
+QString PartitionViewer::getParenthesisText( int iRep ) const
+{
+  QString s = QString::number( x->getNumberOfRepetitionsForParenthesis(iRep) );
+  s += "x";
+  return s;
+}
+//-----------------------------------------------------------------------------
+int PartitionViewer::getParenthesisTextWidth( int iRep ) const
+{
+  QFontMetrics fm( mParenthesisFont );
+  return fm.width( getParenthesisText( iRep ) );
+}
+//-----------------------------------------------------------------------------
 NoteLocator PartitionViewer::getSelectedNote( int i ) const
 { return NoteLocator( mSelectedNotes[i].first, mSelectedNotes[i].second ); }
 //-----------------------------------------------------------------------------
@@ -1356,6 +1469,11 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
       if( (ipE->modifiers() & Qt::ShiftModifier) )
       { commandBreakOrnementsFromSelection(); }
       else{ commandAddOrnement( otMeend ); }
+      break;
+    case Qt::Key_A: //Andolan
+      if( (ipE->modifiers() & Qt::ShiftModifier) )
+      { commandBreakOrnementsFromSelection(); }
+      else{ commandAddOrnement( otAndolan ); }
       break;
     case Qt::Key_E:
       if( (ipE->modifiers() & Qt::ShiftModifier) )
@@ -1521,6 +1639,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
     case Qt::Key_Plus: commandIncreaseOctave(); break;
     case Qt::Key_Minus: commandDecreaseOctave(); break;
     case Qt::Key_Shift: break;
+    case Qt::Key_ParenLeft: commandAddParenthesis(2); break;
     default: break;
   }
   updateUi();
@@ -1637,6 +1756,7 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   //intersection avec les barres
   if( mBarHoverIndex != kNoBarIndex )
   {
+    clearSelection();
     setCurrentBar( mBarHoverIndex );
     setCurrentNote( x->getNumberOfNotesInBar( mBarHoverIndex ) - 1 );
     updateUi();
@@ -1751,6 +1871,7 @@ void PartitionViewer::moveOrnementBackward(int iFromBar, int iToIndex)
   }
 }
 //-----------------------------------------------------------------------------
+/*voir moveOrnementBackward*/
 void PartitionViewer::moveOrnementForward(int iFromBar, int iFromIndex)
 {
   vector<NoteLocator> vn;
@@ -1780,6 +1901,81 @@ void PartitionViewer::moveOrnementForward(int iFromBar, int iFromIndex)
       addNoteToSelection(bar, index);
     }
     commandAddOrnement(ot);
+    clearSelection();
+  }
+}
+//-----------------------------------------------------------------------------
+//voir moveOrnementBackward... c'est pareil
+void PartitionViewer::moveParenthesisBackward( int iFromBar, int iToIndex )
+{
+  /*ramasse toutes les notes de la bar iFromBar*/
+  vector<NoteLocator> vn;
+  for( int i = 0; i < x->getNumberOfNotesInBar(iFromBar); ++i )
+  { vn.push_back( NoteLocator( iFromBar, i) ); }
+  
+  //ramasse tous les ornements à déplacer
+  set<int> pToMove;
+  for( int i = 0; i < vn.size(); ++i )
+  {
+    int p = x->findParenthesis( vn[i].getBar(), vn[i].getIndex() );
+    if( p >= 0 ) { pToMove.insert( p ); }
+  }
+  
+  /*pour chaque parentheses, si la barre du noteLocator est égale à iFromBar
+   on décremente la barre puisqu'on veut déplacer la note dans la barre
+   précédente et on ajoute ce NoteLocator à la selection. Il faut imaginer
+   cette opération comme si on la faisait à bras. On commencerait par mettre
+   les notes de la barre courante dans la barre précedente, ensuite on
+   selectionnerait le note pour refaire le même parenthese et ensuite on
+   effacerait la barre voulue.*/
+  set<int>::iterator it = pToMove.begin();
+  for( ; it != pToMove.end(); ++it )
+  {
+    int numberOfTime = x->getNumberOfRepetitionsForParenthesis( *it );
+    for(int i = 0; i < x->getNumberOfNotesInParenthesis( *it ); ++i )
+    {
+      NoteLocator nl = x->getNoteLocatorFromParenthesis( *it, i);
+      int bar = nl.getBar();
+      int index = nl.getIndex();
+      if( bar == iFromBar )
+      { bar--; index = index + iToIndex; }
+      addNoteToSelection(bar, index);
+    }
+    commandAddParenthesis( numberOfTime );
+    clearSelection();
+  }
+}
+//-----------------------------------------------------------------------------
+//voir moveParenthesisBackward
+void PartitionViewer::moveParenthesisForward( int iFromBar, int iFromIndex )
+{
+  vector<NoteLocator> vn;
+  for( int i = iFromIndex; i < x->getNumberOfNotesInBar(iFromBar); ++i )
+  { vn.push_back( NoteLocator( iFromBar, i) ); }
+  
+  set<int> pToMove;
+  for( int i = 0; i < vn.size(); ++i )
+  {
+    int index = x->findParenthesis( vn[i].getBar(), vn[i].getIndex() );
+    if( index >= 0 ) { pToMove.insert( index ); }
+  }
+  set<int>::iterator it = pToMove.begin();
+  for( ; it != pToMove.end(); ++it )
+  {
+    int numberOfTime = x->getNumberOfRepetitionsForParenthesis( *it );
+    for(int i = 0; i < x->getNumberOfNotesInParenthesis( *it ); ++i )
+    {
+      NoteLocator nl = x->getNoteLocatorFromParenthesis( *it, i);
+      int bar = nl.getBar();
+      int index = nl.getIndex();
+      if( bar == iFromBar && index >= iFromIndex )
+      {
+        bar++;
+        index -= iFromIndex;
+      }
+      addNoteToSelection(bar, index);
+    }
+    commandAddParenthesis( numberOfTime );
     clearSelection();
   }
 }
@@ -1921,6 +2117,15 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       p.drawRect( l.mTextScreenLayout );
     }
     
+    //layout des Parenthesis
+    for( int i = 0; i < x->getNumberOfParenthesis(); ++i )
+    {
+      const Parenthesis& r = mParenthesis[i];
+      p.drawRect( r.mOpeningScreenLayout );
+      p.drawRect( r.mClosingScreenLayout );
+      p.drawRect( r.mTextScreenLayout );
+    }
+    
     //--- different texte...
     p.setPen(Qt::gray);
     //posiition de la souris, dans le coin sup gauche...
@@ -1933,9 +2138,13 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       QPoint pos = mapFromGlobal( QCursor::pos() );
       QString s;
       s.sprintf( "Mouse pos: %d, %d\n"
-                "Region to repaint: %d, %d, %d, %d",
+                "Region to repaint: %d, %d, %d, %d\n"
+                "Number of Ornement: %d\n"
+                "Number of parenthesis: %d\n",
                 pos.x(), pos.y(),
-                r.left(), r.top(), r.right(), r.bottom() );
+                r.left(), r.top(), r.right(), r.bottom(),
+                x->getNumberOfOrnements(),
+                x->getNumberOfParenthesis() ) ;
       p.drawText( r.topLeft() + QPoint(10, 10), s );
       p.restore();
     }
@@ -2196,9 +2405,9 @@ QString PartitionViewer::strokeToString( strokeType iSt ) const
 int PartitionViewer::toPageIndex( QPoint iP ) const
 {
   int r = -1;
-  for( int i = 0; i < getNumberOfPages(); ++i )
+  for( int i = 0; i < getNumberOfPages() + 1; ++i )
   {
-    if( getPageRegion( prBody, i ).contains( iP ) )
+    if( getPageRegion( prPage, i ).contains( iP ) )
     { r = i; break; }
   }
   return r;
@@ -2217,17 +2426,15 @@ vector<NoteLocator> PartitionViewer::toNoteLocator(
  chaque fonction right() et bottom()*/
 void PartitionViewer::updateBar( int iBar )
 {
-  const int kMargin = 2;
-  const int kMinBarWidth = 50;
+  const int kMinBarWidth =  x->getNumberOfNotesInBar( iBar ) ? 0 : 40;
   
   Bar& b = getBar(iBar);
   //--- definition des rect contenants les notes
   b.mNotesRect.clear();
   QFontMetrics fm( mBarFont );
   QFontMetrics gfm( mGraceNotesFont );
-  int separatorPos = getBarRegion( brNoteStartX );
-  int barWidth = separatorPos + 2*kMargin;
-  int cursorX = kMargin + separatorPos;
+  int barWidth = 0;
+  int cursorX = getBarRegion( brNoteStartX );
   for( int j = 0; j < x->getNumberOfNotesInBar( iBar ); ++j )
   {
     QString n = noteToString( x->getNote( iBar, j ) );
@@ -2237,12 +2444,17 @@ void PartitionViewer::updateBar( int iBar )
       getBarRegion( brGraceNoteTopY ) : getBarRegion( brNoteTopY );
     b.mNotesRect.push_back( QRect( cursorX, posY,
       noteLenght, noteHeight ) );
-    cursorX += noteLenght + getInterNoteSpacing( iBar, j, j+1 );
+    NoteLocator n1( iBar, j );
+    NoteLocator n2 = getNext(n1);
+    cursorX += noteLenght + getInterNoteSpacing( n1, n2 );
     barWidth = cursorX;
   }
-//  barWidth += std::max( (getNumberOfNotesInBar( iBar ) - 1) * kInterNoteGap, 0 );
   
   //--- Rectangle contenant la bar
+  //On ajuste la largeur pour contenir le texte.
+  barWidth = max( barWidth,
+    getBarRegion( brTextX ) +
+    QFontMetrics(mBarTextFont).width( x->getBarText(iBar) ) + 5 );
   QRect barRect( QPoint(0, 0), QSize(std::max( barWidth, kMinBarWidth), kBarHeight ) );
   b.mRect = barRect;
   
@@ -2252,7 +2464,6 @@ void PartitionViewer::updateBar( int iBar )
   {
     int left = numeric_limits<int>::max();
     int right = numeric_limits<int>::min();
-    //vector<int>& v = b.mMatraGroups[i];
     for( int j = 0; j < x->getNumberOfNotesInMatra(iBar, i); ++j )
     {
       int noteIndex = x->getNoteIndexFromMatra(iBar, i, j);
@@ -2389,6 +2600,9 @@ void PartitionViewer::updateLayout()
   //--- le layout des ornements
   updateOrnementLayout();
   
+  //--- le layout des repeition
+  updateParenthesisLayout();
+  
   //--- le layout des ligne, il vient apres le layout des barres parce
   //qu'il en est dependant
   updateLineLayout();
@@ -2431,7 +2645,7 @@ void PartitionViewer::updateLineLayout()
     
     //le rect du numero de ligne
     {
-      QString s = QString::number( i + 1 );
+      QString s = QString::number( i + 1 ) + ")";
       QRect r( QPoint(), QSize( fm.width(s), fm.height() ) );
       // on translate le rect contenant la numero de ligne. La position
       // finale est 5 pix a gauche de la marge et centre sur la premiere
@@ -2475,6 +2689,7 @@ void PartitionViewer::updateOrnementLayout()
     {
       case otMeend: height = kMeendHeight; break;
       case otKrintan: height = kKrintanHeight; break;
+      case otAndolan:
       case otGamak: height = kGamakHeight; break;
       default: break;
     }
@@ -2514,6 +2729,60 @@ void PartitionViewer::updateOrnementLayout()
       widthAccum += right - left;
     }
     o.mFullOrnement = QRect( QPoint(0, getBarRegion( brOrnementY ) ), QSize(widthAccum, height) );
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::updateParenthesisLayout()
+{
+  mParenthesis.clear();
+  Parenthesis repLayout;
+  for( int i = 0; i < x->getNumberOfParenthesis(); ++i )
+  {
+    NoteLocator first = x->getNoteLocatorFromParenthesis(i, 0);
+    NoteLocator last = x->getNoteLocatorFromParenthesis(i,
+      x->getNumberOfNotesInParenthesis(i) - 1 );
+
+    //parenthese ouvrante
+    const Bar& b1 = getBar( first.getBar() );
+    {
+      QPointF p;
+      p.setX( b1.getNoteRect( first.getIndex() ).left() );
+      p.setY( (getBarRegion( brNoteTopY ) + getBarRegion( brNoteBottomY )) / 2 );
+
+      p -= QPointF( mBaseParenthesisRect.width(), 0 );
+      QRectF r = mBaseParenthesisRect;
+      r.translate( 0, -r.height() / 2.0 );
+      r.translate( p );
+      repLayout.mOpening = r;
+      r.translate( b1.mScreenLayout.topLeft() ) ;
+      repLayout.mOpeningScreenLayout = r;
+    }
+
+    //parenthese fermante
+    const Bar& b2 = getBar( last.getBar() );
+    {
+      QPointF p;
+      p.setX( b2.getNoteRect( last.getIndex() ).right() );
+      p.setY( (getBarRegion( brNoteTopY ) + getBarRegion( brNoteBottomY )) / 2 );
+      int width = mBaseParenthesisRect.width() + getParenthesisTextWidth(i);
+      p += QPointF( width, 0 );
+      QRectF r = mBaseParenthesisRect;
+      r.translate( -width, -r.height() / 2.0 );
+      r.translate( p );
+      repLayout.mClosing = r;
+      r.translate( b2.mScreenLayout.topLeft() ) ;
+      repLayout.mClosingScreenLayout = r;
+      
+      //le texte
+      QFontMetrics fm( mParenthesisFont );
+      QRectF textR = fm.boundingRect( getParenthesisText( i ) );
+      textR.translate( repLayout.mClosing.bottomRight() );
+      repLayout.mText = textR;
+      textR.translate( b2.mScreenLayout.topLeft() ) ;
+      repLayout.mTextScreenLayout = textR;
+    }
+  
+    mParenthesis.push_back( repLayout );
   }
 }
 //-----------------------------------------------------------------------------
