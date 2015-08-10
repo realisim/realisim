@@ -12,8 +12,10 @@ namespace
 {
   const int kMagicHeader = 0x00ABEF54;
   
-  const int kCurrentVersion = 3;
-  /*version 3: ajout du texte sur les barres.*/
+  const int kCurrentVersion = 4;
+  /*version 3: ajout du texte sur les barres.
+    version 4: ajout des parentheses de repetition
+   */
   
   /*kLowestSupportedVersion indique la plus basse version de logiciel capable
     de lire ce format de fichier. C'est pour les vielles versions, il est
@@ -287,8 +289,8 @@ void Composition::addNoteToParenthesis( int iRep, int iBar, int iIndex )
 void Composition::addOrnement( ornementType iOt, std::vector<NoteLocator> iNotes )
 { mOrnements.push_back( Ornement( iOt, iNotes ) ); }
 //------------------------------------------------------------------------------
-void Composition::addParenthesis( vector<NoteLocator> iNotes )
-{ mParenthesis.push_back( Parenthesis( iNotes, 2 ) ); }
+void Composition::addParenthesis( vector<NoteLocator> iNotes, int iNumRep )
+{ mParenthesis.push_back( Parenthesis( iNotes, iNumRep ) ); }
 //------------------------------------------------------------------------------
 void Composition::addStroke( int iBar, strokeType iSt, vector<int> iNoteIndices )
 {
@@ -731,6 +733,29 @@ void Composition::fromBinary( QByteArray iBa )
       }
       setTarabTuning( vn );
     }
+    
+    //parenthesis
+    if( version >= 4 )
+    {
+      qint32 numParenthesis; ds >> numParenthesis;
+      for( int i = 0; i < numParenthesis; ++i )
+      {
+        //les notelocator de la parenthese
+        vector<NoteLocator> vnl;
+        qint32 numNotes; ds >> numNotes;
+        for( int j = 0; j < numNotes; ++j )
+        {
+          qint32 bar, index;
+          ds>>bar; ds>>index;
+          NoteLocator nl( bar, index );
+          vnl.push_back(nl);
+        }
+        //le nombre de repet
+        qint32 numRep; ds >> numRep;
+        
+        addParenthesis(vnl, numRep);
+      }
+    }
   }
 }
 //------------------------------------------------------------------------------
@@ -947,6 +972,12 @@ void Composition::setNote( int iBar, int iIndex, Note iN )
   Bar& b = getBar( iBar );
   if( iIndex >= 0 && iIndex < getNumberOfNotesInBar(iBar) )
   { b.mNotes[iIndex] = iN; }
+}
+//------------------------------------------------------------------------------
+void Composition::setNumberOfRepetitionForParenthesis(int iIndex, int iNumRepetitions)
+{
+  if( iIndex >= 0 && iIndex < getNumberOfParenthesis() )
+  { mParenthesis[iIndex].mNumber = iNumRepetitions; }
 }
 //------------------------------------------------------------------------------
 void Composition::setScale( std::vector<Note> iNote )
@@ -1179,6 +1210,22 @@ QByteArray Composition::toBinary() const
     ds << (qint32)n.getValue();
     ds << (qint32)n.getOctave();
     ds << (qint32)n.getModification();
+  }
+  
+  //--- parenthesis
+  ds << (qint32)getNumberOfParenthesis();
+  for( int i = 0; i < getNumberOfParenthesis(); ++i)
+  {
+    //les notes entre parentheses
+    ds << (qint32)getNumberOfNotesInParenthesis(i);
+    for( int j = 0; j < getNumberOfNotesInParenthesis(i); ++j )
+    {
+      const NoteLocator& nl = getNoteLocatorFromParenthesis(i, j);
+      ds << (qint32)nl.getBar();
+      ds << (qint32)nl.getIndex();
+    }
+    //le nombre de repetition
+    ds << (qint32)getNumberOfRepetitionsForParenthesis(i);
   }
   
   return ba;

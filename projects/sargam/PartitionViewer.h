@@ -36,6 +36,7 @@ void commandAddParenthesis( int );
   void commandDecreaseOctave();
   void commandErase();
   void commandIncreaseOctave();
+  void commandRemoveParenthesis();
   void commandRemoveSelectionFromGraceNotes();
   void commandRemoveStroke();
   void commandShiftNote();
@@ -67,9 +68,10 @@ signals:
   void interactionOccured(); //documenter...
   
 protected slots:
-  void resizeLineEditToContent();
+  void resizeEditToContent();
   void stopBarTextEdit();
   void stopLineTextEdit();
+  void stopParentheseEdit();
   void stopTitleEdit();
   
 protected:
@@ -195,6 +197,7 @@ protected:
   int getParenthesisTextWidth( int ) const;
   bool hasBarTextEditionPending() const;
   bool hasLineEditionPending() const;
+  bool hasParenthesisEditionPending() const;
   bool hasTitleEditionPending() const {return mEditingTitle;}
   bool isNoteSelected( int, int ) const;
   virtual void keyPressEvent( QKeyEvent* );
@@ -221,6 +224,7 @@ protected:
   void setNumberOfPage(int);
   std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > ) const;
   void startBarTextEdit( int );
+  void startParentheseEdit( int );
   void startLineTextEdit( int );
   void startTitleEdit();
   QString strokeToString( strokeType ) const;
@@ -239,6 +243,7 @@ protected:
   QLineEdit* mpTitleEdit;
   QLineEdit* mpLineTextEdit;
   QLineEdit* mpBarTextEdit;
+  QSpinBox* mpParenthesisEdit;
   
   //--- data
   bool mIsDebugging;
@@ -267,6 +272,7 @@ protected:
   std::vector< std::pair<int, int> > mSelectedNotes; //bar, index
   int mEditingBarText;
   int mEditingLineIndex;
+  int mEditingParentheseIndex;
   bool mEditingTitle;
   int mAddLineTextHover;
   int mBarHoverIndex;

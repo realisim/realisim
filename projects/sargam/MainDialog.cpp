@@ -58,9 +58,6 @@ MainDialog::MainDialog() : QMainWindow(),
   loadSettings();
   newFile();
   
-  //!!! pour le beta, on met a verbose...
-  setAsVerbose( true );
-  
   resize( mpPartitionViewer->width() + mpToolBar->width() + 35, 800 );
 }
 //-----------------------------------------------------------------------------
@@ -241,7 +238,7 @@ void MainDialog::createToolBar()
   {
     QAction* a = new QAction( "meend", this );
     a->setToolTip("Adds a meend over the selection.<br>"
-                  "<B>(K)</B>");
+                  "<B>(B)</B>");
     mActions[ aAddMeend ] = a;
     mpToolBar->addAction( mActions[aAddMeend] );
   }
@@ -261,7 +258,7 @@ void MainDialog::createToolBar()
   }
   {
     QAction* a = new QAction( "remove ornement", this );
-    a->setToolTip("Removes krintan|meend from the selection.<br>"
+    a->setToolTip("Removes krintan|meend|etc.. from the selection.<br>"
                   "<B>(shift+K or shift+M)</B>");
     mActions[ aRemoveOrnement ] = a;
     mpToolBar->addAction( mActions[aRemoveOrnement] );
@@ -279,6 +276,20 @@ void MainDialog::createToolBar()
                   "<B>(shift+G)</B>");
     mActions[ aRemoveGraceNote ] = a;
     mpToolBar->addAction( mActions[aRemoveGraceNote] );
+  }
+  {
+    QAction* a = new QAction( "add parenthesis", this );
+    a->setToolTip("Embraces selected notes in parenthesis.<br>"
+                  "<B>(P)</B>");
+    mActions[ aAddParenthesis ] = a;
+    mpToolBar->addAction( mActions[aAddParenthesis] );
+  }
+  {
+    QAction* a = new QAction( "remove parenthesis", this );
+    a->setToolTip("Removes parenthesis around current notes.<br>"
+                  "<B>(shift+P)</B>");
+    mActions[ aRemoveParenthesis ] = a;
+    mpToolBar->addAction( mActions[aRemoveParenthesis] );
   }
   {
     QAction* a = new QAction( "increase octave", this );
@@ -718,6 +729,8 @@ void MainDialog::toolActionTriggered(QAction* ipA)
     case aRemoveOrnement: mpPartitionViewer->commandBreakOrnementsFromSelection(); break;
     case aAddGraceNote: mpPartitionViewer->commandAddGraceNotes(); break;
     case aRemoveGraceNote: mpPartitionViewer->commandRemoveSelectionFromGraceNotes(); break;
+    case aAddParenthesis: mpPartitionViewer->commandAddParenthesis(2); break;
+    case aRemoveParenthesis: mpPartitionViewer->commandRemoveParenthesis(); break;
     case aDecreaseOctave: mpPartitionViewer->commandDecreaseOctave(); break;
     case aIncreaseOctave: mpPartitionViewer->commandIncreaseOctave(); break;
     case aRest: mpPartitionViewer->commandAddNote( nvRest ); break;
@@ -756,23 +769,25 @@ void MainDialog::updateUi()
     mActions[aPhrasing]->setEnabled(true);
     if( x->hasSelection() )
     {
-      //matras
       bool canBreakMatra = true;
+      bool canBreakOrnement = true;
+      bool canRemoveGraceNote = true;
+      bool canRemoveParenthesis = true;
+      bool canRemoveStroke = true;
       for( int i = 0; i < x->getNumberOfSelectedNote(); ++i )
       {
         NoteLocator nl = x->getSelectedNote( i );
         canBreakMatra &= mComposition.isNoteInMatra( nl.getBar(), nl.getIndex() );
+        canBreakOrnement &= mComposition.isNoteInOrnement( nl.getBar(), nl.getIndex() );
+        canRemoveGraceNote &= mComposition.isGraceNote( nl.getBar(), nl.getIndex() );
+        canRemoveParenthesis &= mComposition.isNoteInParenthesis( nl.getBar(), nl.getIndex() );
+        canRemoveStroke &= mComposition.hasStroke( nl.getBar(), nl.getIndex() );
       }
+      //matras
       mActions[aRemoveMatra]->setEnabled(canBreakMatra);
       mActions[aAddMatra]->setEnabled(!canBreakMatra);
       
       //ornements
-      bool canBreakOrnement = true;
-      for( int i = 0; i < x->getNumberOfSelectedNote(); ++i )
-      {
-        NoteLocator nl = x->getSelectedNote( i );
-        canBreakOrnement &= mComposition.isNoteInOrnement( nl.getBar(), nl.getIndex() );
-      }
       mActions[aRemoveOrnement]->setEnabled(canBreakOrnement);
       mActions[aAddKrintan]->setEnabled(!canBreakOrnement);
       mActions[aAddMeend]->setEnabled(!canBreakOrnement);
@@ -780,26 +795,17 @@ void MainDialog::updateUi()
       mActions[aAddAndolan]->setEnabled(!canBreakOrnement);
       
       //graceNote
-      bool canRemoveGraceNote = true;
-      for( int i = 0; i < x->getNumberOfSelectedNote(); ++i )
-      {
-        NoteLocator nl = x->getSelectedNote( i );
-        canRemoveGraceNote &= mComposition.isGraceNote( nl.getBar(), nl.getIndex() );
-      }
       mActions[aRemoveGraceNote]->setEnabled(canRemoveGraceNote);
       mActions[aAddGraceNote]->setEnabled(!canRemoveGraceNote);
       
+      //parenthesis
+      mActions[aRemoveParenthesis]->setEnabled(canRemoveParenthesis);
+      mActions[aAddParenthesis]->setEnabled(!canRemoveParenthesis);
+
       //strokes
       mActions[aDa]->setEnabled(true);
       mActions[aRa]->setEnabled(true);
       mActions[aDiri]->setEnabled(true);
-      
-      bool canRemoveStroke = true;
-      for( int i = 0; i < x->getNumberOfSelectedNote(); ++i )
-      {
-        NoteLocator nl = x->getSelectedNote( i );
-        canRemoveStroke &= mComposition.hasStroke( nl.getBar(), nl.getIndex() );
-      }
       mActions[ aRemoveStroke ]->setEnabled(canRemoveStroke);
     }
     else

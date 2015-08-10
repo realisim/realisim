@@ -87,7 +87,7 @@ public:
   void addNote( int, Note );
   void addNote( int, int, Note );
   void addOrnement( ornementType, std::vector<NoteLocator> );
-  void addParenthesis( std::vector<NoteLocator> );
+  void addParenthesis( std::vector<NoteLocator>, int = 2 );
   void addStroke( int, strokeType, std::vector<int> );
   void addGraceNote( int, int );
   void clear();
@@ -148,6 +148,7 @@ public:
   void setBarText( int, QString );
   void setLineText( int, QString );
   void setNote( int, int, Note );
+  void setNumberOfRepetitionForParenthesis(int, int);
   void setScale( std::vector<Note> );
   void setTarabTuning( std::vector<Note> );
   void setTitle( QString );
@@ -219,8 +220,6 @@ protected:
   QString mTitle;
   Bar mScale;
   Bar mTarabTuning;
-  //std::vector<Note> mScale;
-  //std::vector<Note> mTarabTuning;
   std::vector<Bar> mBars;
   std::vector<Line> mLines;
   std::vector<Ornement> mOrnements;
