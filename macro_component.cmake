@@ -150,10 +150,10 @@ ENDMACRO (ADD_BINARY_RESOURCES)
 MACRO (CREATE_QRC_FILE FILE_NAME FILES)
   SET ( FILES_TMP ${FILES} ${ARGN} )
   #create qrc file
-   SET (QRC_FILE "<!DOCTYPE RCC><RCC version=\"1.0\">"\n <qresource>\n)
+   SET (QRC_FILE "<!DOCTYPE RCC><RCC version=\"1.0\"> \n <qresource>\n")
 
    FOREACH(FILE ${FILES_TMP})
-     SET (QRC_FILE ${QRC_FILE} "  <file>${FILE}</file>"\n)
+     SET (QRC_FILE ${QRC_FILE} "  <file>${FILE}</file>\n")
    ENDFOREACH(FILE ${FILES_TMP})
 
    SET (QRC_FILE ${QRC_FILE} " </qresource>\n</RCC>")
