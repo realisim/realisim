@@ -148,6 +148,7 @@ public:
   void setBarText( int, QString );
   void setLineText( int, QString );
   void setNote( int, int, Note );
+  void setNumberOfRepetitionForParenthesis(int, int);
   void setScale( std::vector<Note> );
   void setTarabTuning( std::vector<Note> );
   void setTitle( QString );

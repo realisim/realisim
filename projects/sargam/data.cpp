@@ -949,6 +949,12 @@ void Composition::setNote( int iBar, int iIndex, Note iN )
   { b.mNotes[iIndex] = iN; }
 }
 //------------------------------------------------------------------------------
+void Composition::setNumberOfRepetitionForParenthesis(int iIndex, int iNumRepetitions)
+{
+  if( iIndex >= 0 && iIndex < getNumberOfParenthesis() )
+  { mParenthesis[iIndex].mNumber = iNumRepetitions; }
+}
+//------------------------------------------------------------------------------
 void Composition::setScale( std::vector<Note> iNote )
 { mScale.mNotes = iNote; }
 //------------------------------------------------------------------------------

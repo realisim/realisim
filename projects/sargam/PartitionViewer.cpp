@@ -55,6 +55,7 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mCurrentNote( -1 ),
   mEditingBarText( -1 ),
   mEditingLineIndex( -1 ),
+  mEditingParentheseIndex( -1 ),
   mEditingTitle( false ),
   mAddLineTextHover( -1 ),
   mBarHoverIndex( kNoBarIndex ),
@@ -675,6 +676,12 @@ void PartitionViewer::createUi()
           this, SLOT( stopBarTextEdit() ) );
   connect( mpBarTextEdit, SIGNAL( textChanged(const QString&)),
           this, SLOT( resizeLineEditToContent() ) );
+  
+  //spin box pour le nombre de répétitions des parentheses
+  mpParenthesisEdit = new QSpinBox( this->parentWidget() );
+  mpParenthesisEdit->setMinimum(2); mpParenthesisEdit->setMaximum(99);
+  connect( mpParenthesisEdit, SIGNAL( editingFinished() ),
+          this, SLOT( stopParentheseEdit() ) );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
@@ -1448,6 +1455,9 @@ bool PartitionViewer::hasBarTextEditionPending() const
 bool PartitionViewer::hasLineEditionPending() const
 { return mEditingLineIndex != -1; }
 //-----------------------------------------------------------------------------
+bool PartitionViewer::hasParenthesisEditionPending() const
+{ return mEditingParentheseIndex != -1; }
+//-----------------------------------------------------------------------------
 void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
 {
   if( isVerbose() )
@@ -1710,7 +1720,7 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
       shouldUpdate |= true; }
   }
   
-  //intersection avec les lignes
+  //intersection avec le texte des lignes
   for( int i = 0; i < x->getNumberOfLines(); ++i )
   {
     if( mLines[i].mHotSpot.contains( pos ) )
@@ -1725,6 +1735,13 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
     }
       
     if( mLines[i].mTextScreenLayout.contains( pos ) )
+    { cs = Qt::IBeamCursor; }
+  }
+  
+  //intersection avec le texte des parentheses
+  for( int i = 0; i < x->getNumberOfParenthesis(); ++i )
+  {
+    if( mParenthesis[i].mTextScreenLayout.contains(pos) )
     { cs = Qt::IBeamCursor; }
   }
   
@@ -1762,7 +1779,7 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
     updateUi();
   }
   
-  //intersection avec les lignes
+  //intersection avec le texte des lignes
   for( int i = 0; i < x->getNumberOfLines(); ++i )
   {
     if( mLines[i].mHotSpot.contains( pos ) )
@@ -1774,6 +1791,13 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
     
     if( mLines[i].mTextScreenLayout.contains( pos ) )
     { startLineTextEdit( i ); }
+  }
+  
+  //intersection avec le texte des parentheses
+  for( int i = 0; i < x->getNumberOfParenthesis(); ++i )
+  {
+    if( mParenthesis[i].mTextScreenLayout.contains(pos) )
+    { startParentheseEdit(i); }
   }
   
   emit interactionOccured();
@@ -2341,6 +2365,14 @@ void PartitionViewer::startLineTextEdit( int iLineIndex )
   updateUi();
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::startParentheseEdit(int iIndex)
+{
+  mpParenthesisEdit->setFocus();
+  mpParenthesisEdit->setValue(x->getNumberOfRepetitionsForParenthesis(iIndex));
+  mEditingParentheseIndex = iIndex;
+  updateUi();
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::startTitleEdit()
 {
   mpTitleEdit->setFocus();
@@ -2367,6 +2399,19 @@ void PartitionViewer::stopLineTextEdit()
   {
     x->setLineText( mEditingLineIndex, mpLineTextEdit->text() );
     mEditingLineIndex = -1;
+    //on met la barre dirty pour forcer le updatePageLayout
+    setBarAsDirty( 0, true );
+    updateUi();
+    setFocus();
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::stopParentheseEdit()
+{
+  if( hasParenthesisEditionPending() )
+  {
+    x->setNumberOfRepetitionForParenthesis(mEditingParentheseIndex, mpParenthesisEdit->value());
+    mEditingParentheseIndex = -1;
     //on met la barre dirty pour forcer le updatePageLayout
     setBarAsDirty( 0, true );
     updateUi();
@@ -2745,11 +2790,11 @@ void PartitionViewer::updateParenthesisLayout()
     //parenthese ouvrante
     const Bar& b1 = getBar( first.getBar() );
     {
-      QPointF p;
+      QPoint p;
       p.setX( b1.getNoteRect( first.getIndex() ).left() );
       p.setY( (getBarRegion( brNoteTopY ) + getBarRegion( brNoteBottomY )) / 2 );
 
-      p -= QPointF( mBaseParenthesisRect.width(), 0 );
+      p -= QPoint( mBaseParenthesisRect.width(), 0 );
       QRectF r = mBaseParenthesisRect;
       r.translate( 0, -r.height() / 2.0 );
       r.translate( p );
@@ -2863,6 +2908,16 @@ void PartitionViewer::updateUi()
   }
   else { mpLineTextEdit->hide(); }
   
+  //place le spinBox pour edition des parenthese
+  if(hasParenthesisEditionPending())
+  {
+    QPointF p = mParenthesis[mEditingParentheseIndex].mTextScreenLayout.topLeft();
+    QPoint p2(p.x(), p.y());
+    p2 = mapToParent(p2);
+    mpParenthesisEdit->move( p2 );
+    mpParenthesisEdit->show();
+  }
+  else { mpParenthesisEdit->hide(); }
   
   /* On redimensionne le widget pour garantir que toutes les pages seront
      affichees. */
