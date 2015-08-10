@@ -241,7 +241,7 @@ void MainDialog::createToolBar()
   {
     QAction* a = new QAction( "meend", this );
     a->setToolTip("Adds a meend over the selection.<br>"
-                  "<B>(K)</B>");
+                  "<B>(M)</B>");
     mActions[ aAddMeend ] = a;
     mpToolBar->addAction( mActions[aAddMeend] );
   }
