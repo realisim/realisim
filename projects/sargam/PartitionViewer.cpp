@@ -568,6 +568,28 @@ void PartitionViewer::commandIncreaseOctave()
   { getLog().log( "PartitionViewer: commandIncreaseOctave." ); }
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::commandRemoveParenthesis()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  /*On commence par chercher si il y a deja une parenthese associée aux
+   note de la parenthese qu'on est en train d'ajouter. Si oui, on enleve la
+   parenthese deja existante.*/
+  for( int i = 0; i < mSelectedNotes.size(); ++i )
+  {
+    int bar = mSelectedNotes[i].first;
+    int noteIndex = mSelectedNotes[i].second;
+    int p = x->findParenthesis( bar, noteIndex );
+    if( p != -1 )
+    { x->eraseParenthesis( p ); setBarAsDirty( bar, true ); }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: commandRemoveParenthesis." ); }
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::commandRemoveSelectionFromGraceNotes()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
@@ -1510,6 +1532,11 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
       { commandBreakOrnementsFromSelection(); }
       else{ commandAddOrnement( otGamak ); }
       break;
+    case Qt::Key_P:
+      if( (ipE->modifiers() & Qt::ShiftModifier) )
+      { commandRemoveParenthesis(); }
+      else { commandAddParenthesis(2); }
+      break;
     case Qt::Key_Q:
       if( (ipE->modifiers() & Qt::ShiftModifier) )
       { commandRemoveStroke(); }
@@ -1649,7 +1676,6 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
     case Qt::Key_Plus: commandIncreaseOctave(); break;
     case Qt::Key_Minus: commandDecreaseOctave(); break;
     case Qt::Key_Shift: break;
-    case Qt::Key_ParenLeft: commandAddParenthesis(2); break;
     default: break;
   }
   updateUi();
@@ -2916,6 +2942,7 @@ void PartitionViewer::updateUi()
     p2 = mapToParent(p2);
     mpParenthesisEdit->move( p2 );
     mpParenthesisEdit->show();
+    mpParenthesisEdit->selectAll();
   }
   else { mpParenthesisEdit->hide(); }
   

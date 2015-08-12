@@ -36,6 +36,7 @@ void commandAddParenthesis( int );
   void commandDecreaseOctave();
   void commandErase();
   void commandIncreaseOctave();
+  void commandRemoveParenthesis();
   void commandRemoveSelectionFromGraceNotes();
   void commandRemoveStroke();
   void commandShiftNote();

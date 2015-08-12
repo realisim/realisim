@@ -87,7 +87,7 @@ public:
   void addNote( int, Note );
   void addNote( int, int, Note );
   void addOrnement( ornementType, std::vector<NoteLocator> );
-  void addParenthesis( std::vector<NoteLocator> );
+  void addParenthesis( std::vector<NoteLocator>, int = 2 );
   void addStroke( int, strokeType, std::vector<int> );
   void addGraceNote( int, int );
   void clear();
