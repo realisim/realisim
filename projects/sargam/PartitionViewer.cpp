@@ -679,7 +679,7 @@ void PartitionViewer::createUi()
   connect( mpTitleEdit, SIGNAL( editingFinished() ),
           this, SLOT( stopTitleEdit() ) );
   connect( mpTitleEdit, SIGNAL( textChanged(const QString&)),
-          this, SLOT( resizeLineEditToContent() ) );
+          this, SLOT( resizeEditToContent() ) );
   
   //line edit pour titre des lignes
   mpLineTextEdit = new QLineEdit( this->parentWidget() );
@@ -688,7 +688,7 @@ void PartitionViewer::createUi()
   connect( mpLineTextEdit, SIGNAL( editingFinished() ),
           this, SLOT( stopLineTextEdit() ) );
   connect( mpLineTextEdit, SIGNAL( textChanged(const QString&)),
-          this, SLOT( resizeLineEditToContent() ) );
+          this, SLOT( resizeEditToContent() ) );
   
   //ligne pour le texte des barres
   mpBarTextEdit = new QLineEdit( this->parentWidget() );
@@ -697,13 +697,15 @@ void PartitionViewer::createUi()
   connect( mpBarTextEdit, SIGNAL( editingFinished() ),
           this, SLOT( stopBarTextEdit() ) );
   connect( mpBarTextEdit, SIGNAL( textChanged(const QString&)),
-          this, SLOT( resizeLineEditToContent() ) );
+          this, SLOT( resizeEditToContent() ) );
   
   //spin box pour le nombre de répétitions des parentheses
   mpParenthesisEdit = new QSpinBox( this->parentWidget() );
   mpParenthesisEdit->setMinimum(2); mpParenthesisEdit->setMaximum(99);
   connect( mpParenthesisEdit, SIGNAL( editingFinished() ),
           this, SLOT( stopParentheseEdit() ) );
+  connect( mpParenthesisEdit, SIGNAL( valueChanged(int)),
+          this, SLOT( resizeEditToContent() ) );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
@@ -2267,16 +2269,22 @@ void PartitionViewer::print( QPrinter* iPrinter )
   setLayoutOrientation( previousOrientation );
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::resizeLineEditToContent()
+void PartitionViewer::resizeEditToContent()
 {
   QLineEdit* le = dynamic_cast<QLineEdit*>( QObject::sender() );
+  QSpinBox* sb = dynamic_cast<QSpinBox*>( QObject::sender() );
   if( le )
   {
     QFontMetrics fm( le->font() );
     le->resize( std::max( fm.width( le->text() ) * 1.1,
                          (double)fm.width( "short" ) ), le->height() );
-    updateUi();
   }
+  else if(sb)
+  {
+    QFontMetrics fm( sb->font() );
+    sb->setMaximumWidth( (double)fm.width( "99" ) + 30 );
+  }
+  updateUi();
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setAsDebugging( bool iD )

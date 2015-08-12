@@ -220,8 +220,6 @@ protected:
   QString mTitle;
   Bar mScale;
   Bar mTarabTuning;
-  //std::vector<Note> mScale;
-  //std::vector<Note> mTarabTuning;
   std::vector<Bar> mBars;
   std::vector<Line> mLines;
   std::vector<Ornement> mOrnements;

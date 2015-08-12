@@ -68,7 +68,7 @@ signals:
   void interactionOccured(); //documenter...
   
 protected slots:
-  void resizeLineEditToContent();
+  void resizeEditToContent();
   void stopBarTextEdit();
   void stopLineTextEdit();
   void stopParentheseEdit();
