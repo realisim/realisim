@@ -82,16 +82,13 @@ protected:
     brOrnementY, brMatraGroupY, brGraceNoteTopY, brTextX, brTextY };
   enum colors{ cHover, cSelection };
   
-//  class Bar
-//  {};
-//  class EditionBar : public Bar
-//  {};
-//  class SpecialBar : public Bar
-//  {};
-  
+  /*Le type de barre indique s'il s'agit d'une barre de dexcription, comme les
+    barres dans le haut de la page pour indiquer la gamme et l'accodage, ou s'il
+    s'agit d'une barre normal de partition. */
   struct Bar
   {
-    Bar() : mIsDirty(true), mIsWayTooLong(false){;}
+    enum barType {btNormal = 0, btDescription};
+    Bar() : mBarType(btNormal), mIsDirty(true), mIsWayTooLong(false){;}
     QRect getNoteRect( int ) const;
     
     /*--- cache d'Affichage 
@@ -101,6 +98,11 @@ protected:
      mMatraGroupRect: les rects qui contiennent les matras. En coordonnées barre.
      mScreenLayout: mRect, mais en coordonnées écran.
      mNoteScreenLayouts: comme mScreenLayout mais pour les notes.
+     mTextScreenLayout: le rect qui contient le texte de la barre. En 
+        coordonnées barre.
+     mBartype: type de barre.
+     mIsDirty:
+     mIsWayTooLong:
      */
     QRect mRect;
     std::vector< QRect > mNotesRect;
@@ -109,8 +111,7 @@ protected:
     std::vector< QRect > mNoteScreenLayouts;
     QRect mTextRect; //bar coord.
     QRect mTextScreenLayout;
-    
-
+    barType mBarType;
     bool mIsDirty;
     bool mIsWayTooLong;
   };
@@ -180,7 +181,8 @@ protected:
   void eraseOrnement( int );
   Bar& getBar(int);
   const Bar& getBar(int) const;
-  int getBarRegion( barRegion ) const;
+  int getBarHeight(Bar::barType) const;
+  int getBarRegion( barRegion, Bar::barType = Bar::btNormal ) const;
   std::vector<int> getBarsFromPage( int ) const;
   QColor getColor( colors ) const;
   QLine getCursorLine() const;

@@ -25,7 +25,6 @@ namespace
   const double kPageMarginInCm = 1.5;
   const int kPageFooter = 15;
   //bar
-  const int kBarHeight = 60;
   const int kInterNoteGap = 5;
   const int kMeendHeight = 10;
   const int kKrintanHeight = 6;
@@ -119,9 +118,13 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mBaseParenthesisRect = QRectF( QPoint(0, 0),
     QSize(8, QFontMetrics(mBarFont).height() * 1.8) );
 
+  //les barres speciales de description sont initialisées ici
+  mScale.mBarType = Bar::btDescription;
+  mTarabTuning.mBarType = Bar::btDescription;
+  
+  //initialisation du Ui et premiere mise à jour.
   createUi();
   addPage();
-  
   updateUi();
 }
 
@@ -810,103 +813,106 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
     }
     
     //la barre vertical à la fin de la barre
-    int x1 = b.mRect.right() + getBarRegion( brSeparatorX );
-    int y1 = 0.15 * kBarHeight;
-    int y2 = getBarRegion( brStrokeY );
-    iP->drawLine( x1, y1, x1, y2 );
-    
-    //--- render beat groups
-    for( int i = 0; i < b.mMatraGroupsRect.size(); ++i )
+    if( b.mBarType == Bar::btNormal )
     {
-      QRect r = b.mMatraGroupsRect[i];
-      iP->drawArc( r, -10 * 16, -170 * 16 );
-    }
-    
-    //--- render Ornements: meends and krintans
-    for( int i = 0; i < x->getNumberOfOrnements(); ++i )
-    {
-      if( x->ornementAppliesToBar( i, iBar ) )
+      int x1 = b.mRect.right() + getBarRegion( brSeparatorX );
+      int y1 = 0.15 * getBarHeight(b.mBarType);
+      int y2 = getBarRegion( brStrokeY );
+      iP->drawLine( x1, y1, x1, y2 );
+      
+      //--- render beat groups
+      for( int i = 0; i < b.mMatraGroupsRect.size(); ++i )
       {
-        const Ornement& m = mOrnements[i];
-        QRect r =  m.mFullOrnement;
-        
-        iP->save();
-        iP->setClipRect( QRect( QPoint(0, 0), b.mScreenLayout.size() ) );
-        iP->translate( m.getOffset( iBar ), 0 );
-        iP->translate( m.getDestination( iBar ), 0 );
-        ornementType ot = x->getOrnementType(i);
-        switch (ot)
+        QRect r = b.mMatraGroupsRect[i];
+        iP->drawArc( r, -10 * 16, -170 * 16 );
+      }
+      
+      //--- render Ornements: meends and krintans
+      for( int i = 0; i < x->getNumberOfOrnements(); ++i )
+      {
+        if( x->ornementAppliesToBar( i, iBar ) )
         {
-          case otMeend:
-            { iP->drawArc( r, 10 * 16, 170 * 16 ); } break;
-          case otKrintan:
+          const Ornement& m = mOrnements[i];
+          QRect r =  m.mFullOrnement;
+          
+          iP->save();
+          iP->setClipRect( QRect( QPoint(0, 0), b.mScreenLayout.size() ) );
+          iP->translate( m.getOffset( iBar ), 0 );
+          iP->translate( m.getDestination( iBar ), 0 );
+          ornementType ot = x->getOrnementType(i);
+          switch (ot)
           {
-            iP->drawLine( r.bottomLeft(), r.topLeft() );
-            iP->drawLine( r.topLeft(), r.topRight() );
-            iP->drawLine( r.topRight(), r.bottomRight() );
-          } break;
-          case otAndolan:
-          { drawGamak( iP, r, 2 ); } break;
-          case otGamak:
-          { drawGamak( iP, r, 3 ); } break;
-          default:break;
+            case otMeend:
+              { iP->drawArc( r, 10 * 16, 170 * 16 ); } break;
+            case otKrintan:
+            {
+              iP->drawLine( r.bottomLeft(), r.topLeft() );
+              iP->drawLine( r.topLeft(), r.topRight() );
+              iP->drawLine( r.topRight(), r.bottomRight() );
+            } break;
+            case otAndolan:
+            { drawGamak( iP, r, 2 ); } break;
+            case otGamak:
+            { drawGamak( iP, r, 3 ); } break;
+            default:break;
+          }
+          
+          iP->restore();
         }
-        
+      }
+      
+      //render strokes
+      iP->save();
+      iP->setFont(mStrokeFont);
+      for( int i = 0; i < x->getNumberOfStrokesInBar(iBar); ++i )
+      {
+        QRect r, r2;
+        for( int j = 0; j < x->getNumberOfNotesInStroke(iBar, i); ++j )
+        {
+          int noteIndex = x->getNoteIndexFromStroke(iBar, i, j);
+          if( r.isNull() )
+          { r = b.getNoteRect( noteIndex ); }
+          else { r = r.united( b.getNoteRect( noteIndex ) ); }
+        }
+        r2.setTop( getBarRegion( brStrokeY ) );
+        r2.setLeft( r.left() );
+        r2.setWidth( r.width() );
+        r2.setHeight( QFontMetrics(mBarFont).height() );
+        QString a = strokeToString( x->getStrokeType(iBar, i) );
+        iP->drawText( r2, Qt::AlignCenter, a );
+      }
+      iP->restore();
+      
+      //render text
+      {
+        iP->save();
+        iP->setFont(mBarTextFont);
+        iP->drawText( b.mTextRect.bottomLeft(), x->getBarText(iBar) );
         iP->restore();
       }
-    }
-    
-    //render strokes
-    iP->save();
-    iP->setFont(mStrokeFont);
-    for( int i = 0; i < x->getNumberOfStrokesInBar(iBar); ++i )
-    {
-      QRect r, r2;
-      for( int j = 0; j < x->getNumberOfNotesInStroke(iBar, i); ++j )
-      {
-        int noteIndex = x->getNoteIndexFromStroke(iBar, i, j);
-        if( r.isNull() )
-        { r = b.getNoteRect( noteIndex ); }
-        else { r = r.united( b.getNoteRect( noteIndex ) ); }
-      }
-      r2.setTop( getBarRegion( brStrokeY ) );
-      r2.setLeft( r.left() );
-      r2.setWidth( r.width() );
-      r2.setHeight( QFontMetrics(mBarFont).height() );
-      QString a = strokeToString( x->getStrokeType(iBar, i) );
-      iP->drawText( r2, Qt::AlignCenter, a );
-    }
-    iP->restore();
-    
-    //render text
-    {
+      
+      //render Parenthesis
       iP->save();
-      iP->setFont(mBarTextFont);
-      iP->drawText( b.mTextRect.bottomLeft(), x->getBarText(iBar) );
-      iP->restore();
-    }
-    
-    //render Parenthesis
-    iP->save();
-    iP->setFont( mParenthesisFont );
-    for( int i = 0; i < x->getNumberOfParenthesis(); ++i )
-    {
-      if( x->parenthesisAppliesToBar(i, iBar) )
+      iP->setFont( mParenthesisFont );
+      for( int i = 0; i < x->getNumberOfParenthesis(); ++i )
       {
-        const Parenthesis& p = mParenthesis[i];
-        NoteLocator first = x->getNoteLocatorFromParenthesis(i, 0);
-        NoteLocator last = x->getNoteLocatorFromParenthesis(i,
-          x->getNumberOfNotesInParenthesis(i) - 1);
-        if( first.getBar() == iBar )
-        { iP->drawArc( p.mOpening, 90 * 16, 169 * 16 ); }
-        if( last.getBar() == iBar )
+        if( x->parenthesisAppliesToBar(i, iBar) )
         {
-          iP->drawArc( p.mClosing, 80 * 16, -169 * 16 );
-          iP->drawText( p.mText.bottomLeft(), getParenthesisText(i) );
+          const Parenthesis& p = mParenthesis[i];
+          NoteLocator first = x->getNoteLocatorFromParenthesis(i, 0);
+          NoteLocator last = x->getNoteLocatorFromParenthesis(i,
+            x->getNumberOfNotesInParenthesis(i) - 1);
+          if( first.getBar() == iBar )
+          { iP->drawArc( p.mOpening, 90 * 16, 169 * 16 ); }
+          if( last.getBar() == iBar )
+          {
+            iP->drawArc( p.mClosing, 80 * 16, -169 * 16 );
+            iP->drawText( p.mText.bottomLeft(), getParenthesisText(i) );
+          }
         }
       }
-    }
-    iP->restore();
+      iP->restore();
+    } //fin de if( b.mBarType == Bar::btNormal )
   }
   else
   {
@@ -1206,14 +1212,25 @@ QLine PartitionViewer::getCursorLine() const
   else
   {
     int x = b.mScreenLayout.left() + getBarRegion( brNoteStartX );
-    int y = b.mScreenLayout.top() + getBarRegion( brNoteTopY );
+    int y = b.mScreenLayout.top() + getBarRegion( brNoteTopY, b.mBarType );
     int h = getBarRegion( brNoteBottomY ) - getBarRegion( brNoteTopY );
     l.setPoints( QPoint(x,y) , QPoint( x, y + h ) );
   }
   return l;
 }
 //-----------------------------------------------------------------------------
-int PartitionViewer::getBarRegion( barRegion br ) const
+int PartitionViewer::getBarHeight(Bar::barType iT) const
+{
+  int r = 60;
+  switch (iT) {
+    case Bar::btNormal: r = 60; break;
+    case Bar::btDescription: r = 30; break;
+    default: break;
+  }
+  return r;
+}
+//-----------------------------------------------------------------------------
+int PartitionViewer::getBarRegion( barRegion br, Bar::barType iBt ) const
 {
   int r = 0;
   QFontMetrics fm(mBarFont);
@@ -1221,9 +1238,9 @@ int PartitionViewer::getBarRegion( barRegion br ) const
   {
     case brSeparatorX: r = -1; break;
     case brNoteStartX: r = 5; break;
-    case brNoteTopY: r = kBarHeight / 2 - fm.height() / 2; break;
-    case brNoteBottomY: r = kBarHeight / 2 + fm.height() / 2; break;
-    case brStrokeY: r = kBarHeight - fm.height(); break;
+    case brNoteTopY: r = getBarHeight(iBt) / 2 - fm.height() / 2; break;
+    case brNoteBottomY: r = getBarHeight(iBt) / 2 + fm.height() / 2; break;
+    case brStrokeY: r = getBarHeight(iBt) - fm.height(); break;
     case brOrnementY: r = getBarRegion(brGraceNoteTopY) - 5; break;
     case brMatraGroupY: r = getBarRegion(brNoteBottomY) - 4; break;
     case brGraceNoteTopY:
@@ -1325,7 +1342,7 @@ QRect PartitionViewer::getPageRegion( pageRegion iR, int iPage /*=0*/ ) const
     case prBody:
     {
       int margin = cmToPixel( kPageMarginInCm );
-      int sargamScaleBottom = iPage == 0 ? getRegion(rTarabTuning).bottom() + kSpacing : 0;
+      int sargamScaleBottom = iPage == 0 ? getRegion(rTarabTuning).bottom() + 2*kSpacing : 0;
       int startOfBody = max( margin, sargamScaleBottom );
       int paperWidth = getPageSizeInInch().width() * logicalDpiX();
       int paperHeight = getPageSizeInInch().height() * logicalDpiY();
@@ -1400,7 +1417,7 @@ QRect PartitionViewer::getRegion( region iR ) const
       r.translate( 0, t.height() + kSpacing );
       int margin = cmToPixel( kPageMarginInCm );
       r.setLeft( margin );
-      r.setHeight( kBarHeight );
+      r.setHeight( getBarHeight(Bar::btDescription) );
       r.setWidth( fm.width( kSargamScaleLabel ) );
     } break;
     case rSargamScale:
@@ -1412,17 +1429,17 @@ QRect PartitionViewer::getRegion( region iR ) const
       r.translate( 0, t.height() + kSpacing );
       r.setLeft( getRegion( rSargamScaleLabel ).right() );
       r.setRight( t.right() - margin );
-      r.setHeight( kBarHeight );
+      r.setHeight( getBarHeight(Bar::btDescription) );
     } break;
     case rTarabTuningLabel:
     {
       QFontMetrics fm( mBarFont );
       QRect t = getRegion( rSargamScaleLabel );
       r = t;
-      r.translate( 0, t.height() + kSpacing );
+      r.translate( 0, t.height() );
       int margin = cmToPixel( kPageMarginInCm );
       r.setLeft( margin );
-      r.setHeight( kBarHeight );
+      r.setHeight( getBarHeight(Bar::btDescription) );
       r.setWidth( fm.width( kTarabTuningLabel ) );
     } break;
     case rTarabTuning:
@@ -1431,10 +1448,10 @@ QRect PartitionViewer::getRegion( region iR ) const
       QRect t = getRegion( rSargamScaleLabel );
       int margin = cmToPixel( kPageMarginInCm );
       r = t;
-      r.translate( 0, t.height() + kSpacing );
+      r.translate( 0, t.height() );
       r.setLeft( getRegion( rTarabTuningLabel ).right() );
       r.setRight( getPageSizeInInch().width() * logicalDpiX() - margin );
-      r.setHeight( kBarHeight );
+      r.setHeight( getBarHeight(Bar::btDescription) );
     } break;
   }
   return r;
@@ -2136,7 +2153,7 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
     }
     
     //on dessine le layout des bars...
-    for( int i = 0; i < x->getNumberOfBars(); ++i )
+    for( int i = sbScale; i < x->getNumberOfBars(); ++i )
     {
       p.setPen( Qt::green );
       Bar& b = getBar(i);
@@ -2520,7 +2537,7 @@ void PartitionViewer::updateBar( int iBar )
     int noteLenght = x->isGraceNote( iBar, j ) ? gfm.width(n) + 1 : fm.width( n ) + 1;
     int noteHeight = x->isGraceNote( iBar, j )  ? gfm.height() : fm.height();
     int posY = x->isGraceNote( iBar, j ) ?
-      getBarRegion( brGraceNoteTopY ) : getBarRegion( brNoteTopY );
+    getBarRegion( brGraceNoteTopY, b.mBarType ) : getBarRegion( brNoteTopY, b.mBarType );
     b.mNotesRect.push_back( QRect( cursorX, posY,
       noteLenght, noteHeight ) );
     NoteLocator n1( iBar, j );
@@ -2534,7 +2551,8 @@ void PartitionViewer::updateBar( int iBar )
   barWidth = max( barWidth,
     getBarRegion( brTextX ) +
     QFontMetrics(mBarTextFont).width( x->getBarText(iBar) ) + 5 );
-  QRect barRect( QPoint(0, 0), QSize(std::max( barWidth, kMinBarWidth), kBarHeight ) );
+  QRect barRect( QPoint(0, 0), QSize(std::max( barWidth, kMinBarWidth),
+    getBarHeight(b.mBarType) ) );
   b.mRect = barRect;
   
   //--- Rectangle contenant les beat groups.
@@ -2585,7 +2603,7 @@ void PartitionViewer::updateBarLayout()
     if( x->isStartOfLine( i ) && x->findLine( i ) != -1)
     {
       int lineIndex = x->findLine( i );
-      int verticalShift = lineIndex != 0 ? 1.05*kBarHeight : 0;
+      int verticalShift = lineIndex != 0 ? 1.05*getBarHeight(b.mBarType) : 0;
       if( !(x->getLineText( lineIndex ).isEmpty()) ||
          mEditingLineIndex == lineIndex )
       { verticalShift += QFontMetrics(mLineFont).height(); }
@@ -2617,7 +2635,7 @@ void PartitionViewer::updateBarLayout()
               pageLayout.width() < pageBody.width() )
       {
         mLayoutCursor.setX( pageBody.left() );
-        mLayoutCursor.setY( mLayoutCursor.y() + kBarHeight );
+        mLayoutCursor.setY( mLayoutCursor.y() + getBarHeight(b.mBarType) );
       }
       //ne rentre pas dans ce qui reste et est trop grand de toute facon...
       //En ce moment ( 14 avril 2015 ), ce n'est pas supporté, donc on
