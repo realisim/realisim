@@ -19,6 +19,7 @@ using namespace realisim;
 namespace
 {
   const int kSettingVersion = 1;
+  const QString kLogFoldername("sargamLogs");
 }
 
 //-----------------------------------------------------------------------------
@@ -29,29 +30,16 @@ MainDialog::MainDialog() : QMainWindow(),
   mpPartitionViewer(0),
   mSettings( QSettings::UserScope, "Realisim", "Sargam" ),
   mLog(),
-  mIsVerbose( false ),
+  mIsVerbose( false   ),
   mIsToolBarVisible(true)
 {
   createUi();
   
-  //--- init log
-  QDir logDir( "./logs" );
-  bool canLogToFile = true;
-  if( !logDir.exists() )
+  if(isVerbose()) 
   {
-    canLogToFile = QDir(".").mkdir( "logs" );
+    mLog.log( "Sargam started. version: %s", getVersionAsQString().
+      toStdString().c_str() );
   }
-  if( canLogToFile )
-  {
-    mLog.logToFile( true, "logs/" + QDateTime::currentDateTime().toString(
-      "yyyy-MM-dd_hh_mm_ss" ) + ".txt" );
-  }
-  else
-  {
-    getLog().log( "Impossible to log to file. Could not create directory "
-                     "'logs'. Try creating it manually beside the executables." );
-  }
-  mLog.log( "Sargam started. version %d", getVersion() );
   mpPartitionViewer->setLog( &mLog );
   
   //--- init viewer
@@ -156,7 +144,7 @@ void MainDialog::about()
     QString s;
     s.sprintf(
       "<div align='center'> <b>Sargam</b> </div>"
-      "Version: %d"
+      "Version: %s"
       "<p>The intention behind this product is to ease learning and sharing of the<br>"
       "sitar. Please share your compositions/transcriptions.</p>"
       "<p>Original idea and design by Pierre-Olivier Beaudoin (no, I am not the<br>"
@@ -167,7 +155,7 @@ void MainDialog::about()
         "<li>www.reddit.com/r/sitar</li>"
       "</ul>"
       "For any information regarding the software contact us at "
-      "sargam.software@gmail.com\n\n", getVersion() );
+      "sargam.software@gmail.com\n\n", getVersionAsQString().toStdString().c_str() );
     
     QLabel* pVerbatim = new QLabel(this);
     pVerbatim->setText(s);
@@ -421,6 +409,13 @@ void MainDialog::generateRandomPartition()
   
   if( isVerbose() )
   { getLog().log( "MainDialog: random partition generated." ); }
+}
+//-----------------------------------------------------------------------------
+QString MainDialog::getVersionAsQString() const
+{
+   return QString::number( getVersionMajor() ) + "." +
+     QString::number( getVersionMinor() ) + "." +
+     QString::number( getVersionRevision() );
 }
 //-----------------------------------------------------------------------------
 bool MainDialog::isVerbose() const
@@ -698,6 +693,27 @@ void MainDialog::setAsVerbose( bool iV )
   mIsVerbose = iV;
   mpPartitionViewer->setAsVerbose( iV );
   
+  if(isVerbose())
+  {
+     //--- init log  
+     QDir logDir( "./"+kLogFoldername );
+     bool canLogToFile = true;
+     if( !logDir.exists() )
+     { canLogToFile = QDir(".").mkdir( kLogFoldername ); }
+
+     if(canLogToFile)
+     {
+        mLog.logToFile( true, kLogFoldername+"/" + QDateTime::currentDateTime().toString(
+           "yyyy-MM-dd_hh_mm_ss" ) + ".txt" );
+     }
+     else
+     {
+        getLog().log( "Impossible to log to file. Could not create directory "
+           "'sargamLogs'. Try creating it manually beside the executables." );
+     }
+    
+  }
+
   getLog().log( "verbose set to: %s", iV?"true":"false" );
 }
 //-----------------------------------------------------------------------------
