@@ -19,6 +19,7 @@ using namespace realisim;
 namespace
 {
   const int kSettingVersion = 1;
+  const QString kLogFoldername("sargamLogs");
 }
 
 //-----------------------------------------------------------------------------
@@ -29,29 +30,10 @@ MainDialog::MainDialog() : QMainWindow(),
   mpPartitionViewer(0),
   mSettings( QSettings::UserScope, "Realisim", "Sargam" ),
   mLog(),
-  mIsVerbose( true ),
+  mIsVerbose( false   ),
   mIsToolBarVisible(true)
 {
   createUi();
-  
-  //--- init log
-  const QString logFoldername("sargamLogs");
-  QDir logDir( "./"+logFoldername );
-  bool canLogToFile = true;
-  if( !logDir.exists() )
-  {
-    canLogToFile = QDir(".").mkdir( logFoldername );
-  }
-  if( canLogToFile )
-  {
-    mLog.logToFile( true, logFoldername+"/" + QDateTime::currentDateTime().toString(
-      "yyyy-MM-dd_hh_mm_ss" ) + ".txt" );
-  }
-  else
-  {
-    getLog().log( "Impossible to log to file. Could not create directory "
-                     "'sargamLogs'. Try creating it manually beside the executables." );
-  }
   
   if(isVerbose()) 
   {
@@ -711,6 +693,27 @@ void MainDialog::setAsVerbose( bool iV )
   mIsVerbose = iV;
   mpPartitionViewer->setAsVerbose( iV );
   
+  if(isVerbose())
+  {
+     //--- init log  
+     QDir logDir( "./"+kLogFoldername );
+     bool canLogToFile = true;
+     if( !logDir.exists() )
+     { canLogToFile = QDir(".").mkdir( kLogFoldername ); }
+
+     if(canLogToFile)
+     {
+        mLog.logToFile( true, kLogFoldername+"/" + QDateTime::currentDateTime().toString(
+           "yyyy-MM-dd_hh_mm_ss" ) + ".txt" );
+     }
+     else
+     {
+        getLog().log( "Impossible to log to file. Could not create directory "
+           "'sargamLogs'. Try creating it manually beside the executables." );
+     }
+    
+  }
+
   getLog().log( "verbose set to: %s", iV?"true":"false" );
 }
 //-----------------------------------------------------------------------------
