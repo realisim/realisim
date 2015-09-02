@@ -18,7 +18,8 @@ using namespace realisim;
 
 namespace
 {
-  //--- pour PartitionViewer
+  const int kBarFadeDuration = 1000; //msec
+  
   const int kSpacing = 5;
   //page
   const int kInterPageGap = 15;
@@ -51,6 +52,7 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mLayoutOrientation( QPageLayout::Portrait ),
   mNumberOfPages(0),
   mCurrentBar( -1 ),
+  mCurrentBarTimerId(0),
   mCurrentNote( -1 ),
   mEditingBarText( -1 ),
   mEditingLineIndex( -1 ),
@@ -58,6 +60,8 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mEditingTitle( false ),
   mAddLineTextHover( -1 ),
   mBarHoverIndex( kNoBarIndex ),
+  mBarHoverTimerId(0),
+  mBarHoverTimer(),
   mBarTextHover( -1 ),
   x( &mDummyComposition ),
   mDefaultLog(),
@@ -746,12 +750,25 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
   drawCursor( &p );
   drawSelectedNotes( &p );
   
-  //on dessine le contour de la barre survolee si ce nest pas la courant
-  if( mBarHoverIndex != getCurrentBar() )
-  { drawBarContour( &p, mBarHoverIndex, getColor( cHover ) ); }
+  //on dessine le contour de la barre survolee en gris si elle nest pas courante
+  //sinon en bleu. La contour fade au bout de kBarFadeDuration.
+  if( mBarHoverTimerId != 0)
+  {
+    QColor c = mBarHoverIndex == getCurrentBar() ? getColor( cSelection ) :
+      getColor( cHover );
+    c.setAlpha( 255 - 255 *
+               min( mBarHoverTimer.elapsed()/(double)kBarFadeDuration, 1.0) );
+    drawBarContour( &p, mBarHoverIndex, c );
+  }
   
   //on dessine le contour de la barre courante
-  drawBarContour( &p, getCurrentBar(), getColor( cSelection ) );
+  if( mCurrentBarTimerId != 0 )
+  {
+    QColor c = getColor( cSelection );
+    c.setAlpha( 255 - 255 *
+      min( mCurrentBarTimer.elapsed()/(double)kBarFadeDuration, 1.0) );
+    drawBarContour( &p, getCurrentBar(), c );
+  }
   
   //on dessine le bar text hot spot de la barre courante.
   if( mBarTextHover != -1 )
@@ -1758,6 +1775,10 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
     {
       shouldUpdate |= mBarHoverIndex != i;
       mBarHoverIndex = i;
+      
+      if(mBarHoverTimerId != 0){ killTimer(mBarHoverTimerId); }
+      mBarHoverTimerId = startTimer(60);
+      mBarHoverTimer.start();
     }
     else if ( mBarHoverIndex == i )
     {
@@ -1821,6 +1842,12 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
     clearSelection();
     setCurrentBar( mBarHoverIndex );
     setCurrentNote( x->getNumberOfNotesInBar( mBarHoverIndex ) - 1 );
+    
+    //animation du highlight de la barre courante
+    if(mCurrentBarTimerId != 0) { killTimer(mCurrentBarTimerId); }
+    mCurrentBarTimerId = startTimer(60);
+    mCurrentBarTimer.start();
+
     updateUi();
   }
   
@@ -2320,7 +2347,10 @@ void PartitionViewer::setBarAsDirty( vector<int> iV, bool iD )
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setCurrentBar( int iB )
-{ mCurrentBar = iB; updateUi(); }
+{
+    mCurrentBar = iB;
+    updateUi();
+}
 //-----------------------------------------------------------------------------
 /*La note courante ne doit pas etre inférieur a -1 */
 void PartitionViewer::setCurrentNote( int iN )
@@ -2496,6 +2526,29 @@ QString PartitionViewer::strokeToString( strokeType iSt ) const
     default: break;
   }
   return r;
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::timerEvent(QTimerEvent* ipE)
+{
+  if( ipE->timerId() == mCurrentBarTimerId )
+  {
+    updateUi();
+    if( mCurrentBarTimer.elapsed() > kBarFadeDuration )
+    {
+      killTimer(mCurrentBarTimerId);
+      mCurrentBarTimerId = 0;
+    }
+  }
+  
+  if( ipE->timerId() == mBarHoverTimerId )
+  {
+    updateUi();
+    if( mBarHoverTimer.elapsed() > kBarFadeDuration )
+    {
+      killTimer(mBarHoverTimerId);
+      mBarHoverTimerId = 0;
+    }
+  }
 }
 //-----------------------------------------------------------------------------
 int PartitionViewer::toPageIndex( QPoint iP ) const

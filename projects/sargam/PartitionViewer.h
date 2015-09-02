@@ -230,6 +230,7 @@ protected:
   void startLineTextEdit( int );
   void startTitleEdit();
   QString strokeToString( strokeType ) const;
+  virtual void timerEvent(QTimerEvent*);
   int toPageIndex( QPoint ) const;
   std::vector<NoteLocator> toNoteLocator( const std::vector< std::pair<int, int> > ) const;
   void updateBar( int );
@@ -269,6 +270,8 @@ protected:
   std::map< int, std::vector<int> > mBarsPerPage;
   std::vector< Parenthesis > mParenthesis;
   int mCurrentBar;
+  int mCurrentBarTimerId;
+  QTime mCurrentBarTimer;
   int mCurrentNote;
   QPoint mLayoutCursor;
   std::vector< std::pair<int, int> > mSelectedNotes; //bar, index
@@ -278,6 +281,8 @@ protected:
   bool mEditingTitle;
   int mAddLineTextHover;
   int mBarHoverIndex;
+  int mBarHoverTimerId;
+  QTime mBarHoverTimer;
   int mBarTextHover;
   static Composition mDummyComposition;
   Composition* x; //jamais null...
