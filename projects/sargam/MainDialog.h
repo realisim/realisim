@@ -25,7 +25,7 @@ public:
   QString getVersionAsQString() const;  
   int getVersionMajor() const {return 0;}
   int getVersionMinor() const {return 5;}
-  int getVersionRevision() const {return 0;}
+  int getVersionRevision() const {return 1;}
   bool isVerbose() const;
   void setAsVerbose( bool );
   
