@@ -40,7 +40,7 @@ void CustomProxyStyle::drawPrimitive(PrimitiveElement pe,
         ipP->setPen(p);
         QRect r = tle->rect();
         r.adjust(1,1,-1,-1);
-        ipP->drawRoundRect(r, 5, 5);
+        ipP->drawRoundRect(r, 2, 2);
       } break;
       default: QProxyStyle::drawPrimitive(pe, ipSo, ipP, ipW); break;
     }

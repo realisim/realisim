@@ -778,31 +778,37 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
     drawBarContour( &p, getCurrentBar(), c );
   }
   
-  //on dessine le bar text hot spot de la barre courante.
-  if( mBarTextHover != -1 )
+  //on dessine le bar text hot spot de la barre courante si la barre est
+  //courante et qu'il n'y a pas de texte
+  if( !hasBarTextEditionPending() && x->getBarText( getCurrentBar() ).isEmpty() )
   {
     p.save();
+    p.setRenderHints( p.renderHints() | QPainter::Antialiasing );
     QPen pen = p.pen();
-    pen.setStyle( Qt::DashLine );
+    p.setFont(mBarTextFont);
     pen.setColor( getColor( cHover ) );
     p.setPen(pen);
-    p.drawRoundedRect( getBar( mBarTextHover ).mTextScreenLayout, 2, 2 );
+    QRect r = getBar( getCurrentBar() ).mTextScreenLayout;
+    p.drawRoundedRect( r, 2, 2 );
+    p.setBrush(getColor( cHover ));
+    p.drawText(r, Qt::AlignCenter, "+");
     p.restore();
   }
   
   //on dessine le hot spot des lignes
   int currentLine = x->findLine( getCurrentBar() );
-  if(  currentLine != -1 && !hasLineEditionPending() )
+  if( currentLine != -1 && !hasLineEditionPending() )
   {
     const Line& l = mLines[ currentLine ];
     p.save();
+    p.setRenderHints( p.renderHints() | QPainter::Antialiasing );
     p.setFont(mLineFont);
     QPen pen = p.pen();
-    pen.setStyle( Qt::DashLine );
-    pen.setColor( Qt::gray );
+    pen.setColor( getColor( cHover ) );
     p.setPen( pen );
-    p.drawText(l.mHotSpot, Qt::AlignCenter, "+");
     p.drawRoundedRect( l.mHotSpot, 2, 2 );
+    p.setBrush(getColor( cHover ));
+    p.drawText(l.mHotSpot, Qt::AlignCenter, "+");
     p.restore();
   }
   
@@ -2343,7 +2349,7 @@ void PartitionViewer::resizeLineEditToContent(QLineEdit* ipLe)
 void PartitionViewer::resizeSpinBoxToContent(QSpinBox* ipSb)
 {
   QFontMetrics fm( ipSb->font() );
-  ipSb->setMaximumWidth( (double)fm.width( "99" ) + 30 );
+  ipSb->resize( (double)fm.width( "99" ) + 30, ipSb->height() );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setAsDebugging( bool iD )
@@ -3037,6 +3043,7 @@ void PartitionViewer::updateUi()
   {
     QPointF p = mParenthesis[mEditingParentheseIndex].mTextScreenLayout.topLeft();
     QPoint p2(p.x(), p.y());
+    p2 += QPoint(-1, 2);
     p2 = mapToParent(p2);
     mpParenthesisEdit->move( p2 );
     mpParenthesisEdit->show();
