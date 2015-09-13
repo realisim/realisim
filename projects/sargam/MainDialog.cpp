@@ -23,6 +23,33 @@ namespace
 }
 
 //-----------------------------------------------------------------------------
+// --- customProxyStyle
+//-----------------------------------------------------------------------------
+void CustomProxyStyle::drawPrimitive(PrimitiveElement pe,
+  const QStyleOption* ipSo, QPainter* ipP, const QWidget* ipW) const
+{
+  const ThinLineEdit* tle = dynamic_cast<const ThinLineEdit*>(ipW);
+  if(tle)
+  {
+    switch(pe)
+    {
+      case PE_PanelLineEdit:
+      {
+        ipP->setRenderHints( ipP->renderHints() | QPainter::Antialiasing );
+        QPen p(QColor( 0, 10, 210, 120 ));
+        ipP->setPen(p);
+        QRect r = tle->rect();
+        r.adjust(1,1,-1,-1);
+        ipP->drawRoundRect(r, 5, 5);
+      } break;
+      default: QProxyStyle::drawPrimitive(pe, ipSo, ipP, ipW); break;
+    }
+  }
+  else
+  { QProxyStyle::drawPrimitive(pe, ipSo, ipP, ipW); }
+}
+
+//-----------------------------------------------------------------------------
 // --- MAIN WINDOW
 //-----------------------------------------------------------------------------
 MainDialog::MainDialog() : QMainWindow(),

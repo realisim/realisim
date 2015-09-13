@@ -4,6 +4,7 @@
 #define PartitionViewer_hh
 
 #include "data.h"
+#include <QLineEdit>
 #include <QPrinter>
 #include <QtWidgets>
 #include <QSettings>
@@ -14,7 +15,10 @@ namespace realisim
 {
 namespace sargam
 {
-
+  
+class ThinLineEdit : public QLineEdit
+{ public: ThinLineEdit( QWidget* = 0 ); };
+  
 //------------------------------------------------------------------------------
 class PartitionViewer : public QWidget
 {
@@ -219,6 +223,8 @@ protected:
   void moveStrokeForward( int, int );
   QString noteToString( Note ) const;
   virtual void paintEvent(QPaintEvent*);
+  void resizeLineEditToContent(QLineEdit*);
+  void resizeSpinBoxToContent(QSpinBox*);
   void setBarAsDirty( int, bool );
   void setBarAsDirty( std::vector<int>, bool );
   void setCurrentBar(int);
@@ -243,9 +249,9 @@ protected:
   void updateUi();
   
   //--- ui
-  QLineEdit* mpTitleEdit;
-  QLineEdit* mpLineTextEdit;
-  QLineEdit* mpBarTextEdit;
+  ThinLineEdit* mpTitleEdit;
+  ThinLineEdit* mpLineTextEdit;
+  ThinLineEdit* mpBarTextEdit;
   QSpinBox* mpParenthesisEdit;
   
   //--- data

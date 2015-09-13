@@ -4,6 +4,7 @@
 #define MainDialog_hh
 
 #include "data.h"
+#include <QProxyStyle>
 #include <QPrinter>
 #include <QtWidgets>
 #include <QSettings>
@@ -12,6 +13,17 @@
 #include <map>
 
 namespace realisim { namespace sargam { class PartitionViewer; } }
+
+
+class CustomProxyStyle : public QProxyStyle
+{
+public:
+  CustomProxyStyle() : QProxyStyle() {}
+  
+  virtual void drawPrimitive(PrimitiveElement,
+    const QStyleOption*, QPainter*, const QWidget* = 0) const;
+protected:
+};
 
 //------------------------------------------------------------------------------
 class MainDialog : public QMainWindow

@@ -41,6 +41,13 @@ realisim::sargam::Composition PartitionViewer::mDummyComposition;
 PartitionViewer::Bar PartitionViewer::mDummyBar;
 
 //-----------------------------------------------------------------------------
+// --- ThinLineEdit
+//-----------------------------------------------------------------------------
+ThinLineEdit::ThinLineEdit( QWidget* ipParent ) :
+  QLineEdit(ipParent)
+{ setAttribute(Qt::WA_MacShowFocusRect, 0); }
+
+//-----------------------------------------------------------------------------
 // --- partition viewer
 //-----------------------------------------------------------------------------
 PartitionViewer::PartitionViewer( QWidget* ipParent ) :
@@ -680,7 +687,7 @@ void PartitionViewer::createUi()
   /* Astuce: les line edit on comme parent le parent du widget... ainsi
      les touches pesees lors de l'édition* n'interfere jamais avec la
      méthode keyPressEvent de la classe PartitionViewer. */
-  mpTitleEdit = new QLineEdit( this->parentWidget() );
+  mpTitleEdit = new ThinLineEdit( this->parentWidget() );
   mpTitleEdit->setFont( mTitleFont );
   mpTitleEdit->hide();
   connect( mpTitleEdit, SIGNAL( editingFinished() ),
@@ -689,7 +696,7 @@ void PartitionViewer::createUi()
           this, SLOT( resizeEditToContent() ) );
   
   //line edit pour titre des lignes
-  mpLineTextEdit = new QLineEdit( this->parentWidget() );
+  mpLineTextEdit = new ThinLineEdit( this->parentWidget() );
   mpLineTextEdit->setFont( mLineFont );
   mpLineTextEdit->hide();
   connect( mpLineTextEdit, SIGNAL( editingFinished() ),
@@ -698,7 +705,7 @@ void PartitionViewer::createUi()
           this, SLOT( resizeEditToContent() ) );
   
   //ligne pour le texte des barres
-  mpBarTextEdit = new QLineEdit( this->parentWidget() );
+  mpBarTextEdit = new ThinLineEdit( this->parentWidget() );
   mpBarTextEdit->setFont( mBarTextFont );
   mpBarTextEdit->hide();
   connect( mpBarTextEdit, SIGNAL( editingFinished() ),
@@ -708,6 +715,7 @@ void PartitionViewer::createUi()
   
   //spin box pour le nombre de répétitions des parentheses
   mpParenthesisEdit = new QSpinBox( this->parentWidget() );
+  mpParenthesisEdit->setAttribute(Qt::WA_MacShowFocusRect, 0);
   mpParenthesisEdit->setMinimum(2); mpParenthesisEdit->setMaximum(99);
   connect( mpParenthesisEdit, SIGNAL( editingFinished() ),
           this, SLOT( stopParentheseEdit() ) );
@@ -900,7 +908,8 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
       }
       iP->restore();
       
-      //render text
+      //render text si pas en edition.
+      if( mEditingBarText != iBar )
       {
         iP->save();
         iP->setFont(mBarTextFont);
@@ -1253,7 +1262,7 @@ int PartitionViewer::getBarRegion( barRegion br, Bar::barType iBt ) const
   QFontMetrics fm(mBarFont);
   switch( br )
   {
-    case brSeparatorX: r = -1; break;
+    case brSeparatorX: r = 0; break;
     case brNoteStartX: r = 5; break;
     case brNoteTopY: r = getBarHeight(iBt) / 2 - fm.height() / 2; break;
     case brNoteBottomY: r = getBarHeight(iBt) / 2 + fm.height() / 2; break;
@@ -2318,17 +2327,23 @@ void PartitionViewer::resizeEditToContent()
   QLineEdit* le = dynamic_cast<QLineEdit*>( QObject::sender() );
   QSpinBox* sb = dynamic_cast<QSpinBox*>( QObject::sender() );
   if( le )
-  {
-    QFontMetrics fm( le->font() );
-    le->resize( std::max( fm.width( le->text() ) * 1.1,
-                         (double)fm.width( "short" ) ), le->height() );
-  }
+  { resizeLineEditToContent(le); }
   else if(sb)
-  {
-    QFontMetrics fm( sb->font() );
-    sb->setMaximumWidth( (double)fm.width( "99" ) + 30 );
-  }
+  { resizeSpinBoxToContent(sb); }
   updateUi();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::resizeLineEditToContent(QLineEdit* ipLe)
+{
+  QFontMetrics fm( ipLe->font() );
+  ipLe->resize( std::max( fm.width( ipLe->text() + "a" ),
+                       fm.width( "short" ) ), fm.height() );
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::resizeSpinBoxToContent(QSpinBox* ipSb)
+{
+  QFontMetrics fm( ipSb->font() );
+  ipSb->setMaximumWidth( (double)fm.width( "99" ) + 30 );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setAsDebugging( bool iD )
@@ -2433,6 +2448,7 @@ void PartitionViewer::startBarTextEdit( int iBar )
 {
   mpBarTextEdit->setFocus();
   mpBarTextEdit->setText( x->getBarText( iBar ) );
+  resizeLineEditToContent(mpBarTextEdit);
   mEditingBarText = iBar;
   updateUi();
 }
@@ -2441,6 +2457,7 @@ void PartitionViewer::startLineTextEdit( int iLineIndex )
 {
   mpLineTextEdit->setFocus();
   mpLineTextEdit->setText( x->getLineText(iLineIndex) );
+  resizeLineEditToContent(mpLineTextEdit);
   mEditingLineIndex = iLineIndex;
   updateLayout(); //pour afficher correctement le lineEdit
   updateUi();
@@ -2450,6 +2467,7 @@ void PartitionViewer::startParentheseEdit(int iIndex)
 {
   mpParenthesisEdit->setFocus();
   mpParenthesisEdit->setValue(x->getNumberOfRepetitionsForParenthesis(iIndex));
+  resizeSpinBoxToContent(mpParenthesisEdit);
   mEditingParentheseIndex = iIndex;
   updateUi();
 }
@@ -2458,6 +2476,7 @@ void PartitionViewer::startTitleEdit()
 {
   mpTitleEdit->setFocus();
   mpTitleEdit->setText( x->getTitle() );
+  resizeLineEditToContent(mpTitleEdit);
   mEditingTitle = true;
   updateUi();
 }
@@ -2601,7 +2620,8 @@ void PartitionViewer::updateBar( int iBar )
   
   //--- Rectangle contenant la bar
   //On ajuste la largeur pour contenir le texte.
-  barWidth = max( barWidth,
+  const int kBarPad = 2;
+  barWidth = max( barWidth + kBarPad,
     getBarRegion( brTextX ) +
     QFontMetrics(mBarTextFont).width( x->getBarText(iBar) ) + 5 );
   QRect barRect( QPoint(0, 0), QSize(std::max( barWidth, kMinBarWidth),
@@ -2982,12 +3002,9 @@ void PartitionViewer::updateUi()
   //titre
   if( hasTitleEditionPending() )
   {
-    QRect r = getRegion( rTitle );
-    QPoint c = r.center() - QPoint( mpTitleEdit->width() / 2,
-      mpTitleEdit->height() / 2 );
-    //voir la creation de mpTitleEdit pour explication mapping.
-    c = mapToParent( c );
-    mpTitleEdit->move( c );
+    QPoint p = mTitleScreenLayout.topLeft() + QPoint(-1, 5);
+    p = mapToParent(p);
+    mpTitleEdit->move(p);
     mpTitleEdit->show();
   }
   else{ mpTitleEdit->hide(); }
@@ -2996,6 +3013,7 @@ void PartitionViewer::updateUi()
   if( hasBarTextEditionPending() )
   {
     QPoint p = getBar(mEditingBarText).mTextScreenLayout.topLeft();
+    p += QPoint(-1, 2);
     //voir la creation de mpLineTextEdit pour explication mapping.
     p = mapToParent(p);
     mpBarTextEdit->move( p );
@@ -3006,6 +3024,7 @@ void PartitionViewer::updateUi()
   if( hasLineEditionPending() )
   {
     QPoint p = mLines[mEditingLineIndex].mTextScreenLayout.topLeft();
+    p += QPoint(-1, 3);
     //voir la creation de mpLineTextEdit pour explication mapping.
     p = mapToParent(p);
     mpLineTextEdit->move( p );

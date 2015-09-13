@@ -2,8 +2,6 @@
 #include <iostream>
 #include "MainDialog.h"
 #include <QApplication>
-#include <QCommonStyle>
-#include <QIcon>
 
 int startMainApp()
 {
@@ -18,10 +16,10 @@ int startMainApp()
     }
 }
 
-
 int main(int argc, char** argv)
 {
   QApplication app(argc, argv);
+  app.setStyle(new CustomProxyStyle());
   MainDialog m;
   m.show();
 
