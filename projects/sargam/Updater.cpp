@@ -23,7 +23,8 @@ void Updater::checkForUpdate()
   //r.setUrl(QUrl("http://stackoverflow.com/questions/26565666/cannot-retrieve-page-contents-through-https-with-qnetworkaccessmanager"));
   //r.setUrl(QUrl("https://www.google.ca/"));
   //r.setUrl(QUrl("https://www.reddit.com/"));
-  r.setUrl(QUrl("https://github.com/realisim/realisim"));
+  //r.setUrl(QUrl("https://github.com/realisim/realisim"));
+  r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/sargamReleaseNotes/sargamReleaseNotes.txt"));
   mpAccess->get(r);
 }
 //---------------------------------------------------------------------
