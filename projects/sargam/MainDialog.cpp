@@ -55,6 +55,7 @@ void CustomProxyStyle::drawPrimitive(PrimitiveElement pe,
 MainDialog::MainDialog() : QMainWindow(),
   mpScrollArea(0),
   mpPartitionViewer(0),
+  mpUpdater(0),
   mSettings( QSettings::UserScope, "Realisim", "Sargam" ),
   mLog(),
   mIsVerbose( false   ),
@@ -74,6 +75,10 @@ MainDialog::MainDialog() : QMainWindow(),
   newFile();
   
   resize( mpPartitionViewer->width() + mpToolBar->width() + 35, 800 );
+  
+  //check pour les updates...
+  mpUpdater = new Updater(this);
+  mpUpdater->checkForUpdate();
 }
 //-----------------------------------------------------------------------------
 void MainDialog::applyPrinterOptions( QPrinter* iP )

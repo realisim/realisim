@@ -9,6 +9,7 @@
 #include <QtWidgets>
 #include <QSettings>
 #include "utils/Log.h"
+#include "Updater.h"
 #include <vector>
 #include <map>
 
@@ -79,6 +80,7 @@ protected:
   realisim::sargam::PartitionViewer* mpPartitionViewer;
   QToolBar* mpToolBar;
   std::map< action, QAction* > mActions;
+  realisim::sargam::Updater* mpUpdater;
   
   QSettings mSettings;
   QString mSaveFileName;
