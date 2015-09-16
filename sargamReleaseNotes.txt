@@ -1,0 +1,11 @@
+<release>
+<version>0.5.1</version>
+<releaseNotes>Bla be di blayabadabadoo</releaseNotes>
+</release>
+
+<release>
+<version>0.5.0</version>
+<releaseNotes>
+Sargam is a notation tool to ease sharing and teaching of sitar. With it’s simple user interface it makes entering composition as simple as writing them on a paper. It supports printing and PDF export to share with friends or students.
+</releaseNotes>
+</release>
