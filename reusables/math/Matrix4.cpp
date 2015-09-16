@@ -95,9 +95,6 @@ http://fr.wikipedia.org/wiki/Matrice_de_passage
 */
 Matrix4::Matrix4( Vector3d iX, Vector3d iY, Vector3d iZ )
 {
-	assert( math::isEqual(iX.norm(), 1.0, 5*std::numeric_limits<double>::epsilon()) );
-  assert( math::isEqual(iY.norm(), 1.0, 5*std::numeric_limits<double>::epsilon()) );
-  assert( math::isEqual(iZ.norm(), 1.0, 5*std::numeric_limits<double>::epsilon()) );
 	double mat[4][4] = {
   	{ iX.x(), iY.x(), iZ.x(), 0 },
     { iX.y(), iY.y(), iZ.y(), 0 },
