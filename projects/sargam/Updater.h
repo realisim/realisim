@@ -21,6 +21,9 @@ public:
   
   void checkForUpdate();
   
+signals:
+  void updateAvailable();
+  
 protected slots:
   void replyFinished(QNetworkReply*);
   

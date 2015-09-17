@@ -1,6 +1,8 @@
 /* */
 
 #include "Updater.h"
+#include <QRegularExpression>
+#include <QRegularExpressionMatch>
 
 using namespace realisim;
   using namespace sargam;
@@ -19,11 +21,6 @@ void Updater::checkForUpdate()
 {
   QNetworkRequest r;
   r.setSslConfiguration(QSslConfiguration::defaultConfiguration());
-  //r.setUrl(QUrl("https://sargamdev.wordpress.com/Releases"));
-  //r.setUrl(QUrl("http://stackoverflow.com/questions/26565666/cannot-retrieve-page-contents-through-https-with-qnetworkaccessmanager"));
-  //r.setUrl(QUrl("https://www.google.ca/"));
-  //r.setUrl(QUrl("https://www.reddit.com/"));
-  //r.setUrl(QUrl("https://github.com/realisim/realisim"));
   r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/sargamReleaseNotes/sargamReleaseNotes.txt"));
   mpAccess->get(r);
 }
@@ -34,8 +31,20 @@ void Updater::replyFinished(QNetworkReply* ipReply)
   if( e == QNetworkReply::NoError )
   {
     QString content( ipReply->readAll() );
-    printf( "Url: %s\n%s\n", ipReply->url().toString().toStdString().c_str(),
-           content.toStdString().c_str() );
+    
+    QStringList releaseTags;
+    
+    QRegularExpression re("(<release>.*?</release>)", QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpressionMatchIterator it = re.globalMatch(content);
+    while(it.hasNext())
+    {
+      QRegularExpressionMatch m = it.next();
+      printf("%s\n", m.captured(1).toStdString().c_str() );
+    }
+  }
+  else
+  {
+    //log some error
   }
   ipReply->deleteLater();
 }
