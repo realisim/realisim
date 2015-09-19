@@ -1,8 +1,10 @@
 <release>
 <version>0.5.1</version>
-<releaseNotes>- Improved usability of beat notation on bars.
-- Improved current bar highlight behavior.
-- InfraStructure work that enables on line version checking.</releaseNotes>
+<releaseNotes>
+- Improved usability of beat notation on bars.<br>
+- Improved current bar highlight behavior.<br>
+- InfraStructure work that enables on line version checking.<br>
+</releaseNotes>
 </release>
 
 <release>
