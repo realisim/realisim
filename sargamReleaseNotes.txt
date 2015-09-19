@@ -1,6 +1,8 @@
 <release>
 <version>0.5.1</version>
-<releaseNotes>Bla be di blayabadabadoo</releaseNotes>
+<releaseNotes>- Improved usability of beat notation on bars.
+- Improved current bar highlight behavior.
+- InfraStructure work that enables on line version checking.</releaseNotes>
 </release>
 
 <release>
