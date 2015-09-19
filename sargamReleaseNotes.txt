@@ -1,3 +1,5 @@
+<downloadPage>https://sargamdev.wordpress.com/download/</downloadPage>
+
 <release>
 <version>0.5.1</version>
 <releaseNotes>
