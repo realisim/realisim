@@ -1,11 +1,16 @@
 <downloadPage>https://sargamdev.wordpress.com/download/</downloadPage>
+<release>
+<version>0.5.2</version>
+<releaseNotes>
+- Infrastructure work that enables on line version checking.<br>
+</releaseNotes>
+</release>
 
 <release>
 <version>0.5.1</version>
 <releaseNotes>
 - Improved usability of beat notation on bars.<br>
 - Improved current bar highlight behavior.<br>
-- InfraStructure work that enables on line version checking.<br>
 </releaseNotes>
 </release>
 
