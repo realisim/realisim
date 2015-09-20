@@ -7,6 +7,7 @@ ADD_COMPONENT( "." "Application" )
 ADD_COMPONENT("../../reusables/utils" )
 
 ADD_QT_PRINTSUPPORT()
+ADD_QT_NETWORK()
 
 IF(APPLE)
   ADD_MAC_ICON( "./artwork/" "dockIcon.icns" )
