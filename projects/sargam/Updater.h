@@ -6,6 +6,8 @@
 #include <QObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QString>
+#include <vector>
 
 namespace realisim
 {
@@ -19,17 +21,32 @@ public:
   Updater(QObject* = 0);
   virtual ~Updater();
   
+  QString getDownloadPage() const;
+  int getNumberOfVersions() const;
+  QString getReleaseNotes(int) const;
+  QString getVersionAsQString(int) const;
   void checkForUpdate();
   
 signals:
-  void updateAvailable();
+  void updateInformationAvailable();
   
 protected slots:
-  void replyFinished(QNetworkReply*);
+  void handleVersionUpdates(QNetworkReply*);
   
 protected:
-  QNetworkAccessManager* mpAccess;
+  struct VersionInfos
+  {
+    VersionInfos(QString v, QString r) : mVersion(v), mReleaseNotes(r){}
+    QString mVersion;
+    QString mReleaseNotes;
+  };
   
+  QStringList fetchTagContent(QString, QString) const;
+  
+  //data
+  QNetworkAccessManager* mpAccess;
+  std::vector<VersionInfos> mVersions;
+  QString mDownloadPage;
 };
 
   

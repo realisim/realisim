@@ -46,6 +46,7 @@ public:
 	virtual QString getLogPath() const;
   virtual int getNumberOfEntries() const;
   virtual QString getEntry( int ) const;
+//bool isVerbose() const;
   void log( const char *, ... ) const; //support printf
 	virtual void logToConsole( bool );
   virtual void logTimestamp( bool );
@@ -53,6 +54,7 @@ public:
   virtual bool logsToConsole() const;
   virtual bool logsToFile() const;
   virtual bool logsTimestamp() const;
+//virtual void setAsVervbose(bool);
   virtual void setLogPath( QString );
   virtual void takeEntriesFrom( Log& );
    

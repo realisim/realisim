@@ -37,8 +37,8 @@ public:
   const realisim::utils::Log& getLog() const {return mLog;}
   QString getVersionAsQString() const;  
   int getVersionMajor() const {return 0;}
-  int getVersionMinor() const {return 5;}
-  int getVersionRevision() const {return 1;}
+  int getVersionMinor() const {return 4;}
+  int getVersionRevision() const {return 9;}
   bool isVerbose() const;
   void setAsVerbose( bool );
   
@@ -47,6 +47,7 @@ protected slots:
   void ensureVisible( QPoint );
   void generatePrintPreview(QPrinter*);
   void generateRandomPartition();
+  void handleUpdateAvailability();
   void newFile();
   void openFile();
   void preferences();
@@ -60,6 +61,7 @@ protected slots:
   void updateUi();
   
 protected:
+  enum state{ sNormal, sUpdatesAreAvailable };
   enum action{ aAddBar, aLineJump, aAddMatra, aRemoveMatra, aAddKrintan,
     aAddMeend, aAddGamak, aAddAndolan, aRemoveOrnement, aAddGraceNote, aRemoveGraceNote,
     aAddParenthesis, aRemoveParenthesis,
@@ -70,11 +72,15 @@ protected:
   void createUi();
   void createToolBar();
   action findAction( QAction* ) const;
+  state getState() const;
   bool isToolBarVisible() const {return mIsToolBarVisible;}
   void loadSettings();
   void fillPageSizeCombo( QComboBox* );
   void saveSettings();
+  void setState(state);
   void setToolBarVisible( bool i ) { mIsToolBarVisible = i; }
+  void showUpdateDialog();
+  void updateActions();
   
   QScrollArea* mpScrollArea;
   realisim::sargam::PartitionViewer* mpPartitionViewer;
@@ -90,6 +96,7 @@ protected:
   realisim::utils::Log mLog;
   bool mIsVerbose;
   bool mIsToolBarVisible;
+  state mState;
 };
 
 #endif
