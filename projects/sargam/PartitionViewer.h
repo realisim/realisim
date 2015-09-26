@@ -33,7 +33,7 @@ public:
   void commandAddNote( noteValue );
   void commandAddMatra();
   void commandAddOrnement( ornementType );
-void commandAddParenthesis( int );
+  void commandAddParenthesis( int );
   void commandAddStroke( strokeType );
   void commandBreakMatrasFromSelection();
   void commandBreakOrnementsFromSelection();
@@ -54,18 +54,20 @@ void commandAddParenthesis( int );
   QPageSize::PageSizeId getPageSizeId() const;
   int getNumberOfSelectedNote() const;
   NoteLocator getSelectedNote( int ) const;
+  script getScript() const;
   bool hasSelection() const;
   bool hasLogTiming() const { return mHasLogTiming; }
   bool isDebugging() const;
   bool isVerbose() const {return mIsVerbose;}
   void print( QPrinter* );
   void setAsDebugging( bool );
-  void setLayoutOrientation( QPageLayout::Orientation );
-  void setPageSize( QPageSize::PageSizeId );
   void setAsVerbose( bool );
   void setComposition( Composition* );
+  void setLayoutOrientation( QPageLayout::Orientation );
   void setLog( utils::Log* );
   void setLogTiming( bool iL ) {mHasLogTiming = iL;}
+  void setPageSize( QPageSize::PageSizeId );
+  void setScript( script );
   
 signals:
   void ensureVisible( QPoint );
@@ -303,6 +305,7 @@ std::vector<QRect> mWordScreenLayouts; //pas vraiment besoin autre que pour le d
   bool mIsVerbose;
   bool mHasLogTiming;
   static Bar mDummyBar;
+  script mScript;
 };
 
   

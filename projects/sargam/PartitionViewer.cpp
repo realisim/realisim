@@ -1552,6 +1552,9 @@ int PartitionViewer::getParenthesisTextWidth( int iRep ) const
 NoteLocator PartitionViewer::getSelectedNote( int i ) const
 { return NoteLocator( mSelectedNotes[i].first, mSelectedNotes[i].second ); }
 //-----------------------------------------------------------------------------
+script PartitionViewer::getScript() const
+{ return mScript; }
+//-----------------------------------------------------------------------------
 bool PartitionViewer::hasSelection() const
 { return mSelectedNotes.size() > 0; }
 //-----------------------------------------------------------------------------
@@ -2182,19 +2185,63 @@ QString PartitionViewer::noteToString( Note iNote ) const
   noteModification nm = iNote.getModification();
   
   QString r;
-  switch( note )
+  switch( getScript() )
   {
-    case nvSa: r = "S"; break;
-    case nvRe: if(nm == nmKomal){r = "r";}else {r = "R";} break;
-    case nvGa: if(nm == nmKomal){r = "g";}else {r = "G";} break;
-    case nvMa: if(nm == nmTivra){r = "M";}else {r = "m";} break;
-    case nvPa: r = "P"; break;
-    case nvDha: if(nm == nmKomal){r = "d";}else {r = "D";} break;
-    case nvNi: if(nm == nmKomal){r = "n";}else {r = "N";} break;
-    case nvChik: r = "\xE2\x9c\x93"; break; //check
-    case nvRest: r = "\xE2\x80\x94"; break; //barre horizontale
-    case nvComma: r = ","; break;
-    default: break;
+    default:
+    case sLatin:
+    {
+      switch( note )
+      {
+        case nvSa: r = "S"; break;
+        case nvRe: if(nm == nmKomal){r = "r";}else {r = "R";} break;
+        case nvGa: if(nm == nmKomal){r = "g";}else {r = "G";} break;
+        case nvMa: if(nm == nmTivra){r = "M";}else {r = "m";} break;
+        case nvPa: r = "P"; break;
+        case nvDha: if(nm == nmKomal){r = "d";}else {r = "D";} break;
+        case nvNi: if(nm == nmKomal){r = "n";}else {r = "N";} break;
+        case nvChik: r = "\xE2\x9c\x93"; break; //check
+        case nvRest: r = "\xE2\x80\x94"; break; //barre horizontale
+        case nvComma: r = ","; break;
+        default: break;
+      }
+    }  break;
+    case sDevanagari:
+    {
+      switch( note )
+      {
+        case nvSa: r = "\xE0\xA4\xB8"; /*स*/ break;
+        case nvRe:
+          if(nm == nmKomal)
+          {r = QString::fromUtf8("\xE0\xA4\xB0") + QString::fromUtf8("\xE0\xA5\x93"); } //underlined
+          else/*र + accent grave*/
+          {r = QString::fromUtf8("\xE0\xA4\xB0") + QString::fromUtf8("\xE0\xA5\x93");}
+          break;
+        case nvGa:
+          if(nm == nmKomal)
+          {r = "\xE0\xA4\x97";} //underlined
+          else //ग
+          {r = "\xE0\xA4\x97";}
+          break;
+        case nvMa:
+          if(nm == nmTivra)
+          {r = "\xE0\xA4\xAE";} //underlined
+          else {r = "\xE0\xA4\xAE";} break;
+        case nvPa: //प
+          r = "\xE0\xA4\xAA"; break;
+        case nvDha:
+          if(nm == nmKomal)
+          {r = "\xE0\xA4\xA7";} //underline
+          else {r = "\xE0\xA4\xA7";} break;
+        case nvNi:
+          if(nm == nmKomal)
+          {r = "\xE0\xA4\x9E";} //underline
+          else {r = "\xE0\xA4\x9E";} break;
+        case nvChik: r = "\xE2\x9c\x93"; break; //check
+        case nvRest: r = "\xE2\x80\x94"; break; //barre horizontale
+        case nvComma: r = ","; break;
+        default: break;
+      }
+    }break;
   }
   
   return r;
@@ -2466,6 +2513,9 @@ void PartitionViewer::setPageSize( QPageSize::PageSizeId iId )
 //-----------------------------------------------------------------------------
 void PartitionViewer::setNumberOfPage( int iN )
 { mNumberOfPages = iN; }
+//-----------------------------------------------------------------------------
+void PartitionViewer::setScript( script iS )
+{ mScript = iS; updateUi(); }
 //-----------------------------------------------------------------------------
 /*Permet de separer en vecteur de note index par barre une selection iV qui
   contient des notes sur plusieurs barres.*/

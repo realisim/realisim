@@ -18,7 +18,7 @@ using namespace realisim;
 
 namespace
 {
-  const int kSettingVersion = 1;
+  const int kSettingVersion = 2;
   const QString kLogFoldername("sargamLogs");
 }
 
@@ -136,7 +136,6 @@ void MainDialog::createUi()
   //--- preferences
   QMenu* pPreferences = pMenuBar->addMenu("Preferences");
   pPreferences->addAction( "Options...", this, SLOT( preferences() ) );
-  
   
   //debug action
   QShortcut* pRandomPart = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_G), this );
@@ -477,8 +476,10 @@ void MainDialog::loadSettings()
   //---view
   int psi = mSettings.value( "view/pageSizeId", QPageSize::Letter ).toInt();
   int plo = mSettings.value( "view/pageLayoutOrientation", QPageLayout::Portrait ).toInt();
+  int pScript = mSettings.value( "view/script", (int)sLatin ).toInt();
   mpPartitionViewer->setPageSize( (QPageSize::PageSizeId)psi );
   mpPartitionViewer->setLayoutOrientation( (QPageLayout::Orientation)plo );
+  mpPartitionViewer->setScript( (script)pScript );
   
   //--- log
   bool v = mSettings.value( "verboseLog", false ).toBool();
@@ -544,6 +545,7 @@ void MainDialog::openFile()
 void MainDialog::preferences()
 {
   QDialog d( this );
+  QComboBox* pScriptCombo;
   QComboBox* pPageSizeCombo;
   QButtonGroup* pOrientation;
   QCheckBox* pVerboseChkBx;
@@ -555,6 +557,19 @@ void MainDialog::preferences()
     {
       QVBoxLayout* pVLyt = new QVBoxLayout();
       {
+        //--- script
+        QHBoxLayout *pScriptLyt = new QHBoxLayout();
+        {
+          QLabel *pName = new QLabel("Script:", &d);
+          pScriptCombo = new QComboBox(&d);
+          pScriptCombo->insertItem(sLatin, "Latin");
+          pScriptCombo->insertItem(sDevanagari, "देवनागरी");
+          pScriptCombo->setCurrentIndex(mpPartitionViewer->getScript());
+          
+          pScriptLyt->addWidget(pName);
+          pScriptLyt->addWidget(pScriptCombo);
+        }
+        
         //--- taille du papier
         QHBoxLayout* pPaperLyt = new QHBoxLayout();
         {
@@ -563,8 +578,8 @@ void MainDialog::preferences()
           pPageSizeCombo = new QComboBox(&d);
           fillPageSizeCombo( pPageSizeCombo );
           int currrentIndex = distance( mAvailablePageSizeIds.begin(),
-                                       std::find( mAvailablePageSizeIds.begin(), mAvailablePageSizeIds.end(),
-                                                 mpPartitionViewer->getPageSizeId() ) );
+            std::find( mAvailablePageSizeIds.begin(), mAvailablePageSizeIds.end(),
+            mpPartitionViewer->getPageSizeId() ) );
           pPageSizeCombo->setCurrentIndex( currrentIndex );
           
           pPaperLyt->addWidget(pLabel);
@@ -589,6 +604,7 @@ void MainDialog::preferences()
           pOrientationLyt->addWidget(pLandscape);
         }
         
+        pVLyt->addLayout(pScriptLyt);
         pVLyt->addLayout( pPaperLyt );
         pVLyt->addLayout( pOrientationLyt );
       } //vLyt
@@ -627,6 +643,9 @@ void MainDialog::preferences()
   
   if (d.exec() == QDialog::Accepted)
   {
+    //script
+    mpPartitionViewer->setScript( (script)pScriptCombo->currentIndex() );
+    
     //pageSize
     mpPartitionViewer->setPageSize( mAvailablePageSizeIds[ pPageSizeCombo->currentIndex() ] );
     
@@ -725,6 +744,7 @@ void MainDialog::saveSettings()
   //---view options
 	mSettings.setValue( "view/pageSizeId", mpPartitionViewer->getPageSizeId() );
   mSettings.setValue( "view/pageLayoutOrientation", mpPartitionViewer->getLayoutOrientation() );
+  mSettings.setValue( "view/script", mpPartitionViewer->getScript() );
 
   //--- log
   mSettings.setValue( "verboseLog", isVerbose() );

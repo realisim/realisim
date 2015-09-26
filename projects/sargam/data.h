@@ -18,6 +18,7 @@ enum ornementType{ otMeend, otKrintan, otAndolan, otGamak };
 enum noteModification{ nmKomal, nmShuddh, nmTivra };
 enum strokeType{ stDa, stRa, stDiri, stNone };
 enum specialBar{ sbScale = -2 , sbTarabTuning = -1 };
+enum script{ sLatin = 0, sDevanagari, sNumberOfScript };
   
 //------------------------------------------------------------------------------
 class Note
