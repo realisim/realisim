@@ -115,6 +115,9 @@ protected:
     std::vector< QRect > mNoteScreenLayouts;
     QRect mTextRect; //bar coord.
     QRect mTextScreenLayout;
+    std::vector< std::pair<QString, bool> > mWords;
+    std::vector<QRect> mWordLayouts;
+    std::vector<QRect> mWordScreenLayouts;
     barType mBarType;
     bool mIsDirty;
     bool mIsWayTooLong;
@@ -191,6 +194,7 @@ protected:
   QColor getColor( colors ) const;
   QLine getCursorLine() const;
   int getInterNoteSpacing(NoteLocator, NoteLocator) const;
+  QString getInterNoteSpacingAsQString(NoteLocator, NoteLocator) const;
   utils::Log& getLog();
   NoteLocator getNext( const NoteLocator& ) const;
   int getNumberOfPages() const;
@@ -231,6 +235,7 @@ protected:
   void setCurrentNote(int);
   void setNumberOfPage(int);
   std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > ) const;
+  void splitInWords(int);
   void startBarTextEdit( int );
   void startParentheseEdit( int );
   void startLineTextEdit( int );

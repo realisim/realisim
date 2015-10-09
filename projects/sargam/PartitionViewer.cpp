@@ -835,13 +835,20 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
     pen.setColor( Qt::black );
     
     //les notes
-    for( int j = 0; j < x->getNumberOfNotesInBar( iBar ); ++j )
+    for(size_t j = 0; j < b.mWords.size(); ++j)
     {
-      QString s = noteToString( x->getNote( iBar, j ) );
-      QFont f = x->isGraceNote( iBar, j ) ? mGraceNotesFont : mBarFont;
+      QFont f = b.mWords[j].second ? mGraceNotesFont : mBarFont;
       iP->setFont(f);
-      iP->drawText( b.getNoteRect(j).bottomLeft(), s);
+      iP->drawText( b.mWordLayouts[j].bottomLeft(),
+        b.mWords[j].first );
     }
+//    for( int j = 0; j < x->getNumberOfNotesInBar( iBar ); ++j )
+//    {
+//      QString s = noteToString( x->getNote( iBar, j ) );
+//      QFont f = x->isGraceNote( iBar, j ) ? mGraceNotesFont : mBarFont;
+//      iP->setFont(f);
+//      iP->drawText( b.getNoteRect(j).bottomLeft(), s);
+//    }
     
     //la barre vertical à la fin de la barre
     if( b.mBarType == Bar::btNormal )
@@ -1301,6 +1308,40 @@ const Log& PartitionViewer::getLog() const
 //-----------------------------------------------------------------------------
 Log& PartitionViewer::getLog()
 { return const_cast<Log&>( const_cast< const PartitionViewer* >(this)->getLog() ); }
+//-----------------------------------------------------------------------------
+QString PartitionViewer::getInterNoteSpacingAsQString( NoteLocator n1, NoteLocator n2 ) const
+{
+  QString r;
+  //if( n1.getBar() == n2.getBar() )
+  {
+    int matra1 = x->findMatra( n1.getBar(), n1.getIndex() );
+    int matra2 = x->findMatra( n2.getBar(), n2.getIndex() );
+    //les notes ne sont pas du meme matra
+    if( matra1 == -1 || matra2 == -1  || matra1 != matra2 )
+    { r = " "; }
+    
+    //si on passe de note de grace a note normale et vice versa
+    if( x->isGraceNote( n1.getBar(), n1.getIndex() ) !=
+       x->isGraceNote( n2.getBar(), n2.getIndex() ) )
+    { r = " "; }
+    
+    //les répetitions
+    /*On ajoute n*mParenthesisWidth entre 2 notes */
+    int p1 = x->findParenthesis( n1.getBar(), n1.getIndex() );
+    int p2 = x->findParenthesis( n2.getBar(), n2.getIndex() );
+    if( p1 == -1 && p2 != -1 ) //ouverture
+    { r = " "; }
+    if( p1 != -1 && p2 == -1 ) //fermeture
+    {
+      r = " ";
+    }
+    if( p1 != -1 && p2 != -1 && p1 != p2 ) //ouverture et fermeture
+    {
+      r = " ";
+    }
+  }
+  return r;
+}
 //-----------------------------------------------------------------------------
 int PartitionViewer::getInterNoteSpacing( NoteLocator n1, NoteLocator n2 ) const
 {
@@ -2204,9 +2245,15 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       //layout du text
       p.drawRect( b.mTextScreenLayout );
       
+      //layout de mots
+      p.setPen( Qt::blue );
+      for( int j = 0; j < b.mWordScreenLayouts.size(); ++j )
+      { p.drawRect( b.mWordScreenLayouts[j] ); }
+      
+      p.setPen( Qt::green );
       //le layout page des notes
-      for( int j = 0; j < b.mNoteScreenLayouts.size(); ++j )
-      { p.drawRect( b.mNoteScreenLayouts[j] ); }
+//      for( int j = 0; j < b.mNoteScreenLayouts.size(); ++j )
+//      { p.drawRect( b.mNoteScreenLayouts[j] ); }
       
       //texte de debuggage
       p.setPen(Qt::gray);
@@ -2450,6 +2497,54 @@ map< int, vector<int> > PartitionViewer::splitPerBar(
   return r;
 }
 //-----------------------------------------------------------------------------
+/*Cette fonction coupe les notes de la barre en mots. Pour chaque changement
+  de fonte du texte, on crée un nouveau mot. Les mots seront ensuite rendu à
+ l'écran. Lobjectif de séparer en mots est de pouvoir rendre correctement le
+ texte multilangue à l'écran.*/
+void PartitionViewer::splitInWords(int iBar)
+{
+  Bar& b = getBar(iBar);
+  b.mWords.clear();
+  b.mWordLayouts.clear();
+  
+  bool isGraceNote = false;
+  QString text;
+  for( int i = 0; i < x->getNumberOfNotesInBar( iBar ); ++i )
+  {
+    isGraceNote = x->isGraceNote(iBar, i);
+    text += noteToString(x->getNote(iBar, i));
+    if( (i+1) < x->getNumberOfNotesInBar(iBar) )
+    {
+      NoteLocator cnl(iBar, i);
+      NoteLocator nnl = getNext(cnl);
+      text += getInterNoteSpacingAsQString(cnl, nnl);
+      //si la prochaine note demande un changement de font, on
+      //coupe le string.
+      if( x->isGraceNote(iBar, i) != x->isGraceNote(iBar, i+1) )
+      {
+        b.mWords.push_back( make_pair(text, isGraceNote) );
+        text = QString();
+      }
+    }
+  }
+  if( !text.isNull() )
+  { b.mWords.push_back( make_pair(text, isGraceNote) ); }
+  
+  int cursorX = getBarRegion( brNoteStartX, b.mBarType );
+  for(size_t i = 0; i < b.mWords.size(); ++i)
+  {
+    QFontMetrics fm = b.mWords[i].second ? QFontMetrics(mGraceNotesFont) :
+      QFontMetrics(mBarFont);
+    QRect rect = fm.boundingRect( b.mWords[i].first );
+    int posY = b.mWords[i].second ? getBarRegion(brGraceNoteTopY, b.mBarType) :
+      getBarRegion(brNoteTopY, b.mBarType);
+    rect = QRect(cursorX, posY, rect.width(), rect.height() );
+    cursorX += rect.width();
+    b.mWordLayouts.push_back(rect);
+  }
+}
+
+//-----------------------------------------------------------------------------
 void PartitionViewer::startBarTextEdit( int iBar )
 {
   mpBarTextEdit->setFocus();
@@ -2608,6 +2703,10 @@ void PartitionViewer::updateBar( int iBar )
   QFontMetrics fm( mBarFont );
   QFontMetrics gfm( mGraceNotesFont );
   int barWidth = 0;
+  
+  splitInWords(iBar);
+  
+  //definition des rects de chaque notes.
   int cursorX = getBarRegion( brNoteStartX );
   for( int j = 0; j < x->getNumberOfNotesInBar( iBar ); ++j )
   {
@@ -2650,7 +2749,7 @@ void PartitionViewer::updateBar( int iBar )
       QSize( right - left, kBeatGroupHeight ) ) );
   }
   
-  //--- le text
+  //--- le text de la barre
   fm = QFontMetrics( mBarTextFont );
   QRect rect = fm.boundingRect( "+" );
   int w = max( rect.width(), rect.height() );
@@ -2673,6 +2772,7 @@ void PartitionViewer::updateBarLayout()
     Bar& b = getBar(i);
     b.mScreenLayout = QRect();
     b.mNoteScreenLayouts.clear();
+    b.mWordScreenLayouts.clear();
     b.mIsWayTooLong = false;
     
     int pageIndex = toPageIndex( mLayoutCursor );
@@ -2736,6 +2836,13 @@ void PartitionViewer::updateBarLayout()
           b.mNoteScreenLayouts.push_back( n );
         }
         
+        for(size_t j = 0; j < b.mWordLayouts.size(); ++j)
+        {
+          QRect n = b.mWordLayouts[j];
+          n.translate( pageLayout.topLeft() );
+          b.mWordScreenLayouts.push_back(n);
+        }
+        
         /*Il faut mettre le -1 sur le layout.width() parce que width()
          retourne 1 de plus que la coordonnée bottomRight. Donc, un point
          qui peut etre a l'extérieur de pageBody...*/
@@ -2745,7 +2852,7 @@ void PartitionViewer::updateBarLayout()
         
         //textScreenLayout.
         b.mTextScreenLayout = b.mTextRect;
-        b.mTextScreenLayout.translate( b.mScreenLayout.topLeft() );
+        b.mTextScreenLayout.translate( pageLayout.topLeft() );
         
         mBarsPerPage[ pageIndex ].push_back( i );
       }
@@ -2984,6 +3091,13 @@ void PartitionViewer::updateSpecialBarLayout( specialBar barIndex )
     QRect n = b.getNoteRect(j);
     n.translate( topLeft );
     b.mNoteScreenLayouts.push_back(n);
+  }
+  
+  for(size_t j = 0; j < b.mWordLayouts.size(); ++j)
+  {
+    QRect n = b.mWordLayouts[j];
+    n.translate( topLeft );
+    b.mWordScreenLayouts.push_back(n);
   }
 }
 //-----------------------------------------------------------------------------
