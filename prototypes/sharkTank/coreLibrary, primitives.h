@@ -157,8 +157,11 @@ public:
 
    void add(point3);
    point3 getCenterOfMass() const;
+   double getDepth() const {return mMax.z() - mMin.z() ;}
+   double getHeight() const {return mMax.y() - mMin.y() ;}
    point3 getMax() const;
    point3 getMin() const;
+   double getWidth() const {return mMax.x() - mMin.x() ;}
    vector3 getSize() const;
    bool isValid() const;
    void setMax(point3);

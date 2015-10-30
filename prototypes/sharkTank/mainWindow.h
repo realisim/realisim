@@ -32,9 +32,14 @@ protected slots:
    void addFood();
    void addShark();
    void cameraIncrementChanged(int);
+   void fishGroupingForceFactorChanged(const QString&);
    void fishMinSeparationChanged(int);
    void fishMinFlockNeighbourChanged(int);
+   void fishSeparationForceFactorChanged(const QString&);
+   void fishSteeringForceFactorChanged(const QString&);
+   
    void nudgeFish();
+   void restart();
 
 protected:
    void createUi();
@@ -47,6 +52,9 @@ protected:
    //---UI
    QSpinBox* mpFishMinSeparationSpinBox;
    QSpinBox* mpFishMinFlockSpinBox;
+   QLineEdit* mpFishGrpForceFactor;
+   QLineEdit* mpFishSepForceFactor;
+   QLineEdit* mpFishSteeringForceFactor;   
 };
 
 

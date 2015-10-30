@@ -136,27 +136,77 @@ void mainWindow::createUi()
             pFishMinFlockNeighbour->addWidget(l);
             pFishMinFlockNeighbour->addWidget(mpFishMinFlockSpinBox);
          }
+         //fish grouping force factor
+         QHBoxLayout* pFishGroupingForceFactorLyt = new QHBoxLayout();
+         {
+            QLabel* l = new QLabel("fish grp force factor:", pMainframe);
+            mpFishGrpForceFactor = new QLineEdit(pMainframe);            
+            connect( mpFishGrpForceFactor, SIGNAL(textChanged(const QString&)),
+               this, SLOT(fishGroupingForceFactorChanged(const QString&)) );
+
+            pFishGroupingForceFactorLyt->addWidget(l);
+            pFishGroupingForceFactorLyt->addWidget(mpFishGrpForceFactor);
+         }
+         //fish separation force factor
+         QHBoxLayout* pFishSeparationForceFactorLyt = new QHBoxLayout();
+         {
+            QLabel* l = new QLabel("fish separation force factor:", pMainframe);
+            mpFishSepForceFactor = new QLineEdit(pMainframe);            
+            connect( mpFishSepForceFactor, SIGNAL(textChanged(const QString&)),
+               this, SLOT(fishSeparationForceFactorChanged(const QString&)) );
+
+            pFishSeparationForceFactorLyt->addWidget(l);
+            pFishSeparationForceFactorLyt->addWidget(mpFishSepForceFactor);
+         }
+         //fish steering force factor
+         QHBoxLayout* pFishSteeringForceFactorLyt = new QHBoxLayout();
+         {
+            QLabel* l = new QLabel("fish steering force factor:", pMainframe);
+            mpFishSteeringForceFactor = new QLineEdit(pMainframe);            
+            connect( mpFishSteeringForceFactor, SIGNAL(textChanged(const QString&)),
+               this, SLOT(fishSteeringForceFactorChanged(const QString&)) );
+
+            pFishSteeringForceFactorLyt->addWidget(l);
+            pFishSteeringForceFactorLyt->addWidget(mpFishSteeringForceFactor);
+         }
+
 
          //addShark
-         QPushButton* pAddShark = new QPushButton("add shark", pMainframe);
-         connect(pAddShark, SIGNAL(clicked()), this, SLOT(addShark()));
+         QHBoxLayout* pActionLyt = new QHBoxLayout();
+         {
+            QPushButton* pAddShark = new QPushButton("add shark", pMainframe);
+            connect(pAddShark, SIGNAL(clicked()), this, SLOT(addShark()));
 
-         //nudge button
-         QPushButton* pNudge = new QPushButton("nudge", pMainframe);
-         connect(pNudge, SIGNAL(clicked()), this, SLOT(nudgeFish()));
+            //nudge button
+            QPushButton* pNudge = new QPushButton("nudge", pMainframe);
+            connect(pNudge, SIGNAL(clicked()), this, SLOT(nudgeFish()));
 
-         //add food button
-         QPushButton* pAddFood = new QPushButton("add food", pMainframe);
-         connect(pAddFood, SIGNAL(clicked()), this, SLOT(addFood()));
+            //add food button
+            QPushButton* pAddFood = new QPushButton("add food", pMainframe);
+            connect(pAddFood, SIGNAL(clicked()), this, SLOT(addFood()));
+
+            pActionLyt->addWidget(pAddShark);
+            pActionLyt->addWidget(pNudge);
+            pActionLyt->addWidget(pAddFood);
+         }
+         
+
+         //restart
+         QPushButton* pRestart = new QPushButton("restart", pMainframe);
+         connect(pRestart, SIGNAL(clicked()), this, SLOT(restart()));
 
          pLeftLyt->addLayout(pCameraLyt);
          pLeftLyt->addLayout(pFishMinSeparation);
          pLeftLyt->addLayout(pFishMinFlockNeighbour);
+         pLeftLyt->addLayout(pFishGroupingForceFactorLyt);
+         pLeftLyt->addLayout(pFishSeparationForceFactorLyt);
+         pLeftLyt->addLayout(pFishSteeringForceFactorLyt);
          
-         pLeftLyt->addWidget(pAddShark);
-         pLeftLyt->addWidget(pNudge);
-         pLeftLyt->addWidget(pAddFood);
+         
          pLeftLyt->addStretch(1);
+         pLeftLyt->addLayout(pActionLyt);
+         pLeftLyt->addWidget(pRestart);
+         
       }
 
       QVBoxLayout* pRightLyt = new QVBoxLayout();
@@ -186,6 +236,13 @@ void mainWindow::cameraIncrementChanged(int iPercentage)
    mpMyViewer->setCameraMoveIncrement( kMin + (kMax - kMin) * iPercentage/100.0 );
 }
 //-----------------------------------------------------------------------------
+void mainWindow::fishGroupingForceFactorChanged(const QString& iText)
+{
+   bool ok = false;
+   double d = iText.toDouble(&ok);
+   if(ok){ mEngine.setGroupingForceFactor(d); }
+}
+//-----------------------------------------------------------------------------
 void mainWindow::fishMinSeparationChanged(int iV)
 {
    mEngine.setFishMinimalSeparationDistance(iV);
@@ -198,8 +255,28 @@ void mainWindow::fishMinFlockNeighbourChanged(int iV)
    updateUi();
 }
 //-----------------------------------------------------------------------------
+void mainWindow::fishSeparationForceFactorChanged(const QString& iText)
+{
+   bool ok = false;
+   double d = iText.toDouble(&ok);
+   if(ok){ mEngine.setSeparationForceFactor(d); }
+}
+//-----------------------------------------------------------------------------
+void mainWindow::fishSteeringForceFactorChanged(const QString& iText)
+{
+   bool ok = false;
+   double d = iText.toDouble(&ok);
+   if(ok){ mEngine.setSteeringForceFactor(d); }
+}
+//-----------------------------------------------------------------------------
 void mainWindow::nudgeFish()
 { mEngine.nudgeFish(); }
+//-----------------------------------------------------------------------------
+void mainWindow::restart()
+{
+   mEngine.stop();
+   mEngine.start();
+}
 //-----------------------------------------------------------------------------
 void mainWindow::updateUi()
 {
@@ -207,6 +284,10 @@ void mainWindow::updateUi()
 
    mpFishMinSeparationSpinBox->setValue( mEngine.getFishMinimalSeparationDistance() );
    mpFishMinFlockSpinBox->setValue( mEngine.getFishMinimalNumberOfNeighbourToFlock() );
+   mpFishGrpForceFactor->setText( QString::number(mEngine.getGroupingForceFactor(), 'g', 1) );
+   mpFishSepForceFactor->setText( QString::number(mEngine.getSeparationForceFactor(), 'g', 1) );
+   mpFishSteeringForceFactor->setText( QString::number(mEngine.getSteeringForceFactor(), 'g', 1) );   
+   
    update();
 }
 //-----------------------------------------------------------------------------

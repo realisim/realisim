@@ -20,7 +20,7 @@ using namespace resonant;
 class actor
 {
 public:
-   actor(engine& e): mMaxAccel(100), mMaxVelocity(100), mMarkedForDelete(false),
+   actor(engine& e): mMaxAccel(1000), mMaxVelocity(1000), mMarkedForDelete(false),
       mEngine(e) {}
    virtual ~actor() {}
 
@@ -77,13 +77,16 @@ public:
    virtual ~fish() {}
 
    vector3 getFoodForce() const {return mFoodForce;}
+   double getFovAngle() const {return mFovAngle;}
    vector3 getGroupingForce() const {return mGroupingForce;}
    vector3 getSeparationForce() const {return mSeparationForce;}
-   double getSearchNeighbourRadius() const {return mSearchNeighbourRadius;}
-   void setSearchNeighbourRadius(double r) {mSearchNeighbourRadius = r;}
+   double getSearchNeighbourRadius() const {return mSearchNeighbourRadius;}   
+   vector3 getSteeringForce() const {return mSteeringForce;}
    void setFoodForce(vector3 f) {mFoodForce = f;}
-   void setGroupingForce(vector3 f) {mGroupingForce = f;}
-   void setSeparationForce(vector3 f) {mSeparationForce = f;}
+   void setFovAngle(double a) {mFovAngle = a;}
+   //void setGroupingForce(vector3 f) {mGroupingForce = f;}
+   //void setSeparationForce(vector3 f) {mSeparationForce = f;}
+   void setSearchNeighbourRadius(double r) {mSearchNeighbourRadius = r;}
    virtual void update();
 
 protected:
@@ -91,7 +94,8 @@ protected:
    vector3 mGroupingForce;
    vector3 mSeparationForce;
    vector3 mEvadeForce;
-
+   vector3 mSteeringForce;
+   double mFovAngle;
    double mSearchNeighbourRadius;   
 
    fish();
@@ -193,15 +197,19 @@ public:
 
    void addShark();
    void addFood();
-   void addListener(listener*);
+   void addListener(listener*);   
    fishFood* getClosestFood(point3);
-   int getFishMinimalNumberOfNeighbourToFlock() const {return mFishMinimalNumberOfNeighbourToFlock;}
-   double getFishMinimalSeparationDistance() const {return mFishMinimalSeparationDistance;}
    int getElapsedTime() const;
+   int getFishMinimalNumberOfNeighbourToFlock() const {return mFishMinimalNumberOfNeighbourToFlock;}
+   double getFishMinimalSeparationDistance() const {return mFishMinimalSeparationDistance;}   
    std::vector<fish*>& getFishes() {return mFishes;}
+   std::vector<fish*>& getFishNeigbours(point3);
+   double getGroupingForceFactor() const {return mGroupingForceFactor;}
+   double getSeparationForceFactor() const {return mSeparationForceFactor;}
+   double getSteeringForceFactor() const {return mSteeringForceFactor;}
    sceneGraph& getSceneGraph() {return mSceneGraph;}
    std::vector<shark*>& getSharks() {return mSharks;}
-   state getState() const { return mState; }
+   state getState() const { return mState; }   
    void nudgeFish();
    void pause();
    void remove(fish*);
@@ -209,16 +217,36 @@ public:
    void removeListener(listener*);
    void setFishMinimalNumberOfNeighbourToFlock(int n) {mFishMinimalNumberOfNeighbourToFlock = n;}
    void setFishMinimalSeparationDistance(double d) {mFishMinimalSeparationDistance = d;}   
+   void setGroupingForceFactor(double f) {mGroupingForceFactor = f;}
+   void setSeparationForceFactor(double f) {mSeparationForceFactor = f;}
+   void setSteeringForceFactor(double f) {mSteeringForceFactor = f;}
    void start();
    void stop();
-   void updatePhysics(actor*);
 
 protected:
+   void clear();
    void goToState(state);
+   void handleMapCollision(actor*);
    void initialize();
+   void spatialDistribution();
+   void updatePhysics(actor*);
 
    void send(message);
    void timerEvent(QTimerEvent*);
+
+   struct spatialKey
+   {
+      spatialKey(int a, int b, int c) : x(a), y(b), z(c) {}
+
+      bool operator<(const spatialKey& iK) const
+      {
+         return ( z < iK.z && y < iK.y && x < iK.x );
+      }
+
+      int x;
+      int y;
+      int z;
+   };
 
    state mState;
    std::vector<listener*> mListeners;
@@ -230,6 +258,10 @@ protected:
    std::vector<shark*> mSharks;
    double mFishMinimalSeparationDistance;
    int mFishMinimalNumberOfNeighbourToFlock;
+   double mGroupingForceFactor;
+   double mSeparationForceFactor;
+   double mSteeringForceFactor;
+   std::map<spatialKey, std::vector<fish*> > mFishSpatialDistribution;
 
    sceneGraph mSceneGraph;
 };

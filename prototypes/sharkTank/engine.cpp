@@ -1,6 +1,7 @@
-#include <algorithm>
+ï»¿#include <algorithm>
 #define _USE_MATH_DEFINES //pour M_PI
 #include <math.h>
+#include <omp.h>
 #include "engine.h"
 #include <random>
 #include "utilities3d.h"
@@ -12,24 +13,37 @@ using namespace resonant;
 
 
 const int kTimeIncrementInMsec = 15;
+const coreLibrary::box kTheTank( point3( -100, -100, -50 ), vector3(200, 200, 100) );
+const int kSpatialDistributionBinSize = 10;
 
 //--- fish constants
-const int kNumberOfFishInFlock = 500;
-const double kFishMinimalNeighboutSearchRadius = 6.0;
+const int kNumberOfFishInFlock = 1000;
+const double kFishMinimalNeighboutSearchRadius = 30.0;
 const double kFishMaxAccel = 500.0;
-const double kFishMaxVelocity = 32.0;
-const double kEvadeSharkFactor = 15;
-const double kFishBoundingSphereRadius = 1.732 * .5; //sqrt(3)*coté du cube
+const double kFishMaxVelocity = 16.0;
+const double kEvadeSharkFactor = 180;
+const double kFishBoundingSphereRadius = 1.732 * .5; //sqrt(3)*cotÃ© du cube
 
 //--- shark constant
 const double kSharkMinimalNeighboutSearchRadius = 60.0;
-const double kWaterFrictionCoeff = 1.05;
-const double kSharkBoundingSphereRadius = 1.732 * 3; //sqrt(3)*coté du cube
+const double kWaterFrictionCoeff = 0;
+const double kSharkBoundingSphereRadius = 1.732 * 3; //sqrt(3)*cotÃ© du cube
 
 const double kNoVelocity = 0.2;
 
 namespace
 {
+   quaternion add(const quaternion& q1, const quaternion& q2)
+   {
+      return quaternion( q1.x() + q2.x(),
+      q1.y() + q2.y(),
+      q1.z() + q2.z(),
+      q1.w() + q2.w() );
+   }
+   quaternion divide( const quaternion& q, double d )
+   {
+      return quaternion( q.x() / d, q.y() / d, q.z() / d, q.w() / d);
+   }
    double clamp( double iToClamp, double iMin, double iMax )
    { return min(max(iToClamp, iMin), iMax); }
 }
@@ -97,6 +111,11 @@ void fishNode::begin()
    //glColor3ub( 0, 0, 255 ); //bleu
    //lineSegment kydf( mpFish->getPosition(), mpFish->getPosition() + mpFish->getSeparationForce() );
    //utilities::drawLineSegment( kydf );
+   ////steering force
+   //glColor3ub( 255, 0, 0 ); //rouge
+   //lineSegment sf( mpFish->getPosition(), mpFish->getPosition() + mpFish->getSteeringForce() );
+   //utilities::drawLineSegment( sf );
+
    //glEnable(GL_LIGHTING);
 }
 //-----------------------------------------------------------------------------
@@ -197,69 +216,95 @@ void sharkNode::begin()
 //--- fish
 //-----------------------------------------------------------------------------
 fish::fish(engine& e) : actor(e),
+mFovAngle(180),
 mSearchNeighbourRadius(kFishMinimalNeighboutSearchRadius)
 {}
 //-----------------------------------------------------------------------------
 void fish::update()
-{
-   //updatePhysics -
-   mEngine.updatePhysics( this );
-   
+{     
    //--- update behavioral forces
    mFoodForce = vector3::zero;
    mGroupingForce = vector3::zero;
    mSeparationForce = vector3::zero;
    mEvadeForce = vector3::zero;
+   mSteeringForce = vector3::zero;
 
    //-- regroupement des poissons ensemble
-   vector<fish*>& vf = mEngine.getFishes();
+   //vector<fish*>& vf = mEngine.getFishes();
+   vector<fish*>& vf = mEngine.getFishNeigbours(getPosition());
    point3 mCenterOfMass = point3::origin;
+   quaternion averageOrientation(0, 0, 0, 1);
    double numberOfNeighbours = 0;
+
+   //#pragma omp parallel for
+   //for( int i = 0; i < (int)vf.size(); ++i )
    foreach( fish* pFish, vf )
    {
+      //fish* pFish = vf[i];
       if( pFish == this ){ continue; }
 
       vector3 d = pFish->getPosition() - getPosition();
       double dNorm = d.norm();
-      if( dNorm <= 2*kFishBoundingSphereRadius ) //collision
-      {
-         mSeparationForce += d * -1 * 1.0/dNorm * 100;
-      }      
 
-      //on vient de trouver un ami
+      //on vient de trouver un ami dans notre champs de vision
+      if( dNorm < getSearchNeighbourRadius() && 
+         acos(d.normalize() * getVelocity().normalize()) < getFovAngle()*M_PI/180.0 / 2.0 )
+      { 
+         mCenterOfMass += (pFish->getPosition()-point3::origin);
+         averageOrientation = add(averageOrientation, pFish->getOrientation().rotationAsQuaternion());
+         numberOfNeighbours++;
+      }
+
       if(dNorm < getSearchNeighbourRadius())
       {
-         mCenterOfMass += (pFish->getPosition()-point3::origin);
-         numberOfNeighbours++;
-
-         //on applique la force de separation si les amis sont trop près
+         //on applique la force de separation si les amis sont trop prÃ¨s
          if( dNorm <= mEngine.getFishMinimalSeparationDistance() )
          {
-            mSeparationForce += d * -1 * 1.0/dNorm;
+            mSeparationForce += d * -1 * 1.0/dNorm * mEngine.getSeparationForceFactor();
          }
       }
    }   
 
    /*La force de regroupement est vers le centre de masse des voisins
-     trouvé. Si on ne trouve pas un nombre minimal de voisin, on augmente
+     trouvÃ©. Si on ne trouve pas un nombre minimal de voisin, on augmente
      le rayon de recherche afin de ne pas reste seul.*/
-   if( numberOfNeighbours > mEngine.getFishMinimalNumberOfNeighbourToFlock() )
+   if( numberOfNeighbours /*> mEngine.getFishMinimalNumberOfNeighbourToFlock()*/ )
    {
       mCenterOfMass.set( mCenterOfMass.x() / numberOfNeighbours,
          mCenterOfMass.y() / numberOfNeighbours,
          mCenterOfMass.z() / numberOfNeighbours );
-      mGroupingForce = (mCenterOfMass - getPosition());
-      setSearchNeighbourRadius( max( getSearchNeighbourRadius() / 2.0, kFishMinimalNeighboutSearchRadius ) );
+      vector3 d = mCenterOfMass - getPosition();
+      double dNorm = d.norm();
+      mGroupingForce = d *  1.0/dNorm * mEngine.getGroupingForceFactor();
+      averageOrientation = divide( averageOrientation, numberOfNeighbours );
+
+      //steer in the average orientation
+      averageOrientation.normalize();
+      matrix4 o(vector3::zero, averageOrientation);
+      vector3 x(o(0,0), o(0,1), o(0,2)); //dans le sens de la velocity
+      vector3 y(o(1,0), o(1,1), o(1,2)); //perpendiculaire a la velocity
+
+      //on trouve l'angle en la direction moyenne du groupe et la direction
+      //courante du poisson
+      double cosAngle = x * getVelocity().normalize();
+      mSteeringForce = y * cosAngle * mEngine.getSteeringForceFactor();
+
+      //setSearchNeighbourRadius( max( getSearchNeighbourRadius() / 2.0, kFishMinimalNeighboutSearchRadius ) );
    }
-   else
-   { setSearchNeighbourRadius( getSearchNeighbourRadius() * 2.0 ); }
+   /*else
+   { setSearchNeighbourRadius( getSearchNeighbourRadius() * 2.0 ); }*/
 
    //--- force d'attraction de la bouffe.
-   fishFood* ff = mEngine.getClosestFood( getPosition() );
+   fishFood* ff = mEngine.getClosestFood( getPosition() );   
    if( ff )
-   { mFoodForce = ff->getPosition() - getPosition(); }
+   { 
+      const vector3 foodV = ff->getPosition() - getPosition();
+      const double foodVNorm = foodV.norm();
+      if(foodVNorm < 30)
+      { mFoodForce = (ff->getPosition() - getPosition()) * 1 / foodVNorm; }
+   }
 
-   //--- force d'évasion du requin
+   //--- force d'Ã©vasion du requin
    vector<shark*>& vs = mEngine.getSharks();
    foreach( shark* s, vs )
    {
@@ -271,7 +316,8 @@ void fish::update()
       }
    }
 
-   setAppliedForce( mFoodForce + mSeparationForce + mGroupingForce + mEvadeForce );
+   setAppliedForce( mFoodForce + mSeparationForce + mGroupingForce + 
+      mSteeringForce + mEvadeForce );
 }
 //-----------------------------------------------------------------------------
 //--- shark
@@ -283,8 +329,6 @@ shark::shark(engine& e) : actor(e),
 //-----------------------------------------------------------------------------
 void shark::update()
 {
-   mEngine.updatePhysics(this);
-
    mEatingForce = vector3::zero;
    mWanderingForce = vector3::zero;
    
@@ -312,7 +356,7 @@ void shark::update()
    if( numberOfPrey > 0 )
    {
       cm.set( cm.x()/numberOfPrey, cm.y()/numberOfPrey, cm.z()/numberOfPrey );
-      setSearchNeighbourRadius( max(getSearchNeighbourRadius() / 2.0, kSharkMinimalNeighboutSearchRadius) );
+      //setSearchNeighbourRadius( max(getSearchNeighbourRadius() / 2.0, kSharkMinimalNeighboutSearchRadius) );
       setFovAngle( max(getFovAngle() - 0.5, 25.0) );
       mEatingForce = cm - getPosition();
       mCircleAround = point3::origin;
@@ -321,7 +365,7 @@ void shark::update()
    {
       if( mCircleAround.isEqualTo(point3::origin, 1e-5 ) )
       { mCircleAround = getPosition(); }
-      setSearchNeighbourRadius( getSearchNeighbourRadius() * 2.0 );
+      //setSearchNeighbourRadius( getSearchNeighbourRadius() * 2.0 );
       setFovAngle( max(getFovAngle() + 0.5, 65.0) );
       //start circling aroung the last position at 2Pi per 10sec...
       double e = mEngine.getElapsedTime() / 1000.0 * 2 * M_PI / 10.0;
@@ -332,7 +376,7 @@ void shark::update()
       mCircleAround.z() + sin(e)*a );
       mWanderingForce = pointOnCircle - getPosition();
    }  
-   setAppliedForce(mEatingForce + mWanderingForce); 
+   setAppliedForce( mEatingForce + mWanderingForce); 
 }
 //-----------------------------------------------------------------------------
 //--- engine
@@ -341,7 +385,10 @@ engine::engine() : QObject(),
 mState( sStopped ),
 mTimerId(0),
 mFishMinimalSeparationDistance(4.0),
-mFishMinimalNumberOfNeighbourToFlock(10)
+mFishMinimalNumberOfNeighbourToFlock(10),
+mGroupingForceFactor(100.0),
+mSeparationForceFactor(25.0),
+mSteeringForceFactor(10)
 {
    srand((unsigned int)time(NULL));
 }
@@ -350,14 +397,7 @@ engine::~engine()
 {
    send( mDestroyingEngine );
    mListeners.clear();
-
-   for(auto it = mFishes.begin(); it != mFishes.end(); ++it)
-   { delete *it; }
-   mFishes.clear();
-
-   for(auto it = mFishFood.begin(); it != mFishFood.end(); ++it)
-   { delete *it; }
-   mFishFood.clear();
+   clear();
 }
 //-----------------------------------------------------------------------------
 void engine::addShark()
@@ -384,13 +424,16 @@ void engine::addFood()
 {
    //on genere une position alleatoire   
    std::default_random_engine generator(rand());
-   std::uniform_int_distribution<double> spaceDistribution(-200,200);
+   std::uniform_int_distribution<double> n(0.0, 1.0);
 
    //fish food
+   double x = n(generator);
+   double y = n(generator);
+   double z = n(generator);
    fishFood* ff = new fishFood(*this);
-   ff->setPosition( point3( spaceDistribution(generator),
-      spaceDistribution(generator), 
-      spaceDistribution(generator) ) );
+   ff->setPosition( point3( x * kTheTank.getWidth() + kTheTank.getMin().x(),
+      y * kTheTank.getWidth() + kTheTank.getMin().y(), 
+      z * kTheTank.getWidth() + kTheTank.getMin().z() ) );
    mFishFood.push_back( ff );
 
    fishFoodNode* ffn = new fishFoodNode( "fishFood " + 
@@ -403,6 +446,23 @@ void engine::addListener(listener* l)
    auto it = find( mListeners.begin(), mListeners.end(), l );
    if( it == mListeners.end() )
    { mListeners.push_back(l); }
+}
+//-----------------------------------------------------------------------------
+void engine::clear()
+{   
+   for(auto it = mFishes.begin(); it != mFishes.end(); ++it)
+   { delete *it; }
+   mFishes.clear();
+
+   for(auto it = mFishFood.begin(); it != mFishFood.end(); ++it)
+   { delete *it; }
+   mFishFood.clear();
+
+   foreach(shark* s, mSharks)
+   { delete s; }
+   mSharks.clear();
+
+   mSceneGraph.clear();
 }
 //-----------------------------------------------------------------------------
 fishFood* engine::getClosestFood(point3 p)
@@ -421,6 +481,21 @@ fishFood* engine::getClosestFood(point3 p)
 // return the number of milliseconds since initialization
 int engine::getElapsedTime() const
 { return mTime.elapsed(); }
+//-----------------------------------------------------------------------------
+vector<fish*>& engine::getFishNeigbours(point3 p)
+{
+   //vector<fish*> r;
+   int binX = p.x() / kSpatialDistributionBinSize;
+   int binY = p.y() / kSpatialDistributionBinSize;
+   int binZ = p.z() / kSpatialDistributionBinSize;
+
+   spatialKey k(binX, binY, binZ);
+   return mFishSpatialDistribution[k];
+   /*auto it = mFishSpatialDistribution.find(t);
+   if( it != mFishSpatialDistribution.end() )
+   { r = it->second; }
+   return r;*/
+}
 //-----------------------------------------------------------------------------
 void engine::goToState(state s)
 {
@@ -457,6 +532,7 @@ void engine::goToState(state s)
          killTimer(mTimerId);
          mTimerId = 0;
          mState = s;
+         clear();
       break;
       default : break;
       }
@@ -467,13 +543,35 @@ void engine::goToState(state s)
    send( mStateChanged );
 }
 //-----------------------------------------------------------------------------
+void engine::handleMapCollision(actor* ipA)
+{
+
+   const int w = kTheTank.getWidth() / 2;
+   const int h = kTheTank.getHeight() / 2;
+   const int d = kTheTank.getDepth() / 2;
+   //on force les actors dans un rectangle de w, h, d
+
+   box bb( point3(-w,-h,-d), vector3(2*w, 2*h, 2*d) );
+   const point3 p = ipA->getPosition();
+   if( !bb.contains(p) )
+   {
+      vector3 v = point3::origin - p;
+      if( fabs(v.dx()) < w ){ v.setDx(0.0); }
+      if( fabs(v.dy()) < h ){ v.setDy(0.0); }
+      if( fabs(v.dz()) < d ){ v.setDz(0.0); }
+
+      ipA->setAppliedForce( ipA->getAppliedForce() + v );
+   }
+
+}
+//-----------------------------------------------------------------------------
 void engine::initialize()
 {
    mTime.start();
 
    //on genere une position alleatoire
    default_random_engine generator(rand());
-   uniform_int_distribution<double> flockDistribution(-20,20);
+   uniform_int_distribution<double> flockDistribution(-kTheTank.getWidth() / 2, kTheTank.getWidth() / 2);
    uniform_int_distribution<double> accelDistribution(kFishMaxAccel * .8, kFishMaxAccel * 1.2);
    uniform_int_distribution<double> speedDistribution(kFishMaxVelocity * .8, kFishMaxVelocity * 1.2);
 
@@ -486,6 +584,9 @@ void engine::initialize()
          flockDistribution(generator) ) );
       f->setMaxAccel( accelDistribution(generator) );
       f->setMaxVelocity( speedDistribution(generator) );
+
+      f->setAppliedForce( vector3(speedDistribution(generator),
+         speedDistribution(generator), speedDistribution(generator) ) );
       mFishes.push_back(f);
 
       fishNode* fn = new fishNode( "fish " + QString::number((int)f), f );
@@ -503,7 +604,7 @@ void engine::nudgeFish()
    fish* f = mFishes[i];
 
    vector3 force( nudgeForce(generator), nudgeForce(generator), nudgeForce(generator) );
-   f->setGroupingForce( force );
+   f->setAppliedForce( f->getAppliedForce() + force );
 }
 //-----------------------------------------------------------------------------
 void engine::remove(fish* f)
@@ -540,20 +641,55 @@ void engine::send(message m)
    for(size_t i = 0; i < mListeners.size(); ++i )
    { mListeners[i]->received(m); }
 }
+//-----------------------------------------------------------------------------
+void engine::spatialDistribution()
+{
+   mFishSpatialDistribution.clear();
+   const int binSize = kSpatialDistributionBinSize;
+   int binX, binY, binZ;
+   foreach(fish* f, mFishes)
+   {
+      binX = f->getPosition().x() / binSize;
+      binY = f->getPosition().y() / binSize;
+      binZ = f->getPosition().z() / binSize;
 
+      spatialKey k(binX, binY, binZ);
+      vector<fish*>& vf = mFishSpatialDistribution[k];
+      vf.push_back(f);
+   }
+
+   //printf("-----fish spatial distribution---\n");
+   //auto it = mFishSpatialDistribution.begin();
+   //while(it != mFishSpatialDistribution.end())
+   //{
+   //   printf("bin %d, %d, %d: number of fish: %d\n", it->first.x, it->first.y, it->first.z,
+   //      it->second.size() );
+   //   ++it;
+   //}
+}
 //-----------------------------------------------------------------------------
 void engine::start()
-{   
-   goToState(sStarted);
-}
+{    goToState(sStarted); }
+//-----------------------------------------------------------------------------
+void engine::stop()
+{ goToState(sStopped); }
 //-----------------------------------------------------------------------------
 void engine::timerEvent(QTimerEvent* ipE)
 {
    if( ipE->timerId() == mTimerId )
    {
+      spatialDistribution();
+
       //fish
-      foreach(fish* pFish, mFishes)
-      { pFish->update(); }
+      #pragma omp parallel for
+      for(int i = 0; i < (int)mFishes.size(); ++i)
+      //foreach(fish* pFish, mFishes)
+      {  
+         fish* pFish = mFishes[i];
+         updatePhysics(pFish);     
+         pFish->update();
+         handleMapCollision( pFish );
+      }
 
       //food
       foreach(fishFood* ff, mFishFood)
@@ -561,9 +697,13 @@ void engine::timerEvent(QTimerEvent* ipE)
 
       //sharks
       foreach(shark* s, mSharks)
-      { s->update(); }
+      { 
+         updatePhysics(s);
+         s->update();
+         handleMapCollision( s );         
+      }
 
-      //--- cleanup, on enleve les elements marké a détruires.
+      //--- cleanup, on enleve les elements markÃ© a dÃ©truires.
       foreach(fish* f, mFishes)
       {
          if( f->isMarkedForDeletion() )
@@ -630,7 +770,7 @@ void engine::updatePhysics(actor* ipA)
       z = x ^ y;
       z.normalize();
       o = matrix4 (x, y, z);
-      //langle entre la force appliquée et le vecteur velocity donne le 
+      //langle entre la force appliquÃ©e et le vecteur velocity donne le 
       //tanguage
       //double cosTheta = ipA->getAppliedForce().normalize() * ipA->getVelocity().normalize();
 //printf("Theta %.4f\n", acos(cosTheta) * 180.0 / M_PI);
