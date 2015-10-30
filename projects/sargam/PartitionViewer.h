@@ -117,7 +117,7 @@ protected:
     QRect mTextScreenLayout;
     std::vector< std::pair<QString, bool> > mWords;
     std::vector<QRect> mWordLayouts;
-    std::vector<QRect> mWordScreenLayouts;
+std::vector<QRect> mWordScreenLayouts; //pas vraiment besoin autre que pour le debogage...
     barType mBarType;
     bool mIsDirty;
     bool mIsWayTooLong;
@@ -235,7 +235,7 @@ protected:
   void setCurrentNote(int);
   void setNumberOfPage(int);
   std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > ) const;
-  void splitInWords(int);
+  void splitInWords(int); //makeNoteRect
   void startBarTextEdit( int );
   void startParentheseEdit( int );
   void startLineTextEdit( int );

@@ -1,5 +1,6 @@
 	/* */
-
+#include <algorithm>
+#include <cassert>
 #include "MainDialog.h"
 #include "PartitionViewer.h"
 #include "utils/utilities.h"
@@ -7,6 +8,8 @@
 #include <QPrintPreviewDialog>
 #include <QPrinter>
 #include <QPrinterInfo>
+#include <QTextBoundaryFinder>
+#include <QTextLayout>
 #include <set>
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
@@ -2252,8 +2255,8 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       
       p.setPen( Qt::green );
       //le layout page des notes
-//      for( int j = 0; j < b.mNoteScreenLayouts.size(); ++j )
-//      { p.drawRect( b.mNoteScreenLayouts[j] ); }
+      for( int j = 0; j < b.mNoteScreenLayouts.size(); ++j )
+      { p.drawRect( b.mNoteScreenLayouts[j] ); }
       
       //texte de debuggage
       p.setPen(Qt::gray);
@@ -2500,15 +2503,23 @@ map< int, vector<int> > PartitionViewer::splitPerBar(
 /*Cette fonction coupe les notes de la barre en mots. Pour chaque changement
   de fonte du texte, on crée un nouveau mot. Les mots seront ensuite rendu à
  l'écran. Lobjectif de séparer en mots est de pouvoir rendre correctement le
- texte multilangue à l'écran.*/
+ texte multilangue à l'écran.
+ De plus, pour chaque mot, c'est ici qu'est calculé le rectangle qui encapsule
+ chaque note. Étant donnée le support devanagari, pour lequel une note represente
+ plusieurs caracteres ascii, la tâche se complique. C'est ce qui motive
+ l'utilisation de QTexLayout, QTextBoundaryFinder et QGlyphRun.
+ */
 void PartitionViewer::splitInWords(int iBar)
 {
   Bar& b = getBar(iBar);
+  b.mNotesRect.clear();
   b.mWords.clear();
   b.mWordLayouts.clear();
   
   bool isGraceNote = false;
   QString text;
+  /*On ajoute chaque note dans text et lors d'un changement de fonte,
+    on insere text dans le vecteur words et on commence un nouveau mot.*/
   for( int i = 0; i < x->getNumberOfNotesInBar( iBar ); ++i )
   {
     isGraceNote = x->isGraceNote(iBar, i);
@@ -2520,7 +2531,7 @@ void PartitionViewer::splitInWords(int iBar)
       text += getInterNoteSpacingAsQString(cnl, nnl);
       //si la prochaine note demande un changement de font, on
       //coupe le string.
-      if( x->isGraceNote(iBar, i) != x->isGraceNote(iBar, i+1) )
+      if( isGraceNote != x->isGraceNote(iBar, i+1) )
       {
         b.mWords.push_back( make_pair(text, isGraceNote) );
         text = QString();
@@ -2528,19 +2539,63 @@ void PartitionViewer::splitInWords(int iBar)
     }
   }
   if( !text.isNull() )
-  { b.mWords.push_back( make_pair(text, isGraceNote) ); }
+  {
+    /*on ajoute toujours un espace a la fin de la barre pour aérer.*/
+    text += " ";
+    b.mWords.push_back( make_pair(text, isGraceNote) );
+  }
   
+  /*Pour chaque mots, on fabrique le rectangle qui encapsulera ce mot.*/
   int cursorX = getBarRegion( brNoteStartX, b.mBarType );
   for(size_t i = 0; i < b.mWords.size(); ++i)
   {
-    QFontMetrics fm = b.mWords[i].second ? QFontMetrics(mGraceNotesFont) :
-      QFontMetrics(mBarFont);
-    QRect rect = fm.boundingRect( b.mWords[i].first );
+    QString word = b.mWords[i].first;
+    QFont f = b.mWords[i].second ? mGraceNotesFont : mBarFont;
+    
+    QTextLayout tl( word );
+    tl.setFont( f );
+    tl.beginLayout();
+    QTextLine textLine = tl.createLine();
+    textLine.setLineWidth(400);
+    tl.endLayout();
+    
+    QList<QGlyphRun> grl = tl.glyphRuns();
+    assert( grl.size() == 1 );
+    QRectF rectF = grl[0].boundingRect();
     int posY = b.mWords[i].second ? getBarRegion(brGraceNoteTopY, b.mBarType) :
       getBarRegion(brNoteTopY, b.mBarType);
-    rect = QRect(cursorX, posY, rect.width(), rect.height() );
+    QRect rect = QRect(cursorX, posY, rectF.width(), rectF.height() );
     cursorX += rect.width();
     b.mWordLayouts.push_back(rect);
+    
+    /*QtextBoundaryFinder sert a trouver les indices dans le string qui
+     forme un grapheme (une note).*/
+    QTextBoundaryFinder bf(QTextBoundaryFinder::Grapheme, word);
+    bf.toStart();
+    const int offset = b.mWordLayouts[i].left();
+    int glyphStartsAt = 0;
+    int glyphEndsAt = bf.toNextBoundary();
+    /*on va trouver le rectangle qui encapsule chaque note. Ce
+     rectangle servira a placer le curseur, calculer la tailler des ornements et
+     calculer les boites de selection. */
+    while( glyphEndsAt != -1 && glyphStartsAt < word.length() )
+    {
+      //printf("%d, %d, %d, -%s-\n", glyphStartsAt, glyphEndsAt, glyphEndsAt - glyphStartsAt,
+      //       word.mid(glyphStartsAt, glyphEndsAt - glyphStartsAt).toStdString().c_str());
+      
+      QList<QGlyphRun> grl = tl.glyphRuns(glyphStartsAt, glyphEndsAt - glyphStartsAt);
+      assert( grl.size() == 1 );
+      QRectF rectF = grl[0].boundingRect();
+      QRect rect = QRect( QPoint(rectF.left() + offset, posY),
+                         QSize(rectF.width(), rectF.height() ) );
+      
+      //on n'ajoute pas les espace...
+      if( word.mid(glyphStartsAt, glyphEndsAt - glyphStartsAt) != " " )
+      {b.mNotesRect.push_back(rect);}
+      
+      glyphStartsAt = glyphEndsAt;
+      glyphEndsAt = bf.toNextBoundary();
+    }
   }
 }
 
@@ -2698,32 +2753,15 @@ void PartitionViewer::updateBar( int iBar )
   const int kMinBarWidth =  x->getNumberOfNotesInBar( iBar ) ? 0 : 40;
   
   Bar& b = getBar(iBar);
-  //--- definition des rect contenants les notes
-  b.mNotesRect.clear();
-  QFontMetrics fm( mBarFont );
-  QFontMetrics gfm( mGraceNotesFont );
-  int barWidth = 0;
-  
+
+  //definition des rects des mots et notes.
   splitInWords(iBar);
   
-  //definition des rects de chaque notes.
-  int cursorX = getBarRegion( brNoteStartX );
-  for( int j = 0; j < x->getNumberOfNotesInBar( iBar ); ++j )
-  {
-    QString n = noteToString( x->getNote( iBar, j ) );
-    int noteLenght = x->isGraceNote( iBar, j ) ? gfm.width(n) + 1 : fm.width( n ) + 1;
-    int noteHeight = x->isGraceNote( iBar, j )  ? gfm.height() : fm.height();
-    int posY = x->isGraceNote( iBar, j ) ?
-    getBarRegion( brGraceNoteTopY, b.mBarType ) : getBarRegion( brNoteTopY, b.mBarType );
-    b.mNotesRect.push_back( QRect( cursorX, posY,
-      noteLenght, noteHeight ) );
-    NoteLocator n1( iBar, j );
-    NoteLocator n2 = getNext(n1);
-    cursorX += noteLenght + getInterNoteSpacing( n1, n2 );
-    barWidth = cursorX;
-  }
-  
   //--- Rectangle contenant la bar
+  int barWidth = getBarRegion( brNoteStartX );
+  foreach( QRect r, b.mWordLayouts )
+  { barWidth += r.width(); }
+  
   //On ajuste la largeur pour contenir le texte.
   const int kBarPad = 2;
   barWidth = max( barWidth + kBarPad,
@@ -2750,7 +2788,7 @@ void PartitionViewer::updateBar( int iBar )
   }
   
   //--- le text de la barre
-  fm = QFontMetrics( mBarTextFont );
+  QFontMetrics fm( mBarTextFont );
   QRect rect = fm.boundingRect( "+" );
   int w = max( rect.width(), rect.height() );
   rect.setTopLeft( QPoint(0, 0) );
