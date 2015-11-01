@@ -83,7 +83,9 @@ protected:
     rTarabTuningLabel, rTarabTuning };
   enum pageRegion { prPage, prBody, prPageFooter };
   enum barRegion { brSeparatorX, brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
-    brOrnementY, brMatraGroupY, brGraceNoteTopY, brTextX, brTextY };
+    brOrnementY, brMatraGroupY, brGraceNoteTopY, brGraceNoteBottomY,
+    brTextX, brTextY,
+    brLowerOctaveY, brUpperOctaveY, brGraceNoteLowerOctaveY, brGraceNoteUpperOctaveY };
   enum colors{ cHover, cSelection };
   
   /*Le type de barre indique s'il s'agit d'une barre de dexcription, comme les
@@ -93,7 +95,7 @@ protected:
   {
     enum barType {btNormal = 0, btDescription};
     Bar() : mBarType(btNormal), mIsDirty(true), mIsWayTooLong(false){;}
-    QRect getNoteRect( int ) const;
+    QRectF getNoteRect( int ) const;
     
     /*--- cache d'Affichage 
      mRect: coin à (0, 0). C'est les rect qui contient toute la barre
@@ -109,10 +111,10 @@ protected:
      mIsWayTooLong:
      */
     QRect mRect;
-    std::vector< QRect > mNotesRect;
+    std::vector< QRectF > mNotesRect;
     std::vector< QRect > mMatraGroupsRect;
     QRect mScreenLayout;
-    std::vector< QRect > mNoteScreenLayouts;
+    std::vector< QRectF > mNoteScreenLayouts;
     QRect mTextRect; //bar coord.
     QRect mTextScreenLayout;
     std::vector< std::pair<QString, bool> > mWords;
@@ -192,8 +194,7 @@ std::vector<QRect> mWordScreenLayouts; //pas vraiment besoin autre que pour le d
   int getBarRegion( barRegion, Bar::barType = Bar::btNormal ) const;
   std::vector<int> getBarsFromPage( int ) const;
   QColor getColor( colors ) const;
-  QLine getCursorLine() const;
-  int getInterNoteSpacing(NoteLocator, NoteLocator) const;
+  QLineF getCursorLine() const;
   QString getInterNoteSpacingAsQString(NoteLocator, NoteLocator) const;
   utils::Log& getLog();
   NoteLocator getNext( const NoteLocator& ) const;

@@ -58,7 +58,7 @@ MainDialog::MainDialog() : QMainWindow(),
   mpUpdater(0),
   mSettings( QSettings::UserScope, "Realisim", "Sargam" ),
   mLog(),
-  mIsVerbose( true ),
+  mIsVerbose( false ),
   mIsToolBarVisible(true),
   mState( sNormal )
 {
