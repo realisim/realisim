@@ -17,7 +17,7 @@ enum noteValue{ nvSa = 1, nvRe, nvGa, nvMa, nvPa, nvDha, nvNi, nvComma, nvChik,
 enum ornementType{ otMeend, otKrintan, otAndolan, otGamak };
 enum noteModification{ nmKomal, nmShuddh, nmTivra };
 enum strokeType{ stDa, stRa, stDiri, stNone };
-enum specialBar{ sbScale = -2 , sbTarabTuning = -1 };
+enum descriptionBar{ dbScale = -2 , dbTarabTuning = -1, dbNumberOfDescriptionBar = 0};
 enum script{ sLatin = 0, sDevanagari, sNumberOfScript };
   
 //------------------------------------------------------------------------------

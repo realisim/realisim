@@ -309,6 +309,7 @@ void Composition::clear()
   mLines.clear();
   mOrnements.clear();
   mErrors.clear();
+  mParenthesis.clear();
 }
 //------------------------------------------------------------------------------
 vector<Note> Composition::defaultScale() const
@@ -799,8 +800,8 @@ const Composition::Bar& Composition::getBar( int iIndex ) const
   {
     switch (iIndex)
     {
-      case sbScale: b = &mScale; break;
-      case sbTarabTuning: b = &mTarabTuning; break;
+      case dbScale: b = &mScale; break;
+      case dbTarabTuning: b = &mTarabTuning; break;
       default: b = &mBars[iIndex]; break;
     }
   }
@@ -896,13 +897,13 @@ ornementType Composition::getOrnementType( int iOrn ) const
 { return mOrnements[iOrn].mOrnementType; }
 //------------------------------------------------------------------------------
 vector<Note> Composition::getScale() const
-{ return getBar( sbScale ).mNotes; }
+{ return getBar( dbScale ).mNotes; }
 //------------------------------------------------------------------------------
 strokeType Composition::getStrokeType( int iBar, int iStroke ) const
 { return getBar(iBar).mStrokes[iStroke].mStrokeType; }
 //------------------------------------------------------------------------------
 vector<Note> Composition::getTarabTuning() const
-{ return getBar( sbTarabTuning ).mNotes; }
+{ return getBar( dbTarabTuning ).mNotes; }
 //------------------------------------------------------------------------------
 QString Composition::getTitle() const
 { return mTitle; }
@@ -984,7 +985,7 @@ void Composition::setScale( std::vector<Note> iNote )
 { mScale.mNotes = iNote; }
 //------------------------------------------------------------------------------
 void Composition::setTarabTuning( std::vector<Note> iNote )
-{ getBar(sbTarabTuning).mNotes = iNote; }
+{ getBar(dbTarabTuning).mNotes = iNote; }
 //------------------------------------------------------------------------------
 void Composition::setTitle( QString iTitle )
 { mTitle = iTitle; }

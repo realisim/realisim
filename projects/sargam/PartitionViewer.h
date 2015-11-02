@@ -84,7 +84,7 @@ protected:
   enum region { rPartition, rTitle, rSargamScaleLabel, rSargamScale,
     rTarabTuningLabel, rTarabTuning };
   enum pageRegion { prPage, prBody, prPageFooter };
-  enum barRegion { brSeparatorX, brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
+  enum barRegion { brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
     brOrnementY, brMatraGroupY, brGraceNoteTopY, brGraceNoteBottomY,
     brTextX, brTextY,
     brLowerOctaveY, brUpperOctaveY, brGraceNoteLowerOctaveY, brGraceNoteUpperOctaveY };
@@ -120,8 +120,8 @@ protected:
     QRect mTextRect; //bar coord.
     QRect mTextScreenLayout;
     std::vector< std::pair<QString, bool> > mWords;
-    std::vector<QRect> mWordLayouts;
-std::vector<QRect> mWordScreenLayouts; //pas vraiment besoin autre que pour le debogage...
+    std::vector<QRectF> mWordLayouts;
+std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le debogage...
     barType mBarType;
     bool mIsDirty;
     bool mIsWayTooLong;
@@ -186,7 +186,7 @@ std::vector<QRect> mWordScreenLayouts; //pas vraiment besoin autre que pour le d
   void drawPageFooter( QPainter*, int ) const;
   void drawPageFooters( QPainter* iP ) const;
   void drawSelectedNotes( QPainter* ) const;
-  void drawSpecialBars( QPainter* ) const;
+  void drawDescriptionBars( QPainter* ) const;
   void drawTitle( QPainter* ) const;
   void eraseBar(int);
   void eraseOrnement( int );
@@ -253,7 +253,7 @@ std::vector<QRect> mWordScreenLayouts; //pas vraiment besoin autre que pour le d
   void updateParenthesisLayout();
   void updateLayout();
   void updateLineLayout();
-  void updateSpecialBarLayout( specialBar );
+  void updateDescriptionBarLayout( descriptionBar );
   void updateUi();
   
   //--- ui
