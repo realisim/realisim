@@ -292,8 +292,9 @@ void mainWindow::updateUi()
 }
 //-----------------------------------------------------------------------------
 void mainWindow::resizeEvent(QResizeEvent* ipE)
-{
+{   
    mEngine.start();
+   mEngine.setViewerWindowSize( ipE->size() );
 }
 
 ////-----------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 #include <omp.h>
 #include "engine.h"
 #include <random>
+#include "utilities, texture.h"
 #include "utilities3d.h"
 
 using namespace sharkTank;
@@ -13,11 +14,13 @@ using namespace resonant;
 
 
 const int kTimeIncrementInMsec = 15;
-const coreLibrary::box kTheTank( point3( -100, -100, -50 ), vector3(200, 200, 100) );
-const int kSpatialDistributionBinSize = 10;
+const coreLibrary::box kTheTank( point3( -100, -100, -50 ),
+   vector3(200, 200, 100) );
+const int kSpatialDistributionBinSize = 20;
+const QString kFishMultiPassNodeToken = "fish multi pass node";
 
 //--- fish constants
-const int kNumberOfFishInFlock = 1000;
+const int kNumberOfFishInFlock = 4000;
 const double kFishMinimalNeighboutSearchRadius = 30.0;
 const double kFishMaxAccel = 500.0;
 const double kFishMaxVelocity = 16.0;
@@ -46,6 +49,42 @@ namespace
    }
    double clamp( double iToClamp, double iMin, double iMax )
    { return min(max(iToClamp, iMin), iMax); }
+
+   const QString kSelectHighlight = ""
+      "#version 120\n" 
+      "uniform sampler2D texture;\n"
+      "uniform float threshold;\n"
+      "void main()\n"
+      "{\n"
+      "	vec4 c = texture2D(texture, gl_TexCoord[0].xy); \n"
+      "  if(c.x > threshold || c.y > threshold || c.z > threshold) \n"
+      "     gl_FragColor = c; \n"
+      "  else{ gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0); } \n"
+      "}\n";
+   const QString kBlur2d = ""
+      "#version 120\n" 
+      "uniform sampler2D texture;\n"
+      "uniform bool isBlurVertical;\n"
+      "uniform int kernel;\n"
+      
+      "void main()\n"
+      "{\n"
+      "  vec2 step = fwidth(gl_TexCoord[0].xy);\n"
+      "	vec4 result = vec4(0, 0, 0, 0);\n"
+      "  vec2 offset;\n"
+      "  \n"
+      "  for(int i = -kernel / 2; i <= kernel / 2; ++i)\n"
+      "  {    \n"
+      "     if(isBlurVertical)\n"
+      "        offset = vec2(0.0, step.y * i);\n"
+      "     else\n"
+      "        offset = vec2(step.x * i, 0.0);\n"
+      " \n"
+      "     result += texture2D(texture, gl_TexCoord[0].xy + offset);\n"
+      "  }\n"
+      "  gl_FragColor = result / kernel; \n"     
+      //"  gl_FragColor = texture2D(texture, gl_TexCoord[0].xy); \n"      
+      "}\n";
 }
 //-----------------------------------------------------------------------------
 //--- fishFoodNode
@@ -85,13 +124,25 @@ void fishNode::begin()
       //content of the list
       // compile the display list, store a triangle in it
       glNewList(mDisplayList, GL_COMPILE);
+      glColor3ub(131, 188, 245);
       utilities::drawBox( point3(-0.5, -0.5, -0.5), point3(0.5, 0.5, 0.5) );
+
+      glDisable(GL_LIGHTING);
+      glEnable(GL_POLYGON_OFFSET_FILL);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      glLineWidth( 2 );
+      glColor3ub(255, 255, 255);
+      glPolygonOffset(1.0, 4.0);
+      utilities::drawBox( point3(-0.5, -0.5, -0.5), point3(0.5, 0.5, 0.5) );
+      glLineWidth( 1 );
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      glDisable(GL_POLYGON_OFFSET_LINE);
+      glEnable(GL_LIGHTING);
       glEndList();
    }
 
    matrix4 t( mpFish->getPosition()-point3::origin );
-   t *= mpFish->getOrientation();
-   glColor3ub(215, 215, 215);
+   t *= mpFish->getOrientation();   
    glPushMatrix();
    glMultMatrixd( (GLdouble*)&t );
    glCallList(mDisplayList);   
@@ -211,7 +262,146 @@ void sharkNode::begin()
 
    glEnable(GL_LIGHTING);
 }
+//-----------------------------------------------------------------------------
+//--- fishMultiPassNode
+//-----------------------------------------------------------------------------
+fishMultiPassNode::fishMultiPassNode(QString iT) : drawableNode(iT),
+mCount(0)
+{}
+//-----------------------------------------------------------------------------
+void fishMultiPassNode::begin()
+{
+   if( !mFbo.isValid() )
+   { initialize(); }
 
+   mCount++;
+   mFbo.begin();
+   mFbo.drawTo(sFirstPass);
+   glClearColor( .0f, .0f, .0f, 0.0f );
+   glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );   
+}
+//-----------------------------------------------------------------------------
+void fishMultiPassNode::blitToScreen(state iS)
+{
+   using namespace utilities;
+   texture t = mFbo.getColorAttachment(iS);
+
+   glMatrixMode(GL_PROJECTION);
+   glPushMatrix();
+   glMatrixMode(GL_MODELVIEW);
+   glPushMatrix();
+
+   glDisable(GL_LIGHTING);
+   //passe en mode 2d.
+   // on plaque la texture a l'écran
+   glCamera c;
+   c.set( point3(0.0, 0.0, 5.0), 
+      point3(0.0, 0.0, 0.0),
+      vector3( 0.0, 1.0, 0.0 ) );
+   const int w = mViewportSize.width();
+   const int h = mViewportSize.height();
+   c.setViewportSize( w, h );
+   c.setProjection( 0, w, 
+      0, h, 0.5, 100.0,
+      glCamera::ptOrthogonal );
+   c.applyModelViewProjection();
+
+   glColor4ub( 255, 255, 255, 255 );
+   glEnable(GL_TEXTURE_2D);
+   glBindTexture(GL_TEXTURE_2D, t.getId());
+   glBegin(GL_QUADS);
+   glTexCoord2d(0.0, 0.0);
+   glVertex2d(0, 0);
+
+   glTexCoord2d(1.0, 0.0);
+   glVertex2d(w, 0);
+
+   glTexCoord2d(1.0, 1.0);
+   glVertex2d(w, h);
+
+   glTexCoord2d(0.0, 1.0);
+   glVertex2d(0, h);
+   glEnd();
+   glDisable(GL_TEXTURE_2D);
+
+
+   glEnable(GL_LIGHTING);
+   //revient a la camera d'avant
+   glMatrixMode(GL_PROJECTION);
+   glPopMatrix();
+   glMatrixMode(GL_MODELVIEW);
+   glPopMatrix();
+}
+//-----------------------------------------------------------------------------
+void fishMultiPassNode::end()
+{
+   using namespace utilities;
+
+   mFbo.end();
+
+   glDisable(GL_DEPTH_TEST);
+   //start SecondPass
+   mFbo.begin();
+   mFbo.drawTo(sSecondPass);
+   //glClear( GL_COLOR_BUFFER_BIT );
+   mSelectHighlight.begin();
+   mSelectHighlight.setUniform("texture", 0);
+   mSelectHighlight.setUniform("threshold", 0.85f);
+   blitToScreen(sFirstPass);
+   mSelectHighlight.end();
+   mFbo.end();
+
+   //start thirdpass
+   mFbo.begin();
+   mFbo.drawTo(sThirdPass);
+   mShaderBlur.begin();
+   mShaderBlur.setUniform("texture", 0);
+   mShaderBlur.setUniform("isBlurVertical", false);
+   mShaderBlur.setUniform("kernel", 20);
+   blitToScreen(sSecondPass);
+   mShaderBlur.end();
+   mFbo.end();
+
+   mFbo.begin();
+   mFbo.drawTo(sSecondPass);
+   mShaderBlur.begin();
+   mShaderBlur.setUniform("texture", 0);
+   mShaderBlur.setUniform("isBlurVertical", true);
+   mShaderBlur.setUniform("kernel", 20);
+   blitToScreen(sThirdPass);
+   mShaderBlur.end();
+   mFbo.end();
+   glEnable(GL_DEPTH_TEST);
+
+//texture t = mFbo.getColorAttachment(sFirstPass);
+//t.asImage().save("f:/sFirstPass.png", "PNG");
+//t = mFbo.getColorAttachment(sSecondPass);
+//t.asImage().save("f:/sSecondPass.png", "PNG");
+//t = mFbo.getColorAttachment(sThirdPass);
+//t.asImage().save("f:/sThirdPass.png", "PNG");
+
+   //blit to screen
+   glDisable(GL_DEPTH_TEST);
+   glEnable(GL_BLEND);
+   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+   blitToScreen(sFirstPass);
+   blitToScreen(sSecondPass);
+   //blitToScreen(sThirdPass);
+   glDisable(GL_BLEND);
+   glEnable(GL_DEPTH_TEST);
+}
+//-----------------------------------------------------------------------------
+void fishMultiPassNode::initialize()
+{
+   mFbo.resize( mViewportSize.width(), mViewportSize.height() );
+   mFbo.addColorAttachment();
+   mFbo.addColorAttachment();
+   mFbo.addColorAttachment();
+   mFbo.addDepthAttachment();
+
+   mSelectHighlight.addFragmentShaderSource(kSelectHighlight);
+   mShaderBlur.addFragmentShaderSource(kBlur2d);
+}
 //-----------------------------------------------------------------------------
 //--- fish
 //-----------------------------------------------------------------------------
@@ -235,12 +425,9 @@ void fish::update()
    point3 mCenterOfMass = point3::origin;
    quaternion averageOrientation(0, 0, 0, 1);
    double numberOfNeighbours = 0;
-
-   //#pragma omp parallel for
-   //for( int i = 0; i < (int)vf.size(); ++i )
+   
    foreach( fish* pFish, vf )
    {
-      //fish* pFish = vf[i];
       if( pFish == this ){ continue; }
 
       vector3 d = pFish->getPosition() - getPosition();
@@ -387,8 +574,8 @@ mTimerId(0),
 mFishMinimalSeparationDistance(4.0),
 mFishMinimalNumberOfNeighbourToFlock(10),
 mGroupingForceFactor(100.0),
-mSeparationForceFactor(25.0),
-mSteeringForceFactor(10)
+mSeparationForceFactor(55),
+mSteeringForceFactor(25)
 {
    srand((unsigned int)time(NULL));
 }
@@ -490,11 +677,10 @@ vector<fish*>& engine::getFishNeigbours(point3 p)
    int binZ = p.z() / kSpatialDistributionBinSize;
 
    spatialKey k(binX, binY, binZ);
+
+//printf("getFishNeigbours - bin %d, %d, %d: size: %d\n", binX, binY, binZ, (int)mFishSpatialDistribution[k].size() );
+
    return mFishSpatialDistribution[k];
-   /*auto it = mFishSpatialDistribution.find(t);
-   if( it != mFishSpatialDistribution.end() )
-   { r = it->second; }
-   return r;*/
 }
 //-----------------------------------------------------------------------------
 void engine::goToState(state s)
@@ -569,6 +755,9 @@ void engine::initialize()
 {
    mTime.start();
 
+   fishMultiPassNode* fmpn = new fishMultiPassNode(kFishMultiPassNodeToken);
+   mSceneGraph.addNode(fmpn);
+
    //on genere une position alleatoire
    default_random_engine generator(rand());
    uniform_int_distribution<double> flockDistribution(-kTheTank.getWidth() / 2, kTheTank.getWidth() / 2);
@@ -589,8 +778,8 @@ void engine::initialize()
          speedDistribution(generator), speedDistribution(generator) ) );
       mFishes.push_back(f);
 
-      fishNode* fn = new fishNode( "fish " + QString::number((int)f), f );
-      mSceneGraph.addNode( fn );
+      fishNode* fn = new fishNode( "fish " + QString::number((int)f), f );      
+      mSceneGraph.addNode( fn, kFishMultiPassNodeToken );
    }
 }
 //-----------------------------------------------------------------------------
@@ -642,6 +831,15 @@ void engine::send(message m)
    { mListeners[i]->received(m); }
 }
 //-----------------------------------------------------------------------------
+void engine::setViewerWindowSize(QSize iS)
+{
+   mViewerWindowSize = iS;
+   fishMultiPassNode* n = 
+      dynamic_cast<fishMultiPassNode*>(mSceneGraph.findNode(kFishMultiPassNodeToken));
+   if(n)
+   { n->setViewPortSize(iS); }
+}
+//-----------------------------------------------------------------------------
 void engine::spatialDistribution()
 {
    mFishSpatialDistribution.clear();
@@ -649,10 +847,16 @@ void engine::spatialDistribution()
    int binX, binY, binZ;
    foreach(fish* f, mFishes)
    {
+
       binX = f->getPosition().x() / binSize;
       binY = f->getPosition().y() / binSize;
       binZ = f->getPosition().z() / binSize;
 
+//printf("pos: %.2f,%.2f,%.2f -> bin: %d,%d,%d\n", 
+//   f->getPosition().x(), 
+//   f->getPosition().y(),
+//   f->getPosition().z(), 
+//   binX, binY, binZ);
       spatialKey k(binX, binY, binZ);
       vector<fish*>& vf = mFishSpatialDistribution[k];
       vf.push_back(f);
@@ -686,9 +890,9 @@ void engine::timerEvent(QTimerEvent* ipE)
       //foreach(fish* pFish, mFishes)
       {  
          fish* pFish = mFishes[i];
-         updatePhysics(pFish);     
+         updatePhysics(pFish);
          pFish->update();
-         handleMapCollision( pFish );
+         handleMapCollision( pFish );         
       }
 
       //food

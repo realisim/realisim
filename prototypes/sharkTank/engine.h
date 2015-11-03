@@ -5,6 +5,8 @@
 #include "coreLibrary, types.h"
 #include <QObject>
 #include <QTimerEvent>
+#include "utilities, frameBufferObject.h"
+#include "utilities, shader.h"
 #include <vector>
 
 namespace sharkTank{class engine;}
@@ -174,6 +176,39 @@ protected:
 };
 
 //-----------------------------------------------------------------------------
+//--- fishMultiPassNode
+//-----------------------------------------------------------------------------
+class fishMultiPassNode : public resonant::coreLibrary::drawableNode
+{
+public:
+   fishMultiPassNode(QString);
+   virtual ~fishMultiPassNode(){}
+
+   virtual void begin();
+   virtual void end();
+   QSize getViewPortSize() const {return mViewportSize;}
+   void setViewPortSize(QSize iS)
+   {
+      if(iS != mViewportSize)
+      {
+         mViewportSize = iS;
+         mFbo.resize( mViewportSize.width(), mViewportSize.height() );
+      }
+   }
+
+protected:
+   enum state{ sFirstPass = 0, sSecondPass, sThirdPass };
+
+   void blitToScreen(state);
+   void initialize();
+
+   QSize mViewportSize;
+   resonant::utilities::shader mSelectHighlight;
+   resonant::utilities::shader mShaderBlur;
+   resonant::utilities::frameBufferObject mFbo;
+   int mCount;
+};
+//-----------------------------------------------------------------------------
 //--- engine
 //-----------------------------------------------------------------------------
 class engine : QObject
@@ -210,6 +245,7 @@ public:
    sceneGraph& getSceneGraph() {return mSceneGraph;}
    std::vector<shark*>& getSharks() {return mSharks;}
    state getState() const { return mState; }   
+   QSize getViewerWindowSize() const {return mViewerWindowSize; }
    void nudgeFish();
    void pause();
    void remove(fish*);
@@ -220,6 +256,7 @@ public:
    void setGroupingForceFactor(double f) {mGroupingForceFactor = f;}
    void setSeparationForceFactor(double f) {mSeparationForceFactor = f;}
    void setSteeringForceFactor(double f) {mSteeringForceFactor = f;}
+   void setViewerWindowSize(QSize iS);
    void start();
    void stop();
 
@@ -240,7 +277,9 @@ protected:
 
       bool operator<(const spatialKey& iK) const
       {
-         return ( z < iK.z && y < iK.y && x < iK.x );
+         return ( x < iK.x || 
+            x == iK.x && y < iK.y || 
+            x == iK.x && y == iK.y && z < iK.z );
       }
 
       int x;
@@ -262,6 +301,7 @@ protected:
    double mSeparationForceFactor;
    double mSteeringForceFactor;
    std::map<spatialKey, std::vector<fish*> > mFishSpatialDistribution;
+   QSize mViewerWindowSize;
 
    sceneGraph mSceneGraph;
 };

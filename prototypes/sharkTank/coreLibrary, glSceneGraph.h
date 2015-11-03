@@ -231,7 +231,7 @@ public:
 //removeNode( node* );
    void removeNode( QString );
    //vector<QString> pick()
-   void render();
+   void render();   
    void setAsVerbose( bool );
    void slice(const plane&);
    QString toString() const;
