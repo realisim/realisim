@@ -16,11 +16,11 @@ using namespace resonant;
 const int kTimeIncrementInMsec = 15;
 const coreLibrary::box kTheTank( point3( -100, -100, -50 ),
    vector3(200, 200, 100) );
-const int kSpatialDistributionBinSize = 20;
+const int kSpatialDistributionBinSize = 100;
 const QString kFishMultiPassNodeToken = "fish multi pass node";
 
 //--- fish constants
-const int kNumberOfFishInFlock = 4000;
+const int kNumberOfFishInFlock = 600;
 const double kFishMinimalNeighboutSearchRadius = 30.0;
 const double kFishMaxAccel = 500.0;
 const double kFishMaxVelocity = 16.0;
@@ -71,6 +71,7 @@ namespace
       "{\n"
       "  vec2 step = fwidth(gl_TexCoord[0].xy);\n"
       "	vec4 result = vec4(0, 0, 0, 0);\n"
+      "  vec4 c = texture2D(texture, gl_TexCoord[0].xy);\n"
       "  vec2 offset;\n"
       "  \n"
       "  for(int i = -kernel / 2; i <= kernel / 2; ++i)\n"
@@ -82,7 +83,7 @@ namespace
       " \n"
       "     result += texture2D(texture, gl_TexCoord[0].xy + offset);\n"
       "  }\n"
-      "  gl_FragColor = result / kernel; \n"     
+      "  gl_FragColor = result / kernel + c; \n"     
       //"  gl_FragColor = texture2D(texture, gl_TexCoord[0].xy); \n"      
       "}\n";
 }
@@ -127,17 +128,6 @@ void fishNode::begin()
       glColor3ub(131, 188, 245);
       utilities::drawBox( point3(-0.5, -0.5, -0.5), point3(0.5, 0.5, 0.5) );
 
-      glDisable(GL_LIGHTING);
-      glEnable(GL_POLYGON_OFFSET_FILL);
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-      glLineWidth( 2 );
-      glColor3ub(255, 255, 255);
-      glPolygonOffset(1.0, 4.0);
-      utilities::drawBox( point3(-0.5, -0.5, -0.5), point3(0.5, 0.5, 0.5) );
-      glLineWidth( 1 );
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      glDisable(GL_POLYGON_OFFSET_LINE);
-      glEnable(GL_LIGHTING);
       glEndList();
    }
 
@@ -352,12 +342,13 @@ void fishMultiPassNode::end()
    mFbo.end();
 
    //start thirdpass
+   const int kNumBlurSamples = 21;
    mFbo.begin();
    mFbo.drawTo(sThirdPass);
    mShaderBlur.begin();
    mShaderBlur.setUniform("texture", 0);
    mShaderBlur.setUniform("isBlurVertical", false);
-   mShaderBlur.setUniform("kernel", 20);
+   mShaderBlur.setUniform("kernel", kNumBlurSamples);
    blitToScreen(sSecondPass);
    mShaderBlur.end();
    mFbo.end();
@@ -367,7 +358,7 @@ void fishMultiPassNode::end()
    mShaderBlur.begin();
    mShaderBlur.setUniform("texture", 0);
    mShaderBlur.setUniform("isBlurVertical", true);
-   mShaderBlur.setUniform("kernel", 20);
+   mShaderBlur.setUniform("kernel", kNumBlurSamples);
    blitToScreen(sThirdPass);
    mShaderBlur.end();
    mFbo.end();

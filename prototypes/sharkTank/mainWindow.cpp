@@ -33,12 +33,12 @@ void myViewer::draw()
 
    mEngine.getSceneGraph().render();
 
-   glDisable(GL_LIGHTING);
+   /*glDisable(GL_LIGHTING);
    glPushMatrix();
    glScaled( 10, 10, 10 );
    utilities::drawAxis();
    glPopMatrix();
-   glEnable(GL_LIGHTING);
+   glEnable(GL_LIGHTING);*/
 }
 //-----------------------------------------------------------------------------
 void myViewer::initializeGL()
