@@ -292,6 +292,12 @@ void Composition::addOrnement( ornementType iOt, std::vector<NoteLocator> iNotes
 void Composition::addParenthesis( vector<NoteLocator> iNotes, int iNumRep )
 { mParenthesis.push_back( Parenthesis( iNotes, iNumRep ) ); }
 //------------------------------------------------------------------------------
+void Composition::addStroke( int iBar, strokeType iSt, int iNoteIndice )
+{
+  Bar& b = getBar( iBar );
+  b.mStrokes.push_back( Stroke( iSt, iNoteIndice ) );
+}
+//------------------------------------------------------------------------------
 void Composition::addStroke( int iBar, strokeType iSt, vector<int> iNoteIndices )
 {
   Bar& b = getBar( iBar );

@@ -29,11 +29,12 @@ namespace
   const double kPageMarginInCm = 1.5;
   const int kPageFooter = 15;
   //bar
-  const int kMeendHeight = 10;
   const int kKrintanHeight = 6;
   const int kGamakHeight = 4;
-  const int kBeatGroupHeight = 10;
+  const int kOrnementHeight = 10;
+  const int kMatraHeight = 10;
   const int kNoBarIndex = -5;
+  const double kUnderineRatioLength = 0.8;
   
   const QString kSargamScaleLabel("Scale: ");
   const QString kTarabTuningLabel("Tarab tuning: ");
@@ -849,7 +850,8 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
     {
       QFont f = b.mWords[j].second ? mGraceNotesFont : mBarFont;
       iP->setFont(f);
-      iP->drawText( b.mWordLayouts[j],
+      iP->drawText( b.mWordLayouts[j].bottomLeft() -
+        QPointF(0, QFontMetricsF(f).descent()),
         b.mWords[j].first );
     }
     
@@ -877,7 +879,23 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
       
       /*Le script devanagari demande une barre sur la note Tivra ou
         une barre sous la note Komal*/
-      //if( n.getModification() != nmShuddh )
+      if( getScript() == sDevanagari && n.getModification() != nmShuddh )
+      {
+        barRegion br = x->isGraceNote(iBar, j) ? brGraceNoteUnderlineY :
+          brUnderlineY;
+        int y = getBarRegion(br, b.mBarType);
+        
+        const QRectF noteRect = b.getNoteRect(j);
+        double e = noteRect.width() - noteRect.width() * kUnderineRatioLength;
+        float xStart = noteRect.left() + e / 2.0;
+        float xEnd = noteRect.right() - e / 2.0;
+        iP->save();
+        QPen pen = iP->pen();
+        pen.setWidth( 1 );
+        iP->setPen(pen);
+        iP->drawLine(QPointF(xStart, y), QPointF(xEnd, y));
+        iP->restore();
+      }
     }
     
     //la barre vertical à la fin de la barre
@@ -914,14 +932,22 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
               { iP->drawArc( r, 10 * 16, 170 * 16 ); } break;
             case otKrintan:
             {
-              iP->drawLine( r.bottomLeft(), r.topLeft() );
+              iP->drawLine( r.topLeft() + QPointF(0, kKrintanHeight), r.topLeft() );
               iP->drawLine( r.topLeft(), r.topRight() );
-              iP->drawLine( r.topRight(), r.bottomRight() );
+              iP->drawLine( r.topRight() + QPointF(0, kKrintanHeight), r.topRight() );
             } break;
             case otAndolan:
-            { drawGamak( iP, r, 2 ); } break;
+            {
+              r.adjust(0, (r.height() - kGamakHeight) / 2,
+                       0, -(r.height() - kGamakHeight) / 2);
+              drawGamak( iP, r, 2 );
+            } break;
             case otGamak:
-            { drawGamak( iP, r, 3 ); } break;
+            {
+              r.adjust(0, (r.height() - kGamakHeight) / 2,
+                       0, -(r.height() - kGamakHeight) / 2);
+              drawGamak( iP, r, 3 );
+            } break;
             default:break;
           }
           
@@ -1244,11 +1270,94 @@ const PartitionViewer::Bar& PartitionViewer::getBar( int iBar ) const
   return *r;
 }
 //-----------------------------------------------------------------------------
+QImage PartitionViewer::getBarAsImage(int iBar) const
+{
+  QRect rect = getBar(iBar).mScreenLayout;
+  QImage im(size(), QImage::Format_ARGB32);
+  im.fill(Qt::white);
+  QPainter p(&im);
+  drawBar(&p, iBar);
+  p.end();
+  im = im.copy(rect);  
+  return im;
+}
+//-----------------------------------------------------------------------------
 vector<int> PartitionViewer::getBarsFromPage( int iPage ) const
 {
   vector<int> r;
   if( iPage >= 0 && iPage < getNumberOfPages() )
   { r = mBarsPerPage.at(iPage); }
+  return r;
+}
+//-----------------------------------------------------------------------------
+int PartitionViewer::getBarHeight(Bar::barType iT) const
+{
+  QFontMetrics fm(mBarFont);
+  QFontMetrics btfm(mBarTextFont);
+  int r = 60;
+  switch (iT) {
+    case Bar::btNormal: r = 4*fm.height() + btfm.height(); break;
+    case Bar::btDescription: r = 1.5*fm.height(); break;
+    default: break;
+  }
+  return r;
+}
+//-----------------------------------------------------------------------------
+int PartitionViewer::getBarRegion( barRegion br, Bar::barType iBt ) const
+{
+  
+  /*
+   |    text
+   |    ornement
+   |    upperOctave
+   |    Notes
+   |    Komal/Tivra line - devanagari only
+   |    lowerOctave
+   |    matra
+   |    stroke
+   
+   */
+  
+  int r = 0;
+  const QFontMetrics fm(mBarFont);
+  const QFontMetrics gnfm(mGraceNotesFont);
+  const QFontMetrics barTextFm(mBarTextFont);
+  
+  const double kLowerOctaveFactor = 0.1;
+  const int kUnderlineSpacing = getScript() == sDevanagari ? 4 : 0; //pour komal et tivra en devanagari
+  
+  switch( br )
+  {
+    case brTextY: r = 2; break;
+    case brOrnementY: r = getBarRegion(brGraceNoteTopY, iBt) - kOrnementHeight ; break;
+    case brUpperOctaveY: r = getBarRegion(brNoteTopY, iBt) ; break;
+    case brGraceNoteUpperOctaveY: r = getBarRegion(brGraceNoteTopY, iBt); break;
+    case brNoteTopY: r = getBarHeight(iBt) / 2 - fm.height() / 2; break;
+    case brGraceNoteTopY:
+      r = getBarRegion( brNoteTopY, iBt ) - gnfm.height() / 4; break;
+    case brGraceNoteBottomY:
+      r = getBarRegion( brGraceNoteTopY, iBt ) + gnfm.height(); break;
+    case brNoteBottomY: r = getBarHeight(iBt) / 2 + fm.height() / 2; break;
+    case brUnderlineY:
+      r = getBarRegion(brNoteBottomY, iBt) + fm.descent() + kUnderlineSpacing / 2;
+      break;
+    case brGraceNoteUnderlineY:
+      r = getBarRegion(brGraceNoteBottomY, iBt) + gnfm.descent() + kUnderlineSpacing / 2;
+      break;
+    case brGraceNoteLowerOctaveY:
+      r = getBarRegion(brGraceNoteBottomY, iBt) + gnfm.descent() + kUnderlineSpacing +
+      gnfm.height() * kLowerOctaveFactor; break;
+    case brLowerOctaveY:
+      r = getBarRegion(brNoteBottomY, iBt) + fm.descent() + kUnderlineSpacing +
+      fm.height() * kLowerOctaveFactor; break;
+    case brMatraGroupY: r = getBarRegion(brLowerOctaveY, iBt) ; break;
+    case brStrokeY: r = getBarRegion(brMatraGroupY, iBt) + kMatraHeight; break;
+      
+    case brNoteStartX: r = fm.width(" "); break;
+    case brTextX: r = getBarRegion(brNoteStartX, iBt); break;
+
+    default: break;
+  }
   return r;
 }
 //-----------------------------------------------------------------------------
@@ -1288,78 +1397,14 @@ QLineF PartitionViewer::getCursorLine() const
   return l;
 }
 //-----------------------------------------------------------------------------
-int PartitionViewer::getBarHeight(Bar::barType iT) const
-{
-  QFontMetrics fm(mBarFont);
-  int r = 60;
-  switch (iT) {
-    case Bar::btNormal: r = 4*fm.height(); break;
-    case Bar::btDescription: r = 1.5*fm.height(); break;
-    default: break;
-  }
-  return r;
-}
-//-----------------------------------------------------------------------------
-int PartitionViewer::getBarRegion( barRegion br, Bar::barType iBt ) const
-{
-  
-  /*
-   |    text
-   |    ornement
-   |    upperOctave
-   |    Tivra line - devanagari only
-   |    Notes
-   |    Komal line - devanagari only
-   |    lowerOctave
-   |    matra
-   |    stroke
-   
-   */
-  
-  int r = 0;
-  QFontMetrics fm(mBarFont);
-  QFontMetrics gnfm(mGraceNotesFont);
-  QFontMetrics barTextFm(mBarTextFont);
-  
-//  const double kOrnementOffsetY = 0.4 * fm.height();
-  const double kLowerOctaveFactor = 0.1;
-  const double kUpperOctaveFactor = 0;
-  
-  switch( br )
-  {
-    case brNoteStartX: r = fm.width(" "); break;
-    case brNoteTopY: r = getBarHeight(iBt) / 2 - fm.height() / 2; break;
-    case brNoteBottomY: r = getBarHeight(iBt) / 2 + fm.height() / 2; break;
-    case brStrokeY: r = getBarHeight(iBt) - fm.height(); break;
-    case brOrnementY: r = getBarRegion(brGraceNoteTopY, iBt) - 5 ; break;
-    case brMatraGroupY: r = getBarRegion(brNoteBottomY, iBt) ; break;
-    case brGraceNoteTopY:
-      r = getBarRegion( brNoteTopY, iBt ) - gnfm.height() / 4; break;
-    case brGraceNoteBottomY:
-      r = getBarRegion( brGraceNoteTopY, iBt ) + gnfm.height(); break;
-    case brTextX: r = getBarRegion(brNoteStartX, iBt); break;
-    case brTextY: r = 2; break;
-    case brLowerOctaveY:
-      r = getBarRegion(brNoteBottomY, iBt) +
-        fm.height() * kLowerOctaveFactor; break;
-    case brUpperOctaveY:
-      r = getBarRegion(brNoteTopY, iBt) - fm.height() * kUpperOctaveFactor; break;
-    case brGraceNoteLowerOctaveY:
-      r = getBarRegion(brGraceNoteBottomY, iBt) +
-        gnfm.height() * kLowerOctaveFactor; break;
-    case brGraceNoteUpperOctaveY:
-      r = getBarRegion(brGraceNoteTopY, iBt) -
-        gnfm.height() * kUpperOctaveFactor; break;
-    default: break;
-  }
-  return r;
-}
-//-----------------------------------------------------------------------------
 int PartitionViewer::getCurrentBar() const
 { return mCurrentBar; }
 //-----------------------------------------------------------------------------
 int PartitionViewer::getCurrentNote() const
 { return mCurrentNote; }
+//-----------------------------------------------------------------------------
+int PartitionViewer::getFontSize() const
+{ return mBarFont.pointSize(); }
 //-----------------------------------------------------------------------------
 QPageLayout::Orientation PartitionViewer::getLayoutOrientation() const
 { return mLayoutOrientation; }
@@ -2439,6 +2484,12 @@ void PartitionViewer::resizeSpinBoxToContent(QSpinBox* ipSb)
   ipSb->resize( (double)fm.width( "99" ) + 30, ipSb->height() );
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::setAllBarsAsDirty( bool iD )
+{
+  for( int i = dbStartOfDescriptionBar; i < x->getNumberOfBars(); ++i )
+  { setBarAsDirty(i, iD); }
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::setAsDebugging( bool iD )
 { mIsDebugging = iD; updateUi(); }
 //-----------------------------------------------------------------------------
@@ -2478,6 +2529,26 @@ void PartitionViewer::setComposition(Composition* ipC)
   
   setCurrentBar( 0 );
   setCurrentNote( - 1 );
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::setFontSize(int iFontSize)
+{
+  int delta = iFontSize - mBarFont.pointSize();
+  
+  mTitleFont.setPointSize( mTitleFont.pointSize() + delta );
+  mBarFont.setPointSize( mBarFont.pointSize() + delta );
+  mBarTextFont.setPointSize( mBarTextFont.pointSize() + delta );
+  mGraceNotesFont.setPointSize( mGraceNotesFont.pointSize() + delta );
+  mLineFont.setPointSize( mLineFont.pointSize() + delta );
+  mStrokeFont.setPointSize( mStrokeFont.pointSize() + delta );
+  mParenthesisFont.setPointSize( mParenthesisFont.pointSize() + delta );
+
+  mBaseParenthesisRect = QRectF( QPoint(0, 0),
+    QSize(8, QFontMetrics(mBarFont).height() * 1.8) );
+  
+  //on met toutes les barres dirty
+  setAllBarsAsDirty(true);
   updateUi();
 }
 //-----------------------------------------------------------------------------
@@ -2667,6 +2738,7 @@ void PartitionViewer::splitInWords(int iBar)
 void PartitionViewer::startBarTextEdit( int iBar )
 {
   mpBarTextEdit->setFocus();
+  mpBarTextEdit->setFont(mBarTextFont);
   mpBarTextEdit->setText( x->getBarText( iBar ) );
   resizeLineEditToContent(mpBarTextEdit);
   mEditingBarText = iBar;
@@ -2676,6 +2748,7 @@ void PartitionViewer::startBarTextEdit( int iBar )
 void PartitionViewer::startLineTextEdit( int iLineIndex )
 {
   mpLineTextEdit->setFocus();
+  mpLineTextEdit->setFont(mLineFont);
   mpLineTextEdit->setText( x->getLineText(iLineIndex) );
   resizeLineEditToContent(mpLineTextEdit);
   mEditingLineIndex = iLineIndex;
@@ -2686,6 +2759,7 @@ void PartitionViewer::startLineTextEdit( int iLineIndex )
 void PartitionViewer::startParentheseEdit(int iIndex)
 {
   mpParenthesisEdit->setFocus();
+  mpParenthesisEdit->setFont(mParenthesisFont);
   mpParenthesisEdit->setValue(x->getNumberOfRepetitionsForParenthesis(iIndex));
   resizeSpinBoxToContent(mpParenthesisEdit);
   mEditingParentheseIndex = iIndex;
@@ -2695,6 +2769,7 @@ void PartitionViewer::startParentheseEdit(int iIndex)
 void PartitionViewer::startTitleEdit()
 {
   mpTitleEdit->setFocus();
+  mpTitleEdit->setFont(mTitleFont);
   mpTitleEdit->setText( x->getTitle() );
   resizeLineEditToContent(mpTitleEdit);
   mEditingTitle = true;
@@ -2848,7 +2923,7 @@ void PartitionViewer::updateBar( int iBar )
       right = std::max( right, (int)getBar(iBar).getNoteRect(noteIndex).right() );
     }
     b.mMatraGroupsRect.push_back( QRect( QPoint( left, getBarRegion( brMatraGroupY ) ),
-      QSize( right - left, kBeatGroupHeight ) ) );
+      QSize( right - left, kMatraHeight ) ) );
   }
   
   //--- le text de la barre
@@ -3069,15 +3144,7 @@ void PartitionViewer::updateOrnementLayout()
     o.mDestinations.resize( bi.size() );
     int barIndex = -1;
     int widthAccum = 0;
-    int height = 10;
-    switch (x->getOrnementType(iOrn) )
-    {
-      case otMeend: height = kMeendHeight; break;
-      case otKrintan: height = kKrintanHeight; break;
-      case otAndolan:
-      case otGamak: height = kGamakHeight; break;
-      default: break;
-    }
+
     for( int i = 0; i < bi.size(); ++i )
     {
       barIndex = bi[i];
@@ -3113,7 +3180,8 @@ void PartitionViewer::updateOrnementLayout()
       o.mOffsets[i] = make_pair( barIndex, -widthAccum );
       widthAccum += right - left;
     }
-    o.mFullOrnement = QRect( QPoint(0, getBarRegion( brOrnementY ) ), QSize(widthAccum, height) );
+    o.mFullOrnement = QRect( QPoint(0, getBarRegion( brOrnementY ) ),
+                            QSize(widthAccum, kOrnementHeight) );
   }
 }
 //-----------------------------------------------------------------------------

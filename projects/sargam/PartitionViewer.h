@@ -45,9 +45,11 @@ public:
   void commandRemoveStroke();
   void commandShiftNote();
   void generateRandomPartition();
+QImage getBarAsImage(int) const;
   Composition getComposition() const;
   int getCurrentBar() const;
   int getCurrentNote() const;
+  int getFontSize() const;
   int getOctave() const;
   QPageLayout::Orientation getLayoutOrientation() const;
   const utils::Log& getLog() const;
@@ -63,6 +65,7 @@ public:
   void setAsDebugging( bool );
   void setAsVerbose( bool );
   void setComposition( Composition* );
+  void setFontSize(int);
   void setLayoutOrientation( QPageLayout::Orientation );
   void setLog( utils::Log* );
   void setLogTiming( bool iL ) {mHasLogTiming = iL;}
@@ -86,8 +89,8 @@ protected:
   enum pageRegion { prPage, prBody, prPageFooter };
   enum barRegion { brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
     brOrnementY, brMatraGroupY, brGraceNoteTopY, brGraceNoteBottomY,
-    brTextX, brTextY,
-    brLowerOctaveY, brUpperOctaveY, brGraceNoteLowerOctaveY, brGraceNoteUpperOctaveY };
+    brTextX, brTextY, brLowerOctaveY, brUpperOctaveY, brGraceNoteLowerOctaveY,
+    brGraceNoteUpperOctaveY, brUnderlineY, brGraceNoteUnderlineY };
   enum colors{ cHover, cSelection };
   
   /*Le type de barre indique s'il s'agit d'une barre de dexcription, comme les
@@ -232,6 +235,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   virtual void paintEvent(QPaintEvent*);
   void resizeLineEditToContent(QLineEdit*);
   void resizeSpinBoxToContent(QSpinBox*);
+  void setAllBarsAsDirty(bool);
   void setBarAsDirty( int, bool );
   void setBarAsDirty( std::vector<int>, bool );
   void setCurrentBar(int);

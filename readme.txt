@@ -17,3 +17,8 @@ Qt Pour mac:
 
 les lib devraient être compiler en 64 bits
 Enssuite, l'option cmake OSX_CMAKE_ARCHITECTURES devrait être x86_64 et le CMAKE_OSX_SYSROOT: /Developer/SDKs/MacOSX10.6.sdk
+
+
+Notes:
+Pour connaitre le nombre de download des releases sur github
+curl -i https://api.github.com/repos/realisim/realisim/releases -H "Accept: application/vnd.github.manifold-preview+json"

@@ -15,7 +15,6 @@
 
 namespace realisim { namespace sargam { class PartitionViewer; } }
 
-
 class CustomProxyStyle : public QProxyStyle
 {
 public:
@@ -39,6 +38,7 @@ public:
   int getVersionMajor() const {return 0;}
   int getVersionMinor() const {return 5;}
   int getVersionRevision() const {return 3;}
+  bool isToolBarVisible() const {return mIsToolBarVisible;}
   bool isVerbose() const;
   void setAsVerbose( bool );
   
@@ -73,7 +73,6 @@ protected:
   void createToolBar();
   action findAction( QAction* ) const;
   state getState() const;
-  bool isToolBarVisible() const {return mIsToolBarVisible;}
   void loadSettings();
   void fillPageSizeCombo( QComboBox* );
   void saveSettings();
@@ -91,12 +90,55 @@ protected:
   QSettings mSettings;
   QString mSaveFileName;
   QString mLastSavePath;
-  std::vector<QPageSize::PageSizeId> mAvailablePageSizeIds;
   realisim::sargam::Composition mComposition;
   realisim::utils::Log mLog;
   bool mIsVerbose;
   bool mIsToolBarVisible;
   state mState;
 };
+
+//------------------------------------------------------------------------------
+class PreferencesDialog : public QDialog
+{
+  Q_OBJECT
+public:
+  PreferencesDialog(const MainDialog*,
+                    const realisim::sargam::PartitionViewer*,
+                    QWidget* = 0);
+  ~PreferencesDialog(){}
+  
+  int getFontSize() const;
+  QPageLayout::Orientation getPageLayout() const;
+  QPageSize::PageSizeId getPageSizeId() const;
+  realisim::sargam::script getScript() const;
+  bool isToolBarVisible() const;
+  bool isVerbose() const;
+  
+protected slots:
+  void updateUi();
+  
+protected:
+  void fillPageSizeCombo();
+  void initUi();
+  
+  //--- data
+  const MainDialog* mpMainDialog;
+  const realisim::sargam::PartitionViewer* mpPartViewer;
+  realisim::sargam::Composition mPartPreviewData;
+  realisim::sargam::PartitionViewer* mpPartPreview;
+  std::vector<QPageSize::PageSizeId> mAvailablePageSizeIds;
+  
+  //--- Ui
+  QSpinBox* mpFontSize;
+  QComboBox* mpScriptCombo;
+  QLabel* mpPreviewLabel;
+  QComboBox* mpPageSizeCombo;
+  QButtonGroup* mpOrientation;
+  QCheckBox* mpPortrait;
+  QCheckBox* mpLandscape;
+  QCheckBox* mpVerboseChkBx;
+  QCheckBox* mpShowToolBarChkBx;
+};
+
 
 #endif
