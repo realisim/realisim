@@ -102,24 +102,6 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   float strokeFontSize = 10;
   float parenthesisFontSize = 9;
 
-//  float barFontSize = 24;
-//  float barTextSize = 20;
-//  float graceNoteSize = 20;
-//  float lineFontSize = 22;
-//  float strokeFontSize = 20;
-//  float parenthesisFontSize = 19;
-  
-#ifdef _WIN32
-  float f = 72/96.0f;
-  titleSize *= f;
-  barFontSize *= f;
-  barTextSize *= f;
-  graceNoteSize *= f;
-  lineFontSize *= f;
-  strokeFontSize *= f;
-  parenthesisFontSize *= f;
-#endif
-
   mTitleFont = QFont( fontFamily );
   mTitleFont.setBold( true );
   mTitleFont.setPointSizeF( titleSize );

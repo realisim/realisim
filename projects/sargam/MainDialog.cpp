@@ -719,13 +719,19 @@ void MainDialog::loadSettings()
   int version = mSettings.value( "version", 1 ).toInt();
 	mLastSavePath = mSettings.value( "lastSavePath" ).toString();
   
+  int defaultFontSize = 14;
+#ifdef _WIN32
+  defaultFontSize = 11;
+#endif
   //---view
   int psi = mSettings.value( "view/pageSizeId", QPageSize::Letter ).toInt();
   int plo = mSettings.value( "view/pageLayoutOrientation", QPageLayout::Portrait ).toInt();
   int pScript = mSettings.value( "view/script", (int)sLatin ).toInt();
+  int fontSize = mSettings.value( "view/fontSize", defaultFontSize ).toInt();
   mpPartitionViewer->setPageSize( (QPageSize::PageSizeId)psi );
   mpPartitionViewer->setLayoutOrientation( (QPageLayout::Orientation)plo );
   mpPartitionViewer->setScript( (script)pScript );
+  mpPartitionViewer->setFontSize(fontSize);
   
   //--- log
   bool v = mSettings.value( "verboseLog", false ).toBool();
@@ -896,6 +902,7 @@ void MainDialog::saveSettings()
 	mSettings.setValue( "view/pageSizeId", mpPartitionViewer->getPageSizeId() );
   mSettings.setValue( "view/pageLayoutOrientation", mpPartitionViewer->getLayoutOrientation() );
   mSettings.setValue( "view/script", mpPartitionViewer->getScript() );
+  mSettings.setValue( "view/fontSize", mpPartitionViewer->getFontSize() );
 
   //--- log
   mSettings.setValue( "verboseLog", isVerbose() );
