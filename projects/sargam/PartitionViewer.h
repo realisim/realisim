@@ -33,7 +33,7 @@ public:
   void commandAddNote( noteValue );
   void commandAddMatra();
   void commandAddOrnement( ornementType );
-void commandAddParenthesis( int );
+  void commandAddParenthesis( int );
   void commandAddStroke( strokeType );
   void commandBreakMatrasFromSelection();
   void commandBreakOrnementsFromSelection();
@@ -45,27 +45,32 @@ void commandAddParenthesis( int );
   void commandRemoveStroke();
   void commandShiftNote();
   void generateRandomPartition();
+QImage getBarAsImage(int) const;
   Composition getComposition() const;
   int getCurrentBar() const;
   int getCurrentNote() const;
+  int getFontSize() const;
   int getOctave() const;
   QPageLayout::Orientation getLayoutOrientation() const;
   const utils::Log& getLog() const;
   QPageSize::PageSizeId getPageSizeId() const;
   int getNumberOfSelectedNote() const;
   NoteLocator getSelectedNote( int ) const;
+  script getScript() const;
   bool hasSelection() const;
   bool hasLogTiming() const { return mHasLogTiming; }
   bool isDebugging() const;
   bool isVerbose() const {return mIsVerbose;}
   void print( QPrinter* );
   void setAsDebugging( bool );
-  void setLayoutOrientation( QPageLayout::Orientation );
-  void setPageSize( QPageSize::PageSizeId );
   void setAsVerbose( bool );
   void setComposition( Composition* );
+  void setFontSize(int);
+  void setLayoutOrientation( QPageLayout::Orientation );
   void setLog( utils::Log* );
   void setLogTiming( bool iL ) {mHasLogTiming = iL;}
+  void setPageSize( QPageSize::PageSizeId );
+  void setScript( script );
   
 signals:
   void ensureVisible( QPoint );
@@ -82,8 +87,10 @@ protected:
   enum region { rPartition, rTitle, rSargamScaleLabel, rSargamScale,
     rTarabTuningLabel, rTarabTuning };
   enum pageRegion { prPage, prBody, prPageFooter };
-  enum barRegion { brSeparatorX, brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
-    brOrnementY, brMatraGroupY, brGraceNoteTopY, brTextX, brTextY };
+  enum barRegion { brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
+    brOrnementY, brMatraGroupY, brGraceNoteTopY, brGraceNoteBottomY,
+    brTextX, brTextY, brLowerOctaveY, brUpperOctaveY, brGraceNoteLowerOctaveY,
+    brGraceNoteUpperOctaveY, brUnderlineY, brGraceNoteUnderlineY };
   enum colors{ cHover, cSelection };
   
   /*Le type de barre indique s'il s'agit d'une barre de dexcription, comme les
@@ -93,7 +100,7 @@ protected:
   {
     enum barType {btNormal = 0, btDescription};
     Bar() : mBarType(btNormal), mIsDirty(true), mIsWayTooLong(false){;}
-    QRect getNoteRect( int ) const;
+    QRectF getNoteRect( int ) const;
     
     /*--- cache d'Affichage 
      mRect: coin à (0, 0). C'est les rect qui contient toute la barre
@@ -109,12 +116,15 @@ protected:
      mIsWayTooLong:
      */
     QRect mRect;
-    std::vector< QRect > mNotesRect;
+    std::vector< QRectF > mNotesRect;
     std::vector< QRect > mMatraGroupsRect;
     QRect mScreenLayout;
-    std::vector< QRect > mNoteScreenLayouts;
+    std::vector< QRectF > mNoteScreenLayouts;
     QRect mTextRect; //bar coord.
     QRect mTextScreenLayout;
+    std::vector< std::pair<QString, bool> > mWords;
+    std::vector<QRectF> mWordLayouts;
+std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le debogage...
     barType mBarType;
     bool mIsDirty;
     bool mIsWayTooLong;
@@ -179,7 +189,7 @@ protected:
   void drawPageFooter( QPainter*, int ) const;
   void drawPageFooters( QPainter* iP ) const;
   void drawSelectedNotes( QPainter* ) const;
-  void drawSpecialBars( QPainter* ) const;
+  void drawDescriptionBars( QPainter* ) const;
   void drawTitle( QPainter* ) const;
   void eraseBar(int);
   void eraseOrnement( int );
@@ -189,8 +199,8 @@ protected:
   int getBarRegion( barRegion, Bar::barType = Bar::btNormal ) const;
   std::vector<int> getBarsFromPage( int ) const;
   QColor getColor( colors ) const;
-  QLine getCursorLine() const;
-  int getInterNoteSpacing(NoteLocator, NoteLocator) const;
+  QLineF getCursorLine() const;
+  QString getInterNoteSpacingAsQString(NoteLocator, NoteLocator) const;
   utils::Log& getLog();
   NoteLocator getNext( const NoteLocator& ) const;
   int getNumberOfPages() const;
@@ -225,12 +235,14 @@ protected:
   virtual void paintEvent(QPaintEvent*);
   void resizeLineEditToContent(QLineEdit*);
   void resizeSpinBoxToContent(QSpinBox*);
+  void setAllBarsAsDirty(bool);
   void setBarAsDirty( int, bool );
   void setBarAsDirty( std::vector<int>, bool );
   void setCurrentBar(int);
   void setCurrentNote(int);
   void setNumberOfPage(int);
   std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > ) const;
+  void splitInWords(int); //makeNoteRect
   void startBarTextEdit( int );
   void startParentheseEdit( int );
   void startLineTextEdit( int );
@@ -245,7 +257,7 @@ protected:
   void updateParenthesisLayout();
   void updateLayout();
   void updateLineLayout();
-  void updateSpecialBarLayout( specialBar );
+  void updateDescriptionBarLayout( descriptionBar );
   void updateUi();
   
   //--- ui
@@ -297,6 +309,7 @@ protected:
   bool mIsVerbose;
   bool mHasLogTiming;
   static Bar mDummyBar;
+  script mScript;
 };
 
   

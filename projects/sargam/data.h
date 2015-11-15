@@ -17,7 +17,8 @@ enum noteValue{ nvSa = 1, nvRe, nvGa, nvMa, nvPa, nvDha, nvNi, nvComma, nvChik,
 enum ornementType{ otMeend, otKrintan, otAndolan, otGamak };
 enum noteModification{ nmKomal, nmShuddh, nmTivra };
 enum strokeType{ stDa, stRa, stDiri, stNone };
-enum specialBar{ sbScale = -2 , sbTarabTuning = -1 };
+enum descriptionBar{ dbScale = -2 , dbTarabTuning = -1, dbStartOfDescriptionBar = -2};
+enum script{ sLatin = 0, sDevanagari, sNumberOfScript };
   
 //------------------------------------------------------------------------------
 class Note
@@ -88,6 +89,7 @@ public:
   void addNote( int, int, Note );
   void addOrnement( ornementType, std::vector<NoteLocator> );
   void addParenthesis( std::vector<NoteLocator>, int = 2 );
+  void addStroke( int, strokeType, int );
   void addStroke( int, strokeType, std::vector<int> );
   void addGraceNote( int, int );
   void clear();
