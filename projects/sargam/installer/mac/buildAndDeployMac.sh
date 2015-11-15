@@ -15,16 +15,16 @@ else
 
 	#——— build ———
 	#build clean
-	xcodebuild -project ../../../cmake/Realisim.xcodeproj clean -configuration Release -sdk macosx10.10
+	xcodebuild -project ../../../../../cmake/Realisim.xcodeproj clean -configuration Release -sdk macosx10.10
 
 	#build in release 64 bits with SDK 10.10 and deployment target 10.7
-	xcodebuild -project ../../../cmake/Realisim.xcodeproj build -configuration Release -sdk macosx10.10 MACOSX_DEPLOYMENT_TARGET=10.7
+	xcodebuild -project ../../../../../cmake/Realisim.xcodeproj build -configuration Release -sdk macosx10.10 MACOSX_DEPLOYMENT_TARGET=10.7
 
 	#——— ajout de frameworks et plugin QT au app avec qtmacdeploy
-	/Users/po/Qt5.4.0/5.4/clang_64/bin/macdeployqt ../../../cmake/projects/sargam/Release/sargam.app
+	/Users/po/Qt5.4.0/5.4/clang_64/bin/macdeployqt ../../../../../cmake/projects/sargam/Release/sargam.app
 
 	#--- creation du DMG de distribution
-	pushd ../../../cmake/projects/sargam/Release/
+	pushd ../../../../../cmake/projects/sargam/Release/
 
 	# taille du DMG doit etre aussi grande que la taille du app
 	# figure out how big our DMG needs to be
@@ -49,8 +49,10 @@ else
 
 	#nettoyage des dmg temporaires
 	rm -rf "${RW_DMG_NAME}"
-
 	popd
+	
+	#--- on deplace le dmg vers le répertoire courant du script
+	mv ../../../../../cmake/projects/sargam/Release/"${FINAL_DMG_NAME}" ./"${FINAL_DMG_NAME}"
 fi
 	
 
