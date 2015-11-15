@@ -5,8 +5,6 @@
 <version>0.6.0</version>
 <releaseNotes>
 
-<h2>Sagarm v0.6.0</h2>
-
 <h3>Release notes</h3>
 <p>
 -Support for devanagari script.<br>
@@ -22,8 +20,8 @@
 
 <h3>General</h3>
 <p>
-A tutorial is now available on the main page at <a href="https://sargamdev.wordpress.com/">https://sargamdev.wordpress.com/</a><br>
-If you enjoy the product, please donate via the paypal's button on the <a href="https://sargamdev.wordpress.com/download/">download page.</a><br>
+A tutorial is now available on the main page at https://sargamdev.wordpress.com/<br>
+If you enjoy the product, please donate via the paypal's button on the download page at https://sargamdev.wordpress.com/download/<br>
 
   <p> 
   Thank you very much for using Sargam, please share with your friends!<br>
