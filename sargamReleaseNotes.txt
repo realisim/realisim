@@ -5,9 +5,6 @@
 <version>0.6.0</version>
 <releaseNotes>
 
-<h2>november 17th 2015</h2>
-<p>This release is available <strong>only on mac</strong> because I am having problems with the deployment on windows. It will be fixed soon.</p>
-
 <h3>Release notes</h3>
 <p>
 -Support for devanagari script.<br>
