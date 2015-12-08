@@ -30,7 +30,7 @@ public:
   void commandAddBar();
   void commandAddGraceNotes();
   void commandAddLine();
-  void commandAddNote( noteValue );
+  void commandAddNote( Note );
   void commandAddMatra();
   void commandAddOrnement( ornementType );
   void commandAddParenthesis( int );
@@ -175,6 +175,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void addBar( int );
   void addNoteToSelection( int, int );
   void addPage();
+  Note alterNoteFromScale( Note ) const;
   void clear();
   void clearSelection();
   void createUi();
@@ -218,7 +219,6 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   bool isNoteSelected( int, int ) const;
   virtual void keyPressEvent( QKeyEvent* );
   virtual void keyReleaseEvent( QKeyEvent* );
-  Note makeNoteFromScale( noteValue ) const;
   virtual void mouseMoveEvent( QMouseEvent* );
   virtual void mouseReleaseEvent( QMouseEvent* );
   void moveGraceNoteBackward( int, int );

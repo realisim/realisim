@@ -182,6 +182,17 @@ void PartitionViewer::clear()
   { getLog().log( "PartitionViewer: clear." ); }
 }
 //-----------------------------------------------------------------------------
+Note PartitionViewer::alterNoteFromScale( Note iN ) const
+{
+  vector<Note> v = x->getScale();
+  for( int i = 0; i < v.size(); ++i )
+  {
+    if( v[i].getValue() == iN.getValue() )
+    { iN.setModification( v[i].getModification() ); break; }
+  }
+  return iN;
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::clearSelection()
 {
   for( int i = 0; i < mSelectedNotes.size(); ++i )
@@ -312,11 +323,11 @@ void PartitionViewer::commandAddMatra()
   { getLog().log( "PartitionViewer: commandAddMatra." ); }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::commandAddNote( noteValue iN )
+void PartitionViewer::commandAddNote( Note iN )
 {
   if( hasSelection() )
   { commandErase(); }
-  Note n = makeNoteFromScale( iN );
+  Note n = alterNoteFromScale( iN );
   x->addNote( getCurrentBar(), getCurrentNote(), n );
   mCurrentNote++;
   clearSelection();
@@ -1639,6 +1650,9 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
     case Qt::Key_5: commandAddNote( nvPa );  break;
     case Qt::Key_6: commandAddNote( nvDha );  break;
     case Qt::Key_7: commandAddNote( nvNi );  break;
+    case Qt::Key_8: commandAddNote( Note(nvSa, 1) );  break;
+    case Qt::Key_9: commandAddNote( Note(nvRe, 1) );  break;
+    case Qt::Key_0: commandAddNote( Note(nvGa, 1) );  break;
     case Qt::Key_Comma: commandAddNote( nvComma ); break;
     case Qt::Key_C: commandAddNote( nvChik ); break;
     case Qt::Key_B: //Bend - meend
@@ -1834,18 +1848,6 @@ void PartitionViewer::keyReleaseEvent( QKeyEvent* ipE )
   {
     default: break;
   }
-}
-//-----------------------------------------------------------------------------
-Note PartitionViewer::makeNoteFromScale( noteValue iN ) const
-{
-  Note r( iN, 0, nmShuddh );
-  vector<Note> v = x->getScale();
-  for( int i = 0; i < v.size(); ++i )
-  {
-    if( v[i].getValue() == r.getValue() )
-    { r.setModification( v[i].getModification() ); break; }
-  }
-  return r;
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
