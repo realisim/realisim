@@ -6,6 +6,8 @@
 #ifndef realisim_utils_command_hh
 #define realisim_utils_command_hh
 
+#include <string>
+
 /*Classe de base pour les commandes du système de undo/redo. Il suffit de la
   sous classer et de l'ajouter a utils::CommandStack. Ensuite, via le 
   CommandStack, on peut appeler CommandStack::undo qui appelle le Command::undo
@@ -25,16 +27,23 @@ namespace realisim
 {
 namespace utils 
 {
-  class Command
-  {
-    public:
-      Command(){};
-      virtual ~Command(){};
-      
-      virtual void execute() = 0;
-      virtual void undo() = 0;
-      virtual void redo() {execute();}
-  };
+  
+class Command
+{
+  public:
+    Command(){};
+    virtual ~Command(){};
+  
+    std::string getDescription() const {return mDescription;}
+    virtual void execute() = 0;
+    virtual void redo() {execute();}
+  void setDescription(std::string iS) {mDescription = iS;}
+    virtual void undo() = 0;
+  
+  protected:
+    std::string mDescription;
+};
+  
 }
 }
 #endif

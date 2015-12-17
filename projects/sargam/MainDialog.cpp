@@ -60,6 +60,7 @@ PreferencesDialog::PreferencesDialog(const MainDialog* ipMd,
   mPartPreviewData(),
   mpPartPreview(0)
 {
+  
   initUi();
   
   mPartPreviewData.setTitle( "Untitled" );

@@ -8,6 +8,8 @@
 #include <QPrinter>
 #include <QtWidgets>
 #include <QSettings>
+#include "utils/Command.h"
+#include "utils/CommandStack.h"
 #include "utils/Log.h"
 #include <vector>
 
@@ -20,6 +22,11 @@ class ThinLineEdit : public QLineEdit
 { public: ThinLineEdit( QWidget* = 0 ); };
   
 //------------------------------------------------------------------------------
+/*
+ 
+ Expliquer le system de undo/redo. commandXxx qui est publique et
+ l'implémentation privé doCommandXxx
+ */
 class PartitionViewer : public QWidget
 {
   Q_OBJECT
@@ -30,8 +37,8 @@ public:
   void commandAddBar();
   void commandAddGraceNotes();
   void commandAddLine();
-  void commandAddNote( Note );
   void commandAddMatra();
+  void commandAddNote( Note );
   void commandAddOrnement( ornementType );
   void commandAddParenthesis( int );
   void commandAddStroke( strokeType );
@@ -44,11 +51,12 @@ public:
   void commandRemoveSelectionFromGraceNotes();
   void commandRemoveStroke();
   void commandShiftNote();
-  void generateRandomPartition();
+void generateRandomPartition();
 QImage getBarAsImage(int) const;
   Composition getComposition() const;
   int getCurrentBar() const;
   int getCurrentNote() const;
+  NoteLocator getCursorPosition() const;
   int getFontSize() const;
   int getOctave() const;
   QPageLayout::Orientation getLayoutOrientation() const;
@@ -77,13 +85,34 @@ signals:
   void interactionOccured(); //documenter...
   
 protected slots:
+  void redoActivated();
   void resizeEditToContent();
   void stopBarTextEdit();
   void stopLineTextEdit();
   void stopParentheseEdit();
   void stopTitleEdit();
+  void undoActivated();
   
 protected:
+  friend class PartitionViewerCommand;
+  friend class CommandAddBar;
+  friend class CommandAddGraceNotes;
+  friend class CommandAddLine;
+  friend class CommandAddMatra;
+  friend class CommandAddNote;
+  friend class CommandAddOrnement;
+  friend class CommandAddParenthesis;
+  friend class CommandAddStroke;
+  friend class CommandBreakMatrasFromSelection;
+  friend class CommandBreakOrnementsFromSelection;
+  friend class CommandDecreaseOctave;
+  friend class CommandErase;
+  friend class CommandIncreaseOctave;
+  friend class CommandRemoveParenthesis;
+  friend class CommandRemoveSelectionFromGraceNotes;
+  friend class CommandRemoveStroke;
+  friend class CommandShiftNote;
+  
   enum region { rPartition, rTitle, rSargamScaleLabel, rSargamScale,
     rTarabTuningLabel, rTarabTuning };
   enum pageRegion { prPage, prBody, prPageFooter };
@@ -180,6 +209,23 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void clearSelection();
   void createUi();
   int cmToPixel( double ) const;
+  void doCommandAddBar();
+  void doCommandAddGraceNotes();
+  void doCommandAddLine();
+  void doCommandAddMatra();
+  void doCommandAddNote(Note);
+  void doCommandAddOrnement( ornementType );
+  void doCommandAddParenthesis( int );
+  void doCommandAddStroke( strokeType );
+  void doCommandBreakMatrasFromSelection();
+  void doCommandBreakOrnementsFromSelection();
+  void doCommandDecreaseOctave();
+  void doCommandErase();
+  void doCommandIncreaseOctave();
+  void doCommandRemoveParenthesis();
+  void doCommandRemoveSelectionFromGraceNotes();
+  void doCommandRemoveStroke();
+  void doCommandShiftNote();
   void draw( QPaintDevice* iPaintDevice ) const;
   void drawBar( QPainter*, int ) const;
   void drawBarContour( QPainter*, int, QColor ) const;
@@ -237,9 +283,10 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void resizeSpinBoxToContent(QSpinBox*);
   void setAllBarsAsDirty(bool);
   void setBarAsDirty( int, bool );
-  void setBarAsDirty( std::vector<int>, bool );
+  void setBarsAsDirty( std::vector<int>, bool );
   void setCurrentBar(int);
   void setCurrentNote(int);
+  void setCursorPosition( NoteLocator );
   void setNumberOfPage(int);
   std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > ) const;
   void splitInWords(int); //makeNoteRect
@@ -310,6 +357,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   bool mHasLogTiming;
   static Bar mDummyBar;
   script mScript;
+  utils::CommandStack mUndoRedoStack;
 };
 
   

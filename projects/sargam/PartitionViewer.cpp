@@ -1,6 +1,7 @@
 	/* */
 #include <algorithm>
 #include <cassert>
+#include "Commands.h"
 #include "MainDialog.h"
 #include "PartitionViewer.h"
 #include "utils/utilities.h"
@@ -132,7 +133,9 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
 }
 
 PartitionViewer::~PartitionViewer()
-{}
+{
+  //mUndoRedoStack nettoie lui même la mémoire.
+}
 
 //-----------------------------------------------------------------------------
 /*Ajoute une barre a la suite de la barre iBarIndex*/
@@ -203,486 +206,125 @@ void PartitionViewer::clearSelection()
 int PartitionViewer::cmToPixel( double iCm ) const
 { return logicalDpiX() * iCm / 2.54; }
 //-----------------------------------------------------------------------------
-/*Ajoute une barre apres la barre courante, les notes suivant le curseur sont
-  ajoutées à la nouvelle barre*/
 void PartitionViewer::commandAddBar()
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  // ajout de la barre
-  int cb = getCurrentBar();
-  addBar( cb );
-  clearSelection();
-  
-  //déplacement des notes dans la nouvelle barre. Le + 1 dans la boucle est pour
-  //déplacer les notes qui suivent le curseur.
-  vector<NoteLocator> vn;
-  int moveFromIndex = getCurrentNote() + 1;
-  for( int i = moveFromIndex; i < x->getNumberOfNotesInBar(cb); ++i )
-  {
-    vn.push_back( NoteLocator( cb, i) );
-    x->addNote( cb+1, x->getNote(cb, i) );
-  }
-  
-  //deplace les matras
-  moveMatraForward( cb, moveFromIndex );
-  //deplace les ornements
-  moveOrnementForward( cb, moveFromIndex );
-  //déplace les strokes
-  moveStrokeForward( cb, moveFromIndex );
-  //déplace note de grace
-  moveGraceNoteForward(cb, moveFromIndex);
-  //déplace parentheses
-  moveParenthesisForward( cb, moveFromIndex );
-  
-  //efface le note de la barre courrante
-  for( int i = vn.size() - 1; i >= 0; --i )
-  { x->eraseNote( vn[i].getBar(), vn[i].getIndex() ); }
-  
-  setBarAsDirty( cb, true );
-  setBarAsDirty( cb + 1, true );
-  setCurrentNote( -1 );
-  setCurrentBar( cb + 1 );
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandAddBar." ); }
+  CommandAddBar *c = new CommandAddBar(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 /*Les notes de la selection deviennent des graces notes si elle ne le sont
  pas déjà.*/
 void PartitionViewer::commandAddGraceNotes()
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  if( hasSelection() )
-  {
-    for( int i = 0; i < mSelectedNotes.size(); ++i )
-    {
-      int barIndex = mSelectedNotes[i].first;;
-      int noteIndex = mSelectedNotes[i].second;
-      x->addGraceNote( barIndex, noteIndex );
-      setBarAsDirty( barIndex, true );
-    }
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandAddGraceNotes." ); }
+  CommandAddGraceNotes *c = new CommandAddGraceNotes(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddLine()
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  commandAddBar();
-  x->addLine( getCurrentBar() );
-  setCurrentNote( -1 );
-  setBarAsDirty( getCurrentBar(), true );
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandAddLine." ); }
+  CommandAddLine *c = new CommandAddLine(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddMatra()
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  if( hasSelection() )
-  {
-    /*On commence par chercher si il y a deja un matra associe aux
-     note du matra qu'on est en train d'ajouter. Si oui, on enleve le matra
-     deja existants.*/
-    for( int i = 0; i < mSelectedNotes.size(); ++i )
-    {
-      int bar = mSelectedNotes[i].first;
-      int noteIndex = mSelectedNotes[i].second;
-      if( x->isNoteInMatra( bar, noteIndex) )
-      {
-        x->eraseMatra( bar, x->findMatra( bar, noteIndex ) );
-        setBarAsDirty( bar, true );
-      }
-    }
-    
-    map<int, vector<int> > m = splitPerBar( mSelectedNotes );
-    map<int, vector<int> >::const_iterator it = m.begin();
-    for( ; it != m.end(); ++it )
-    {
-      x->addMatra( it->first, it->second );
-      setBarAsDirty( it->first, true );
-    }
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandAddMatra." ); }
+  CommandAddMatra *c = new CommandAddMatra(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddNote( Note iN )
 {
-  if( hasSelection() )
-  { commandErase(); }
-  Note n = alterNoteFromScale( iN );
-  x->addNote( getCurrentBar(), getCurrentNote(), n );
-  mCurrentNote++;
-  clearSelection();
-  setBarAsDirty(getCurrentBar(), true);
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandAddNote." ); }
+  CommandAddNote* c = new CommandAddNote(this, iN);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddOrnement( ornementType iOt )
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  if( hasSelection() )
-  {
-    /*On commence par chercher si il y a deja un ornement associe aux
-     note de lornement qu'on est en train d'ajouter. Si oui, on enleve lornement
-     deja existants.*/
-    for( int i = 0; i < mSelectedNotes.size(); ++i )
-    {
-      int bar = mSelectedNotes[i].first;
-      int noteIndex = mSelectedNotes[i].second;
-      if( x->isNoteInOrnement( bar, noteIndex) )
-      { eraseOrnement( x->findOrnement( bar, noteIndex ) ); }
-    }
-    
-    mOrnements.push_back( Ornement() );
-    x->addOrnement( iOt, toNoteLocator( mSelectedNotes ) );
-    setBarAsDirty( x->getBarsInvolvedByOrnement(
-      x->findOrnement( mSelectedNotes[0].first, mSelectedNotes[0].second) ), true );
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandAddOrnement." ); }
+  CommandAddOrnement *c = new CommandAddOrnement(this, iOt);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddParenthesis( int iNumber )
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  if( hasSelection() )
-  {
-    /*On commence par chercher si il y a deja une parenthese associée aux
-     note de la parenthese qu'on est en train d'ajouter. Si oui, on enleve la
-     parenthese deja existante.*/
-    for( int i = 0; i < mSelectedNotes.size(); ++i )
-    {
-      int bar = mSelectedNotes[i].first;
-      int noteIndex = mSelectedNotes[i].second;
-      int p = x->findParenthesis( bar, noteIndex );
-      if( p != -1 )
-      { x->eraseParenthesis( p ); }
-    }
-    
-    x->addParenthesis( toNoteLocator( mSelectedNotes ) );
-    
-    //dirty sur toutes les barres impliquées.
-    map< int, vector<int> > m = splitPerBar( mSelectedNotes );
-    map< int, vector<int> >::const_iterator it = m.begin();
-    for( ; it != m.end(); ++it )
-    { setBarAsDirty(it->first, true); }
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandAddParenthesis." ); }
+  CommandAddParenthesis *c = new CommandAddParenthesis(this, iNumber);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandAddStroke( strokeType iSt )
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  vector< pair<int, int> > v;
-  if( hasSelection() )
-  {
-    for( int i = 0; i < mSelectedNotes.size(); ++i )
-    { v.push_back( mSelectedNotes[i] ); }
-  }
-  else{ v.push_back( make_pair( getCurrentBar(), getCurrentNote() ) ); }
- 
-  for( int i = 0; i < v.size(); ++i )
-  {
-    int bar = v[i].first;
-    int index = v[i].second;
-    
-    /*On commence par chercher si il y a deja un stroke associe aux
-      notes du stroke qu'on est en train d'ajouter. Si oui, on enleve les strokes
-     deja existants.*/
-    if( x->hasStroke( bar, index ) )
-    {
-      x->eraseStroke( bar, x->findStroke( bar, index ) );
-      setBarAsDirty( bar, true );
-    }
-  }
-
-  //on ajoute les strokes par barre
-  map< int, vector<int> > m = splitPerBar( v );
-  map< int, vector<int> >::const_iterator it = m.begin();
-  for( ; it != m.end(); ++it )
-  {
-    int bar = it->first;
-    x->addStroke( bar, iSt, it->second );
-    setBarAsDirty( bar, true );
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandAddStroke." ); }
+  CommandAddStroke *c = new CommandAddStroke(this, iSt);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandBreakMatrasFromSelection()
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  for( int i = 0; i < mSelectedNotes.size(); ++i )
-  {
-    int bar = mSelectedNotes[i].first;
-    int index = mSelectedNotes[i].second;
-    int matraIndex = x->findMatra( bar, index );
-    if( matraIndex != -1 )
-    {
-      x->eraseMatra( bar, matraIndex );
-      setBarAsDirty( bar, true );
-    }
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandBreakMatrasFromSelection." ); }
+  CommandBreakMatrasFromSelection *c = new CommandBreakMatrasFromSelection(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandBreakOrnementsFromSelection()
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  for( int i = 0; i < mSelectedNotes.size(); ++i )
-  {
-    int bar = mSelectedNotes[i].first;
-    int index = mSelectedNotes[i].second;
-    int ornementIndex = x->findOrnement( bar, index );
-    if( ornementIndex != -1 )
-    { eraseOrnement( ornementIndex ); }
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandBreakOrnementsFromSelection." ); }
+  CommandBreakOrnementsFromSelection *c = new CommandBreakOrnementsFromSelection(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandDecreaseOctave()
 {
-  vector< pair<int, int> > v;
-  if( hasSelection() )
-  {
-    for( int i = 0; i < mSelectedNotes.size(); ++i )
-    { v.push_back( mSelectedNotes[i] ); }
-  }
-  else{ v.push_back( make_pair( getCurrentBar(), getCurrentNote() ) ); }
-  
-  for( int i = 0; i < v.size(); ++i )
-  {
-    Note n = x->getNote( v[i].first, v[i].second );
-    n.setOctave( n.getOctave() - 1 );
-    x->setNote( v[i].first, v[i].second, n );
-    setBarAsDirty( v[i].first, true );
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandDecreaseOctave." ); }
+  CommandDecreaseOctave *c = new CommandDecreaseOctave(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandErase()
 {
-  if( hasSelection() )
-  {
-    /*On efface les notes en partant de la fin parce que la selection contient
-     les indices des notes, ainsi en commençant par la fin, nous n'avons pas à
-     ajuster les indices.*/
-    for( int i = mSelectedNotes.size() - 1; i >= 0; --i )
-    {
-      int bar = mSelectedNotes[i].first;
-      int index = mSelectedNotes[i].second;
-      x->eraseNote( bar, index );
-      
-      if( x->isNoteInOrnement(bar, index) )
-      {
-        setBarAsDirty( x->getBarsInvolvedByOrnement(
-          x->findOrnement(bar, index) ), true );
-      }
-    }
-    setCurrentBar( mSelectedNotes[0].first );
-    /*Le -1 est parce que la premiere note selectionnée est effacée, il faut
-      donc aller à l'autre d'avant.*/
-    setCurrentNote( mSelectedNotes[0].second - 1);
-    clearSelection();
-  }
-  else
-  {
-    int cb = getCurrentBar();
-    if( getCurrentNote() != -1 )
-    {
-      x->eraseNote( cb, getCurrentNote() );
-      setCurrentNote( getCurrentNote() - 1 );
-    }
-    else
-    {
-      /*On efface la ligne si la note courante est -1 et que la barre est
-       un début de ligne. Par contre, on ne peut pas effacer la ligne 0.*/
-      if( x->isStartOfLine( cb ) && x->findLine( cb ) != 0 )
-      { x->eraseLine( x->findLine( cb ) ); }
-      /*On ne peut pas effacer la derniere barre...*/
-      if( x->getNumberOfBars() > 1 )
-      {
-        int i = x->getNumberOfNotesInBar( cb - 1 ) - 1;
-        eraseBar( cb );
-        setCurrentBar( cb - 1 );
-        setCurrentNote( i );
-      }
-    }
-    setBarAsDirty( getCurrentBar(), true );
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandErase." ); }
+  CommandErase * c = new CommandErase(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandIncreaseOctave()
 {
-  vector< pair<int, int> > v;
-  if( hasSelection() )
-  {
-    for( int i = 0; i < mSelectedNotes.size(); ++i )
-    { v.push_back( mSelectedNotes[i] ); }
-  }
-  else{ v.push_back( make_pair( getCurrentBar(), getCurrentNote() ) ); }
-  
-  for( int i = 0; i < v.size(); ++i )
-  {
-    Note n = x->getNote( v[i].first, v[i].second );
-    n.setOctave( n.getOctave() + 1 );
-    x->setNote( v[i].first, v[i].second, n );
-    setBarAsDirty( v[i].first, true );
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandIncreaseOctave." ); }
+  CommandIncreaseOctave *c = new CommandIncreaseOctave(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandRemoveParenthesis()
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  /*On commence par chercher si il y a deja une parenthese associée aux
-   note de la parenthese qu'on est en train d'ajouter. Si oui, on enleve la
-   parenthese deja existante.*/
-  for( int i = 0; i < mSelectedNotes.size(); ++i )
-  {
-    int bar = mSelectedNotes[i].first;
-    int noteIndex = mSelectedNotes[i].second;
-    int p = x->findParenthesis( bar, noteIndex );
-    if( p != -1 )
-    { x->eraseParenthesis( p ); setBarAsDirty( bar, true ); }
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandRemoveParenthesis." ); }
+  CommandRemoveParenthesis *c = new CommandRemoveParenthesis(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandRemoveSelectionFromGraceNotes()
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  for( int i = 0; i < mSelectedNotes.size(); ++i )
-  {
-    int bar = mSelectedNotes[i].first;
-    int index = mSelectedNotes[i].second;
-    if( x->isGraceNote( bar, index ) )
-    {
-      x->eraseGraceNote( bar, index );
-      setBarAsDirty( bar, true );
-    }
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandRemoveSelectionFromGraceNotes." ); }
+  CommandRemoveSelectionFromGraceNotes *c = new CommandRemoveSelectionFromGraceNotes(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandRemoveStroke()
 {
-  /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
-  
-  vector< pair<int, int> > l;
-  if( hasSelection() )
-  { l = mSelectedNotes; }
-  else
-  { l.push_back( make_pair( getCurrentBar(), getCurrentNote()) ); }
-  
-  for( int i = 0; i < l.size(); ++i )
-  {
-    int bar = l[i].first;
-    int index = l[i].second;
-    int strokeIndex = x->findStroke( bar, index );
-    if( strokeIndex != -1 )
-    {
-      x->eraseStroke( bar, strokeIndex );
-      setBarAsDirty( bar, true );
-    }
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandRemoveStroke." ); }
+  CommandRemoveStroke *c = new CommandRemoveStroke(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::commandShiftNote()
 {
-  vector< pair<int, int> > l;
-  if( hasSelection() )
-  { l = mSelectedNotes; }
-  else
-  { l.push_back( make_pair( getCurrentBar(), getCurrentNote()) ); }
- 
-  for( int i = 0; i < l.size(); ++i )
-  {
-    int bar = l[i].first;
-    int index = l[i].second;
-    Note n = x->getNote( bar, index );
-    if( n.getModification() == nmKomal || n.getModification() == nmTivra )
-    { n.setModification( nmShuddh ); }
-    else if( n.canBeKomal() )
-    { n.setModification( nmKomal); }
-    else if( n.canBeTivra() )
-    { n.setModification( nmTivra ); }
-    x->setNote( bar, index, n );
-    setBarAsDirty( bar, true );
-  }
-  updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "PartitionViewer: commandShiftNote." ); }
+  CommandShiftNote *c = new CommandShiftNote(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::createUi()
@@ -725,6 +367,494 @@ void PartitionViewer::createUi()
           this, SLOT( stopParentheseEdit() ) );
   connect( mpParenthesisEdit, SIGNAL( valueChanged(int)),
           this, SLOT( resizeEditToContent() ) );
+  
+  //shortcut pour edition
+  QShortcut *pUndo = new QShortcut(QKeySequence(tr("Ctrl+Z", "undo")), this);
+  connect(pUndo, SIGNAL(activated()), this, SLOT(undoActivated()));
+  
+  QShortcut *pRedo = new QShortcut(QKeySequence(tr("Ctrl+Shift+Z", "redo")), this);
+  connect(pRedo, SIGNAL(activated()), this, SLOT(redoActivated()));
+}
+//-----------------------------------------------------------------------------
+/*Ajoute une barre apres la barre courante, les notes suivant le curseur sont
+ ajoutées à la nouvelle barre*/
+void PartitionViewer::doCommandAddBar()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  // ajout de la barre
+  int cb = getCurrentBar();
+  addBar( cb );
+  clearSelection();
+  
+  //déplacement des notes dans la nouvelle barre. Le + 1 dans la boucle est pour
+  //déplacer les notes qui suivent le curseur.
+  vector<NoteLocator> vn;
+  int moveFromIndex = getCurrentNote() + 1;
+  for( int i = moveFromIndex; i < x->getNumberOfNotesInBar(cb); ++i )
+  {
+    vn.push_back( NoteLocator( cb, i) );
+    x->addNote( cb+1, x->getNote(cb, i) );
+  }
+  
+  //deplace les matras
+  moveMatraForward( cb, moveFromIndex );
+  //deplace les ornements
+  moveOrnementForward( cb, moveFromIndex );
+  //déplace les strokes
+  moveStrokeForward( cb, moveFromIndex );
+  //déplace note de grace
+  moveGraceNoteForward(cb, moveFromIndex);
+  //déplace parentheses
+  moveParenthesisForward( cb, moveFromIndex );
+  
+  //efface le note de la barre courrante
+  for( int i = vn.size() - 1; i >= 0; --i )
+  { x->eraseNote( vn[i].getBar(), vn[i].getIndex() ); }
+  
+  setBarAsDirty( cb, true );
+  setBarAsDirty( cb + 1, true );
+  setCursorPosition( NoteLocator(cb + 1, -1) );
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandAddBar." ); }
+}
+//-----------------------------------------------------------------------------
+/*Les notes de la selection deviennent des graces notes si elle ne le sont
+ pas déjà.*/
+void PartitionViewer::doCommandAddGraceNotes()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  if( hasSelection() )
+  {
+    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    {
+      int barIndex = mSelectedNotes[i].first;;
+      int noteIndex = mSelectedNotes[i].second;
+      x->addGraceNote( barIndex, noteIndex );
+      setBarAsDirty( barIndex, true );
+    }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandAddGraceNotes." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandAddLine()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  doCommandAddBar();
+  x->addLine( getCurrentBar() );
+  setCursorPosition( NoteLocator(getCurrentBar(), -1) );
+  setBarAsDirty( getCurrentBar(), true );
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandAddLine." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandAddMatra()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  if( hasSelection() )
+  {
+    /*On commence par chercher si il y a deja un matra associe aux
+     note du matra qu'on est en train d'ajouter. Si oui, on enleve le matra
+     deja existants.*/
+    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    {
+      int bar = mSelectedNotes[i].first;
+      int noteIndex = mSelectedNotes[i].second;
+      if( x->isNoteInMatra( bar, noteIndex) )
+      {
+        x->eraseMatra( bar, x->findMatra( bar, noteIndex ) );
+        setBarAsDirty( bar, true );
+      }
+    }
+    
+    map<int, vector<int> > m = splitPerBar( mSelectedNotes );
+    map<int, vector<int> >::const_iterator it = m.begin();
+    for( ; it != m.end(); ++it )
+    {
+      x->addMatra( it->first, it->second );
+      setBarAsDirty( it->first, true );
+    }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandAddMatra." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandAddNote( Note iN )
+{
+  if( hasSelection() )
+  { doCommandErase(); }
+  Note n = alterNoteFromScale( iN );
+  x->addNote( getCurrentBar(), getCurrentNote(), n );
+  setCursorPosition( NoteLocator(getCurrentBar(), getCurrentNote()+1) );
+  clearSelection();
+  setBarAsDirty(getCurrentBar(), true);
+  updateUi();
+
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandAddNote." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandAddOrnement( ornementType iOt )
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  if( hasSelection() )
+  {
+    /*On commence par chercher si il y a deja un ornement associe aux
+     note de lornement qu'on est en train d'ajouter. Si oui, on enleve lornement
+     deja existants.*/
+    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    {
+      int bar = mSelectedNotes[i].first;
+      int noteIndex = mSelectedNotes[i].second;
+      if( x->isNoteInOrnement( bar, noteIndex) )
+      { eraseOrnement( x->findOrnement( bar, noteIndex ) ); }
+    }
+    
+    mOrnements.push_back( Ornement() );
+    x->addOrnement( iOt, toNoteLocator( mSelectedNotes ) );
+    setBarsAsDirty( x->getBarsInvolvedByOrnement(
+                                                 x->findOrnement( mSelectedNotes[0].first, mSelectedNotes[0].second) ), true );
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandAddOrnement." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandAddParenthesis( int iNumber )
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  if( hasSelection() )
+  {
+    /*On commence par chercher si il y a deja une parenthese associée aux
+     note de la parenthese qu'on est en train d'ajouter. Si oui, on enleve la
+     parenthese deja existante.*/
+    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    {
+      int bar = mSelectedNotes[i].first;
+      int noteIndex = mSelectedNotes[i].second;
+      int p = x->findParenthesis( bar, noteIndex );
+      if( p != -1 )
+      { x->eraseParenthesis( p ); }
+    }
+    
+    x->addParenthesis( toNoteLocator( mSelectedNotes ) );
+    
+    //dirty sur toutes les barres impliquées.
+    map< int, vector<int> > m = splitPerBar( mSelectedNotes );
+    map< int, vector<int> >::const_iterator it = m.begin();
+    for( ; it != m.end(); ++it )
+    { setBarAsDirty(it->first, true); }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: docommandAddParenthesis." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandAddStroke( strokeType iSt )
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  vector< pair<int, int> > v;
+  if( hasSelection() )
+  {
+    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    { v.push_back( mSelectedNotes[i] ); }
+  }
+  else{ v.push_back( make_pair( getCurrentBar(), getCurrentNote() ) ); }
+  
+  for( int i = 0; i < v.size(); ++i )
+  {
+    int bar = v[i].first;
+    int index = v[i].second;
+    
+    /*On commence par chercher si il y a deja un stroke associe aux
+     notes du stroke qu'on est en train d'ajouter. Si oui, on enleve les strokes
+     deja existants.*/
+    if( x->hasStroke( bar, index ) )
+    {
+      x->eraseStroke( bar, x->findStroke( bar, index ) );
+      setBarAsDirty( bar, true );
+    }
+  }
+  
+  //on ajoute les strokes par barre
+  map< int, vector<int> > m = splitPerBar( v );
+  map< int, vector<int> >::const_iterator it = m.begin();
+  for( ; it != m.end(); ++it )
+  {
+    int bar = it->first;
+    x->addStroke( bar, iSt, it->second );
+    setBarAsDirty( bar, true );
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandAddStroke." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandBreakMatrasFromSelection()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  for( int i = 0; i < mSelectedNotes.size(); ++i )
+  {
+    int bar = mSelectedNotes[i].first;
+    int index = mSelectedNotes[i].second;
+    int matraIndex = x->findMatra( bar, index );
+    if( matraIndex != -1 )
+    {
+      x->eraseMatra( bar, matraIndex );
+      setBarAsDirty( bar, true );
+    }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandBreakMatrasFromSelection." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandBreakOrnementsFromSelection()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  for( int i = 0; i < mSelectedNotes.size(); ++i )
+  {
+    int bar = mSelectedNotes[i].first;
+    int index = mSelectedNotes[i].second;
+    int ornementIndex = x->findOrnement( bar, index );
+    if( ornementIndex != -1 )
+    { eraseOrnement( ornementIndex ); }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandBreakOrnementsFromSelection." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandDecreaseOctave()
+{
+  vector< pair<int, int> > v;
+  if( hasSelection() )
+  {
+    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    { v.push_back( mSelectedNotes[i] ); }
+  }
+  else{ v.push_back( make_pair( getCurrentBar(), getCurrentNote() ) ); }
+  
+  for( int i = 0; i < v.size(); ++i )
+  {
+    Note n = x->getNote( v[i].first, v[i].second );
+    n.setOctave( n.getOctave() - 1 );
+    x->setNote( v[i].first, v[i].second, n );
+    setBarAsDirty( v[i].first, true );
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCcommandDecreaseOctave." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandErase()
+{
+  if( hasSelection() )
+  {
+    /*On efface les notes en partant de la fin parce que la selection contient
+     les indices des notes, ainsi en commençant par la fin, nous n'avons pas à
+     ajuster les indices.*/
+    for( int i = mSelectedNotes.size() - 1; i >= 0; --i )
+    {
+      int bar = mSelectedNotes[i].first;
+      int index = mSelectedNotes[i].second;
+      x->eraseNote( bar, index );
+      
+      if( x->isNoteInOrnement(bar, index) )
+      {
+        setBarsAsDirty( x->getBarsInvolvedByOrnement(
+                                                     x->findOrnement(bar, index) ), true );
+      }
+    }
+    
+    /*Le -1 est parce que la premiere note selectionnée est effacée, il faut
+     donc aller à l'autre d'avant.*/
+    setCursorPosition( NoteLocator(mSelectedNotes[0].first,
+                                   mSelectedNotes[0].second - 1 ) );
+    clearSelection();
+  }
+  else
+  {
+    int cb = getCurrentBar();
+    if( getCurrentNote() != -1 )
+    {
+      x->eraseNote( cb, getCurrentNote() );
+      setCursorPosition( NoteLocator(cb, getCurrentNote() - 1) );
+    }
+    else
+    {
+      /*On efface la ligne si la note courante est -1 et que la barre est
+       un début de ligne. Par contre, on ne peut pas effacer la ligne 0.*/
+      if( x->isStartOfLine( cb ) && x->findLine( cb ) != 0 )
+      { x->eraseLine( x->findLine( cb ) ); }
+      /*On ne peut pas effacer la derniere barre...*/
+      if( x->getNumberOfBars() > 1 )
+      {
+        int i = x->getNumberOfNotesInBar( cb - 1 ) - 1;
+        eraseBar( cb );
+        setCursorPosition( NoteLocator(cb - 1, i) );
+      }
+    }
+    setBarAsDirty( getCurrentBar(), true );
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandErase." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandIncreaseOctave()
+{
+  vector< pair<int, int> > v;
+  if( hasSelection() )
+  {
+    for( int i = 0; i < mSelectedNotes.size(); ++i )
+    { v.push_back( mSelectedNotes[i] ); }
+  }
+  else{ v.push_back( make_pair( getCurrentBar(), getCurrentNote() ) ); }
+  
+  for( int i = 0; i < v.size(); ++i )
+  {
+    Note n = x->getNote( v[i].first, v[i].second );
+    n.setOctave( n.getOctave() + 1 );
+    x->setNote( v[i].first, v[i].second, n );
+    setBarAsDirty( v[i].first, true );
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandIncreaseOctave." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandRemoveParenthesis()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  /*On commence par chercher si il y a deja une parenthese associée aux
+   note de la parenthese qu'on est en train d'ajouter. Si oui, on enleve la
+   parenthese deja existante.*/
+  for( int i = 0; i < mSelectedNotes.size(); ++i )
+  {
+    int bar = mSelectedNotes[i].first;
+    int noteIndex = mSelectedNotes[i].second;
+    int p = x->findParenthesis( bar, noteIndex );
+    if( p != -1 )
+    { x->eraseParenthesis( p ); setBarAsDirty( bar, true ); }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandRemoveParenthesis." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandRemoveSelectionFromGraceNotes()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  for( int i = 0; i < mSelectedNotes.size(); ++i )
+  {
+    int bar = mSelectedNotes[i].first;
+    int index = mSelectedNotes[i].second;
+    if( x->isGraceNote( bar, index ) )
+    {
+      x->eraseGraceNote( bar, index );
+      setBarAsDirty( bar, true );
+    }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandRemoveSelectionFromGraceNotes." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandRemoveStroke()
+{
+  /*Cette commande ne peut pas etre executée sur les barres speciales*/
+  if( getCurrentBar() < 0 ){ return; }
+  
+  vector< pair<int, int> > l;
+  if( hasSelection() )
+  { l = mSelectedNotes; }
+  else
+  { l.push_back( make_pair( getCurrentBar(), getCurrentNote()) ); }
+  
+  for( int i = 0; i < l.size(); ++i )
+  {
+    int bar = l[i].first;
+    int index = l[i].second;
+    int strokeIndex = x->findStroke( bar, index );
+    if( strokeIndex != -1 )
+    {
+      x->eraseStroke( bar, strokeIndex );
+      setBarAsDirty( bar, true );
+    }
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandRemoveStroke." ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::doCommandShiftNote()
+{
+  vector< pair<int, int> > l;
+  if( hasSelection() )
+  { l = mSelectedNotes; }
+  else
+  { l.push_back( make_pair( getCurrentBar(), getCurrentNote()) ); }
+  
+  for( int i = 0; i < l.size(); ++i )
+  {
+    int bar = l[i].first;
+    int index = l[i].second;
+    Note n = x->getNote( bar, index );
+    if( n.getModification() == nmKomal || n.getModification() == nmTivra )
+    { n.setModification( nmShuddh ); }
+    else if( n.canBeKomal() )
+    { n.setModification( nmKomal); }
+    else if( n.canBeTivra() )
+    { n.setModification( nmTivra ); }
+    x->setNote( bar, index, n );
+    setBarAsDirty( bar, true );
+  }
+  updateUi();
+  
+  if( isVerbose() )
+  { getLog().log( "PartitionViewer: doCommandShiftNote." ); }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
@@ -1178,7 +1308,11 @@ void PartitionViewer::drawTitle( QPainter* iP ) const
 }
 //-----------------------------------------------------------------------------
 /*Efface la barre iBar des donnees et des donnees d'affichage. Si la barre 
-  contient des notes, ces notes sont transférées à la barre précédente*/
+  contient des notes, ces notes sont transférées à la barre précédente
+ 
+ Yark! le contenu de cette fonction devrait être dans la classe
+ composition.
+ */
 void PartitionViewer::eraseBar( int iBar )
 {
   int moveToIndex = x->getNumberOfNotesInBar( iBar - 1 );
@@ -1212,7 +1346,7 @@ void PartitionViewer::eraseOrnement( int iIndex )
 {
   if( iIndex >= 0 && iIndex < mOrnements.size() )
   {
-    setBarAsDirty( x->getBarsInvolvedByOrnement( iIndex ), true );
+    setBarsAsDirty( x->getBarsInvolvedByOrnement( iIndex ), true );
     mOrnements.erase( mOrnements.begin() + iIndex );
     x->eraseOrnement( iIndex );
   }
@@ -1395,6 +1529,9 @@ int PartitionViewer::getCurrentBar() const
 //-----------------------------------------------------------------------------
 int PartitionViewer::getCurrentNote() const
 { return mCurrentNote; }
+//-----------------------------------------------------------------------------
+NoteLocator PartitionViewer::getCursorPosition() const
+{ return NoteLocator( mCurrentBar, mCurrentNote ); }
 //-----------------------------------------------------------------------------
 int PartitionViewer::getFontSize() const
 { return mBarFont.pointSize(); }
@@ -1723,7 +1860,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
         if( shiftPressed )
         {
           int bar = getCurrentBar();
-          int index = mCurrentNote;
+          int index = getCurrentNote();
           if( index == -1 && (bar - 1) < x->getNumberOfBars() )
           {
             bar--;
@@ -1734,10 +1871,12 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
         else
         {
           mCurrentNote = std::max( --mCurrentNote, -2 );
-          if( getCurrentNote() == -2 && getCurrentBar() > dbScale )
+          if( mCurrentNote == -2 && getCurrentBar() > dbScale )
           {
-            setCurrentBar( getCurrentBar() - 1 );
-            setCurrentNote( x->getNumberOfNotesInBar( getCurrentBar() ) - 1 );
+            const int previousBar = getCurrentBar() - 1;
+            NoteLocator nl( previousBar,
+                        x->getNumberOfNotesInBar( previousBar ) - 1 );
+            setCursorPosition(nl);
           }
         }
       }
@@ -1759,8 +1898,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
         else
         {
           int index = max( -1, mSelectedNotes[0].second - 1 );
-          setCurrentBar( mSelectedNotes[0].first );
-          setCurrentNote( index );
+          setCursorPosition( NoteLocator(mSelectedNotes[0].first, index) );
           clearSelection();
         }
       }
@@ -1779,7 +1917,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
       if( !hasSelection() )
       {
         int bar = getCurrentBar();
-        int nextNote = mCurrentNote + 1;
+        int nextNote = getCurrentNote() + 1;
         
         if( shiftPressed )
         {
@@ -1801,8 +1939,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
             nextNote = -1;
           }
           nextNote = min( nextNote, x->getNumberOfNotesInBar( bar ) - 1 );
-          setCurrentBar( bar );
-          setCurrentNote( nextNote );
+          setCursorPosition( NoteLocator(bar, nextNote) );
         }
       }
       else
@@ -1822,8 +1959,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
         }
         else
         {
-          setCurrentBar( bar );
-          setCurrentNote( index );
+          setCursorPosition( NoteLocator(bar, index) );
           clearSelection();
         }
       }
@@ -1951,8 +2087,8 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   if( mBarHoverIndex != kNoBarIndex )
   {
     clearSelection();
-    setCurrentBar( mBarHoverIndex );
-    setCurrentNote( x->getNumberOfNotesInBar( mBarHoverIndex ) - 1 );
+    setCursorPosition( NoteLocator(mBarHoverIndex,
+        x->getNumberOfNotesInBar( mBarHoverIndex ) - 1) );
     
     //animation du highlight de la barre courante
     if(mCurrentBarTimerId != 0) { killTimer(mCurrentBarTimerId); }
@@ -1992,7 +2128,7 @@ void PartitionViewer::moveGraceNoteBackward(int iFromBar, int iToIndex)
   {
     int ni = x->getNoteIndexFromGraceNote(iFromBar, i) + iToIndex;
     { addNoteToSelection(iFromBar-1, ni); }
-    commandAddGraceNotes();
+    doCommandAddGraceNotes();
     clearSelection();
   }
 }
@@ -2004,7 +2140,7 @@ void PartitionViewer::moveGraceNoteForward(int iFromBar, int iFromIndex)
     int ni = x->getNoteIndexFromGraceNote(iFromBar, i) - iFromIndex;
     if( ni >= 0 )
     { addNoteToSelection(iFromBar+1, ni); }
-    commandAddGraceNotes();
+    doCommandAddGraceNotes();
     clearSelection();
   }
 }
@@ -2018,7 +2154,7 @@ void PartitionViewer::moveMatraBackward(int iFromBar, int iToIndex)
       int ni = x->getNoteIndexFromMatra(iFromBar, i, j) + iToIndex;
       { addNoteToSelection(iFromBar - 1, ni ); }
     }
-    commandAddMatra();
+    doCommandAddMatra();
     clearSelection();
   }
 }
@@ -2033,7 +2169,7 @@ void PartitionViewer::moveMatraForward(int iFromBar, int iFromIndex)
       if( ni >= 0 )
       { addNoteToSelection(iFromBar+1, ni ); }
     }
-    commandAddMatra();
+    doCommandAddMatra();
     clearSelection();
   }
 }
@@ -2073,7 +2209,7 @@ void PartitionViewer::moveOrnementBackward(int iFromBar, int iToIndex)
       { bar--; index = index + iToIndex; }
       addNoteToSelection(bar, index);
     }
-    commandAddOrnement(ot);
+    doCommandAddOrnement(ot);
     clearSelection();
   }
 }
@@ -2107,7 +2243,7 @@ void PartitionViewer::moveOrnementForward(int iFromBar, int iFromIndex)
       }
       addNoteToSelection(bar, index);
     }
-    commandAddOrnement(ot);
+    doCommandAddOrnement(ot);
     clearSelection();
   }
 }
@@ -2148,7 +2284,7 @@ void PartitionViewer::moveParenthesisBackward( int iFromBar, int iToIndex )
       { bar--; index = index + iToIndex; }
       addNoteToSelection(bar, index);
     }
-    commandAddParenthesis( numberOfTime );
+    doCommandAddParenthesis( numberOfTime );
     clearSelection();
   }
 }
@@ -2182,7 +2318,7 @@ void PartitionViewer::moveParenthesisForward( int iFromBar, int iFromIndex )
       }
       addNoteToSelection(bar, index);
     }
-    commandAddParenthesis( numberOfTime );
+    doCommandAddParenthesis( numberOfTime );
     clearSelection();
   }
 }
@@ -2199,7 +2335,7 @@ void PartitionViewer::moveStrokeBackward(int iFromBar, int iToIndex)
     }
     if( hasSelection() )
     {
-      commandAddStroke(st);
+      doCommandAddStroke(st);
       clearSelection();
     }
   }
@@ -2218,7 +2354,7 @@ void PartitionViewer::moveStrokeForward(int iFromBar, int iFromIndex)
     }
     if( hasSelection() )
     {
-      commandAddStroke(st);
+      doCommandAddStroke(st);
       clearSelection();
     }
   }
@@ -2325,13 +2461,13 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       { p.drawRect( b.mNoteScreenLayouts[j] ); }
       
       //texte de debuggage
-//      p.setPen(Qt::gray);
-//      p.drawText( b.mScreenLayout, Qt::AlignCenter, QString::number(i) );
-//      QString s;
-//      if( getCurrentBar() == i )
-//      { s += QString().sprintf("current note: %d\n", getCurrentNote() ); }
-//      s += QString().sprintf("number of notes: %d", x->getNumberOfNotesInBar( i ) );
-//      p.drawText( b.mScreenLayout, Qt::AlignBottom | Qt::AlignRight, s );
+      p.setPen(Qt::gray);
+      p.drawText( b.mScreenLayout, Qt::AlignCenter, QString::number(i) );
+      QString s;
+      if( getCurrentBar() == i )
+      { s += QString().sprintf("current note: %d\n", getCurrentNote() ); }
+      s += QString().sprintf("number of notes: %d", x->getNumberOfNotesInBar( i ) );
+      p.drawText( b.mScreenLayout, Qt::AlignBottom | Qt::AlignRight, s );
     }
     
     p.setPen( Qt::blue );
@@ -2444,6 +2580,9 @@ void PartitionViewer::print( QPrinter* iPrinter )
   setLayoutOrientation( previousOrientation );
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::redoActivated()
+{ mUndoRedoStack.redo(); }
+//-----------------------------------------------------------------------------
 void PartitionViewer::resizeEditToContent()
 {
   QLineEdit* le = dynamic_cast<QLineEdit*>( QObject::sender() );
@@ -2483,21 +2622,11 @@ void PartitionViewer::setAsVerbose( bool iV )
 void PartitionViewer::setBarAsDirty( int iBar, bool iD )
 { getBar(iBar).mIsDirty = iD; }
 //-----------------------------------------------------------------------------
-void PartitionViewer::setBarAsDirty( vector<int> iV, bool iD )
+void PartitionViewer::setBarsAsDirty( vector<int> iV, bool iD )
 {
   for( int i = 0; i < iV.size(); ++i )
   { setBarAsDirty( iV[i], iD ); }
 }
-//-----------------------------------------------------------------------------
-void PartitionViewer::setCurrentBar( int iB )
-{
-    mCurrentBar = iB;
-    updateUi();
-}
-//-----------------------------------------------------------------------------
-/*La note courante ne doit pas etre inférieur a -1 */
-void PartitionViewer::setCurrentNote( int iN )
-{ mCurrentNote = max( iN, -1 ); updateUi(); }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setComposition(Composition* ipC)
 {
@@ -2511,8 +2640,27 @@ void PartitionViewer::setComposition(Composition* ipC)
   //--- ornements
   mOrnements.resize( ipC->getNumberOfOrnements() );
   
-  setCurrentBar( 0 );
-  setCurrentNote( - 1 );
+  setCursorPosition(NoteLocator(0, -1));
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+//sets the current bar. See also setCursorPosition
+void PartitionViewer::setCurrentBar( int iB )
+{
+    mCurrentBar = iB;
+    updateUi();
+}
+//-----------------------------------------------------------------------------
+//La note courante ne doit pas etre inférieur a -1. La valeur -1 indique,
+//que le curseur est au début de la barre, juste avant la note 0.
+//voir aussi setCursorPosition
+void PartitionViewer::setCurrentNote( int iN )
+{ mCurrentNote = max( iN, -1 ); updateUi(); }
+//-----------------------------------------------------------------------------
+void PartitionViewer::setCursorPosition( NoteLocator iNl )
+{
+  setCurrentBar(iNl.getBar());
+  setCurrentNote(iNl.getIndex());
   updateUi();
 }
 //-----------------------------------------------------------------------------
@@ -3329,6 +3477,9 @@ void PartitionViewer::updateUi()
   
   update();
 }
+//-----------------------------------------------------------------------------
+void PartitionViewer::undoActivated()
+{ mUndoRedoStack.undo(); }
 //-----------------------------------------------------------------------------
 // --- PARTITIONVIEWER::Bar (vibhag)
 //-----------------------------------------------------------------------------

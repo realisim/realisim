@@ -1237,3 +1237,5 @@ QByteArray Composition::toBinary() const
   
   return ba;
 }
+
+
