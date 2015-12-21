@@ -1,6 +1,40 @@
 <downloadPage>https://sargamdev.wordpress.com/download/</downloadPage>
 
+<release>
+<version>0.7.0</version>
+<releaseNotes>
 
+<h2>november 17th 2015</h2>
+<p>This release is available <strong>only on mac</strong> because I am having problems with the deployment on windows. It will be fixed soon.</p>
+
+<h3>Release notes</h3>
+<p>
+-Support for devanagari script.<br>
+-Font size can now be changed.<br>
+-Enhanced rendering of the notes<br>
+<blockquote>
+-Octaves (dots) above or under notes are clearer.<br>
+-Notes rendering is more natural.<br>
+-Fixed multiples rendering issues on the windows version.<br>
+</blockquote>
+-Fixed numerous small bugs
+</p>
+
+<h3>General</h3>
+<p>
+A tutorial is now available on the main page at https://sargamdev.wordpress.com/<br>
+If you enjoy the product, please donate via the paypal's button on the download page at https://sargamdev.wordpress.com/download/<br>
+
+  <p> 
+  Thank you very much for using Sargam, please share with your friends!<br>
+  Feel free to report bugs and idea at sargam.software@gmail.com
+  </p>
+</p>
+
+</releaseNotes>
+</release>
+
+//-----------------------------------------------------------------------------
 <release>
 <version>0.6.0</version>
 <releaseNotes>
@@ -35,6 +69,7 @@ If you enjoy the product, please donate via the paypal's button on the download 
 </releaseNotes>
 </release>
 
+//-----------------------------------------------------------------------------
 <release>
 <version>0.5.2</version>
 <releaseNotes>
