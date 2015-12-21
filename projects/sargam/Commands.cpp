@@ -29,7 +29,7 @@ void PartitionViewerCommand::restoreComposition()
   //ainsi, le ui sera correctement rafraichit comme si on avait
   //ouvert une nouvelle composition.
   p->x->fromBinary(mCompositionState);
-  p->setComposition(p->x);
+  p->resetComposition(p->x);
 }
 //------------------------------------------------------------------
 void PartitionViewerCommand::restoreUi()

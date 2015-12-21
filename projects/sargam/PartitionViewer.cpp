@@ -78,7 +78,8 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mDefaultLog(),
   mpLog( &mDefaultLog ),
   mIsVerbose( false ),
-  mHasLogTiming( false )
+  mHasLogTiming( false ),
+  mHasModifications( false )
 {
   setMouseTracking( true );
   setFocusPolicy( Qt::StrongFocus );
@@ -416,6 +417,7 @@ void PartitionViewer::doCommandAddBar()
   setBarAsDirty( cb, true );
   setBarAsDirty( cb + 1, true );
   setCursorPosition( NoteLocator(cb + 1, -1) );
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -439,6 +441,7 @@ void PartitionViewer::doCommandAddGraceNotes()
       setBarAsDirty( barIndex, true );
     }
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -454,6 +457,7 @@ void PartitionViewer::doCommandAddLine()
   x->addLine( getCurrentBar() );
   setCursorPosition( NoteLocator(getCurrentBar(), -1) );
   setBarAsDirty( getCurrentBar(), true );
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -489,6 +493,7 @@ void PartitionViewer::doCommandAddMatra()
       setBarAsDirty( it->first, true );
     }
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -504,6 +509,7 @@ void PartitionViewer::doCommandAddNote( Note iN )
   setCursorPosition( NoteLocator(getCurrentBar(), getCurrentNote()+1) );
   clearSelection();
   setBarAsDirty(getCurrentBar(), true);
+  setAsModified(true);
   updateUi();
 
   if( isVerbose() )
@@ -531,8 +537,9 @@ void PartitionViewer::doCommandAddOrnement( ornementType iOt )
     mOrnements.push_back( Ornement() );
     x->addOrnement( iOt, toNoteLocator( mSelectedNotes ) );
     setBarsAsDirty( x->getBarsInvolvedByOrnement(
-                                                 x->findOrnement( mSelectedNotes[0].first, mSelectedNotes[0].second) ), true );
+      x->findOrnement( mSelectedNotes[0].first, mSelectedNotes[0].second) ), true );
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -566,6 +573,7 @@ void PartitionViewer::doCommandAddParenthesis( int iNumber )
     for( ; it != m.end(); ++it )
     { setBarAsDirty(it->first, true); }
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -609,6 +617,7 @@ void PartitionViewer::doCommandAddStroke( strokeType iSt )
     x->addStroke( bar, iSt, it->second );
     setBarAsDirty( bar, true );
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -631,6 +640,7 @@ void PartitionViewer::doCommandBreakMatrasFromSelection()
       setBarAsDirty( bar, true );
     }
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -650,6 +660,7 @@ void PartitionViewer::doCommandBreakOrnementsFromSelection()
     if( ornementIndex != -1 )
     { eraseOrnement( ornementIndex ); }
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -673,6 +684,7 @@ void PartitionViewer::doCommandDecreaseOctave()
     x->setNote( v[i].first, v[i].second, n );
     setBarAsDirty( v[i].first, true );
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -729,6 +741,7 @@ void PartitionViewer::doCommandErase()
     }
     setBarAsDirty( getCurrentBar(), true );
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -752,6 +765,7 @@ void PartitionViewer::doCommandIncreaseOctave()
     x->setNote( v[i].first, v[i].second, n );
     setBarAsDirty( v[i].first, true );
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -774,6 +788,7 @@ void PartitionViewer::doCommandRemoveParenthesis()
     if( p != -1 )
     { x->eraseParenthesis( p ); setBarAsDirty( bar, true ); }
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -795,6 +810,7 @@ void PartitionViewer::doCommandRemoveSelectionFromGraceNotes()
       setBarAsDirty( bar, true );
     }
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -823,6 +839,7 @@ void PartitionViewer::doCommandRemoveStroke()
       setBarAsDirty( bar, true );
     }
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -851,6 +868,7 @@ void PartitionViewer::doCommandShiftNote()
     x->setNote( bar, index, n );
     setBarAsDirty( bar, true );
   }
+  setAsModified(true);
   updateUi();
   
   if( isVerbose() )
@@ -1749,6 +1767,9 @@ script PartitionViewer::getScript() const
 bool PartitionViewer::hasSelection() const
 { return mSelectedNotes.size() > 0; }
 //-----------------------------------------------------------------------------
+bool PartitionViewer::hasModifications() const
+{ return mHasModifications; }
+//-----------------------------------------------------------------------------
 bool PartitionViewer::isDebugging() const
 { return mIsDebugging; }
 //-----------------------------------------------------------------------------
@@ -2583,6 +2604,25 @@ void PartitionViewer::print( QPrinter* iPrinter )
 void PartitionViewer::redoActivated()
 { mUndoRedoStack.redo(); }
 //-----------------------------------------------------------------------------
+// clears all ui cache regarding composition and sets internal pointer
+// see setComposition to start with a clean slate (like opening a new
+// file). This method is mostly used by command for undoing changes.
+void PartitionViewer::resetComposition(Composition* ipC)
+{
+  clear();
+  x = ipC != 0 ? ipC : &mDummyComposition;
+  mBars.resize( ipC->getNumberOfBars() );
+  
+  //--- lines
+  mLines.resize( ipC->getNumberOfLines() );
+  
+  //--- ornements
+  mOrnements.resize( ipC->getNumberOfOrnements() );
+  
+  setCursorPosition(NoteLocator(0, -1));
+  updateUi();
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::resizeEditToContent()
 {
   QLineEdit* le = dynamic_cast<QLineEdit*>( QObject::sender() );
@@ -2628,20 +2668,13 @@ void PartitionViewer::setBarsAsDirty( vector<int> iV, bool iD )
   { setBarAsDirty( iV[i], iD ); }
 }
 //-----------------------------------------------------------------------------
+// Clear all ui cache, undo/redo stack and sets the composition to ipC
 void PartitionViewer::setComposition(Composition* ipC)
 {
-  clear();
-  x = ipC != 0 ? ipC : &mDummyComposition;
-  mBars.resize( ipC->getNumberOfBars() );
+  mUndoRedoStack.clear();
+  setAsModified(false);
   
-  //--- lines
-  mLines.resize( ipC->getNumberOfLines() );
-  
-  //--- ornements
-  mOrnements.resize( ipC->getNumberOfOrnements() );
-  
-  setCursorPosition(NoteLocator(0, -1));
-  updateUi();
+  resetComposition(ipC);
 }
 //-----------------------------------------------------------------------------
 //sets the current bar. See also setCursorPosition
@@ -3408,6 +3441,9 @@ void PartitionViewer::updateDescriptionBarLayout( descriptionBar barIndex )
 //-----------------------------------------------------------------------------
 void PartitionViewer::updateUi()
 {
+  if(hasModifications())
+  { setWindowModified(true); }
+  
   /*
    */
   bool shouldUpdateLayout = false;
@@ -3479,7 +3515,10 @@ void PartitionViewer::updateUi()
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::undoActivated()
-{ mUndoRedoStack.undo(); }
+{
+  mUndoRedoStack.undo();
+  setAsModified(true);
+}
 //-----------------------------------------------------------------------------
 // --- PARTITIONVIEWER::Bar (vibhag)
 //-----------------------------------------------------------------------------

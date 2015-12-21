@@ -65,12 +65,14 @@ QImage getBarAsImage(int) const;
   int getNumberOfSelectedNote() const;
   NoteLocator getSelectedNote( int ) const;
   script getScript() const;
-  bool hasSelection() const;
   bool hasLogTiming() const { return mHasLogTiming; }
+  bool hasModifications() const;
+  bool hasSelection() const;
   bool isDebugging() const;
   bool isVerbose() const {return mIsVerbose;}
   void print( QPrinter* );
   void setAsDebugging( bool );
+  void setAsModified(bool m) {mHasModifications = m;}
   void setAsVerbose( bool );
   void setComposition( Composition* );
   void setFontSize(int);
@@ -279,6 +281,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void moveStrokeForward( int, int );
   QString noteToString( Note ) const;
   virtual void paintEvent(QPaintEvent*);
+  void resetComposition(Composition*);
   void resizeLineEditToContent(QLineEdit*);
   void resizeSpinBoxToContent(QSpinBox*);
   void setAllBarsAsDirty(bool);
@@ -358,6 +361,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   static Bar mDummyBar;
   script mScript;
   utils::CommandStack mUndoRedoStack;
+  bool mHasModifications;
 };
 
   

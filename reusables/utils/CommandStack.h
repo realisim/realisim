@@ -32,6 +32,10 @@ namespace utils
     virtual ~CommandStack();
      
     void add(Command*);
+    int getCurrentCommandIndex() const;
+    int getNumberOfCommands() const;
+    bool isEmpty() const;
+    void clear();
     void redo();
     void undo();
      
