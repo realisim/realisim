@@ -21,6 +21,8 @@ namespace sargam
 //--- PreferencesDialog
 //------------------------------------------------------------------------------
 class PartitionViewer;
+class Updater;
+  
 class PreferencesDialog : public QDialog
 {
   Q_OBJECT
@@ -89,6 +91,20 @@ protected:
   QString mFileName;
 };
 
+//------------------------------------------------------------------------------
+//--- UpdateDialog
+//------------------------------------------------------------------------------
+class UpdateDialog : public QDialog
+{
+public:
+  UpdateDialog(QWidget *, QString, const Updater *);
+  virtual ~UpdateDialog() {}
+  
+protected:
+  void createUi();
+  QString mCurrentVersion;
+  const Updater *mpUpdater;
+};
   
 }
 }

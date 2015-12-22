@@ -2,6 +2,7 @@
 #include "Dialogs.h"
 #include "MainDialog.h"
 #include "PartitionViewer.h"
+#include "Updater.h"
 #include <QButtonGroup>
 #include <QCheckBox>
 #include <QComboBox>
@@ -364,3 +365,60 @@ void SaveDialog::save()
 //------------------------------------------------------------------------------
 SaveDialog::answer SaveDialog::getAnswer() const
 { return mAnswer; }
+
+//------------------------------------------------------------------------------
+//--- UpdateDialog
+//------------------------------------------------------------------------------
+UpdateDialog::UpdateDialog(QWidget *ipParent, QString iCurrentVersion,
+                           const Updater *ipUpdater) :
+QDialog(ipParent),
+mCurrentVersion(iCurrentVersion),
+mpUpdater(ipUpdater)
+{ createUi(); }
+//------------------------------------------------------------------------------
+void UpdateDialog::createUi()
+{
+  setWindowFlags(Qt::Dialog);
+  
+  resize(540, 440);
+  setWindowTitle("New version available");
+  setWindowModality(Qt::ApplicationModal);
+  
+  QVBoxLayout *pVlyt = new QVBoxLayout(this);
+  pVlyt->setMargin(0); pVlyt->setSpacing(2);
+  {
+    QTextEdit *pTextEdit = new QTextEdit(this);
+    pTextEdit->setReadOnly(true);
+    
+    //get all release notes
+    QString t;
+    for( int i = 0; i < mpUpdater->getNumberOfVersions(); ++i )
+    {
+      if( mCurrentVersion < mpUpdater->getVersionAsQString(i) )
+      {
+        t += mpUpdater->getReleaseNotes(i);
+        t += "<hr>";
+      }
+    }
+    t += "You are currently using version: " + mCurrentVersion + "<br>";
+    pTextEdit->setText(t);
+    
+    
+    //add cancel and visit web site button
+    QHBoxLayout *pButLyt = new QHBoxLayout();
+    {
+      QPushButton *pCancel = new QPushButton("Cancel", this);
+      connect(pCancel, SIGNAL(clicked()), this, SLOT(reject()) );
+      
+      QPushButton *pVisitWebSite = new QPushButton("Visit web site", this);
+      connect(pVisitWebSite, SIGNAL(clicked()), this, SLOT(accept()) );
+      
+      pButLyt->addStretch(1);
+      pButLyt->addWidget(pCancel);
+      pButLyt->addWidget(pVisitWebSite);
+    }
+    
+    pVlyt->addWidget(pTextEdit);
+    pVlyt->addLayout(pButLyt);
+  }
+}

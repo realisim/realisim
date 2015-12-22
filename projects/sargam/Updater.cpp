@@ -22,6 +22,7 @@ void Updater::checkForUpdate()
   QNetworkRequest r;
   r.setSslConfiguration(QSslConfiguration::defaultConfiguration());
   r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/sargamReleaseNotes/sargamReleaseNotes.txt"));
+  //r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/sargamReleaseNotes/sargamReleaseNotes-preprod.txt"));
   mpAccess->get(r);
 }
 //---------------------------------------------------------------------

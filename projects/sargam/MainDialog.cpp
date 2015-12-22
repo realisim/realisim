@@ -733,51 +733,7 @@ void MainDialog::setState(state s)
 //-----------------------------------------------------------------------------
 void MainDialog::showUpdateDialog()
 {
-  QDialog d(this, Qt::WindowTitleHint);
-  d.resize(540, 240);
-  d.setWindowTitle("New version is available");
-  d.setWindowModality(Qt::ApplicationModal);
-  QVBoxLayout *pVlyt = new QVBoxLayout(&d);
-  pVlyt->setMargin(0); pVlyt->setSpacing(2);
-  {
-    QTextEdit *pTextEdit = new QTextEdit(&d);
-    pTextEdit->setReadOnly(true);
-    
-    //populate the text edit
-    QString t;
-    t += "You are currently using version: " + getVersionAsQString() + "<br>";
-    t += "Click on 'Visit web site' to access the download links from your "
-      "favorite browser.";
-    for( int i = 0; i < mpUpdater->getNumberOfVersions(); ++i )
-    {
-      if( getVersionAsQString() < mpUpdater->getVersionAsQString(i) )
-      {
-        t += "<p>";
-        t += "<b>Version: " + mpUpdater->getVersionAsQString(i)+"</b><br>";
-        t += mpUpdater->getReleaseNotes(i);
-        t += "</p>";
-      }
-    }
-    pTextEdit->setText(t);
-    
-    //add cancel and visit web site button
-    QHBoxLayout *pButLyt = new QHBoxLayout();
-    {
-      QPushButton *pCancel = new QPushButton("Cancel", &d);
-      connect(pCancel, SIGNAL(clicked()), &d, SLOT(reject()) );
-              
-      QPushButton *pVisitWebSite = new QPushButton("Visit web site", &d);
-      connect(pVisitWebSite, SIGNAL(clicked()), &d, SLOT(accept()) );
-      
-      pButLyt->addStretch(1);
-      pButLyt->addWidget(pCancel);
-      pButLyt->addWidget(pVisitWebSite);
-    }
-    
-    pVlyt->addWidget(pTextEdit);
-    pVlyt->addLayout(pButLyt);
-  }
-
+  UpdateDialog d(this, getVersionAsQString(), mpUpdater);
   if( d.exec() == QDialog::Accepted )
   {
     QDesktopServices::openUrl(QUrl( mpUpdater->getDownloadPage() ));
