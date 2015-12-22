@@ -28,13 +28,12 @@ If you enjoy the product, please donate via the paypal's button on the download 
 </release>
 
 //-----------------------------------------------------------------------------
+
 <release>
 <version>0.6.0</version>
 <releaseNotes>
 
-<h2>november 17th 2015</h2>
-<p>This release is available <strong>only on mac</strong> because I am having problems with the deployment on windows. It will be fixed soon.</p>
-
+<h1>Sargam v0.6.0</h1>
 <h3>Release notes</h3>
 <p>
 -Support for devanagari script.<br>
@@ -65,21 +64,26 @@ If you enjoy the product, please donate via the paypal's button on the download 
 //-----------------------------------------------------------------------------
 <release>
 <version>0.5.2</version>
+<h1>Sargam v0.5.2</h1>
 <releaseNotes>
 - Infrastructure work that enables on line version checking.<br>
 </releaseNotes>
 </release>
 
+//-----------------------------------------------------------------------------
 <release>
 <version>0.5.1</version>
+<h1>Sargam v0.5.1</h1>
 <releaseNotes>
 - Improved usability of beat notation on bars.<br>
 - Improved current bar highlight behavior.<br>
 </releaseNotes>
 </release>
 
+//-----------------------------------------------------------------------------
 <release>
 <version>0.5.0</version>
+<h1>Sargam v0.5.0</h1>
 <releaseNotes>
 Sargam is a notation tool to ease sharing and teaching of sitar. With it’s simple user interface it makes entering composition as simple as writing them on a paper. It supports printing and PDF export to share with friends or students.
 </releaseNotes>
