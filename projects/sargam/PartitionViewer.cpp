@@ -58,7 +58,7 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   QWidget( ipParent ),
   mpTitleEdit(0),
   mpLineTextEdit(0),
-  mIsDebugging( false),
+  mDebugMode( dmNone ),
   mPageSizeId( QPageSize::Letter ),
   mLayoutOrientation( QPageLayout::Portrait ),
   mNumberOfPages(0),
@@ -1551,6 +1551,9 @@ int PartitionViewer::getCurrentNote() const
 NoteLocator PartitionViewer::getCursorPosition() const
 { return NoteLocator( mCurrentBar, mCurrentNote ); }
 //-----------------------------------------------------------------------------
+PartitionViewer::debugMode PartitionViewer::getDebugMode() const
+{ return mDebugMode; }
+//-----------------------------------------------------------------------------
 int PartitionViewer::getFontSize() const
 { return mBarFont.pointSize(); }
 //-----------------------------------------------------------------------------
@@ -1771,7 +1774,7 @@ bool PartitionViewer::hasModifications() const
 { return mHasModifications; }
 //-----------------------------------------------------------------------------
 bool PartitionViewer::isDebugging() const
-{ return mIsDebugging; }
+{ return mDebugMode != dmNone; }
 //-----------------------------------------------------------------------------
 bool PartitionViewer::isNoteSelected(int iBar, int iNoteIndex ) const
 {
@@ -2472,23 +2475,32 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       p.drawRect( b.mTextScreenLayout );
       
       //layout de mots
-      p.setPen( Qt::blue );
-      for( int j = 0; j < b.mWordScreenLayouts.size(); ++j )
-      { p.drawRect( b.mWordScreenLayouts[j] ); }
+      if( getDebugMode() == dmWordLayout )
+      {
+        p.setPen( Qt::blue );
+        for( int j = 0; j < b.mWordScreenLayouts.size(); ++j )
+        { p.drawRect( b.mWordScreenLayouts[j] ); }
+      }
       
-      p.setPen( Qt::green );
       //le layout page des notes
-      for( int j = 0; j < b.mNoteScreenLayouts.size(); ++j )
-      { p.drawRect( b.mNoteScreenLayouts[j] ); }
+      if( getDebugMode() == dmNoteLayout )
+      {
+        p.setPen( Qt::green );
+        for( int j = 0; j < b.mNoteScreenLayouts.size(); ++j )
+        { p.drawRect( b.mNoteScreenLayouts[j] ); }
+      }
       
       //texte de debuggage
-      p.setPen(Qt::gray);
-      p.drawText( b.mScreenLayout, Qt::AlignCenter, QString::number(i) );
-      QString s;
-      if( getCurrentBar() == i )
-      { s += QString().sprintf("current note: %d\n", getCurrentNote() ); }
-      s += QString().sprintf("number of notes: %d", x->getNumberOfNotesInBar( i ) );
-      p.drawText( b.mScreenLayout, Qt::AlignBottom | Qt::AlignRight, s );
+      if( getDebugMode() == dmBarInfo )
+      {
+        p.setPen(Qt::gray);
+        p.drawText( b.mScreenLayout, Qt::AlignCenter, QString::number(i) );
+        QString s;
+        if( getCurrentBar() == i )
+        { s += QString().sprintf("current note: %d\n", getCurrentNote() ); }
+        s += QString().sprintf("number of notes: %d", x->getNumberOfNotesInBar( i ) );
+        p.drawText( b.mScreenLayout, Qt::AlignBottom | Qt::AlignRight, s );
+      }
     }
     
     p.setPen( Qt::blue );
@@ -2652,9 +2664,6 @@ void PartitionViewer::setAllBarsAsDirty( bool iD )
   for( int i = dbStartOfDescriptionBar; i < x->getNumberOfBars(); ++i )
   { setBarAsDirty(i, iD); }
 }
-//-----------------------------------------------------------------------------
-void PartitionViewer::setAsDebugging( bool iD )
-{ mIsDebugging = iD; updateUi(); }
 //-----------------------------------------------------------------------------
 void PartitionViewer::setAsVerbose( bool iV )
 { mIsVerbose = iV; }
@@ -3028,6 +3037,12 @@ void PartitionViewer::timerEvent(QTimerEvent* ipE)
       mBarHoverTimerId = 0;
     }
   }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::toggleDebugMode()
+{
+  mDebugMode = (debugMode)((mDebugMode+1) % numberOfDebugMode);
+  updateUi();
 }
 //-----------------------------------------------------------------------------
 int PartitionViewer::toPageIndex( QPoint iP ) const

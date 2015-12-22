@@ -743,7 +743,7 @@ void MainDialog::showUpdateDialog()
 //-----------------------------------------------------------------------------
 void MainDialog::toggleDebugging()
 {
-  mpPartitionViewer->setAsDebugging( !mpPartitionViewer->isDebugging() );
+  mpPartitionViewer->toggleDebugMode();
   getLog().log( "MainDialog: debugging toggled to %s.", mpPartitionViewer->isDebugging()?"true":"false" );
 }
 //-----------------------------------------------------------------------------

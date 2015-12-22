@@ -71,7 +71,6 @@ QImage getBarAsImage(int) const;
   bool isDebugging() const;
   bool isVerbose() const {return mIsVerbose;}
   void print( QPrinter* );
-  void setAsDebugging( bool );
   void setAsModified(bool m) {mHasModifications = m;}
   void setAsVerbose( bool );
   void setComposition( Composition* );
@@ -81,6 +80,7 @@ QImage getBarAsImage(int) const;
   void setLogTiming( bool iL ) {mHasLogTiming = iL;}
   void setPageSize( QPageSize::PageSizeId );
   void setScript( script );
+  void toggleDebugMode();
   
 signals:
   void ensureVisible( QPoint );
@@ -123,6 +123,8 @@ protected:
     brTextX, brTextY, brLowerOctaveY, brUpperOctaveY, brGraceNoteLowerOctaveY,
     brGraceNoteUpperOctaveY, brUnderlineY, brGraceNoteUnderlineY };
   enum colors{ cHover, cSelection };
+  enum debugMode{ dmNone = 0, dmNoteLayout, dmWordLayout, dmBarInfo,
+    numberOfDebugMode };
   
   /*Le type de barre indique s'il s'agit d'une barre de dexcription, comme les
     barres dans le haut de la page pour indiquer la gamme et l'accodage, ou s'il
@@ -249,6 +251,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   std::vector<int> getBarsFromPage( int ) const;
   QColor getColor( colors ) const;
   QLineF getCursorLine() const;
+  debugMode getDebugMode() const;
   QString getInterNoteSpacingAsQString(NoteLocator, NoteLocator) const;
   utils::Log& getLog();
   NoteLocator getNext( const NoteLocator& ) const;
@@ -317,7 +320,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   QSpinBox* mpParenthesisEdit;
   
   //--- data
-  bool mIsDebugging;
+  debugMode mDebugMode;
   QRect mTitleScreenLayout;
   QPageSize::PageSizeId mPageSizeId;
   QPageLayout::Orientation mLayoutOrientation;
