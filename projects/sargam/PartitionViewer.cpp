@@ -875,7 +875,7 @@ void PartitionViewer::doCommandShiftNote()
   { getLog().log( "PartitionViewer: doCommandShiftNote." ); }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
+void PartitionViewer::draw( QPaintDevice* iPaintDevice, QRect iPaintRegion ) const
 {
   QElapsedTimer _timer;
   _timer.start();
@@ -886,25 +886,45 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice ) const
   QPen pen = p.pen();
   p.setBackground( b );
   
-  //--- render pages
-  drawPages( &p );
-  
-  //--- titre
-  drawTitle( &p );
-  
-  //--- rendu des textes pour barres speciales (sargam scale, tarab tuning...)
-  p.setPen( Qt::black );
-  p.setFont( mBarFont );
-  p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, kSargamScaleLabel );
-  p.drawText( getRegion( rTarabTuningLabel ), Qt::AlignCenter, kTarabTuningLabel );
-  
-  //render bars
-  drawDescriptionBars( &p );
-  for( int i = 0; i < x->getNumberOfBars(); ++i )
+  //on fait le rendu uniquement des barres qui sont sur des pages
+  //visible
+  for(int i = 0; i < getNumberOfPages(); ++i )
   {
-    drawBar( &p, i );
-    if( x->isStartOfLine( i ) )
-    { drawLine( &p, x->findLine( i ) ); }
+    if( getPageRegion(prPage, i).intersects( iPaintRegion ) )
+    {
+      //on nettoie la page en dessinant un rectangle blanc
+      //on dessine le background blanc de la page
+      p.setPen( Qt::white );
+      p.setBrush( Qt::white );
+      p.drawRect( getPageRegion( prPage, i ) );
+      
+      //--- tout le text de la page
+      p.setPen( Qt::black );
+      p.setBrush( Qt::NoBrush );
+      
+      if( i == 0) //premiere page
+      {
+        //--- titre
+        drawTitle( &p );
+        
+        //--- rendu des textes pour barres speciales (sargam scale, tarab tuning...)
+        p.setPen( Qt::black );
+        p.setFont( mBarFont );
+        p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, kSargamScaleLabel );
+        p.drawText( getRegion( rTarabTuningLabel ), Qt::AlignCenter, kTarabTuningLabel );
+        
+        drawDescriptionBars( &p );
+      }
+      
+      //render bars
+      vector<int> bars = getBarsFromPage(i);
+      for( int j = 0; j < (int)bars.size(); ++j )
+      {
+        drawBar( &p, bars[j] );
+        if( x->isStartOfLine( bars[j] ) )
+        { drawLine( &p, x->findLine( bars[j] ) ); }
+      }
+    }
   }
   
   drawCursor( &p );
@@ -1232,21 +1252,6 @@ void PartitionViewer::drawLine( QPainter* iP, int iLine ) const
   if( mEditingLineIndex != iLine )
   { iP->drawText( l.mTextScreenLayout.bottomLeft(), x->getLineText(iLine) ); }
 
-}
-//-----------------------------------------------------------------------------
-void PartitionViewer::drawPages( QPainter* iP ) const
-{
-  for( int i = 0; i < getNumberOfPages(); ++i)
-  {
-    //on dessine le background blanc de la page
-    iP->setPen( Qt::white );
-    iP->setBrush( Qt::white );
-    iP->drawRect( getPageRegion( prPage, i ) );
-    
-    //--- tout le text de la page
-    iP->setPen( Qt::black );
-    iP->setBrush( Qt::NoBrush );
-  }
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::drawPageFooter( QPainter* iP, int i ) const
@@ -2436,7 +2441,7 @@ QString PartitionViewer::noteToString( Note iNote ) const
 //-----------------------------------------------------------------------------
 void PartitionViewer::paintEvent( QPaintEvent* ipE )
 {
-  draw( this );
+  draw( this, ipE->region().boundingRect() );
   
   //--- render debug infos
   if( isDebugging() )

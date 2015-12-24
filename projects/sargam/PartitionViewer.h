@@ -230,13 +230,12 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void doCommandRemoveSelectionFromGraceNotes();
   void doCommandRemoveStroke();
   void doCommandShiftNote();
-  void draw( QPaintDevice* iPaintDevice ) const;
+  void draw( QPaintDevice* iPaintDevice, QRect ) const;
   void drawBar( QPainter*, int ) const;
   void drawBarContour( QPainter*, int, QColor ) const;
   void drawCursor( QPainter* ) const;
   void drawGamak( QPainter*, QRect, double ) const;
   void drawLine( QPainter*, int ) const;
-  void drawPages( QPainter* ) const;
   void drawPageFooter( QPainter*, int ) const;
   void drawPageFooters( QPainter* iP ) const;
   void drawSelectedNotes( QPainter* ) const;
