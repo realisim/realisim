@@ -2055,6 +2055,13 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
       if(mBarHoverTimerId != 0){ killTimer(mBarHoverTimerId); }
       mBarHoverTimerId = startTimer(60);
       mBarHoverTimer.start();
+      
+      //intersection avec les mots de la barre
+      for(int j = 0; j < (int)b.mWordScreenLayouts.size(); ++j )
+      {
+        if( b.mWordScreenLayouts[j].contains(pos) )
+        { cs = Qt::IBeamCursor; }
+      }
     }
     else if ( mBarHoverIndex == i )
     {
@@ -2105,19 +2112,62 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   { startTitleEdit(); }
   
   //intersection avec le text de la barre courante
-  const Bar& b = getBar( getCurrentBar() );
-  if( b.mTextScreenLayout.contains( pos ) )
+  const Bar& currentB = getBar( getCurrentBar() );
+  if( currentB.mTextScreenLayout.contains( pos ) )
   {
     mBarTextHover = -1;
     startBarTextEdit( getCurrentBar() );
   }
   
   //intersection avec les barres
+  const Bar& hoveredB = getBar( mBarHoverIndex );
   if( mBarHoverIndex != kNoBarIndex )
   {
     clearSelection();
-    setCursorPosition( NoteLocator(mBarHoverIndex,
-        x->getNumberOfNotesInBar( mBarHoverIndex ) - 1) );
+    
+    //intersection avec les notes de la barres, on met le
+    //curseur sur la note la plus proches. Si aucune notes
+    //cliquée, on met au début de la barre.
+    //intersection avec les mots de la barre
+    bool clickedOnWord = false;
+    for(int j = 0; j < (int)hoveredB.mWordScreenLayouts.size(); ++j )
+    {
+      if( hoveredB.mWordScreenLayouts[j].contains(pos) )
+      {
+        clickedOnWord = true;
+        break;
+      }
+    }
+    
+    if(clickedOnWord)
+    {
+      int closestNoteIndex = -1;
+      double shortestDistance = numeric_limits<double>::max();
+      for(size_t j = 0; j < hoveredB.mNoteScreenLayouts.size(); ++j )
+      {
+        QRectF r = hoveredB.mNoteScreenLayouts[j];
+        QPointF p(pos.x(), pos.y());
+        QPointF sub = r.center() - p;
+        double d = sub.x()*sub.x() + sub.y()*sub.y();
+        if( d < shortestDistance )
+        {
+          shortestDistance = d;
+          closestNoteIndex = j;
+        }
+      }
+      
+      //si on click a gauche du centre, on prend la note précédente,
+      //sinon le note la plus pres du click.
+      if( (pos.x() -
+         hoveredB.mNoteScreenLayouts[closestNoteIndex].center().x()) < 0)
+      { closestNoteIndex = max(closestNoteIndex - 1, -1); }
+      setCursorPosition( NoteLocator(mBarHoverIndex, closestNoteIndex) );
+    }
+    else
+    {
+      //-1 pour le début de la barre
+      setCursorPosition( NoteLocator(mBarHoverIndex, -1) );
+    }
     
     //animation du highlight de la barre courante
     if(mCurrentBarTimerId != 0) { killTimer(mCurrentBarTimerId); }
