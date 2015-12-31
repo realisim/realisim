@@ -52,7 +52,8 @@ else
 	popd
 	
 	#--- on deplace le dmg vers le répertoire courant du script
-	mv ../../../../../cmake/projects/sargam/Release/"${FINAL_DMG_NAME}" ./"${FINAL_DMG_NAME}"
+	mkdir -p output
+	mv ../../../../../cmake/projects/sargam/Release/"${FINAL_DMG_NAME}" ./output/"${FINAL_DMG_NAME}"
 fi
 	
 

@@ -108,7 +108,7 @@ PreferencesDialog::~PreferencesDialog()
   if(mpPartPreview)
   {
     delete mpPartPreview;
-    mpPartPreview = nullptr;
+    mpPartPreview = 0;
   }
 }
 //-----------------------------------------------------------------------------
