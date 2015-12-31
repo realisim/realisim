@@ -54,11 +54,13 @@ protected slots:
   void preferences();
   void print();
   void printPreview();
+  void redoActivated();
   void save();
   void saveAs();
   void toggleDebugging();
   void toggleLogTiming();
   void toolActionTriggered(QAction*);
+  void undoActivated();
   void updateUi();
   
 protected:

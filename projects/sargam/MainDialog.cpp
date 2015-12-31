@@ -140,6 +140,13 @@ void MainDialog::createUi()
   pFile->addAction( QString("Print preview..."), this, SLOT( printPreview() ) );
   pFile->addAction( QString("About..."), this, SLOT( about() ) );
   
+  //--- edit
+  QMenu *pEdit = pMenuBar->addMenu("Edit");
+  pEdit->addAction( QString("Undo"), this, SLOT( undoActivated() ),
+                   QKeySequence::Undo );
+  pEdit->addAction( QString("Redo"), this, SLOT( redoActivated() ),
+                   QKeySequence::Redo );
+  
   //--- tool bar
   createToolBar();
   
@@ -619,6 +626,9 @@ void MainDialog::printPreview()
   { getLog().log( "MainDialog: print preview."); }
 }
 //-----------------------------------------------------------------------------
+void MainDialog::redoActivated()
+{ mpPartitionViewer->redoActivated(); }
+//-----------------------------------------------------------------------------
 void MainDialog::save()
 {
 	if( !hasSaveFilePath() )
@@ -787,6 +797,9 @@ void MainDialog::toolActionTriggered(QAction* ipA)
   }
   updateUi();
 }
+//-----------------------------------------------------------------------------
+void MainDialog::undoActivated()
+{ mpPartitionViewer->undoActivated(); }
 //-----------------------------------------------------------------------------
 void MainDialog::updateActions()
 {

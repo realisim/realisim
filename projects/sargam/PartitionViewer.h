@@ -81,19 +81,21 @@ QImage getBarAsImage(int) const;
   void setPageSize( QPageSize::PageSizeId );
   void setScript( script );
   void toggleDebugMode();
+
+public slots:
+  void redoActivated();
+  void undoActivated();
   
 signals:
   void ensureVisible( QPoint );
   void interactionOccured(); //documenter...
   
 protected slots:
-  void redoActivated();
   void resizeEditToContent();
   void stopBarTextEdit();
   void stopLineTextEdit();
   void stopParentheseEdit();
   void stopTitleEdit();
-  void undoActivated();
   
 protected:
   friend class PartitionViewerCommand;
