@@ -1,4 +1,4 @@
-	/* */
+
 #include <algorithm>
 #include <cassert>
 #include "Commands.h"
@@ -2912,7 +2912,14 @@ void PartitionViewer::splitInWords(int iBar)
     tl.setFont( f );
     tl.beginLayout();
     QTextLine textLine = tl.createLine();
-    textLine.setLineWidth( getPageRegion( prBody, 0 ).width() );
+    //on met 2 fois la taille de la page par mesure de pécaution.
+    //Lorsqu'on atteint la taille de textLine, la methode
+    //glyphRuns() retourne 0... ce qui nous cause des problèmes.
+    //Étant donné, qu'on ne gère pas encore les barres plus grande
+    //qu'une ligne, on ajoute cette mesure de précaution ici pour ne
+    //pas crasher l'application dès que la barre atteint la taille de
+    //la page.
+    textLine.setLineWidth( 2*getPageRegion( prBody, 0 ).width() );
     tl.endLayout();
     
 //printf("textLayout on bar %d: -%s-\n", iBar, tl.text().toStdString().c_str());
@@ -2943,9 +2950,11 @@ void PartitionViewer::splitInWords(int iBar)
       
       QList<QGlyphRun> grl = tl.glyphRuns(glyphStartsAt, glyphEndsAt - glyphStartsAt);
       assert( grl.size() == 1 );
+//printf("grl size: %d\n", (int)grl.size());
+
       QRectF glyphRect = grl[0].boundingRect();
       glyphRect = QRectF( QPointF(glyphRect.left() + offsetX, posY),
-                      QSize(glyphRect.width(), glyphRect.height() ) );
+                         QSize(glyphRect.width(), glyphRect.height() ) );
       
       //on n'ajoute pas les espace...
       if( word.mid(glyphStartsAt, glyphEndsAt - glyphStartsAt) != " " )

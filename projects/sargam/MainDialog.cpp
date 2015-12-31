@@ -141,7 +141,15 @@ void MainDialog::createUi()
   pFile->addAction( QString("About..."), this, SLOT( about() ) );
   
   //--- edit
-  QMenu *pEdit = pMenuBar->addMenu("Edit");
+  QString editString("Edit");
+#ifdef __APPLE__
+  //sous mac, le menu edit se fait peupler par 2 items indésirable
+  //On change le nom du menu pour éviter ce problème
+  //voir http://stackoverflow.com/questions/21369736/remove-start-dictation-and-special-characters-from-menu
+  //https://bugreports.qt.io/browse/QTBUG-43217
+  editString = QString("Undo/Redo");
+#endif
+  QMenu *pEdit = pMenuBar->addMenu(editString);
   pEdit->addAction( QString("Undo"), this, SLOT( undoActivated() ),
                    QKeySequence::Undo );
   pEdit->addAction( QString("Redo"), this, SLOT( redoActivated() ),
