@@ -4,6 +4,7 @@
 #define MainDialog_hh
 
 #include "data.h"
+#include "Dialogs.h"
 #include <QProxyStyle>
 #include <QPrinter>
 #include <QtWidgets>
@@ -36,7 +37,7 @@ public:
   const realisim::utils::Log& getLog() const {return mLog;}
   QString getVersionAsQString() const;  
   int getVersionMajor() const {return 0;}
-  int getVersionMinor() const {return 6;}
+  int getVersionMinor() const {return 7;}
   int getVersionRevision() const {return 0;}
   bool isToolBarVisible() const {return mIsToolBarVisible;}
   bool isVerbose() const;
@@ -53,11 +54,13 @@ protected slots:
   void preferences();
   void print();
   void printPreview();
+  void redoActivated();
   void save();
   void saveAs();
   void toggleDebugging();
   void toggleLogTiming();
   void toolActionTriggered(QAction*);
+  void undoActivated();
   void updateUi();
   
 protected:
@@ -69,12 +72,17 @@ protected:
     aDa, aRa, aDiri, aRemoveStroke, aUnknown };
   
   void applyPrinterOptions( QPrinter* );
+  void closeEvent( QCloseEvent* );
   void createUi();
   void createToolBar();
   action findAction( QAction* ) const;
+  bool hasSaveFilePath() const;
   state getState() const;
   void loadSettings();
   void fillPageSizeCombo( QComboBox* );
+  QString getSaveFilePath() const;
+  QString getSaveFileName() const;
+  realisim::sargam::SaveDialog::answer saveIfNeeded();
   void saveSettings();
   void setState(state);
   void setToolBarVisible( bool i ) { mIsToolBarVisible = i; }
@@ -88,56 +96,13 @@ protected:
   realisim::sargam::Updater* mpUpdater;
   
   QSettings mSettings;
-  QString mSaveFileName;
+  QString mSaveFilePath;
   QString mLastSavePath;
   realisim::sargam::Composition mComposition;
   realisim::utils::Log mLog;
   bool mIsVerbose;
   bool mIsToolBarVisible;
   state mState;
-};
-
-//------------------------------------------------------------------------------
-class PreferencesDialog : public QDialog
-{
-  Q_OBJECT
-public:
-  PreferencesDialog(const MainDialog*,
-                    const realisim::sargam::PartitionViewer*,
-                    QWidget* = 0);
-  ~PreferencesDialog(){}
-  
-  int getFontSize() const;
-  QPageLayout::Orientation getPageLayout() const;
-  QPageSize::PageSizeId getPageSizeId() const;
-  realisim::sargam::script getScript() const;
-  bool isToolBarVisible() const;
-  bool isVerbose() const;
-  
-protected slots:
-  void updateUi();
-  
-protected:
-  void fillPageSizeCombo();
-  void initUi();
-  
-  //--- data
-  const MainDialog* mpMainDialog;
-  const realisim::sargam::PartitionViewer* mpPartViewer;
-  realisim::sargam::Composition mPartPreviewData;
-  realisim::sargam::PartitionViewer* mpPartPreview;
-  std::vector<QPageSize::PageSizeId> mAvailablePageSizeIds;
-  
-  //--- Ui
-  QSpinBox* mpFontSize;
-  QComboBox* mpScriptCombo;
-  QLabel* mpPreviewLabel;
-  QComboBox* mpPageSizeCombo;
-  QButtonGroup* mpOrientation;
-  QCheckBox* mpPortrait;
-  QCheckBox* mpLandscape;
-  QCheckBox* mpVerboseChkBx;
-  QCheckBox* mpShowToolBarChkBx;
 };
 
 

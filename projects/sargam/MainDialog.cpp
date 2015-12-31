@@ -5,8 +5,6 @@
 #include "utils/utilities.h"
 #include <QPrintDialog>
 #include <QPrintPreviewDialog>
-#include <QPrinter>
-#include <QPrinterInfo>
 #include <set>
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
@@ -47,274 +45,6 @@ void CustomProxyStyle::drawPrimitive(PrimitiveElement pe,
   }
   else
   { QProxyStyle::drawPrimitive(pe, ipSo, ipP, ipW); }
-}
-//-----------------------------------------------------------------------------
-// --- PreferencesDialog
-//-----------------------------------------------------------------------------
-PreferencesDialog::PreferencesDialog(const MainDialog* ipMd,
-                                     const PartitionViewer* ipPv,
-                                     QWidget* ipParent) :
-  QDialog(ipParent),
-  mpMainDialog(ipMd),
-  mpPartViewer(ipPv),
-  mPartPreviewData(),
-  mpPartPreview(0)
-{
-  initUi();
-  
-  mPartPreviewData.setTitle( "Untitled" );
-  mPartPreviewData.addBar();
-  mPartPreviewData.addLine(0);
-  
-  //--- 16 notes
-  mPartPreviewData.addNote(0, Note(nvMa, -1));
-  mPartPreviewData.addNote(0, Note(nvPa, -1));
-  mPartPreviewData.addNote(0, Note(nvDha, -1));
-  mPartPreviewData.addNote(0, Note(nvNi, -1));
-  mPartPreviewData.addNote(0, Note(nvSa, 0));
-  mPartPreviewData.addNote(0, Note(nvRe, 0));
-  mPartPreviewData.addNote(0, Note(nvGa, 0));
-  mPartPreviewData.addNote(0, Note(nvMa, 0));
-  mPartPreviewData.addNote(0, Note(nvPa, 0));
-  mPartPreviewData.addNote(0, Note(nvDha, 0));
-  mPartPreviewData.addNote(0, Note(nvNi, 0));
-  mPartPreviewData.addNote(0, Note(nvSa, 1));
-  mPartPreviewData.addNote(0, Note(nvRe, 1));
-  mPartPreviewData.addNote(0, Note(nvGa, 1));
-  mPartPreviewData.addNote(0, Note(nvMa, 1));
-  mPartPreviewData.addNote(0, Note(nvPa, 1));
-  
-  // 4 matras a 4 notes par matra
-  vector<int> m1(4, 0); m1[0] = 0; m1[1] = 1; m1[2] = 2; m1[3] = 3;
-  vector<int> m2(4, 0); m2[0] = 4; m2[1] = 5; m2[2] = 6; m2[3] = 7;
-  vector<int> m3(4, 0); m3[0] = 8; m3[1] = 9; m3[2] = 10; m3[3] = 11;
-  vector<int> m4(4, 0); m4[0] = 12; m4[1] = 13; m4[2] = 14; m4[3] = 15;
-  mPartPreviewData.addMatra(0, m1);
-  mPartPreviewData.addMatra(0, m2);
-  mPartPreviewData.addMatra(0, m3);
-  mPartPreviewData.addMatra(0, m4);
-  
-  // quelques notes de grace sur les 2iem et 3ieme matra
-  mPartPreviewData.addGraceNote(0, 4);
-  mPartPreviewData.addGraceNote(0, 5);
-  mPartPreviewData.addGraceNote(0, 6);
-  mPartPreviewData.addGraceNote(0, 8);
-  mPartPreviewData.addGraceNote(0, 9);
-  mPartPreviewData.addGraceNote(0, 10);
-  
-  //krintan et meend sur 2ieme et 3ieme matra
-  vector<NoteLocator> o1; o1.resize(4);
-  o1[0] = NoteLocator(0, 4); o1[1] = NoteLocator(0, 5);
-  o1[2] = NoteLocator(0, 6); o1[3] = NoteLocator(0, 7);
-  vector<NoteLocator> o2; o2.resize(4);
-  o2[0] = NoteLocator(0, 8); o2[1] = NoteLocator(0, 9);
-  o2[2] = NoteLocator(0, 10); o2[3] = NoteLocator(0, 11);
-  mPartPreviewData.addOrnement(otKrintan, o1);
-  mPartPreviewData.addOrnement(otMeend, o2);
-  
-  //des strokes
-  mPartPreviewData.addStroke(0, stDa, 0);
-  mPartPreviewData.addStroke(0, stRa, 1);
-  mPartPreviewData.addStroke(0, stDa, 2);
-  mPartPreviewData.addStroke(0, stRa, 3);
-  
-  mPartPreviewData.addStroke(0, stDa, 4);
-  mPartPreviewData.addStroke(0, stDa, 8);
-  
-  mPartPreviewData.addStroke(0, stDa, 12);
-  mPartPreviewData.addStroke(0, stRa, 13);
-  mPartPreviewData.addStroke(0, stDa, 14);
-  mPartPreviewData.addStroke(0, stRa, 15);
-  
-  //un peu de texte
-  mPartPreviewData.setBarText(0, "Test string");
-  
-  mpPartPreview->setComposition( &mPartPreviewData );
-  updateUi();
-}
-//-----------------------------------------------------------------------------
-void PreferencesDialog::fillPageSizeCombo()
-{
-  mpPageSizeCombo->clear();
-  mAvailablePageSizeIds.clear();
-  //ajout de letter par defaut...
-  mAvailablePageSizeIds.push_back( QPageSize::Letter );
-  
-  QList<QPrinterInfo> pis = QPrinterInfo::availablePrinters();
-  for( int i = 0; i < pis.size(); ++i )
-  {
-    QList<QPageSize> lps = pis.at(i).supportedPageSizes();
-    for( int j = 0; j < lps.size(); ++j )
-    { mAvailablePageSizeIds.push_back( lps.at(j).id() ); }
-  }
-  
-  sort( mAvailablePageSizeIds.begin(), mAvailablePageSizeIds.end() );
-  mAvailablePageSizeIds.erase( unique( mAvailablePageSizeIds.begin(),
-                                      mAvailablePageSizeIds.end() ), mAvailablePageSizeIds.end() );
-  
-  for( int i = 0; i < mAvailablePageSizeIds.size(); ++i )
-  { mpPageSizeCombo->insertItem(i, QPageSize::name( mAvailablePageSizeIds[i] ) ); }
-}
-//-----------------------------------------------------------------------------
-int PreferencesDialog::getFontSize() const
-{ return mpFontSize->value(); }
-//-----------------------------------------------------------------------------
-QPageLayout::Orientation PreferencesDialog::getPageLayout() const
-{
-  QPageLayout::Orientation o;
-  if( mpOrientation->checkedId() == 0 ){ o = QPageLayout::Portrait; }
-  else{ o = QPageLayout::Landscape; }
-  return o;
-}
-//-----------------------------------------------------------------------------
-QPageSize::PageSizeId PreferencesDialog::getPageSizeId() const
-{ return mAvailablePageSizeIds[ mpPageSizeCombo->currentIndex() ]; }
-//-----------------------------------------------------------------------------
-realisim::sargam::script PreferencesDialog::getScript() const
-{ return (realisim::sargam::script)mpScriptCombo->currentIndex(); }
-//-----------------------------------------------------------------------------
-void PreferencesDialog::initUi()
-{
-  mpPartPreview = new PartitionViewer( this );
-  mpPartPreview->hide();
-  
-  QVBoxLayout* pMainLyt = new QVBoxLayout( this );
-  {
-    QGroupBox* pVisualizationGrp = new QGroupBox( "Visualization", this );
-    {
-      QVBoxLayout* pVLyt = new QVBoxLayout();
-      {
-        //--- font size
-        QHBoxLayout *pFontSizeLyt = new QHBoxLayout();
-        {
-          QLabel *pName = new QLabel("Font size:", this);
-          mpFontSize = new QSpinBox(this);
-          mpFontSize->setMinimum(10);
-          mpFontSize->setMaximum(60);
-          
-          pFontSizeLyt->addWidget(pName);
-          pFontSizeLyt->addWidget(mpFontSize);
-          
-          mpFontSize->setValue( mpPartViewer->getFontSize() );
-        }
-        
-        //--- script
-        QHBoxLayout *pScriptLyt = new QHBoxLayout();
-        {
-          QLabel *pName = new QLabel("Script:", this);
-          mpScriptCombo = new QComboBox(this);
-          mpScriptCombo->insertItem(sLatin, "Latin");
-          mpScriptCombo->insertItem(sDevanagari, "देवनागरी");
-        
-          pScriptLyt->addWidget(pName);
-          pScriptLyt->addWidget(mpScriptCombo);
-          
-          mpScriptCombo->setCurrentIndex( mpPartViewer->getScript() );
-        }
-        
-        //--- part preview
-        QHBoxLayout *pPartPreviewLyt = new QHBoxLayout();
-        {
-          mpPreviewLabel = new QLabel("n/a", this);
-          
-          pPartPreviewLyt->addStretch(1);
-          pPartPreviewLyt->addWidget(mpPreviewLabel, Qt::AlignHCenter);
-          pPartPreviewLyt->addStretch(1);
-        }
-        
-        //--- taille du papier
-        QHBoxLayout* pPaperLyt = new QHBoxLayout();
-        {
-          QLabel* pLabel = new QLabel( "Page size: ", this );
-          
-          mpPageSizeCombo = new QComboBox(this);
-          
-          pPaperLyt->addWidget(pLabel);
-          pPaperLyt->addWidget(mpPageSizeCombo);
-          
-          fillPageSizeCombo();
-          int currrentIndex = distance( mAvailablePageSizeIds.begin(),
-            std::find( mAvailablePageSizeIds.begin(), mAvailablePageSizeIds.end(),
-            mpPartViewer->getPageSizeId() ) );
-          mpPageSizeCombo->setCurrentIndex( currrentIndex );
-        }
-        
-        //--- Portrait, landscape
-        QHBoxLayout* pOrientationLyt = new QHBoxLayout();
-        {
-          mpOrientation = new QButtonGroup( this );
-          mpPortrait = new QCheckBox( "Portrait", this );
-          mpLandscape = new QCheckBox( "Landscape", this );
-          mpOrientation->addButton( mpPortrait, 0 );
-          mpOrientation->addButton( mpLandscape, 1 );
-          
-          pOrientationLyt->addStretch(1);
-          pOrientationLyt->addWidget(mpPortrait);
-          pOrientationLyt->addWidget(mpLandscape);
-          
-          QPageLayout::Orientation o = mpPartViewer->getLayoutOrientation();
-          if( o == QPageLayout::Portrait )
-          { mpPortrait->setCheckState( Qt::Checked ); }
-          else{ mpLandscape->setCheckState( Qt::Checked ); }
-        }
-        
-        connect(mpFontSize, SIGNAL(valueChanged(int)),
-                this, SLOT(updateUi()));
-        connect(mpScriptCombo, SIGNAL(activated(int)),
-                this, SLOT(updateUi()));
-        
-        pVLyt->addLayout(pFontSizeLyt);
-        pVLyt->addLayout(pScriptLyt);
-        pVLyt->addLayout(pPartPreviewLyt);
-        pVLyt->addLayout( pPaperLyt );
-        pVLyt->addLayout( pOrientationLyt );
-      } //vLyt
-      
-      pVisualizationGrp->setLayout(pVLyt);
-    } //groupbox
-    
-    //--- log
-    mpVerboseChkBx = new QCheckBox( "Verbose log", this);
-    mpVerboseChkBx->setChecked(mpMainDialog->isVerbose());
-    
-    //--- show tool bar
-    mpShowToolBarChkBx = new QCheckBox( "Show toolbar", this );
-    mpShowToolBarChkBx->setChecked(mpMainDialog->isToolBarVisible());
-    
-    //--- ok, Cancel
-    QHBoxLayout* pBottomButLyt = new QHBoxLayout();
-    {
-      QPushButton* pOk = new QPushButton( "Ok", this );
-      connect( pOk, SIGNAL( clicked() ), this, SLOT( accept() ) );
-      
-      QPushButton* pCancel = new QPushButton( "Cancel", this );
-      connect( pCancel, SIGNAL( clicked() ), this, SLOT( reject() ) );
-      
-      pBottomButLyt->addStretch(1);
-      pBottomButLyt->addWidget(pOk);
-      pBottomButLyt->addWidget(pCancel);
-    }
-    
-    pMainLyt->addWidget( pVisualizationGrp );
-    pMainLyt->addWidget( mpVerboseChkBx );
-    pMainLyt->addWidget( mpShowToolBarChkBx );
-    pMainLyt->addStretch(1);
-    pMainLyt->addLayout( pBottomButLyt );
-  }
-}
-//-----------------------------------------------------------------------------
-bool PreferencesDialog::isToolBarVisible() const
-{ return mpShowToolBarChkBx->isChecked(); }
-//-----------------------------------------------------------------------------
-bool PreferencesDialog::isVerbose() const
-{ return mpVerboseChkBx->isChecked(); }
-//-----------------------------------------------------------------------------
-void PreferencesDialog::updateUi()
-{
-  mpPartPreview->setFontSize( mpFontSize->value() );
-  mpPartPreview->setScript( (script)mpScriptCombo->currentIndex() );
-  QPixmap pix = QPixmap::fromImage(mpPartPreview->getBarAsImage(0));
-  mpPreviewLabel->setPixmap(pix);
 }
 
 //-----------------------------------------------------------------------------
@@ -373,6 +103,18 @@ void MainDialog::applyPrinterOptions( QPrinter* iP )
   { getLog().log( "Page layout could not be accepted by current printer."); }
 }
 //-----------------------------------------------------------------------------
+void MainDialog::closeEvent( QCloseEvent *ipE )
+{
+  SaveDialog::answer a = saveIfNeeded();
+  switch (a)
+  {
+    case SaveDialog::aDontSave : ipE->accept(); break;
+    case SaveDialog::aSave : ipE->accept(); break;
+    case SaveDialog::aCancel : ipE->ignore(); break;
+    default: break;
+  }
+}
+//-----------------------------------------------------------------------------
 void MainDialog::createUi()
 {
   QWidget* pMainWidget = new QWidget( this );
@@ -397,6 +139,13 @@ void MainDialog::createUi()
                    QKeySequence::Print );
   pFile->addAction( QString("Print preview..."), this, SLOT( printPreview() ) );
   pFile->addAction( QString("About..."), this, SLOT( about() ) );
+  
+  //--- edit
+  QMenu *pEdit = pMenuBar->addMenu("Edit");
+  pEdit->addAction( QString("Undo"), this, SLOT( undoActivated() ),
+                   QKeySequence::Undo );
+  pEdit->addAction( QString("Redo"), this, SLOT( redoActivated() ),
+                   QKeySequence::Redo );
   
   //--- tool bar
   createToolBar();
@@ -453,8 +202,13 @@ void MainDialog::about()
       "male model you will find googling!).</p>"
       "Many thanks to the following contributors:"
       "<ul>"
-        "<li>Lars Jacobsen</li>"
+        "<li>Lars Jacobsen from http://raincitymusic.com/</li>"
+        "<li>Shivraj Sawant and his poject http://vishwamohini.com/</li>"
         "<li>www.reddit.com/r/sitar</li>"
+      "</ul>"
+      "A special thanks to generous donators who make this project possible:"
+      "<ul>"
+        "<li>Wallace Thompson</li>"
       "</ul>"
       "For any information regarding the software contact us at "
       "sargam.software@gmail.com\n\n", getVersionAsQString().toStdString().c_str() );
@@ -691,6 +445,12 @@ void MainDialog::generateRandomPartition()
   { getLog().log( "MainDialog: random partition generated." ); }
 }
 //-----------------------------------------------------------------------------
+QString MainDialog::getSaveFileName() const
+{ return QFileInfo(getSaveFilePath()).fileName(); }
+//-----------------------------------------------------------------------------
+QString MainDialog::getSaveFilePath() const
+{ return mSaveFilePath; }
+//-----------------------------------------------------------------------------
 QString MainDialog::getVersionAsQString() const
 {
    return QString::number( getVersionMajor() ) + "." +
@@ -710,6 +470,9 @@ void MainDialog::handleUpdateAvailability()
     { setState( sUpdatesAreAvailable ); break; }
   }
 }
+//-----------------------------------------------------------------------------
+bool MainDialog::hasSaveFilePath() const
+{ return !mSaveFilePath.isEmpty(); }
 //-----------------------------------------------------------------------------
 bool MainDialog::isVerbose() const
 { return mIsVerbose; }
@@ -747,51 +510,58 @@ void MainDialog::loadSettings()
 //-----------------------------------------------------------------------------
 void MainDialog::newFile()
 {
-  //check modif and save...
-  mSaveFileName = QString();
-  
-  mComposition = Composition();
-//!!! les 3 lignes suivantes devraient etre dans le constructeur de Composition
-  mComposition.setTitle( "Untitled" );
-  mComposition.addBar();
-  mComposition.addLine(0);
-  mpPartitionViewer->setComposition( &mComposition );
-  
+  if( saveIfNeeded() != SaveDialog::aCancel )
+  {
+    //check modif and save...
+    mSaveFilePath = QString();
+    
+    mComposition = Composition();
+  //!!! les 3 lignes suivantes devraient etre dans le constructeur de Composition
+    mComposition.setTitle( "Untitled" );
+    mComposition.addBar();
+    mComposition.addLine(0);
+    mpPartitionViewer->setComposition( &mComposition );
+    
+    if( isVerbose() )
+    { getLog().log( "MainDialog: new file." ); }
+  }
   updateUi();
-  
-  if( isVerbose() )
-  { getLog().log( "MainDialog: new file." ); }
 }
 //-----------------------------------------------------------------------------
 void MainDialog::openFile()
 {
- 	QString s;
-  s = QFileDialog::getOpenFileName(
-    this, tr("Open Composition"),
-    mLastSavePath,
-    tr("Sargam file (*.srg)"));
-  
-  if(!s.isEmpty())
+  if( saveIfNeeded() != SaveDialog::aCancel )
   {
-    mSaveFileName = s;
-    mLastSavePath = QFileInfo(s).absolutePath();
-    mComposition.fromBinary( utils::fromFile( s ) );
-    saveSettings();
+  
+    QString s;
+    s = QFileDialog::getOpenFileName(
+      this, tr("Open Composition"),
+      mLastSavePath,
+      tr("Sargam file (*.srg)"));
     
-    if( !mComposition.hasError() )
+    if(!s.isEmpty())
     {
-      mpPartitionViewer->setComposition( &mComposition );
+      mSaveFilePath = s;
+      mLastSavePath = QFileInfo(s).absolutePath();
+      mComposition.fromBinary( utils::fromFile( s ) );
+      saveSettings();
       
-      if( isVerbose() )
-      { getLog().log( "MainDialog: file %s opened.", s.toStdString().c_str() ); }
-    }
-    else
-    {
-      getLog().log( "Errors while opening file %s: %s.", s.toStdString().c_str(),
-        mComposition.getAndClearLastErrors().toStdString().c_str() );
-      newFile();
+      if( !mComposition.hasError() )
+      {
+        mpPartitionViewer->setComposition( &mComposition );
+        
+        if( isVerbose() )
+        { getLog().log( "MainDialog: file %s opened.", s.toStdString().c_str() ); }
+      }
+      else
+      {
+        getLog().log( "Errors while opening file %s: %s.", s.toStdString().c_str(),
+          mComposition.getAndClearLastErrors().toStdString().c_str() );
+        newFile();
+      }
     }
   }
+  updateUi();
 }
 //-----------------------------------------------------------------------------
 void MainDialog::preferences()
@@ -856,15 +626,19 @@ void MainDialog::printPreview()
   { getLog().log( "MainDialog: print preview."); }
 }
 //-----------------------------------------------------------------------------
+void MainDialog::redoActivated()
+{ mpPartitionViewer->redoActivated(); }
+//-----------------------------------------------------------------------------
 void MainDialog::save()
 {
-	if( mSaveFileName.isEmpty() )
+	if( !hasSaveFilePath() )
   { saveAs(); }
   else
   {
-    utils::toFile( mSaveFileName,
+    utils::toFile( getSaveFilePath(),
       mpPartitionViewer->getComposition().toBinary() );
   }
+  mpPartitionViewer->setAsModified(false);
   updateUi();
   
   if( isVerbose() )
@@ -882,15 +656,36 @@ void MainDialog::saveAs()
       
   if(!s.isEmpty())
   {
-  	mSaveFileName = s;
+  	mSaveFilePath = s;
     mLastSavePath = QFileInfo(s).absolutePath();
     saveSettings();
     save();
+    mpPartitionViewer->setAsModified(false);
   }
   updateUi();
   
   if( isVerbose() )
-  { getLog().log( "MainDialog: save as %s.", mSaveFileName.toStdString().c_str() ); }
+  { getLog().log( "MainDialog: save as %s.", getSaveFilePath().toStdString().c_str() ); }
+}
+//-----------------------------------------------------------------------------
+SaveDialog::answer MainDialog::saveIfNeeded()
+{
+  SaveDialog::answer r = SaveDialog::aDontSave;
+  if( mpPartitionViewer->hasModifications() )
+  {
+    QString fileName = hasSaveFilePath() ? getSaveFileName() : "untitled";
+    SaveDialog sd(mpPartitionViewer, fileName);
+    sd.exec();
+    r = sd.getAnswer();
+    switch (r)
+    {
+      case SaveDialog::aDontSave : break;
+      case SaveDialog::aSave : save(); break;
+      case SaveDialog::aCancel : break;
+      default: break;
+    }
+  }
+  return r;
 }
 //-----------------------------------------------------------------------------
 void MainDialog::saveSettings()
@@ -948,51 +743,7 @@ void MainDialog::setState(state s)
 //-----------------------------------------------------------------------------
 void MainDialog::showUpdateDialog()
 {
-  QDialog d(this, Qt::WindowTitleHint);
-  d.resize(540, 240);
-  d.setWindowTitle("New version is available");
-  d.setWindowModality(Qt::ApplicationModal);
-  QVBoxLayout *pVlyt = new QVBoxLayout(&d);
-  pVlyt->setMargin(0); pVlyt->setSpacing(2);
-  {
-    QTextEdit *pTextEdit = new QTextEdit(&d);
-    pTextEdit->setReadOnly(true);
-    
-    //populate the text edit
-    QString t;
-    t += "You are currently using version: " + getVersionAsQString() + "<br>";
-    t += "Click on 'Visit web site' to access the download links from your "
-      "favorite browser.";
-    for( int i = 0; i < mpUpdater->getNumberOfVersions(); ++i )
-    {
-      if( getVersionAsQString() < mpUpdater->getVersionAsQString(i) )
-      {
-        t += "<p>";
-        t += "<b>Version: " + mpUpdater->getVersionAsQString(i)+"</b><br>";
-        t += mpUpdater->getReleaseNotes(i);
-        t += "</p>";
-      }
-    }
-    pTextEdit->setText(t);
-    
-    //add cancel and visit web site button
-    QHBoxLayout *pButLyt = new QHBoxLayout();
-    {
-      QPushButton *pCancel = new QPushButton("Cancel", &d);
-      connect(pCancel, SIGNAL(clicked()), &d, SLOT(reject()) );
-              
-      QPushButton *pVisitWebSite = new QPushButton("Visit web site", &d);
-      connect(pVisitWebSite, SIGNAL(clicked()), &d, SLOT(accept()) );
-      
-      pButLyt->addStretch(1);
-      pButLyt->addWidget(pCancel);
-      pButLyt->addWidget(pVisitWebSite);
-    }
-    
-    pVlyt->addWidget(pTextEdit);
-    pVlyt->addLayout(pButLyt);
-  }
-
+  UpdateDialog d(this, getVersionAsQString(), mpUpdater);
   if( d.exec() == QDialog::Accepted )
   {
     QDesktopServices::openUrl(QUrl( mpUpdater->getDownloadPage() ));
@@ -1002,7 +753,7 @@ void MainDialog::showUpdateDialog()
 //-----------------------------------------------------------------------------
 void MainDialog::toggleDebugging()
 {
-  mpPartitionViewer->setAsDebugging( !mpPartitionViewer->isDebugging() );
+  mpPartitionViewer->toggleDebugMode();
   getLog().log( "MainDialog: debugging toggled to %s.", mpPartitionViewer->isDebugging()?"true":"false" );
 }
 //-----------------------------------------------------------------------------
@@ -1046,6 +797,9 @@ void MainDialog::toolActionTriggered(QAction* ipA)
   }
   updateUi();
 }
+//-----------------------------------------------------------------------------
+void MainDialog::undoActivated()
+{ mpPartitionViewer->undoActivated(); }
 //-----------------------------------------------------------------------------
 void MainDialog::updateActions()
 {
@@ -1135,6 +889,9 @@ void MainDialog::updateActions()
 //-----------------------------------------------------------------------------
 void MainDialog::updateUi()
 {
+  setWindowTitle( mComposition.getTitle() );
+  setWindowModified(mpPartitionViewer->hasModifications());
+  
   mpToolBar->setVisible( isToolBarVisible() );
   
   //disable everything...

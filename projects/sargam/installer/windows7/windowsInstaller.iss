@@ -34,16 +34,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "E:\code\CmakeRealisim\projects\sargam\Release\sargam.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Qt\Qt5.4.2\5.4\msvc2013_64\bin\icudt53.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Qt\Qt5.4.2\5.4\msvc2013_64\bin\icuin53.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Qt\Qt5.4.2\5.4\msvc2013_64\bin\icuuc53.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Qt\Qt5.4.2\5.4\msvc2013_64\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Qt\Qt5.4.2\5.4\msvc2013_64\bin\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Qt\Qt5.4.2\5.4\msvc2013_64\bin\Qt5Network.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Qt\Qt5.4.2\5.4\msvc2013_64\bin\Qt5PrintSupport.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Qt\Qt5.4.2\5.4\msvc2013_64\bin\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
-; vcredist pour les redistributables de vc12
+Source: "E:\code\CmakeRealisim\projects\sargam\Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 Source: "vcredist_2013_x64.exe"; DestDir: {tmp}; Flags: deleteafterinstall
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
@@ -52,41 +43,6 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{tmp}\vcredist_2013_x64.exe"; Check: VCRedistNeedsInstall
+Filename: "{tmp}\vcredist_2013_x64.exe"; Parameters: /install /passive /norestart
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-
-[Code]
-#IFDEF UNICODE
-  #DEFINE AW "W"
-#ELSE
-  #DEFINE AW "A"
-#ENDIF
-type
-  INSTALLSTATE = Longint;
-const
-  INSTALLSTATE_INVALIDARG = -2;  // An invalid parameter was passed to the function.
-  INSTALLSTATE_UNKNOWN = -1;     // The product is neither advertised or installed.
-  INSTALLSTATE_ADVERTISED = 1;   // The product is advertised but not installed.
-  INSTALLSTATE_ABSENT = 2;       // The product is installed for a different user.
-  INSTALLSTATE_DEFAULT = 5;      // The product is installed for the current user.
-
-  // Visual C++ 2013 Redistributable 12.0.21005
-  VC_2013_REDIST_X86_MIN = '{13A4EE12-23EA-3371-91EE-EFB36DDFFF3E}';
-  VC_2013_REDIST_X64_MIN = '{A749D8E6-B613-3BE3-8F5F-045C84EBA29B}';
-
-  VC_2013_REDIST_X86_ADD = '{F8CFEB22-A2E7-3971-9EDA-4B11EDEFC185}';
-  VC_2013_REDIST_X64_ADD = '{929FBD26-9020-399B-9A7A-751D61F0B942}';
-
-function MsiQueryProductState(szProduct: string): INSTALLSTATE; 
-  external 'MsiQueryProductState{#AW}@msi.dll stdcall';
-
-function VCVersionInstalled(const ProductID: string): Boolean;
-begin
-  Result := MsiQueryProductState(ProductID) = INSTALLSTATE_DEFAULT;
-end;
-
-function VCRedistNeedsInstall: Boolean;
-begin
-  Result := not (VCVersionInstalled(VC_2013_REDIST_X64_ADD) )
-end;
 

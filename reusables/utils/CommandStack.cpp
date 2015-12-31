@@ -16,10 +16,7 @@ CommandStack::CommandStack() :
 {}
 
 CommandStack::~CommandStack()
-{
-  for(unsigned int i = 0; i < mCommands.size(); ++i)
-    delete mCommands[i];
-}
+{ clear(); }
 
 //------------------------------------------------------------------------------
 /*Ajoute une commande a la fin de la pile. CommandStack devient le propriétaire
@@ -45,6 +42,26 @@ void CommandStack::add(Command* ipC)
   mCommands.push_back(ipC);
   mIndex = mCommands.size() - 1;
 }
+
+//------------------------------------------------------------------------------
+void CommandStack::clear()
+{
+  for(unsigned int i = 0; i < mCommands.size(); ++i)
+    delete mCommands[i];
+  mCommands.clear();
+}
+
+//------------------------------------------------------------------------------
+int CommandStack::getCurrentCommandIndex() const
+{ return mIndex; }
+
+//------------------------------------------------------------------------------
+int CommandStack::getNumberOfCommands() const
+{ return (int)mCommands.size(); }
+
+//------------------------------------------------------------------------------
+bool CommandStack::isEmpty() const
+{ return getNumberOfCommands() == 0; }
 
 //------------------------------------------------------------------------------
 /*ré-exécute la prochaine commande de la pile et place l'index sur cette 

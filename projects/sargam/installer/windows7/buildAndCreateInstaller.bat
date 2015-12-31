@@ -1,6 +1,7 @@
 @echo off
 
-if "%1"=="" goto error
+if "%1" == "" goto error
+if "%2" == "-i" goto installer
 
 REM clean
 pushd "c:\Program Files (x86)\MSBuild\12.0\Bin\"
@@ -10,8 +11,13 @@ REM build
 "C:\Program Files (x86)\MSBuild\12.0\Bin\MSBuild" /t:build /p:configuration=RELEASE e:\code\CmakeRealisim\Realisim.sln
 popd
 
+REM windeploy
+pushd E:\Qt\Qt5.4.2\5.4\msvc2013_64\bin
+set PATH=e:\Qt\Qt5.4.2\5.4\msvc2013_64\bin;%PATH%
+windeployqt.exe e:\code\CmakeRealisim\projects\sargam\Release\sargam.exe
+popd
 
-REM installer
+:installer
 echo %1
 pushd "E:\Program Files (x86)\Inno Setup 5\"
 ISCC.exe "/dMyAppVersion=%1" E:\code\realisim\projects\sargam\installer\windows7\windowsInstaller.iss

@@ -8,6 +8,8 @@
 #include <QPrinter>
 #include <QtWidgets>
 #include <QSettings>
+#include "utils/Command.h"
+#include "utils/CommandStack.h"
 #include "utils/Log.h"
 #include <vector>
 
@@ -20,6 +22,11 @@ class ThinLineEdit : public QLineEdit
 { public: ThinLineEdit( QWidget* = 0 ); };
   
 //------------------------------------------------------------------------------
+/*
+ 
+ Expliquer le system de undo/redo. commandXxx qui est publique et
+ l'implémentation privé doCommandXxx
+ */
 class PartitionViewer : public QWidget
 {
   Q_OBJECT
@@ -30,8 +37,8 @@ public:
   void commandAddBar();
   void commandAddGraceNotes();
   void commandAddLine();
-  void commandAddNote( noteValue );
   void commandAddMatra();
+  void commandAddNote( Note );
   void commandAddOrnement( ornementType );
   void commandAddParenthesis( int );
   void commandAddStroke( strokeType );
@@ -44,11 +51,12 @@ public:
   void commandRemoveSelectionFromGraceNotes();
   void commandRemoveStroke();
   void commandShiftNote();
-  void generateRandomPartition();
+void generateRandomPartition();
 QImage getBarAsImage(int) const;
   Composition getComposition() const;
   int getCurrentBar() const;
   int getCurrentNote() const;
+  NoteLocator getCursorPosition() const;
   int getFontSize() const;
   int getOctave() const;
   QPageLayout::Orientation getLayoutOrientation() const;
@@ -57,12 +65,13 @@ QImage getBarAsImage(int) const;
   int getNumberOfSelectedNote() const;
   NoteLocator getSelectedNote( int ) const;
   script getScript() const;
-  bool hasSelection() const;
   bool hasLogTiming() const { return mHasLogTiming; }
+  bool hasModifications() const;
+  bool hasSelection() const;
   bool isDebugging() const;
   bool isVerbose() const {return mIsVerbose;}
   void print( QPrinter* );
-  void setAsDebugging( bool );
+  void setAsModified(bool m) {mHasModifications = m;}
   void setAsVerbose( bool );
   void setComposition( Composition* );
   void setFontSize(int);
@@ -71,6 +80,11 @@ QImage getBarAsImage(int) const;
   void setLogTiming( bool iL ) {mHasLogTiming = iL;}
   void setPageSize( QPageSize::PageSizeId );
   void setScript( script );
+  void toggleDebugMode();
+
+public slots:
+  void redoActivated();
+  void undoActivated();
   
 signals:
   void ensureVisible( QPoint );
@@ -84,6 +98,25 @@ protected slots:
   void stopTitleEdit();
   
 protected:
+  friend class PartitionViewerCommand;
+  friend class CommandAddBar;
+  friend class CommandAddGraceNotes;
+  friend class CommandAddLine;
+  friend class CommandAddMatra;
+  friend class CommandAddNote;
+  friend class CommandAddOrnement;
+  friend class CommandAddParenthesis;
+  friend class CommandAddStroke;
+  friend class CommandBreakMatrasFromSelection;
+  friend class CommandBreakOrnementsFromSelection;
+  friend class CommandDecreaseOctave;
+  friend class CommandErase;
+  friend class CommandIncreaseOctave;
+  friend class CommandRemoveParenthesis;
+  friend class CommandRemoveSelectionFromGraceNotes;
+  friend class CommandRemoveStroke;
+  friend class CommandShiftNote;
+  
   enum region { rPartition, rTitle, rSargamScaleLabel, rSargamScale,
     rTarabTuningLabel, rTarabTuning };
   enum pageRegion { prPage, prBody, prPageFooter };
@@ -92,6 +125,8 @@ protected:
     brTextX, brTextY, brLowerOctaveY, brUpperOctaveY, brGraceNoteLowerOctaveY,
     brGraceNoteUpperOctaveY, brUnderlineY, brGraceNoteUnderlineY };
   enum colors{ cHover, cSelection };
+  enum debugMode{ dmNone = 0, dmNoteLayout, dmWordLayout, dmBarInfo,
+    numberOfDebugMode };
   
   /*Le type de barre indique s'il s'agit d'une barre de dexcription, comme les
     barres dans le haut de la page pour indiquer la gamme et l'accodage, ou s'il
@@ -175,17 +210,34 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void addBar( int );
   void addNoteToSelection( int, int );
   void addPage();
+  Note alterNoteFromScale( Note ) const;
   void clear();
   void clearSelection();
   void createUi();
   int cmToPixel( double ) const;
-  void draw( QPaintDevice* iPaintDevice ) const;
+  void doCommandAddBar();
+  void doCommandAddGraceNotes();
+  void doCommandAddLine();
+  void doCommandAddMatra();
+  void doCommandAddNote(Note);
+  void doCommandAddOrnement( ornementType );
+  void doCommandAddParenthesis( int );
+  void doCommandAddStroke( strokeType );
+  void doCommandBreakMatrasFromSelection();
+  void doCommandBreakOrnementsFromSelection();
+  void doCommandDecreaseOctave();
+  void doCommandErase();
+  void doCommandIncreaseOctave();
+  void doCommandRemoveParenthesis();
+  void doCommandRemoveSelectionFromGraceNotes();
+  void doCommandRemoveStroke();
+  void doCommandShiftNote();
+  void draw( QPaintDevice* iPaintDevice, QRect ) const;
   void drawBar( QPainter*, int ) const;
   void drawBarContour( QPainter*, int, QColor ) const;
   void drawCursor( QPainter* ) const;
   void drawGamak( QPainter*, QRect, double ) const;
   void drawLine( QPainter*, int ) const;
-  void drawPages( QPainter* ) const;
   void drawPageFooter( QPainter*, int ) const;
   void drawPageFooters( QPainter* iP ) const;
   void drawSelectedNotes( QPainter* ) const;
@@ -200,6 +252,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   std::vector<int> getBarsFromPage( int ) const;
   QColor getColor( colors ) const;
   QLineF getCursorLine() const;
+  debugMode getDebugMode() const;
   QString getInterNoteSpacingAsQString(NoteLocator, NoteLocator) const;
   utils::Log& getLog();
   NoteLocator getNext( const NoteLocator& ) const;
@@ -218,7 +271,6 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   bool isNoteSelected( int, int ) const;
   virtual void keyPressEvent( QKeyEvent* );
   virtual void keyReleaseEvent( QKeyEvent* );
-  Note makeNoteFromScale( noteValue ) const;
   virtual void mouseMoveEvent( QMouseEvent* );
   virtual void mouseReleaseEvent( QMouseEvent* );
   void moveGraceNoteBackward( int, int );
@@ -233,13 +285,15 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void moveStrokeForward( int, int );
   QString noteToString( Note ) const;
   virtual void paintEvent(QPaintEvent*);
+  void resetComposition(Composition*);
   void resizeLineEditToContent(QLineEdit*);
   void resizeSpinBoxToContent(QSpinBox*);
   void setAllBarsAsDirty(bool);
   void setBarAsDirty( int, bool );
-  void setBarAsDirty( std::vector<int>, bool );
+  void setBarsAsDirty( std::vector<int>, bool );
   void setCurrentBar(int);
   void setCurrentNote(int);
+  void setCursorPosition( NoteLocator );
   void setNumberOfPage(int);
   std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > ) const;
   void splitInWords(int); //makeNoteRect
@@ -267,7 +321,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   QSpinBox* mpParenthesisEdit;
   
   //--- data
-  bool mIsDebugging;
+  debugMode mDebugMode;
   QRect mTitleScreenLayout;
   QPageSize::PageSizeId mPageSizeId;
   QPageLayout::Orientation mLayoutOrientation;
@@ -310,6 +364,8 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   bool mHasLogTiming;
   static Bar mDummyBar;
   script mScript;
+  utils::CommandStack mUndoRedoStack;
+  bool mHasModifications;
 };
 
   
