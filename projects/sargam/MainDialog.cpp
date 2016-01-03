@@ -897,7 +897,8 @@ void MainDialog::updateActions()
 //-----------------------------------------------------------------------------
 void MainDialog::updateUi()
 {
-  setWindowTitle( mComposition.getTitle() );
+  //lasterix est pour notifier lusager que le document est modifié sous windows.
+  setWindowTitle( mComposition.getTitle()+"[*]" );
   setWindowModified(mpPartitionViewer->hasModifications());
   
   mpToolBar->setVisible( isToolBarVisible() );
