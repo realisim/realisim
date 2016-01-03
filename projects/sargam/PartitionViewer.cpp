@@ -370,10 +370,10 @@ void PartitionViewer::createUi()
           this, SLOT( resizeEditToContent() ) );
   
   //shortcut pour edition
-  QShortcut *pUndo = new QShortcut(QKeySequence(tr("Ctrl+Z", "undo")), this);
+  QShortcut *pUndo = new QShortcut(QKeySequence::Undo, this);
   connect(pUndo, SIGNAL(activated()), this, SLOT(undoActivated()));
   
-  QShortcut *pRedo = new QShortcut(QKeySequence(tr("Ctrl+Shift+Z", "redo")), this);
+  QShortcut *pRedo = new QShortcut(QKeySequence::Redo, this);
   connect(pRedo, SIGNAL(activated()), this, SLOT(redoActivated()));
 }
 //-----------------------------------------------------------------------------
