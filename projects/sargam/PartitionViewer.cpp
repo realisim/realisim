@@ -368,13 +368,6 @@ void PartitionViewer::createUi()
           this, SLOT( stopParentheseEdit() ) );
   connect( mpParenthesisEdit, SIGNAL( valueChanged(int)),
           this, SLOT( resizeEditToContent() ) );
-  
-  //shortcut pour edition
-  QShortcut *pUndo = new QShortcut(QKeySequence(tr("Ctrl+Z", "undo")), this);
-  connect(pUndo, SIGNAL(activated()), this, SLOT(undoActivated()));
-  
-  QShortcut *pRedo = new QShortcut(QKeySequence(tr("Ctrl+Shift+Z", "redo")), this);
-  connect(pRedo, SIGNAL(activated()), this, SLOT(redoActivated()));
 }
 //-----------------------------------------------------------------------------
 /*Ajoute une barre apres la barre courante, les notes suivant le curseur sont
