@@ -10,18 +10,19 @@
 -Support for undo/redo<br>
 -Reminder to save when quitting<br>
 -Added keys 8,9, and 0 to complete the scale when entering notes<br>
--Fixed numerous small bugs
+-Enabled navigation using mouse<br>
+-Improved update dialog<br>
+-Fixed numerous small bugs<br>
 </p>
 
 <h3>General</h3>
 <p>
-A tutorial is now available on the main page at https://sargamdev.wordpress.com/<br>
-If you enjoy the product, please donate via the paypal's button on the download page at https://sargamdev.wordpress.com/download/<br>
+If you would like to buy me a beer as a thank you, feel free to do so via the paypal's button on the download page at https://sargamdev.wordpress.com/download/<br>
+</p>
 
-  <p> 
-  Thank you very much for using Sargam, please share with your friends!<br>
-  Feel free to report bugs and idea at sargam.software@gmail.com
-  </p>
+<p> 
+Thank you very much for using Sargam, please share with your friends!<br>
+Please report bugs and ideas at sargam.software@gmail.com
 </p>
 
 </releaseNotes>
