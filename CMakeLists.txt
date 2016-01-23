@@ -120,10 +120,8 @@ MACRO(ADD_WIN_ICON RC_FILE)
   SET( SOURCES ${SOURCES} ${RC_FILE} )
 ENDMACRO(ADD_WIN_ICON)
 
-option( REALEDIT_BUILDOPTION "Build RealEdit" OFF )
-option( SPRITEEDITOR_BUILDOPTION "Build SpriteEditor" ON )
-option( REMOTEDESKTOP_BUILDOPTION "Build RemoteDesktop" OFF )
-option( SARGAM_BUILDOPTION "Build RemoteDesktop" OFF )
+option( SPRITEEDITOR_BUILDOPTION "Build SpriteEditor" OFF )
+option( SARGAM_BUILDOPTION "Build Sargam" ON )
 option( PROTOTYPES_BUILDOPTION "Build Prototypes" OFF )
 
 add_subdirectory( projects )
