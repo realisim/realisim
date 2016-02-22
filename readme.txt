@@ -2,22 +2,11 @@ Toutes les versions de QT peuvent être downloader a partir du ftp suivant:
 ftp://ftp.qt-project.org/qt/source/
 
 Pour windows:
-installer Qt 4.7.0 ( qt-win-opensource-4.7.0.vs2008.exe )
+installer Qt 5.4
 - mettre le path de qmake ( [disque]/Qt/4.7.0/bin/qmake.exe ) dans la variable QT_QMAKE_EXECUTABLE de CMake
-
-
-Qt Pour mac:
--compiler en dynamique (/usr/local/TrollTech/Qt-4.7.0/)
--compiler en static de préférence dans un répertoire different de la compile dynamique (/usr/local/TrollTech/Qt-4.7.0-static/).
-  -Pour utiliser Qt en static, il faut ajouter les lib suivantes au link (le cmakelist principale le fait quand on choisi l'option de compilation 'Qt-Static': Carbon, ApplicationServices, AppKit. 
-  -Il faut aussi ahouter les plugins de qt (qt-libjpeg, qt-libpng, qt-libsvg)
-    - Pour utiliser les plugins de qt (qt-libjpeg, qt-libpng, qt-libsvg) lorsqu'on utilise Qt en statique:
-      http://doc.trolltech.com/4.4/plugins-howto.html#static-plugins
-  (voir cmakelist du root à la révision 80 pour un exemple)
-
-les lib devraient être compiler en 64 bits
-Enssuite, l'option cmake OSX_CMAKE_ARCHITECTURES devrait être x86_64 et le CMAKE_OSX_SYSROOT: /Developer/SDKs/MacOSX10.6.sdk
-
+- mettre tous les paths nÈcessaires de Qt pour cmake (QT5Core_Dir et les autres...)
+	- sur mac qt_install_dir/Qt5.4.0/5.4/clang_64/lib/cmake/Qt5Core
+	- sur windows ???
 
 Notes:
 Pour connaitre le nombre de download des releases sur github
