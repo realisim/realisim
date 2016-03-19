@@ -27,6 +27,7 @@ namespace utils
   {
   public:
     Statistics();
+    Statistics(const Statistics&);
     virtual ~Statistics();
     
     void add(double);
@@ -42,7 +43,6 @@ namespace utils
     void keepSamples(bool iK) {mKeepSamples = iK;}
     
   protected:
-    Statistics(const Statistics&);
     Statistics& operator=(const Statistics&);
     
     void clear();

@@ -1,5 +1,6 @@
 
 #include "utils/Statistics.h"
+#include "utils/Timer.h"
 #include "math/MathUtils.h"
 
 using namespace realisim;
@@ -47,9 +48,7 @@ bool test()
 
 int main(int argc, char** argv)
 {
-	
   realisim::utils::Statistics st;
-  
   for(int i = 0; i <= 200; ++i)
   {
     st.add(i);
@@ -59,5 +58,20 @@ int main(int argc, char** argv)
   
   if( test() ) { printf("success"); }
   else{ printf("failure"); }
+  
+  
+  realisim::utils::Timer t;
+  for(int i = 0; i < 1000; ++i)
+  { printf("*"); }
+  printf("\n time to print 1000 stars %.6f\n", t.getElapsed());
+  
+  t.start();
+  for(int i = 0; i < 1000; ++i)
+  { printf("*"); }
+  printf("\n time to print 1000 stars again %.6f\n", t.getElapsed());
+  
+  for(int i = 0; i < 1000; ++i)
+  { printf("*"); }
+  printf("\n time to print 1000 stars 2 times %.6f\n", t.getElapsed());
   return 0;
 }

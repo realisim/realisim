@@ -16,6 +16,16 @@ Statistics::Statistics() :
 {}
 
 //-------------------------------------------------------------------------
+Statistics::Statistics(const Statistics& iRhs) :
+mKeepSamples(iRhs.isKeepingSamples()),
+mNumberOfSamples(iRhs.getNumberOfSamples()),
+mSum(iRhs.mSum),
+mSumSquared(iRhs.mSumSquared),
+mMin(iRhs.mMin),
+mMax(iRhs.mMax)
+{}
+
+//-------------------------------------------------------------------------
 Statistics::~Statistics()
 { clear(); }
 
