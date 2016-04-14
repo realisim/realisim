@@ -2,11 +2,13 @@
 #ifndef MainDialog_hh
 #define MainDialog_hh
 
-#include <QtGui>
+#include <QMainWindow>
 #include "3d/Widget3d.h"
 
-
 class Viewer;
+class QComboBox;
+class QLabel;
+class QLineEdit;
 
 //------------------------------------------------------------------------------
 class MainDialog : public QMainWindow

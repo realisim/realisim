@@ -28,8 +28,8 @@ namespace
   int kCounter = 60;
   int kStep = 4;
 
-  float e = 2.718;
-  float sigma = 0.4;
+  float e = 2.718f;
+  float sigma = 0.4f;
   float sigmaSquare = sigma*sigma;
   float normalDistribution(float iValue)
   {

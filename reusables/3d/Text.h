@@ -2,8 +2,8 @@
 #ifndef Realisim_TreeD_Text_hh
 #define Realisim_TreeD_Text_hh
 
+#include "openGlHeaders.h"
 #include <cassert>
-#include <QtOpenGL/qgl.h>
 #include <QColor>
 #include <QFont>
 #include <QString>

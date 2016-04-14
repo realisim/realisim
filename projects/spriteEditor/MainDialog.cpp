@@ -2,6 +2,7 @@
 
 #include "3d/Utilities.h"
 #include "MainDialog.h"
+#include <cmath> //round, ceil, floor
 #include "math/MathUtils.h"
 #include <qlayout.h>
 #include <QFile.h>
@@ -36,6 +37,9 @@ namespace
     "}"
     "gl_FragColor = color;\n"
     "}";
+
+    double round(double iV)
+    { return floor( iV + 0.5 ); }
 }  
 
 Viewer::Viewer(MainDialog& m, QWidget* ipParent, const QGLWidget* ipShared /*=0*/) : 
@@ -245,8 +249,8 @@ void Viewer::handleDrag()
       	mMousePos.y() ) );  
       Sprite& s = mMain.mSpriteCatalog.getSprite( mMain.mSpriteToken );
       Texture& t = mMain.mSpriteCatalog.getTexture( mMain.mTextureToken );
-      QPoint p( round(glMousePos.x()),
-        t.height() - round(glMousePos.y()) );
+      QPoint p( round( glMousePos.x()),
+        t.height() - round( glMousePos.y()) );
       QRect r = s.getRect();
 
       switch(mSelectedId)
