@@ -2,8 +2,8 @@
 #ifndef Realisim_TreeD_Shader_hh
 #define Realisim_TreeD_Shader_hh
 
+#include "openGlHeaders.h"
 #include <QString>
-#include <QtOpenGL/qgl.h>
 #include <math/Matrix4.h>
 #include <math/Point.h>
 #include <math/Vect.h>

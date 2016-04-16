@@ -2,10 +2,10 @@
 #ifndef Realisim_TreeD_Texture_hh
 #define Realisim_TreeD_Texture_hh
 
+#include "openGlHeaders.h"
 #include <cassert>
 #include "math/Vect.h"
 #include <QImage>
-#include <QtOpenGL/qgl.h>
 #include <QString>
 #include <vector>
 

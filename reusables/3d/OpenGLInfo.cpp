@@ -1,6 +1,6 @@
 
-#include <iostream>
 #include "OpenGLInfo.h"
+#include <iostream>
 #include <sstream>
 
 using namespace realisim;

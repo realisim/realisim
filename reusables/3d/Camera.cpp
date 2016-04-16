@@ -2,8 +2,9 @@
 
 #include "Camera.h"
 #include <iostream>
-#include <QtOpenGL/qgl.h>
-#include <OpenGL/glu.h>
+//#include <QtOpenGL/qgl.h>
+
+
 #include "math/MathUtils.h"
 
 using namespace realisim;

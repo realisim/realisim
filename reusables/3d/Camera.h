@@ -2,6 +2,7 @@
 #ifndef Realisim_E3d_Camera_hh
 #define Realisim_E3d_Camera_hh
 
+#include "openGlHeaders.h"
 #include "math/Matrix4.h"
 #include "math/Point.h"
 #include "math/Vect.h"

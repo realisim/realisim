@@ -58,7 +58,7 @@ Widget3d::~Widget3d()
 //-----------------------------------------------------------------------------
 void Widget3d::beginFrame()  
 {
-	makeCurrent();
+  makeCurrent();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
   mCam.applyModelViewTransformation();
@@ -66,9 +66,9 @@ void Widget3d::beginFrame()
 //-----------------------------------------------------------------------------
 const Camera& Widget3d::getCamera() const
 {
-	const Camera* r = &mCam;
-	if( isAnimatingCamera() ){ r = &mNewCam; }
-	return *r;
+  const Camera* r = &mCam;
+  if( isAnimatingCamera() ){ r = &mNewCam; }
+  return *r;
 }
 //-----------------------------------------------------------------------------
 Widget3d::controlType Widget3d::getControlType() const
@@ -77,7 +77,16 @@ Widget3d::controlType Widget3d::getControlType() const
 void Widget3d::initializeGL()
 {
   QGLWidget::initializeGL();
-  
+ 
+#ifdef WIN32
+  GLenum err = glewInit();
+  if (GLEW_OK != err)
+  {
+      /* Problem: glewInit failed, something is seriously wrong. */
+      fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+  }
+#endif
+   
   //print openGL info
   OpenGLInfo i;
   i.print();
@@ -95,7 +104,7 @@ void Widget3d::initializeGL()
 
   // Let OpenGL clear background to Grey
   //glClearColor(125/255.0f, 125/255.0f, 125/255.0f, 0.0);
-  glClearColor(0.3, 0.3, 0.3, 0.0);
+  glClearColor(0.3f, 0.3f, 0.3f, 0.0f);
 
   glShadeModel(GL_SMOOTH);
 
@@ -128,25 +137,25 @@ bool Widget3d::isAnimatingCamera() const
 bool Widget3d::isKeyPressed( int iKey ) const
 {
   bool r = false;
-	map< int, bool >::const_iterator it = mKeys.find( iKey );
- 	if( it != mKeys.end() ) { r = it->second; }
-	return r;
+  map< int, bool >::const_iterator it = mKeys.find( iKey );
+   if( it != mKeys.end() ) { r = it->second; }
+  return r;
 }
 
 //-----------------------------------------------------------------------------
 void Widget3d::keyPressEvent(QKeyEvent* ipE)
 { 
-	if( getControlType() != ctNone && !ipE->isAutoRepeat() )
+  if( getControlType() != ctNone && !ipE->isAutoRepeat() )
   {
     mKeys[(int)ipE->key()] = true;
     if( mCameraControlTimerId == 0 )
     { mCameraControlTimerId = startTimer( 15 ); }
-  }	
+  }  
 }
 //-----------------------------------------------------------------------------
 void Widget3d::keyReleaseEvent( QKeyEvent* ipE )
 { 
-	map< int, bool >::iterator it = mKeys.find( ipE->key() );
+  map< int, bool >::iterator it = mKeys.find( ipE->key() );
   if( it != mKeys.end() )
   { mKeys.erase( it ); }
   
@@ -177,28 +186,28 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
     int deltaY = e->y() - mMousePosY;
     
     Vector3d delta = getCamera().screenToWorld( Vector2d(deltaX, deltaY), 
-    	mCam.getLook() );
+      mCam.getLook() );
     switch ( getControlType() ) 
     {
       case ctPan: mCam.translate( -delta ); break;
       case ctRotateAround:
       {
-      	//arbitrairement, la taille du viewport correspond a une rotation de 360        
-      	double radX = deltaX * 2 * PI / (double)mCam.getViewport().getWidth();
+        //arbitrairement, la taille du viewport correspond a une rotation de 360        
+        double radX = deltaX * 2 * PI / (double)mCam.getViewport().getWidth();
         double radY = deltaY * 2 * PI / (double)mCam.getViewport().getHeight();
         //rotation relative a x;
         mCam.rotate( -radX, Vector3d( 0.0, 1.0, 0.0 ), mCam.getLook() );
         //rotation relative a y
-      	mCam.rotate( -radY, mCam.cameraToWorld( Vector3d(1,0,0) ), mCam.getLook() );
+        mCam.rotate( -radY, mCam.cameraToWorld( Vector3d(1,0,0) ), mCam.getLook() );
       } break;
       case ctFree:
       {
-      	//arbitrairement, la taille du viewport correspond a une rotation de 360        
-      	double radX = deltaX * 2 * PI / (double)mCam.getViewport().getWidth();
+        //arbitrairement, la taille du viewport correspond a une rotation de 360        
+        double radX = deltaX * 2 * PI / (double)mCam.getViewport().getWidth();
         double radY = deltaY * 2 * PI / (double)mCam.getViewport().getHeight();
-				
+        
         mCam.rotate( -radX, Vector3d( 0.0, 1.0, 0.0 ), mCam.getPos() );
-      	mCam.rotate( -radY, mCam.getLat(),
+        mCam.rotate( -radY, mCam.getLat(),
         mCam.getPos() );
       }break;
       default: break;
@@ -238,7 +247,7 @@ Widget3d::paintGL()
   GLfloat position[]  = {50.0, 30.0, 5.0, 1.0};
   glLightfv(GL_LIGHT0, GL_POSITION, position);
 
-	draw();
+  draw();
 
 #ifdef NDEBUG
   if(glGetError())
@@ -260,7 +269,7 @@ Widget3d::paintGL()
 vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
   int iHeight /*= 1*/ )
 {
-	makeCurrent();
+  makeCurrent();
   GLint viewport[4]; //x, y, width, height
   glGetIntegerv(GL_VIEWPORT,viewport);
   
@@ -284,13 +293,13 @@ vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
   //on cap le coin superieur droit sur la taille du viewport.
   x2 = max(x2, viewport[0]);
   y2 = max(y2, viewport[1]);
-	x2 = min(x2, viewport[0] + viewport[2]);
+  x2 = min(x2, viewport[0] + viewport[2]);
   y2 = min(y2, viewport[1] + viewport[3]);
   
-	int absWidth = x2 - x1;
+  int absWidth = x2 - x1;
   int absHeight = y1 - y2;
   vector<unsigned int> hits;
-	GLubyte pixels[absWidth * absHeight * 4];
+  GLubyte *pixels = new GLubyte[absWidth * absHeight * 4];
 
   glPushAttrib(GL_COLOR_BUFFER_BIT | GL_POLYGON_BIT);
   //draw the scene in picking mode...
@@ -301,24 +310,25 @@ vector<unsigned int> Widget3d::pick(int iX, int iY, int iWidth /*= 1*/,
   drawSceneForPicking();
   
   glReadPixels(x1, viewport[3] - y1, absWidth, absHeight,
-		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
+    GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
   for(int i = 0; i < absHeight; ++i)
     for(int j = 0; j < absWidth; ++j)    
       if(pixels[i*absWidth*4 + j*4] != 255 || pixels[i*absWidth*4 + j*4 + 1] != 255 || pixels[i*absWidth*4 + j*4 + 2] != 255 || pixels[i*absWidth*4 + j*4 + 3] != 255)
         hits.push_back(colorToId(QColor(pixels[i*absWidth*4 + j*4],pixels[i*absWidth*4 + j*4 + 1],pixels[i*absWidth*4 + j*4 + 2],pixels[i*absWidth*4 + j*4 + 3])));
   
+  delete[] pixels;
   /*Quand la boite fait plus de 1x1, on fais une selection sur les back facing
     polygones aussi, ainsi permettant une selection qui passe au travers
     de la surface.*/
 //  if(absWidth > 1 || absHeight > 1 )
 //  {
-//  	glEnable(GL_CULL_FACE);
-//  	glCullFace(GL_FRONT);
+//    glEnable(GL_CULL_FACE);
+//    glCullFace(GL_FRONT);
 //    beginFrame();
 //    drawSceneForPicking();
 //    
 //    glReadPixels(x1, viewport[3] - y1, absWidth, absHeight,
-//  		GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
+//      GL_RGBA,GL_UNSIGNED_BYTE,(void *)pixels);
 //    for(int i = 0; i < absHeight; ++i)
 //      for(int j = 0; j < absWidth; ++j)    
 //        if(pixels[i*absWidth*4 + j*4] != 255 || pixels[i*absWidth*4 + j*4 + 1] != 255 || pixels[i*absWidth*4 + j*4 + 2] != 255 || pixels[i*absWidth*4 + j*4 + 3] != 255)
@@ -389,9 +399,9 @@ void
 Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
   int iDuration /*=1000ms*/ )
 {
-	/*On empêche de changer la camera lorsqu'on est en train
+  /*On empêche de changer la camera lorsqu'on est en train
     de faire une animation.*/
-	if(mAnimationTimerId != 0)
+  if(mAnimationTimerId != 0)
     return;
     
   mOldCam = mCam;
@@ -487,14 +497,14 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     m2 = Matrix4( toVector(mNewCam.getPos()) ) * m2;
     
     Matrix4 iterationMatrix = 
-    	math::interpolate( m1, m2, t );
+      math::interpolate( m1, m2, t );
     Vector3d interpolatedLook = toVector(mOldCam.getLook()) * (1 - t) +
       toVector(mNewCam.getLook()) * t;
     mCam.set( toPoint(iterationMatrix.getTranslationAsVector()),
-    	toPoint(interpolatedLook),
+      toPoint(interpolatedLook),
       Vector3d( iterationMatrix(1, 0), iterationMatrix(1, 1), iterationMatrix(1, 2) ) );
 
-		//--- animation de la projection    
+    //--- animation de la projection    
     Camera::Projection iProj = mNewCam.getProjection();
     Camera::Projection oldProj = mOldCam.getProjection();
     Camera::Projection newProj = mNewCam.getProjection();
@@ -508,7 +518,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
     iProj.mType = newProj.mType;
     iProj.mProportionalToWindow = newProj.mProportionalToWindow;
     mCam.setProjection( iProj );
-		mCam.applyProjectionTransformation();
+    mCam.applyProjectionTransformation();
     
     if ( animationTime >= mAnimationDuration )
     {
@@ -520,12 +530,12 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
   }
   else if( ipE->timerId() == mCameraControlTimerId && !isAnimatingCamera() )
   {
-  	switch ( getControlType() ) 
+    switch ( getControlType() ) 
     {
-    	case ctRotateAround:
+      case ctRotateAround:
       {
-      	Vector3d v; double a = 1.0 * PI / 180;
-      	if( isKeyPressed( Qt::Key_W ) )
+        Vector3d v; double a = 1.0 * PI / 180;
+        if( isKeyPressed( Qt::Key_W ) )
         { v += mCam.getLat(); a *= -1; }
         if( isKeyPressed( Qt::Key_S ) )
         { v += mCam.getLat(); }
@@ -537,8 +547,8 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
       }break;
       case ctFree:
       {
-      	Vector3d v;
-      	if( isKeyPressed( Qt::Key_W ) )
+        Vector3d v;
+        if( isKeyPressed( Qt::Key_W ) )
         { v += Vector3d( mCam.getPos(), mCam.getLook() ); }
         if( isKeyPressed( Qt::Key_S ) )
         { v += -Vector3d( mCam.getPos(), mCam.getLook() ); }
@@ -555,7 +565,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
       } break;
       default: break;
     }
-  	update();
+    update();
   }
   else
   {
@@ -568,18 +578,18 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
 {
   makeCurrent();
 
-	if( isAnimatingCamera() ) { return; }
+  if( isAnimatingCamera() ) { return; }
     
   if(getCamera().getProjection().mType == Camera::Projection::tOrthogonal)
   {
-  	Point2d mousePos( ipE->x(), ipE->y() );
+    Point2d mousePos( ipE->x(), ipE->y() );
     double zoom = 1 / 1.15;
     if(ipE->delta() < 0)
       zoom = 1.15;
     double finalZoom = getCamera().getZoom() * zoom;
     if(finalZoom >= kMaxZoom && finalZoom <= kMinZoom)
     {                  
-    	Point3d workingPlane( 0.0, 0.0, mCam.getProjection().mNear );
+      Point3d workingPlane( 0.0, 0.0, mCam.getProjection().mNear );
       Point3d preZoom = mCam.screenToWorld( mousePos, workingPlane );
       mCam.setZoom(finalZoom);
       Point3d postZoom = mCam.screenToWorld( mousePos, workingPlane );

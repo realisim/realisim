@@ -3,8 +3,8 @@
 #define Realisim_TreeD_FrameBufferObject_hh
 
 #include <cassert>
+#include "openGlHeaders.h"
 #include <QImage>
-#include <QtOpenGL/qgl.h>
 #include "Texture.h"
 #include <vector>
 

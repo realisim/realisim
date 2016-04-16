@@ -316,12 +316,14 @@ bool Shader::setUniform(const char* iName, int iSize, const double* iData)
   if(!isValid())
     return false;
   
-  float d[iSize];
+  float *d = new float[iSize];
   for(int i = 0; i < iSize; ++i)
   { d[i] = (float)iData[i]; }
-  
+    
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform1fv(loc, iSize, d);
+
+  delete[] d;
   return loc >= 0 ? true : false;
 }
 

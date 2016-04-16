@@ -1,9 +1,9 @@
 /* Particules.cpp */
 
+#include "openGlHeaders.h"
 #include "math/MathUtils.h"
 #include "limits.h"
 #include "Particules.h"
-#include <QtOpenGL/qgl.h>
 
 using namespace realisim;
   using namespace math;

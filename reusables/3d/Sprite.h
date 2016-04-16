@@ -5,7 +5,6 @@
 
 namespace realisim{namespace treeD{class Camera;}}
 #include <QImage>
-#include <OpenGL/OpenGL.h>
 #include <QRect>
 #include <QString>
 #include <QTime>
