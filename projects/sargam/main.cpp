@@ -19,7 +19,6 @@ int startMainApp()
 int main(int argc, char** argv)
 {
   QApplication app(argc, argv);
-  app.setStyle(new CustomProxyStyle());
   MainDialog m;
   m.show();
 

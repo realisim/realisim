@@ -16,15 +16,15 @@
 
 namespace realisim { namespace sargam { class PartitionViewer; } }
 
-class CustomProxyStyle : public QProxyStyle
-{
-public:
-  CustomProxyStyle() : QProxyStyle() {}
-  
-  virtual void drawPrimitive(PrimitiveElement,
-    const QStyleOption*, QPainter*, const QWidget* = 0) const;
-protected:
-};
+//class CustomProxyStyle : public QProxyStyle
+//{
+//public:
+//  CustomProxyStyle() : QProxyStyle() {}
+//  
+//  virtual void drawPrimitive(PrimitiveElement,
+//    const QStyleOption*, QPainter*, const QWidget* = 0) const;
+//protected:
+//};
 
 //------------------------------------------------------------------------------
 class MainDialog : public QMainWindow

@@ -45,13 +45,6 @@ realisim::sargam::Composition PartitionViewer::mDummyComposition;
 PartitionViewer::Bar PartitionViewer::mDummyBar;
 
 //-----------------------------------------------------------------------------
-// --- ThinLineEdit
-//-----------------------------------------------------------------------------
-ThinLineEdit::ThinLineEdit( QWidget* ipParent ) :
-  QLineEdit(ipParent)
-{ setAttribute(Qt::WA_MacShowFocusRect, 0); }
-
-//-----------------------------------------------------------------------------
 // --- partition viewer
 //-----------------------------------------------------------------------------
 PartitionViewer::PartitionViewer( QWidget* ipParent ) :
@@ -336,14 +329,16 @@ void PartitionViewer::createUi()
      méthode keyPressEvent de la classe PartitionViewer. */
   mpTitleEdit = new ThinLineEdit( this->parentWidget() );
   mpTitleEdit->setFont( mTitleFont );
-  mpTitleEdit->hide();
-  connect( mpTitleEdit, SIGNAL( editingFinished() ),
-          this, SLOT( stopTitleEdit() ) );
-  connect( mpTitleEdit, SIGNAL( textChanged(const QString&)),
-          this, SLOT( resizeEditToContent() ) );
+  //mpTitleEdit->hide();
+//   connect( mpTitleEdit, SIGNAL( editingFinished() ),
+//           this, SLOT( stopTitleEdit() ) );
+//   connect( mpTitleEdit, SIGNAL( textChanged(const QString&)),
+//           this, SLOT( resizeEditToContent() ) );
+  connect( mpTitleEdit, SIGNAL( textChanged() ),
+        this, SLOT( titleChanged() ) );
   
   //line edit pour titre des lignes
-  mpLineTextEdit = new ThinLineEdit( this->parentWidget() );
+  mpLineTextEdit = new QLineEdit( this->parentWidget() );
   mpLineTextEdit->setFont( mLineFont );
   mpLineTextEdit->hide();
   connect( mpLineTextEdit, SIGNAL( editingFinished() ),
@@ -352,7 +347,7 @@ void PartitionViewer::createUi()
           this, SLOT( resizeEditToContent() ) );
   
   //ligne pour le texte des barres
-  mpBarTextEdit = new ThinLineEdit( this->parentWidget() );
+  mpBarTextEdit = new QLineEdit( this->parentWidget() );
   mpBarTextEdit->setFont( mBarTextFont );
   mpBarTextEdit->hide();
   connect( mpBarTextEdit, SIGNAL( editingFinished() ),
@@ -1311,16 +1306,13 @@ void PartitionViewer::drawDescriptionBars( QPainter* iP ) const
 //-----------------------------------------------------------------------------
 void PartitionViewer::drawTitle( QPainter* iP ) const
 {
-  iP->save();
-  
-  if( !hasTitleEditionPending() )
-  {
-    iP->setFont( mTitleFont );
-    iP->setPen( Qt::black );
-    iP->drawText( mTitleScreenLayout.bottomLeft(), x->getTitle() );
-  }
-  
-  iP->restore();
+  mpTitleEdit->draw(iP);
+  //if( !hasTitleEditionPending() )
+  //{
+  //  iP->setFont( mTitleFont );
+  //  iP->setPen( Qt::black );
+  //  iP->drawText( mTitleScreenLayout.bottomLeft(), x->getTitle() );
+  //}
 }
 //-----------------------------------------------------------------------------
 /*Efface la barre iBar des donnees et des donnees d'affichage. Si la barre 
@@ -2101,8 +2093,8 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   QPoint pos = ipE->pos();
   
   //intersection avec le titre
-  if( mTitleScreenLayout.contains( pos ) )
-  { startTitleEdit(); }
+  /*if( mTitleScreenLayout.contains( pos ) )
+  { startTitleEdit(); }*/
   
   //intersection avec le text de la barre courante
   const Bar& currentB = getBar( getCurrentBar() );
@@ -2694,6 +2686,7 @@ void PartitionViewer::resizeEditToContent()
   updateUi();
 }
 //-----------------------------------------------------------------------------
+// !!!! a enlever...
 void PartitionViewer::resizeLineEditToContent(QLineEdit* ipLe)
 {
   QFontMetrics fm( ipLe->font() );
@@ -2997,15 +2990,15 @@ void PartitionViewer::startParentheseEdit(int iIndex)
   updateUi();
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::startTitleEdit()
+/*void PartitionViewer::startTitleEdit()
 {
   mpTitleEdit->setFocus();
   mpTitleEdit->setFont(mTitleFont);
   mpTitleEdit->setText( x->getTitle() );
-  resizeLineEditToContent(mpTitleEdit);
+  //resizeLineEditToContent(mpTitleEdit);
   mEditingTitle = true;
   updateUi();
-}
+}*/
 //-----------------------------------------------------------------------------
 void PartitionViewer::stopBarTextEdit()
 {
@@ -3045,18 +3038,18 @@ void PartitionViewer::stopParentheseEdit()
   }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::stopTitleEdit()
+/*void PartitionViewer::stopTitleEdit()
 {
   if( hasTitleEditionPending() )
   {
-    x->setTitle( mpTitleEdit->text() );
+    x->setTitle( mpTitleEdit->getText() );
     mEditingTitle = false;
     //on met la barre dirty pour forcer le updatePageLayout
     setBarAsDirty( 0, true );
     updateUi();
     setFocus();
   }
-}
+}*/
 
 //-----------------------------------------------------------------------------
 QString PartitionViewer::strokeToString( strokeType iSt ) const
@@ -3072,6 +3065,7 @@ QString PartitionViewer::strokeToString( strokeType iSt ) const
   }
   return r;
 }
+
 //-----------------------------------------------------------------------------
 void PartitionViewer::timerEvent(QTimerEvent* ipE)
 {
@@ -3095,6 +3089,16 @@ void PartitionViewer::timerEvent(QTimerEvent* ipE)
     }
   }
 }
+
+//-----------------------------------------------------------------------------
+void PartitionViewer::titleChanged()
+{
+    x->setTitle( mpTitleEdit->getText() );
+    //on met la barre dirty pour forcer le updatePageLayout
+    setBarAsDirty( 0, true );
+    updateUi();
+}
+
 //-----------------------------------------------------------------------------
 void PartitionViewer::toggleDebugMode()
 {
@@ -3533,14 +3537,16 @@ void PartitionViewer::updateUi()
   
   //placer le ui l'écran
   //titre
-  if( hasTitleEditionPending() )
+  mpTitleEdit->setText(x->getTitle());
+  mpTitleEdit->move(mTitleScreenLayout.topLeft());
+  /*if( hasTitleEditionPending() )
   {
     QPoint p = mTitleScreenLayout.topLeft() + QPoint(-1, 5);
     p = mapToParent(p);
     mpTitleEdit->move(p);
     mpTitleEdit->show();
   }
-  else{ mpTitleEdit->hide(); }
+  else{ mpTitleEdit->hide(); }*/
   
   //place le line edit pour les barres
   if( hasBarTextEditionPending() )

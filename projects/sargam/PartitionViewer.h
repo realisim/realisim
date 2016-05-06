@@ -8,6 +8,7 @@
 #include <QPrinter>
 #include <QtWidgets>
 #include <QSettings>
+#include "ThinLineEdit.h"
 #include "utils/Command.h"
 #include "utils/CommandStack.h"
 #include "utils/Log.h"
@@ -17,9 +18,6 @@ namespace realisim
 {
 namespace sargam
 {
-  
-class ThinLineEdit : public QLineEdit
-{ public: ThinLineEdit( QWidget* = 0 ); };
   
 //------------------------------------------------------------------------------
 /*
@@ -95,7 +93,8 @@ protected slots:
   void stopBarTextEdit();
   void stopLineTextEdit();
   void stopParentheseEdit();
-  void stopTitleEdit();
+  //void stopTitleEdit();
+  void titleChanged();
   
 protected:
   friend class PartitionViewerCommand;
@@ -300,7 +299,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void startBarTextEdit( int );
   void startParentheseEdit( int );
   void startLineTextEdit( int );
-  void startTitleEdit();
+  //void startTitleEdit();
   QString strokeToString( strokeType ) const;
   virtual void timerEvent(QTimerEvent*);
   int toPageIndex( QPoint ) const;
@@ -316,8 +315,8 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   
   //--- ui
   ThinLineEdit* mpTitleEdit;
-  ThinLineEdit* mpLineTextEdit;
-  ThinLineEdit* mpBarTextEdit;
+  QLineEdit* mpLineTextEdit;
+  QLineEdit* mpBarTextEdit;
   QSpinBox* mpParenthesisEdit;
   
   //--- data
