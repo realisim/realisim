@@ -145,7 +145,7 @@ protected:
      mScreenLayout: mRect, mais en coordonnées écran.
      mNoteScreenLayouts: comme mScreenLayout mais pour les notes.
      mTextScreenLayout: le rect qui contient le texte de la barre. En 
-        coordonnées barre.
+        coordonnées écran.
      mBartype: type de barre.
      mIsDirty:
      mIsWayTooLong:
@@ -353,8 +353,6 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   bool mEditingTitle;
   int mAddLineTextHover;
   int mBarHoverIndex;
-  int mBarHoverTimerId;
-  QTime mBarHoverTimer;
   int mBarTextHover;
   static Composition mDummyComposition;
   Composition* x; //jamais null...

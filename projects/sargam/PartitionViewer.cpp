@@ -71,8 +71,6 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mEditingTitle( false ),
   mAddLineTextHover( -1 ),
   mBarHoverIndex( kNoBarIndex ),
-  mBarHoverTimerId(0),
-  mBarHoverTimer(),
   mBarTextHover( -1 ),
   x( &mDummyComposition ),
   mDefaultLog(),
@@ -923,17 +921,6 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice, QRect iPaintRegion ) con
   drawCursor( &p );
   drawSelectedNotes( &p );
   
-  //on dessine le contour de la barre survolee en gris si elle nest pas courante
-  //sinon en bleu. La contour fade au bout de kBarFadeDuration.
-  if( mBarHoverTimerId != 0)
-  {
-    QColor c = mBarHoverIndex == getCurrentBar() ? getColor( cSelection ) :
-      getColor( cHover );
-    c.setAlpha( 255 - 255 *
-               min( mBarHoverTimer.elapsed()/(double)kBarFadeDuration, 1.0) );
-    drawBarContour( &p, mBarHoverIndex, c );
-  }
-  
   //on dessine le contour de la barre courante
   if( mCurrentBarTimerId != 0 )
   {
@@ -1025,7 +1012,8 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
         float x = b.getNoteRect(j).left() + b.getNoteRect(j).width() / 2.0;
         iP->save();
         QPen pen = iP->pen();
-        pen.setWidth( 2 );
+        pen.setWidth( 3 );
+        pen.setCapStyle(Qt::RoundCap);
         iP->setPen(pen);
         iP->drawPoint( QPointF(x,y) );
         iP->restore();
@@ -2042,12 +2030,7 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
     const Bar& b = getBar(i);
     if( b.mScreenLayout.contains( pos ) )
     {
-      shouldUpdate |= mBarHoverIndex != i;
       mBarHoverIndex = i;
-      
-      if(mBarHoverTimerId != 0){ killTimer(mBarHoverTimerId); }
-      mBarHoverTimerId = startTimer(60);
-      mBarHoverTimer.start();
       
       //intersection avec les mots de la barre
       for(int j = 0; j < (int)b.mWordScreenLayouts.size(); ++j )
@@ -2059,7 +2042,7 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
     else if ( mBarHoverIndex == i )
     {
       mBarHoverIndex = kNoBarIndex;
-      shouldUpdate |= true; }
+    }
   }
   
   //intersection avec le texte des lignes
@@ -3082,16 +3065,6 @@ void PartitionViewer::timerEvent(QTimerEvent* ipE)
     {
       killTimer(mCurrentBarTimerId);
       mCurrentBarTimerId = 0;
-    }
-  }
-  
-  if( ipE->timerId() == mBarHoverTimerId )
-  {
-    updateUi();
-    if( mBarHoverTimer.elapsed() > kBarFadeDuration )
-    {
-      killTimer(mBarHoverTimerId);
-      mBarHoverTimerId = 0;
     }
   }
 }
