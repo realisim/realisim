@@ -36,6 +36,7 @@ void CustomProxyStyle::drawPrimitive(PrimitiveElement pe,
         ipP->setRenderHints( ipP->renderHints() | QPainter::Antialiasing );
         QPen p(QColor( 0, 10, 210, 120 ));
         ipP->setPen(p);
+        ipP->setBrush(Qt::white);
         QRect r = tle->rect();
         r.adjust(1,1,-1,-1);
         ipP->drawRoundRect(r, 2, 2);
@@ -524,10 +525,6 @@ void MainDialog::newFile()
     mSaveFilePath = QString();
     
     mComposition = Composition();
-  //!!! les 3 lignes suivantes devraient etre dans le constructeur de Composition
-    mComposition.setTitle( "Untitled" );
-    mComposition.addBar();
-    mComposition.addLine(0);
     mpPartitionViewer->setComposition( &mComposition );
     
     if( isVerbose() )

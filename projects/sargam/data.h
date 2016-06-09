@@ -17,7 +17,6 @@ enum noteValue{ nvSa = 1, nvRe, nvGa, nvMa, nvPa, nvDha, nvNi, nvComma, nvChik,
 enum ornementType{ otMeend, otKrintan, otAndolan, otGamak };
 enum noteModification{ nmKomal, nmShuddh, nmTivra };
 enum strokeType{ stDa, stRa, stDiri, stNone };
-enum descriptionBar{ dbScale = -2 , dbTarabTuning = -1, dbStartOfDescriptionBar = -2};
 enum script{ sLatin = 0, sDevanagari, sNumberOfScript };
   
 //------------------------------------------------------------------------------
@@ -75,6 +74,8 @@ protected:
  Notes:
    On suppose que les notes ne seront pas dans plus de 1 matras/ornement/stroke
    simultanément.
+ 
+ Explication sur les barres et barres de description
  */
 class Composition
 {
@@ -83,6 +84,7 @@ public:
 
   void addBar();
   void addBar( int );
+void addDescriptionBar(QString);
   void addLine( int, QString = QString() );
   void addMatra( int, std::vector<int> );
   void addNote( int, Note );
@@ -94,6 +96,7 @@ public:
   void addGraceNote( int, int );
   void clear();
   void eraseBar( int );
+bool eraseDescriptionBar( int );
   void eraseLine( int );
   void eraseGraceNote( int, int );
   void eraseMatra( int, int );
@@ -111,6 +114,7 @@ public:
   QString getBarText( int ) const;
   std::vector<int> getBarsInvolvedByOrnement( int ) const;
   std::vector<int> getBarsInvolvedByParenthesis( int ) const;
+QString getLabelFromDescriptionBar( int ) const;
   int getLineFirstBar( int ) const;
   QString getLineText( int ) const;
   Note getNote( int, int ) const;
@@ -120,6 +124,7 @@ public:
   NoteLocator getNoteLocatorFromOrnement( int iO, int i ) const;
   NoteLocator getNoteLocatorFromParenthesis( int iO, int i ) const;
   int getNumberOfBars() const;
+int getNumberOfDescriptionBars() const;
   int getNumberOfLines() const;
   int getNumberOfGraceNotesInBar( int ) const;
   int getNumberOfMatraInBar( int ) const;
@@ -133,9 +138,8 @@ public:
   int getNumberOfRepetitionsForParenthesis( int ) const;
   int getNumberOfStrokesInBar( int ) const;
   ornementType getOrnementType( int ) const;
-  std::vector<Note> getScale() const;
+std::vector<Note> getScale() const;  //a effacer?
   strokeType getStrokeType( int iBar, int i ) const;
-  std::vector<Note> getTarabTuning() const;
   QString getTitle() const;
   bool hasError() const;
   bool hasBarText( int ) const;
@@ -148,11 +152,10 @@ public:
   bool ornementAppliesToBar( int, int ) const;
   bool parenthesisAppliesToBar( int, int ) const;
   void setBarText( int, QString );
+void setLabelForDescriptionBar( int, QString );
   void setLineText( int, QString );
   void setNote( int, int, Note );
   void setNumberOfRepetitionForParenthesis(int, int);
-  void setScale( std::vector<Note> );
-  void setTarabTuning( std::vector<Note> );
   void setTitle( QString );
   QByteArray toBinary() const;
   
@@ -220,9 +223,8 @@ protected:
   static Bar mDummyBar;
   static Note mDummyNote;
   QString mTitle;
-  Bar mScale;
-  Bar mTarabTuning;
   std::vector<Bar> mBars;
+  std::vector< QString > mDescriptionBarLabels;
   std::vector<Line> mLines;
   std::vector<Ornement> mOrnements;
   std::vector< Parenthesis > mParenthesis;

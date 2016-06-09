@@ -34,11 +34,43 @@ namespace
   const int kGamakHeight = 4;
   const int kOrnementHeight = 10;
   const int kMatraHeight = 10;
-  const int kNoBarIndex = -5;
+  const int kNoBarIndex = -1;
   const double kUnderineRatioLength = 0.8;
   
-  const QString kSargamScaleLabel("Scale: ");
-  const QString kTarabTuningLabel("Tarab tuning: ");
+
+  const QString kPushButtonStyle =
+  "QWidget#partitionViewer"
+  "{"
+  "  background-color: white;"
+  "}"
+  ""
+  "QPushButton#partitionViewer"
+  "{"
+  "  border-style: solid;"
+  "  border-width: 1px;"
+  "  border-color: lightgrey;"
+  "  border-radius: 3px;"
+  "  color: lightgrey;"
+  "}"
+  ""
+  "QPushButton#partitionViewer:hover"
+  "{"
+  "  border-style: solid;"
+  "  border-width: 1px;"
+  "  border-color: black;"
+  "  border-radius: 3px;"
+  "  color: black;"
+  "}"
+  ""
+  "QPushButton#partitionViewer:pressed"
+  "{"
+  "  border-style: solid;"
+  "  border-width: 1px;"
+  "  border-color: black;"
+  "  background-color: lightgrey;"
+  "  border-radius: 3px;"
+  "  color: black;"
+  "}";
 }
 
 realisim::sargam::Composition PartitionViewer::mDummyComposition;
@@ -66,12 +98,14 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mCurrentBarTimerId(0),
   mCurrentNote( -1 ),
   mEditingBarText( -1 ),
+  mEditingDescriptionBarLabel(-1),
   mEditingLineIndex( -1 ),
   mEditingParentheseIndex( -1 ),
   mEditingTitle( false ),
   mAddLineTextHover( -1 ),
   mBarHoverIndex( kNoBarIndex ),
   mBarTextHover( -1 ),
+  mDescriptionBarLabelHoverIndex(kNoBarIndex),
   x( &mDummyComposition ),
   mDefaultLog(),
   mpLog( &mDefaultLog ),
@@ -83,17 +117,14 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   setFocusPolicy( Qt::StrongFocus );
   srand( time(NULL) );
   
+  //pour que le style du QWidget s'applique
+  setObjectName("PartitionViewer");
+  
+  setStyleSheet(kPushButtonStyle);
+  
   QString fontFamily( "Arial" );
 
-  /*Mac et windows ne font pas le rendu des police de la meme facon...
-  pour faire une histoire courte; Sous mac, le dpi est de 72 et sous windows de
-  96. Donc une police de 12 points aurait 12/72 de pouce (donc 1/6 de pouce) de
-  haut et à l'écran aurait 12 pixels sous mac et 16 pixels sous windows. C'est
-  pourquoi on change les tailles de polices...
-
-  details: http://www.rfwilmut.clara.net/about/fonts.html
-  */
-
+  //definition des tailles de polices
   float titleSize = 24;
   float barFontSize = 14;
   float barTextSize = 10;
@@ -122,8 +153,8 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
     QSize(8, QFontMetrics(mBarFont).height() * 1.8) );
 
   //les barres speciales de description sont initialisées ici
-  mScale.mBarType = Bar::btDescription;
-  mTarabTuning.mBarType = Bar::btDescription;
+//  mScale.mBarType = Bar::btDescription;
+//  mTarabTuning.mBarType = Bar::btDescription;
   
   //initialisation du Ui et premiere mise à jour.
   createUi();
@@ -140,13 +171,18 @@ PartitionViewer::~PartitionViewer()
 /*Ajoute une barre a la suite de la barre iBarIndex*/
 void PartitionViewer::addBar( int iBarIndex )
 {
-  x->addBar( iBarIndex );
-  
   //on ajoute une barre pour les donnees d'affichage.
   vector<Bar>::iterator it = mBars.begin() + iBarIndex + 1;
   if( it < mBars.end() )
   { mBars.insert(it, Bar()); }
   else{ mBars.push_back( Bar() ); }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::addDescriptionBarClicked()
+{
+  CommandAddDescriptionBar* c = new CommandAddDescriptionBar(this);
+  c->execute();
+  mUndoRedoStack.add(c);
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::addNoteToSelection( int iBar, int iNote )
@@ -177,8 +213,8 @@ void PartitionViewer::clear()
   mCurrentNote = -1;
   mSelectedNotes.clear();
   mParenthesis.clear();
-  setBarAsDirty(dbScale, true);
-  setBarAsDirty(dbTarabTuning, true);
+//  setBarAsDirty(dbScale, true);
+//  setBarAsDirty(dbTarabTuning, true);
   
   if( isVerbose() )
   { getLog().log( "PartitionViewer: clear." ); }
@@ -358,6 +394,15 @@ void PartitionViewer::createUi()
   connect( mpBarTextEdit, SIGNAL( textChanged(const QString&)),
           this, SLOT( resizeEditToContent() ) );
   
+  //line edit pour les label de barres de description
+  mpDescriptionBarLabelEdit = new ThinLineEdit( this->parentWidget() );
+  mpDescriptionBarLabelEdit->setFont( mBarFont );
+  mpDescriptionBarLabelEdit->hide();
+  connect( mpDescriptionBarLabelEdit, SIGNAL( editingFinished() ),
+          this, SLOT( stopDescriptionBarLabelEdit() ) );
+  connect( mpDescriptionBarLabelEdit, SIGNAL( textChanged(const QString&)),
+          this, SLOT( resizeEditToContent() ) );
+  
   //spin box pour le nombre de répétitions des parentheses
   mpParenthesisEdit = new QSpinBox( this->parentWidget() );
   mpParenthesisEdit->setAttribute(Qt::WA_MacShowFocusRect, 0);
@@ -366,6 +411,33 @@ void PartitionViewer::createUi()
           this, SLOT( stopParentheseEdit() ) );
   connect( mpParenthesisEdit, SIGNAL( valueChanged(int)),
           this, SLOT( resizeEditToContent() ) );
+  
+  //add remove description bar
+  mpAddRemoveDescriptionBar = new QWidget(this);
+  mpAddRemoveDescriptionBar->setObjectName("partitionViewer");
+  QHBoxLayout* pLyt = new QHBoxLayout(mpAddRemoveDescriptionBar);
+  {
+    pLyt->setMargin(5);
+    pLyt->setSpacing(2);
+
+    //button to add description bar
+    QPushButton* pAdd = new QPushButton( this );
+    connect(pAdd, SIGNAL(clicked()), this, SLOT(addDescriptionBarClicked()));
+    pAdd->setObjectName("partitionViewer");
+    pAdd->setFont(mLineFont);
+    pAdd->setText("Add");
+    
+    //button to remove description bar
+    QPushButton* pRemove = new QPushButton( this );
+    connect(pRemove, SIGNAL(clicked()), this, SLOT(removeDescriptionBarClicked()));
+    pRemove->setObjectName("partitionViewer");
+    pRemove->setFont(mLineFont);
+    pRemove->setText("Remove");
+
+    pLyt->addWidget(pAdd);
+    pLyt->addWidget(pRemove);
+    pLyt->addStretch(1);
+  }
 }
 //-----------------------------------------------------------------------------
 /*Ajoute une barre apres la barre courante, les notes suivant le curseur sont
@@ -373,10 +445,11 @@ void PartitionViewer::createUi()
 void PartitionViewer::doCommandAddBar()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   // ajout de la barre
   int cb = getCurrentBar();
+  x->addBar( cb );
   addBar( cb );
   clearSelection();
   
@@ -415,12 +488,27 @@ void PartitionViewer::doCommandAddBar()
   { getLog().log( "PartitionViewer: doCommandAddBar." ); }
 }
 //-----------------------------------------------------------------------------
+/**/
+void PartitionViewer::doCommandAddDescriptionBar()
+{
+  x->addDescriptionBar("Description");
+  const int iIndex = x->getNumberOfDescriptionBars() - 1;
+  
+  x->addNote(iIndex, Note(nvSa));
+  x->addNote(iIndex, Note(nvRe));
+  x->addNote(iIndex, Note(nvGa));
+  
+  addBar(iIndex);
+  setBarAsDirty(iIndex, true);
+  updateUi();
+}
+//-----------------------------------------------------------------------------
 /*Les notes de la selection deviennent des graces notes si elle ne le sont
  pas déjà.*/
 void PartitionViewer::doCommandAddGraceNotes()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   if( hasSelection() )
   {
@@ -442,7 +530,7 @@ void PartitionViewer::doCommandAddGraceNotes()
 void PartitionViewer::doCommandAddLine()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   doCommandAddBar();
   x->addLine( getCurrentBar() );
@@ -458,7 +546,7 @@ void PartitionViewer::doCommandAddLine()
 void PartitionViewer::doCommandAddMatra()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   if( hasSelection() )
   {
@@ -510,7 +598,7 @@ void PartitionViewer::doCommandAddNote( Note iN )
 void PartitionViewer::doCommandAddOrnement( ornementType iOt )
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   if( hasSelection() )
   {
@@ -540,7 +628,7 @@ void PartitionViewer::doCommandAddOrnement( ornementType iOt )
 void PartitionViewer::doCommandAddParenthesis( int iNumber )
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   if( hasSelection() )
   {
@@ -574,7 +662,7 @@ void PartitionViewer::doCommandAddParenthesis( int iNumber )
 void PartitionViewer::doCommandAddStroke( strokeType iSt )
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   vector< pair<int, int> > v;
   if( hasSelection() )
@@ -618,7 +706,7 @@ void PartitionViewer::doCommandAddStroke( strokeType iSt )
 void PartitionViewer::doCommandBreakMatrasFromSelection()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   for( int i = 0; i < mSelectedNotes.size(); ++i )
   {
@@ -641,7 +729,7 @@ void PartitionViewer::doCommandBreakMatrasFromSelection()
 void PartitionViewer::doCommandBreakOrnementsFromSelection()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   for( int i = 0; i < mSelectedNotes.size(); ++i )
   {
@@ -763,10 +851,27 @@ void PartitionViewer::doCommandIncreaseOctave()
   { getLog().log( "PartitionViewer: doCommandIncreaseOctave." ); }
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::doCommandRemoveDescriptionBar()
+{
+  const int index = x->getNumberOfDescriptionBars() - 1;
+  
+  if( x->eraseDescriptionBar( index ) )
+  {
+    //efface des données d'affichage
+    if( index >= 0 && index < x->getNumberOfBars() )
+    {
+      mBars.erase( mBars.begin() + index );
+      if( x->getNumberOfBars() > 0 ){ setBarAsDirty(0, true); }
+    }
+  }
+  
+  updateUi();
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::doCommandRemoveParenthesis()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   /*On commence par chercher si il y a deja une parenthese associée aux
    note de la parenthese qu'on est en train d'ajouter. Si oui, on enleve la
@@ -789,7 +894,7 @@ void PartitionViewer::doCommandRemoveParenthesis()
 void PartitionViewer::doCommandRemoveSelectionFromGraceNotes()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   for( int i = 0; i < mSelectedNotes.size(); ++i )
   {
@@ -811,7 +916,7 @@ void PartitionViewer::doCommandRemoveSelectionFromGraceNotes()
 void PartitionViewer::doCommandRemoveStroke()
 {
   /*Cette commande ne peut pas etre executée sur les barres speciales*/
-  if( getCurrentBar() < 0 ){ return; }
+  if( getCurrentBar() < x->getNumberOfDescriptionBars() ){ return; }
   
   vector< pair<int, int> > l;
   if( hasSelection() )
@@ -898,12 +1003,7 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice, QRect iPaintRegion ) con
         //--- titre
         drawTitle( &p );
         
-        //--- rendu des textes pour barres speciales (sargam scale, tarab tuning...)
-        p.setPen( Qt::black );
-        p.setFont( mBarFont );
-        p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, kSargamScaleLabel );
-        p.drawText( getRegion( rTarabTuningLabel ), Qt::AlignCenter, kTarabTuningLabel );
-        
+        //--- rendu des textes pour barres de description
         drawDescriptionBars( &p );
       }
       
@@ -1170,7 +1270,7 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
 //-----------------------------------------------------------------------------
 void PartitionViewer::drawBarContour( QPainter* iP, int iBarIndex, QColor iCol ) const
 {
-  if( iBarIndex >= dbScale && hasFocus() )
+  if( iBarIndex >= 0 && hasFocus() )
   {
     QPen pen = iP->pen();
     iP->save();
@@ -1293,8 +1393,18 @@ void PartitionViewer::drawSelectedNotes( QPainter* iP ) const
 //-----------------------------------------------------------------------------
 void PartitionViewer::drawDescriptionBars( QPainter* iP ) const
 {
-  drawBar( iP, dbScale );
-  drawBar( iP, dbTarabTuning );
+  iP->save();
+  iP->setFont( mBarFont );
+  for(int i = 0; i < x->getNumberOfDescriptionBars(); ++i)
+  {
+    //draw description bar label
+    if( mEditingDescriptionBarLabel != i )
+    {
+      iP->drawText( getRegion( dbrLabel, i ), Qt::AlignCenter, x->getLabelFromDescriptionBar(i) );
+    }
+    drawBar(iP, i);
+  }
+  iP->restore();
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::drawTitle( QPainter* iP ) const
@@ -1358,25 +1468,25 @@ void PartitionViewer::eraseOrnement( int iIndex )
 //-----------------------------------------------------------------------------
 void PartitionViewer::generateRandomPartition()
 {
-  clear();
-  const int kNumBars = 52;
-  for( int i = 0; i < kNumBars; ++i )
-  {
-    addBar( x->getNumberOfBars() );
-    double norm = rand() / (double)RAND_MAX;
-    int numNotes = 4 + norm * 16;
-    for( int j = 0; j < numNotes; ++j )
-    {
-      norm = rand() / (double)RAND_MAX;
-      int note = 1 + norm * 6; //entre 1 et 7
-      int octave;
-      if( norm < 0.33 ) octave = -1;
-      else if( 0.33 <= norm && norm < 0.66 ) octave = 0;
-      else octave = 1;
-      x->addNote( i, Note( (noteValue)note, octave ) );
-    }
-  }
-  updateUi();
+//  clear();
+//  const int kNumBars = 52;
+//  for( int i = 0; i < kNumBars; ++i )
+//  {
+//    addBar( x->getNumberOfBars() );
+//    double norm = rand() / (double)RAND_MAX;
+//    int numNotes = 4 + norm * 16;
+//    for( int j = 0; j < numNotes; ++j )
+//    {
+//      norm = rand() / (double)RAND_MAX;
+//      int note = 1 + norm * 6; //entre 1 et 7
+//      int octave;
+//      if( norm < 0.33 ) octave = -1;
+//      else if( 0.33 <= norm && norm < 0.66 ) octave = 0;
+//      else octave = 1;
+//      x->addNote( i, Note( (noteValue)note, octave ) );
+//    }
+//  }
+//  updateUi();
 }
 //-----------------------------------------------------------------------------
 PartitionViewer::Bar& PartitionViewer::getBar( int iBar )
@@ -1389,15 +1499,8 @@ const PartitionViewer::Bar& PartitionViewer::getBar( int iBar ) const
 {
   const Bar* r = &mDummyBar;
 
-  if( iBar >= dbScale && iBar < (int)mBars.size() )
-  {
-     switch( iBar )
-     {
-       case dbScale: r = &mScale; break;
-       case dbTarabTuning: r = &mTarabTuning; break;
-       default: r = &mBars[iBar]; break;
-     }
-  }  
+  if( iBar >= 0 && iBar < (int)mBars.size() )
+  { r = &mBars[iBar]; }
   return *r;
 }
 //-----------------------------------------------------------------------------
@@ -1619,7 +1722,7 @@ QRect PartitionViewer::getPageRegion( pageRegion iR, int iPage /*=0*/ ) const
     case prBody:
     {
       int margin = cmToPixel( kPageMarginInCm );
-      int sargamScaleBottom = iPage == 0 ? getRegion(rTarabTuning).bottom() + 2*kSpacing : 0;
+      int sargamScaleBottom = iPage == 0 ? getRegion(rAddRemoveDescriptionBar).bottom() + 2*kSpacing : 0;
       int startOfBody = max( margin, sargamScaleBottom );
       int paperWidth = getPageSizeInInch().width() * logicalDpiX();
       int paperHeight = getPageSizeInInch().height() * logicalDpiY();
@@ -1686,50 +1789,55 @@ QRect PartitionViewer::getRegion( region iR ) const
       int h = QFontMetrics(mTitleFont).height();
       r.setTop( cmToPixel( kPageMarginInCm ) ); r.setWidth( w ); r.setHeight( h );
     }break;
-    case rSargamScaleLabel:
+    case rDescriptionBars:
     {
-      QFontMetrics fm( mBarFont );
       QRect t = getRegion( rTitle );
       r = t;
       r.translate( 0, t.height() + kSpacing );
       int margin = cmToPixel( kPageMarginInCm );
       r.setLeft( margin );
-      r.setHeight( getBarHeight(Bar::btDescription) );
-      r.setWidth( fm.width( kSargamScaleLabel ) );
-    } break;
-    case rSargamScale:
+      r.setHeight( x->getNumberOfDescriptionBars() * getBarHeight(Bar::btDescription) );
+    }break;
+    case rAddRemoveDescriptionBar:
     {
-      QFontMetrics fm( mBarFont );
-      QRect t = getRegion( rTitle );
-      int margin = cmToPixel( kPageMarginInCm );
-      r = t;
-      r.translate( 0, t.height() + kSpacing );
-      r.setLeft( getRegion( rSargamScaleLabel ).right() );
-      r.setRight( t.right() - margin );
-      r.setHeight( getBarHeight(Bar::btDescription) );
-    } break;
-    case rTarabTuningLabel:
-    {
-      QFontMetrics fm( mBarFont );
-      QRect t = getRegion( rSargamScaleLabel );
+      //on rajoute l'espace d'une barre de description pour faire place
+      //aux boutons
+      QRect t = getRegion( rDescriptionBars );
       r = t;
       r.translate( 0, t.height() );
       int margin = cmToPixel( kPageMarginInCm );
       r.setLeft( margin );
       r.setHeight( getBarHeight(Bar::btDescription) );
-      r.setWidth( fm.width( kTarabTuningLabel ) );
-    } break;
-    case rTarabTuning:
+    }break;
+  }
+  return r;
+}
+//-----------------------------------------------------------------------------
+QRect PartitionViewer::getRegion( descriptionBarRegion iR, int iIndex ) const
+{
+  QRect r(0, 0, 1, 1);
+  
+  switch( iR )
+  {
+    case dbrLabel:
     {
-      QFontMetrics fm( mBarFont );
-      QRect t = getRegion( rSargamScaleLabel );
-      int margin = cmToPixel( kPageMarginInCm );
-      r = t;
-      r.translate( 0, t.height() );
-      r.setLeft( getRegion( rTarabTuningLabel ).right() );
-      r.setRight( getPageSizeInInch().width() * logicalDpiX() - margin );
-      r.setHeight( getBarHeight(Bar::btDescription) );
-    } break;
+      r = getRegion( rDescriptionBars );
+      r.setTop( r.top() +
+        r.height() / x->getNumberOfDescriptionBars() * iIndex );
+      r.setHeight( getBarHeight( Bar::btDescription ) );
+      
+      QFontMetrics fm(mBarFont);
+      r.setWidth( fm.width( x->getLabelFromDescriptionBar(iIndex) ) );
+    }break;
+    case dbrBar:
+    {
+      r = getRegion( rDescriptionBars );
+      r.setTop( r.top() +
+        r.height() / x->getNumberOfDescriptionBars() * iIndex );
+      r.setHeight( getBarHeight( Bar::btDescription ) );
+
+      r.setLeft( getRegion( dbrLabel, iIndex ).right() + 5 );
+    }break;
   }
   return r;
 }
@@ -1775,6 +1883,9 @@ bool PartitionViewer::isNoteSelected(int iBar, int iNoteIndex ) const
 //-----------------------------------------------------------------------------
 bool PartitionViewer::hasBarTextEditionPending() const
 { return mEditingBarText != -1; }
+//-----------------------------------------------------------------------------
+bool PartitionViewer::hasDescriptionBarLabelEditionPending() const
+{ return mEditingDescriptionBarLabel != -1; }
 //-----------------------------------------------------------------------------
 bool PartitionViewer::hasLineEditionPending() const
 { return mEditingLineIndex != -1; }
@@ -1881,7 +1992,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
         else
         {
           mCurrentNote = std::max( --mCurrentNote, -2 );
-          if( mCurrentNote == -2 && getCurrentBar() > dbScale )
+          if( mCurrentNote == -2 && getCurrentBar() > 0 )
           {
             const int previousBar = getCurrentBar() - 1;
             NoteLocator nl( previousBar,
@@ -2003,29 +2114,34 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
   
   QPoint pos = ipE->pos();
   Qt::CursorShape cs = Qt::ArrowCursor;
-  bool shouldUpdate = false;
   
   //intersection avec le titre
   if( mTitleScreenLayout.contains( pos ) )
   { cs = Qt::IBeamCursor; }
   
+  //intersection avec les labels de barres de description
+  for(int i = 0; i < x->getNumberOfDescriptionBars(); ++i)
+  {
+    if( getRegion(dbrLabel, i ).contains(pos) )
+    {
+      mDescriptionBarLabelHoverIndex = i;
+      cs = Qt::IBeamCursor;
+    }
+    else if( mDescriptionBarLabelHoverIndex == i )
+    { mDescriptionBarLabelHoverIndex = kNoBarIndex; }
+  }
+  
   //intersection avec le text de la barre courante
   const Bar& b = getBar( getCurrentBar() );
   if( b.mTextScreenLayout.contains( pos ) )
   {
-    shouldUpdate |= mBarTextHover != getCurrentBar();
     mBarTextHover = getCurrentBar();
     if( x->hasBarText( getCurrentBar() ) )
     { cs = Qt::IBeamCursor; }
   }
-  else if( mBarTextHover != -1 )
-  {
-    mBarTextHover = -1;
-    shouldUpdate |= true;
-  }
 
   //intersection avec les barres
-  for( int i = dbScale; i < x->getNumberOfBars(); ++i )
+  for( int i = 0; i < x->getNumberOfBars(); ++i )
   {
     const Bar& b = getBar(i);
     if( b.mScreenLayout.contains( pos ) )
@@ -2050,13 +2166,11 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
   {
     if( mLines[i].mHotSpot.contains( pos ) )
     {
-      shouldUpdate |= mAddLineTextHover != i;
       mAddLineTextHover = i;
     }
     else if(mAddLineTextHover == i)
     {
       mAddLineTextHover = -1;
-      shouldUpdate |= true;
     }
       
     if( mLines[i].mTextScreenLayout.contains( pos ) )
@@ -2070,7 +2184,6 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
     { cs = Qt::IBeamCursor; }
   }
   
-  if( shouldUpdate ) {updateUi();}
   setCursor( cs );
   
   if( hasLogTiming() )
@@ -2087,6 +2200,13 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   if( mTitleScreenLayout.contains( pos ) )
   { startTitleEdit(); }
   
+  //intersection avec les labels des barres de description
+  if(mDescriptionBarLabelHoverIndex != kNoBarIndex)
+  {
+    startDescriptionBarLabelEdit( mDescriptionBarLabelHoverIndex );
+    mDescriptionBarLabelHoverIndex = -1;
+  }
+    
   //intersection avec le text de la barre courante
   const Bar& currentB = getBar( getCurrentBar() );
   if( currentB.mTextScreenLayout.contains( pos ) )
@@ -2486,22 +2606,31 @@ void PartitionViewer::paintEvent( QPaintEvent* ipE )
       if( i == 0 )
       {
         p.drawRect( getRegion( rTitle ) );
-        p.drawRect( getRegion( rSargamScaleLabel ) );
-        p.drawRect( getRegion( rSargamScale ) );
-        p.drawRect( getRegion( rTarabTuningLabel ) );
-        p.drawRect( getRegion( rTarabTuning ) );
+        p.drawRect( getRegion(rDescriptionBars) );
+        p.drawRect( getRegion(rAddRemoveDescriptionBar) );
       }
       p.drawRect( getPageRegion( prBody, i ) );
       p.drawRect( getPageRegion( prPageFooter, i ) );
     }
     
+    //lemplace du bouton add description bar
+    QPen pen = p.pen();
+    pen.setColor(Qt::black);
+    pen.setWidth(3);
+    p.setPen(pen);
+    p.drawPoint(mAddDescriptionBarButtonPos);
+    
     //on dessine le layout des bars...
-    for( int i = dbScale; i < x->getNumberOfBars(); ++i )
+    for( int i = 0; i < x->getNumberOfBars(); ++i )
     {
       p.setPen( Qt::green );
       Bar& b = getBar(i);
       //le layput page de la bar
       p.drawRect( b.mScreenLayout );
+      
+      if(i < x->getNumberOfDescriptionBars())
+      { p.drawRect( getRegion(dbrLabel, i) ); }
+      
       //layout du text
       p.drawRect( b.mTextScreenLayout );
       
@@ -2607,11 +2736,7 @@ void PartitionViewer::print( QPrinter* iPrinter )
   //--- titre
   drawTitle( &p );
   
-  //--- rendu des textes pour barres speciales (sargam scale, tarab tuning...)
-  p.setFont( mBarFont );
-  p.drawText( getRegion( rSargamScaleLabel ), Qt::AlignCenter, kSargamScaleLabel );
-  p.drawText( getRegion( rTarabTuningLabel ), Qt::AlignCenter, kTarabTuningLabel );
-  
+  //--- rendu des textes pour barres description  
   drawDescriptionBars( &p );
   
   for( int i = 0; i < getNumberOfPages(); ++i )
@@ -2646,6 +2771,13 @@ void PartitionViewer::print( QPrinter* iPrinter )
 //-----------------------------------------------------------------------------
 void PartitionViewer::redoActivated()
 { mUndoRedoStack.redo(); }
+//-----------------------------------------------------------------------------
+void PartitionViewer::removeDescriptionBarClicked()
+{
+  CommandRemoveDescriptionBar* c = new CommandRemoveDescriptionBar(this);
+  c->execute();
+  mUndoRedoStack.add(c);
+}
 //-----------------------------------------------------------------------------
 // clears all ui cache regarding composition and sets internal pointer
 // see setComposition to start with a clean slate (like opening a new
@@ -2692,7 +2824,7 @@ void PartitionViewer::resizeSpinBoxToContent(QSpinBox* ipSb)
 //-----------------------------------------------------------------------------
 void PartitionViewer::setAllBarsAsDirty( bool iD )
 {
-  for( int i = dbStartOfDescriptionBar; i < x->getNumberOfBars(); ++i )
+  for( int i = 0; i < x->getNumberOfBars(); ++i )
   { setBarAsDirty(i, iD); }
 }
 //-----------------------------------------------------------------------------
@@ -2793,10 +2925,17 @@ void PartitionViewer::setScript( script iS )
   if( mScript != iS)
   {
     mScript = iS;
-    //on invalide toutes les barres.
-    for( int i = dbScale; i < (int)mBars.size(); ++i )
-    { setBarAsDirty(i, true); }
+    setAllBarsAsDirty(true);
   }
+  updateUi();
+}
+//-----------------------------------------------------------------------------
+//cette méthode sert a garantir que tous les éléments du layout qui
+//dépendent de widgets sont correctement calculé lorsque l'application
+//apparait a l'écran la première fois.
+void PartitionViewer::showEvent(QShowEvent* ipSe)
+{
+  updateLayout();
   updateUi();
 }
 //-----------------------------------------------------------------------------
@@ -2959,6 +3098,16 @@ void PartitionViewer::startBarTextEdit( int iBar )
   updateUi();
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::startDescriptionBarLabelEdit( int iBar )
+{
+  mpDescriptionBarLabelEdit->setFocus();
+//  mpBarTextEdit->setFont(mBarFont);
+  mpDescriptionBarLabelEdit->setText( x->getLabelFromDescriptionBar(iBar) );
+  resizeLineEditToContent(mpDescriptionBarLabelEdit);
+  mEditingDescriptionBarLabel = iBar;
+  updateUi();
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::startLineTextEdit( int iLineIndex )
 {
   mpLineTextEdit->setFocus();
@@ -2997,6 +3146,18 @@ void PartitionViewer::stopBarTextEdit()
     x->setBarText( mEditingBarText, mpBarTextEdit->text() );
     setBarAsDirty( mEditingBarText, true );
     mEditingBarText = -1;
+    updateUi();
+    setFocus();
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::stopDescriptionBarLabelEdit()
+{
+  if( hasDescriptionBarLabelEditionPending() )
+  {
+    x->setLabelForDescriptionBar(mEditingDescriptionBarLabel, mpDescriptionBarLabelEdit->text() );
+    setBarAsDirty( mEditingDescriptionBarLabel, true );
+    mEditingDescriptionBarLabel = -1;
     updateUi();
     setFocus();
   }
@@ -3102,6 +3263,9 @@ void PartitionViewer::updateBar( int iBar )
   const int kMinBarWidth =  x->getNumberOfNotesInBar( iBar ) ? 0 : 40;
   
   Bar& b = getBar(iBar);
+  
+  if(iBar < x->getNumberOfDescriptionBars())
+  { b.mBarType = Bar::btDescription; }
 
   //definition des rects des mots et notes.
   splitInWords(iBar);
@@ -3154,7 +3318,7 @@ void PartitionViewer::updateBarLayout()
   mBarsPerPage.clear();
   
   mLayoutCursor = getPageRegion( prBody, 0 ).topLeft();
-  for( int i = 0; i < x->getNumberOfBars(); ++i )
+  for( int i = x->getNumberOfDescriptionBars(); i < x->getNumberOfBars(); ++i )
   {
     Bar& b = getBar(i);
     b.mScreenLayout = QRect();
@@ -3261,8 +3425,9 @@ void PartitionViewer::updateLayout()
   mTitleScreenLayout.translate( QPoint( dx, dy ) - l.topLeft() );
   
   //layout des barres spéciale (gamme, accordage tarab, etc...)
-  updateDescriptionBarLayout( dbScale );
-  updateDescriptionBarLayout( dbTarabTuning );
+  updateDescriptionBarLayout();
+//  updateDescriptionBarLayout( dbScale );
+//  updateDescriptionBarLayout( dbTarabTuning );
   
   //--- le layout des barres du sargam
   updateBarLayout();
@@ -3451,37 +3616,40 @@ void PartitionViewer::updateParenthesisLayout()
   }
 }
 //-----------------------------------------------------------------------------
-void PartitionViewer::updateDescriptionBarLayout( descriptionBar barIndex )
+void PartitionViewer::updateDescriptionBarLayout()
 {
-  Bar& b = getBar( barIndex );
-  b.mScreenLayout = QRect();
-  b.mNoteScreenLayouts.clear();
-  b.mWordScreenLayouts.clear();
-  QRect l = b.mRect;
-  QPoint topLeft;
-  switch (barIndex)
+  for( int i = 0; i < x->getNumberOfDescriptionBars(); ++i )
   {
-    case dbScale: topLeft = getRegion( rSargamScale ).topLeft(); break;
-    case dbTarabTuning: topLeft = getRegion( rTarabTuning ).topLeft(); break;
-    default: break;
+    Bar& b = getBar( i );
+    b.mScreenLayout = QRect();
+    b.mNoteScreenLayouts.clear();
+    b.mWordScreenLayouts.clear();
+    QRect l = b.mRect;
+    const QPoint topLeft = getRegion(dbrBar, i).topLeft();
+    
+    l.translate( topLeft );
+    b.mScreenLayout = l;
+    //on fait le layout des notes pour cette barre
+    for( int j = 0; j < x->getNumberOfNotesInBar(i); ++j )
+    {
+      QRectF n = b.getNoteRect(j);
+      n.translate( topLeft );
+      b.mNoteScreenLayouts.push_back(n);
+    }
+    
+    for(size_t j = 0; j < b.mWordLayouts.size(); ++j)
+    {
+      QRectF n = b.mWordLayouts[j];
+      n.translate( topLeft );
+      b.mWordScreenLayouts.push_back(n);
+    }
   }
   
-  l.translate( topLeft );
-  b.mScreenLayout = l;
-  //on fait le layout des notes pour cette barre
-  for( int j = 0; j < x->getNumberOfNotesInBar(barIndex); ++j )
-  {
-    QRectF n = b.getNoteRect(j);
-    n.translate( topLeft );
-    b.mNoteScreenLayouts.push_back(n);
-  }
+  //update the position of the add button
+  const QRect lastBar = getRegion( rAddRemoveDescriptionBar );
+  const QPoint p( lastBar.left(), lastBar.top() );
   
-  for(size_t j = 0; j < b.mWordLayouts.size(); ++j)
-  {
-    QRectF n = b.mWordLayouts[j];
-    n.translate( topLeft );
-    b.mWordScreenLayouts.push_back(n);
-  }
+  mAddDescriptionBarButtonPos = p;
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::updateUi()
@@ -3492,7 +3660,7 @@ void PartitionViewer::updateUi()
   /*
    */
   bool shouldUpdateLayout = false;
-  for( int i = dbScale; i < x->getNumberOfBars(); ++i )
+  for( int i = 0; i < x->getNumberOfBars(); ++i )
   {
     Bar& b = getBar(i);
     if( b.mIsDirty )
@@ -3526,6 +3694,18 @@ void PartitionViewer::updateUi()
     mpBarTextEdit->show();
   }else { mpBarTextEdit->hide(); }
   
+  //place le line edit pour les barres de description
+  if( hasDescriptionBarLabelEditionPending() )
+  {
+    QPoint p = getRegion(dbrLabel, mEditingDescriptionBarLabel).topLeft();
+    p += QPoint(-1, 2);
+    //voir la creation de mpDescriptionBarLabelEdit pour explication mapping.
+    p = mapToParent(p);
+    mpDescriptionBarLabelEdit->move( p );
+    mpDescriptionBarLabelEdit->show();
+  }
+  else { mpDescriptionBarLabelEdit->hide(); }
+  
   //place la lineEdit pour les ligne
   if( hasLineEditionPending() )
   {
@@ -3550,6 +3730,9 @@ void PartitionViewer::updateUi()
     mpParenthesisEdit->selectAll();
   }
   else { mpParenthesisEdit->hide(); }
+  
+  //place le bouton pour ajouter les barres de descriptions
+  mpAddRemoveDescriptionBar->move( mAddDescriptionBarButtonPos );
   
   /* On redimensionne le widget pour garantir que toutes les pages seront
      affichees. */

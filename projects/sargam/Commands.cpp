@@ -57,6 +57,10 @@ p->do ## COMMAND_NAME(); \
 //------------------------------------------------------------------
 MAKE_COMMAND_IMPLEMENTATION(CommandAddBar);
 //------------------------------------------------------------------
+//--- CommandAddDescriptionBar
+//------------------------------------------------------------------
+MAKE_COMMAND_IMPLEMENTATION(CommandAddDescriptionBar);
+//------------------------------------------------------------------
 //--- CommandAddGraceNotes
 //------------------------------------------------------------------
 MAKE_COMMAND_IMPLEMENTATION(CommandAddGraceNotes);
@@ -147,6 +151,10 @@ MAKE_COMMAND_IMPLEMENTATION(CommandErase);
 //--- CommandIncreaseOctave
 //------------------------------------------------------------------
 MAKE_COMMAND_IMPLEMENTATION(CommandIncreaseOctave);
+//------------------------------------------------------------------
+//--- CommandRemoveDescriptionBar
+//------------------------------------------------------------------
+MAKE_COMMAND_IMPLEMENTATION(CommandRemoveDescriptionBar);
 //------------------------------------------------------------------
 //--- CommandRemoveParenthesis
 //------------------------------------------------------------------

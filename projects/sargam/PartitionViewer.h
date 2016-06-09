@@ -91,8 +91,11 @@ signals:
   void interactionOccured(); //documenter...
   
 protected slots:
+  void addDescriptionBarClicked();
+  void removeDescriptionBarClicked();
   void resizeEditToContent();
   void stopBarTextEdit();
+  void stopDescriptionBarLabelEdit();
   void stopLineTextEdit();
   void stopParentheseEdit();
   void stopTitleEdit();
@@ -100,6 +103,7 @@ protected slots:
 protected:
   friend class PartitionViewerCommand;
   friend class CommandAddBar;
+  friend class CommandAddDescriptionBar;
   friend class CommandAddGraceNotes;
   friend class CommandAddLine;
   friend class CommandAddMatra;
@@ -112,18 +116,20 @@ protected:
   friend class CommandDecreaseOctave;
   friend class CommandErase;
   friend class CommandIncreaseOctave;
+  friend class CommandRemoveDescriptionBar;
   friend class CommandRemoveParenthesis;
   friend class CommandRemoveSelectionFromGraceNotes;
   friend class CommandRemoveStroke;
   friend class CommandShiftNote;
   
-  enum region { rPartition, rTitle, rSargamScaleLabel, rSargamScale,
-    rTarabTuningLabel, rTarabTuning };
+  enum region { rPartition, rTitle, rDescriptionBars,
+    rAddRemoveDescriptionBar};
   enum pageRegion { prPage, prBody, prPageFooter };
   enum barRegion { brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
     brOrnementY, brMatraGroupY, brGraceNoteTopY, brGraceNoteBottomY,
     brTextX, brTextY, brLowerOctaveY, brUpperOctaveY, brGraceNoteLowerOctaveY,
     brGraceNoteUpperOctaveY, brUnderlineY, brGraceNoteUnderlineY };
+  enum descriptionBarRegion { dbrLabel, dbrBar };
   enum colors{ cHover, cSelection };
   enum debugMode{ dmNone = 0, dmNoteLayout, dmWordLayout, dmBarInfo,
     numberOfDebugMode };
@@ -216,6 +222,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void createUi();
   int cmToPixel( double ) const;
   void doCommandAddBar();
+  void doCommandAddDescriptionBar();
   void doCommandAddGraceNotes();
   void doCommandAddLine();
   void doCommandAddMatra();
@@ -228,6 +235,7 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void doCommandDecreaseOctave();
   void doCommandErase();
   void doCommandIncreaseOctave();
+  void doCommandRemoveDescriptionBar();
   void doCommandRemoveParenthesis();
   void doCommandRemoveSelectionFromGraceNotes();
   void doCommandRemoveStroke();
@@ -257,14 +265,16 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   utils::Log& getLog();
   NoteLocator getNext( const NoteLocator& ) const;
   int getNumberOfPages() const;
-  QRect getPageRegion( pageRegion ) const;
-  QRect getPageRegion( pageRegion, int ) const;
+QRect getPageRegion( pageRegion ) const; //getRegion
+QRect getPageRegion( pageRegion, int ) const; //getRegion
   QSizeF getPageSizeInInch() const;
   NoteLocator getPrevious(const NoteLocator&) const;
   QRect getRegion( region ) const;
+  QRect getRegion( descriptionBarRegion, int ) const;
   QString getParenthesisText( int ) const;
   int getParenthesisTextWidth( int ) const;
   bool hasBarTextEditionPending() const;
+  bool hasDescriptionBarLabelEditionPending() const;
   bool hasLineEditionPending() const;
   bool hasParenthesisEditionPending() const;
   bool hasTitleEditionPending() const {return mEditingTitle;}
@@ -295,9 +305,11 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void setCurrentNote(int);
   void setCursorPosition( NoteLocator );
   void setNumberOfPage(int);
+  virtual void showEvent(QShowEvent*) override;
   std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > ) const;
   void splitInWords(int); //makeNoteRect
   void startBarTextEdit( int );
+  void startDescriptionBarLabelEdit( int );
   void startParentheseEdit( int );
   void startLineTextEdit( int );
   void startTitleEdit();
@@ -311,14 +323,16 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   void updateParenthesisLayout();
   void updateLayout();
   void updateLineLayout();
-  void updateDescriptionBarLayout( descriptionBar );
+  void updateDescriptionBarLayout( );
   void updateUi();
   
   //--- ui
   ThinLineEdit* mpTitleEdit;
   ThinLineEdit* mpLineTextEdit;
   ThinLineEdit* mpBarTextEdit;
+  ThinLineEdit* mpDescriptionBarLabelEdit;
   QSpinBox* mpParenthesisEdit;
+  QWidget* mpAddRemoveDescriptionBar;
   
   //--- data
   debugMode mDebugMode;
@@ -334,13 +348,12 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   QFont mStrokeFont;
   QFont mParenthesisFont;
   QRectF mBaseParenthesisRect;
-  Bar mScale;
-  Bar mTarabTuning;
   std::vector< Bar > mBars;
   std::vector< Ornement > mOrnements;
   std::vector< Line > mLines;
   std::map< int, std::vector<int> > mBarsPerPage;
   std::vector< Parenthesis > mParenthesis;
+  QPoint mAddDescriptionBarButtonPos;
   int mCurrentBar;
   int mCurrentBarTimerId;
   QTime mCurrentBarTimer;
@@ -348,12 +361,14 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   QPoint mLayoutCursor;
   std::vector< std::pair<int, int> > mSelectedNotes; //bar, index
   int mEditingBarText;
+  int mEditingDescriptionBarLabel;
   int mEditingLineIndex;
   int mEditingParentheseIndex;
   bool mEditingTitle;
   int mAddLineTextHover;
   int mBarHoverIndex;
   int mBarTextHover;
+  int mDescriptionBarLabelHoverIndex;
   static Composition mDummyComposition;
   Composition* x; //jamais null...
   utils::Log mDefaultLog;

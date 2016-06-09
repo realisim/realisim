@@ -12,9 +12,10 @@ namespace
 {
   const int kMagicHeader = 0x00ABEF54;
   
-  const int kCurrentVersion = 4;
+  const int kCurrentVersion = 5;
   /*version 3: ajout du texte sur les barres.
     version 4: ajout des parentheses de repetition
+    version 5: ajout des barres de description arbitraires (en nombre)
    */
   
   /*kLowestSupportedVersion indique la plus basse version de logiciel capable
@@ -158,8 +159,19 @@ realisim::sargam::Note Composition::mDummyNote(nvSa);
 
 Composition::Composition()
 {
-  mScale.mNotes = defaultScale();
-  mTarabTuning.mNotes = defaultTarabTuning();
+  setTitle( "Untitled" );
+  
+  //Par defaut, on ajoute 2 barres de description.
+  addDescriptionBar("Scale: ");
+  mBars[0].mNotes = defaultScale();
+  
+  addDescriptionBar("Tarab tuning: ");
+  mBars[1].mNotes = defaultTarabTuning();
+  
+  //on ajoute une barre vide pour bien commencer et la première
+  //ligne commence avec la barre 2.
+  addBar();
+  addLine(2);
 }
 //------------------------------------------------------------------------------
 void Composition::addError( QString iE ) const
@@ -181,6 +193,12 @@ void Composition::addBar( int iBarIndex )
     shiftParenthesis(1, iBarIndex );
   }
   else{ mBars.push_back( Bar() ); }
+}
+//------------------------------------------------------------------------------
+void Composition::addDescriptionBar(QString iLabel)
+{
+  addBar( getNumberOfDescriptionBars() - 1);
+  mDescriptionBarLabels.push_back( iLabel );
 }
 //------------------------------------------------------------------------------
 /*ajoute un saut de ligne ' la barre iIbarIndex avec le texte iText*/
@@ -309,9 +327,8 @@ void Composition::addGraceNote( int iBar, int iNoteIndex )
 //------------------------------------------------------------------------------
 void Composition::clear()
 {
-  mScale = Bar();
-  mTarabTuning = Bar();
   mBars.clear();
+  mDescriptionBarLabels.clear();
   mLines.clear();
   mOrnements.clear();
   mErrors.clear();
@@ -373,6 +390,22 @@ void Composition::eraseBar( int iBarIndex )
     shiftOrnements(-1, iBarIndex);
     shiftParenthesis(-1, iBarIndex );
   }
+}
+//------------------------------------------------------------------------------
+//enleve la barre iIndex, qui doit etre une barre de description, de plus, le
+//label pour la barre de description est enlevé
+bool Composition::eraseDescriptionBar(int iIndex)
+{
+  bool r = false;
+  //il est impossible d'enlever la barre 0 qui contient la gamme
+  //par défaut
+  if(iIndex >= 1 && iIndex < getNumberOfDescriptionBars())
+  {
+    eraseBar(iIndex);
+    mDescriptionBarLabels.erase( mDescriptionBarLabels.begin() + iIndex );
+    r = true;
+  }
+  return r;
 }
 //------------------------------------------------------------------------------
 /*Efface la note de grace iNoteIndex de la narre iBarIndex.*/
@@ -712,23 +745,10 @@ void Composition::fromBinary( QByteArray iBa )
       addOrnement((ornementType)ot, vn);
     }
     
-    //--- gamme
-    vector<Note> vn;
-    qint32 numNotes;
-    ds >> numNotes;
-    for( int i = 0; i < numNotes; ++i )
+    if(version < 5)
     {
-      qint32 v, m, o;
-      ds >> v; ds >> o; ds >> m;
-      Note n( (noteValue)v, o, (noteModification)m );
-      vn.push_back(n);
-    }
-    setScale( vn );
-    
-    //--- tarab tuning
-    if( version >= 2 )
-    {
-      vector<Note> vn;
+      //--- gamme devient la barre 0
+      addDescriptionBar("Scale");
       qint32 numNotes;
       ds >> numNotes;
       for( int i = 0; i < numNotes; ++i )
@@ -736,9 +756,22 @@ void Composition::fromBinary( QByteArray iBa )
         qint32 v, m, o;
         ds >> v; ds >> o; ds >> m;
         Note n( (noteValue)v, o, (noteModification)m );
-        vn.push_back(n);
+        addNote(0, n);
       }
-      setTarabTuning( vn );
+      
+      //--- tarab tuning devient la barre 1
+      {
+        addDescriptionBar("Tarab tuning");
+        qint32 numNotes;
+        ds >> numNotes;
+        for( int i = 0; i < numNotes; ++i )
+        {
+          qint32 v, m, o;
+          ds >> v; ds >> o; ds >> m;
+          Note n( (noteValue)v, o, (noteModification)m );
+          addNote(1, n);
+        }
+      }
     }
     
     //parenthesis
@@ -763,6 +796,27 @@ void Composition::fromBinary( QByteArray iBa )
         addParenthesis(vnl, numRep);
       }
     }
+    
+    //description bars
+    //les notes des barres de description sont contenues dans mBars
+    //Il ne reste qu'a charger la valeur du label.
+    if(version >= 5)
+    {
+      qint32 numDescriptionBars;
+      ds >> numDescriptionBars;
+      for(int i = 0; i < numDescriptionBars; ++i)
+      {
+        QString label;
+        ds >> label;
+        
+        //on ne fait pas addDescriptionBar(QString) car
+        //cette méthode ajoute une barre, alors que les barres de
+        //description ont déjà été ajouté dans mBars lors du chargement
+        //des barres. Il ne reste qu'a seter le label
+        mDescriptionBarLabels.push_back(label);
+      }
+    }
+
   }
 }
 //------------------------------------------------------------------------------
@@ -802,14 +856,9 @@ vector<int> Composition::getBarsInvolvedByParenthesis( int iRep ) const
 const Composition::Bar& Composition::getBar( int iIndex ) const
 {
   const Bar* b = 0;
-  if( iIndex < (int)mBars.size() )
+  if( iIndex >= 0 && iIndex < (int)mBars.size() )
   {
-    switch (iIndex)
-    {
-      case dbScale: b = &mScale; break;
-      case dbTarabTuning: b = &mTarabTuning; break;
-      default: b = &mBars[iIndex]; break;
-    }
+    b = &mBars[iIndex];
   }
   else
   {
@@ -830,6 +879,14 @@ Composition::Bar& Composition::getBar( int iIndex )
 //------------------------------------------------------------------------------
 QString Composition::getBarText( int iBar ) const
 { return getBar(iBar).mText; }
+//------------------------------------------------------------------------------
+QString Composition::getLabelFromDescriptionBar( int iIndex ) const
+{
+  QString r;
+  if( iIndex >= 0 && iIndex < getNumberOfDescriptionBars() )
+  { r = mDescriptionBarLabels[iIndex]; }
+  return r;
+}
 //------------------------------------------------------------------------------
 int Composition::getLineFirstBar( int iLine ) const
 { return mLines[iLine].mFirstBar; }
@@ -862,6 +919,9 @@ NoteLocator Composition::getNoteLocatorFromOrnement( int iO, int i ) const
 //------------------------------------------------------------------------------
 int Composition::getNumberOfBars() const
 { return mBars.size(); }
+//------------------------------------------------------------------------------
+int Composition::getNumberOfDescriptionBars() const
+{ return mDescriptionBarLabels.size(); }
 //------------------------------------------------------------------------------
 int Composition::getNumberOfLines() const
 { return mLines.size(); }
@@ -902,14 +962,13 @@ int Composition::getNumberOfStrokesInBar( int iBar ) const
 ornementType Composition::getOrnementType( int iOrn ) const
 { return mOrnements[iOrn].mOrnementType; }
 //------------------------------------------------------------------------------
+//La barre 0 contient toujours la gamme...
+//Il faut que jempeche d'enlever la barre 0...
 vector<Note> Composition::getScale() const
-{ return getBar( dbScale ).mNotes; }
+{ return getBar( 0 ).mNotes; }
 //------------------------------------------------------------------------------
 strokeType Composition::getStrokeType( int iBar, int iStroke ) const
 { return getBar(iBar).mStrokes[iStroke].mStrokeType; }
-//------------------------------------------------------------------------------
-vector<Note> Composition::getTarabTuning() const
-{ return getBar( dbTarabTuning ).mNotes; }
 //------------------------------------------------------------------------------
 QString Composition::getTitle() const
 { return mTitle; }
@@ -968,6 +1027,12 @@ bool Composition::parenthesisAppliesToBar( int iRep, int iBar ) const
 void Composition::setBarText( int iBar, QString iText )
 { getBar(iBar).mText = iText; }
 //------------------------------------------------------------------------------
+void Composition::setLabelForDescriptionBar( int iIndex, QString iLabel )
+{
+  if( iIndex >= 0 && iIndex < getNumberOfDescriptionBars() )
+  { mDescriptionBarLabels[iIndex] = iLabel; }
+}
+//------------------------------------------------------------------------------
 void Composition::setLineText( int iLineIndex, QString iText )
 {
   if( iLineIndex >= 0 && iLineIndex < mLines.size() )
@@ -986,12 +1051,12 @@ void Composition::setNumberOfRepetitionForParenthesis(int iIndex, int iNumRepeti
   if( iIndex >= 0 && iIndex < getNumberOfParenthesis() )
   { mParenthesis[iIndex].mNumber = iNumRepetitions; }
 }
-//------------------------------------------------------------------------------
-void Composition::setScale( std::vector<Note> iNote )
-{ mScale.mNotes = iNote; }
-//------------------------------------------------------------------------------
-void Composition::setTarabTuning( std::vector<Note> iNote )
-{ getBar(dbTarabTuning).mNotes = iNote; }
+////------------------------------------------------------------------------------
+//void Composition::setScale( std::vector<Note> iNote )
+//{ mScale.mNotes = iNote; }
+////------------------------------------------------------------------------------
+//void Composition::setTarabTuning( std::vector<Note> iNote )
+//{ getBar(dbTarabTuning).mNotes = iNote; }
 //------------------------------------------------------------------------------
 void Composition::setTitle( QString iTitle )
 { mTitle = iTitle; }
@@ -1197,28 +1262,6 @@ QByteArray Composition::toBinary() const
     }
   }
   
-  //--- gamme
-  const vector<Note> scale = getScale();
-  ds << (qint32) scale.size();
-  for( int i = 0; i < scale.size(); ++i )
-  {
-    Note n = scale[i];
-    ds << (qint32)n.getValue();
-    ds << (qint32)n.getOctave();
-    ds << (qint32)n.getModification();
-  }
-  
-  //--- tarab tuning
-  const vector<Note> tuning = getTarabTuning();
-  ds << (qint32) tuning.size();
-  for( int i = 0; i < tuning.size(); ++i )
-  {
-    Note n = tuning[i];
-    ds << (qint32)n.getValue();
-    ds << (qint32)n.getOctave();
-    ds << (qint32)n.getModification();
-  }
-  
   //--- parenthesis
   ds << (qint32)getNumberOfParenthesis();
   for( int i = 0; i < getNumberOfParenthesis(); ++i)
@@ -1235,6 +1278,12 @@ QByteArray Composition::toBinary() const
     ds << (qint32)getNumberOfRepetitionsForParenthesis(i);
   }
   
+  //--- description bars
+  ds << (qint32)getNumberOfDescriptionBars();
+  for(int i = 0; i < getNumberOfDescriptionBars(); ++i)
+  {
+    ds << getLabelFromDescriptionBar(i);
+  }
   return ba;
 }
 

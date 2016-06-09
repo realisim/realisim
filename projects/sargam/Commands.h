@@ -47,6 +47,8 @@ PartitionViewer* p; \
 //--------------------------------------------------------------------
 MAKE_COMMAND_CLASS(CommandAddBar);
 //--------------------------------------------------------------------
+MAKE_COMMAND_CLASS(CommandAddDescriptionBar);
+//--------------------------------------------------------------------
 MAKE_COMMAND_CLASS(CommandAddGraceNotes);
 //--------------------------------------------------------------------
 MAKE_COMMAND_CLASS(CommandAddLine);
@@ -106,6 +108,8 @@ MAKE_COMMAND_CLASS(CommandDecreaseOctave);
 MAKE_COMMAND_CLASS(CommandErase);
 //--------------------------------------------------------------------
 MAKE_COMMAND_CLASS(CommandIncreaseOctave);
+//--------------------------------------------------------------------
+MAKE_COMMAND_CLASS(CommandRemoveDescriptionBar);
 //--------------------------------------------------------------------
 MAKE_COMMAND_CLASS(CommandRemoveParenthesis);
 //--------------------------------------------------------------------
