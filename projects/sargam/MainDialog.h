@@ -37,7 +37,7 @@ public:
   const realisim::utils::Log& getLog() const {return mLog;}
   QString getVersionAsQString() const;  
   int getVersionMajor() const {return 0;}
-  int getVersionMinor() const {return 7;}
+  int getVersionMinor() const {return 8;}
   int getVersionRevision() const {return 0;}
   bool isToolBarVisible() const {return mIsToolBarVisible;}
   bool isVerbose() const;
@@ -47,7 +47,6 @@ protected slots:
   void about();
   void ensureVisible( QPoint );
   void generatePrintPreview(QPrinter*);
-  void generateRandomPartition();
   void handleUpdateAvailability();
   void newFile();
   void openFile();

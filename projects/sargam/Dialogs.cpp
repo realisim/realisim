@@ -33,71 +33,72 @@ mpPartPreview(0)
   initUi();
   
   mPartPreviewData.setTitle( "Untitled" );
-  mPartPreviewData.addBar();
-  mPartPreviewData.addLine(0);
-  
+  //voir constructeur composition.
+  //La composition a toujours 3 barres... gamme, tuning et une barre
+  //vide. Donc la premiere barre, qui n'est pas de description, est a l'index 2.
+  const int bi = 2; //barIndex
   //--- 16 notes
-  mPartPreviewData.addNote(0, Note(nvMa, -1));
-  mPartPreviewData.addNote(0, Note(nvPa, -1));
-  mPartPreviewData.addNote(0, Note(nvDha, -1));
-  mPartPreviewData.addNote(0, Note(nvNi, -1));
-  mPartPreviewData.addNote(0, Note(nvSa, 0));
-  mPartPreviewData.addNote(0, Note(nvRe, 0));
-  mPartPreviewData.addNote(0, Note(nvGa, 0));
-  mPartPreviewData.addNote(0, Note(nvMa, 0));
-  mPartPreviewData.addNote(0, Note(nvPa, 0));
-  mPartPreviewData.addNote(0, Note(nvDha, 0));
-  mPartPreviewData.addNote(0, Note(nvNi, 0));
-  mPartPreviewData.addNote(0, Note(nvSa, 1));
-  mPartPreviewData.addNote(0, Note(nvRe, 1));
-  mPartPreviewData.addNote(0, Note(nvGa, 1));
-  mPartPreviewData.addNote(0, Note(nvMa, 1));
-  mPartPreviewData.addNote(0, Note(nvPa, 1));
+  mPartPreviewData.addNote(bi, Note(nvMa, -1));
+  mPartPreviewData.addNote(bi, Note(nvPa, -1));
+  mPartPreviewData.addNote(bi, Note(nvDha, -1));
+  mPartPreviewData.addNote(bi, Note(nvNi, -1));
+  mPartPreviewData.addNote(bi, Note(nvSa, 0));
+  mPartPreviewData.addNote(bi, Note(nvRe, 0));
+  mPartPreviewData.addNote(bi, Note(nvGa, 0));
+  mPartPreviewData.addNote(bi, Note(nvMa, 0));
+  mPartPreviewData.addNote(bi, Note(nvPa, 0));
+  mPartPreviewData.addNote(bi, Note(nvDha, 0));
+  mPartPreviewData.addNote(bi, Note(nvNi, 0));
+  mPartPreviewData.addNote(bi, Note(nvSa, 1));
+  mPartPreviewData.addNote(bi, Note(nvRe, 1));
+  mPartPreviewData.addNote(bi, Note(nvGa, 1));
+  mPartPreviewData.addNote(bi, Note(nvMa, 1));
+  mPartPreviewData.addNote(bi, Note(nvPa, 1));
   
   // 4 matras a 4 notes par matra
   vector<int> m1(4, 0); m1[0] = 0; m1[1] = 1; m1[2] = 2; m1[3] = 3;
   vector<int> m2(4, 0); m2[0] = 4; m2[1] = 5; m2[2] = 6; m2[3] = 7;
   vector<int> m3(4, 0); m3[0] = 8; m3[1] = 9; m3[2] = 10; m3[3] = 11;
   vector<int> m4(4, 0); m4[0] = 12; m4[1] = 13; m4[2] = 14; m4[3] = 15;
-  mPartPreviewData.addMatra(0, m1);
-  mPartPreviewData.addMatra(0, m2);
-  mPartPreviewData.addMatra(0, m3);
-  mPartPreviewData.addMatra(0, m4);
+  mPartPreviewData.addMatra(bi, m1);
+  mPartPreviewData.addMatra(bi, m2);
+  mPartPreviewData.addMatra(bi, m3);
+  mPartPreviewData.addMatra(bi, m4);
   
   // quelques notes de grace sur les 2iem et 3ieme matra
-  mPartPreviewData.addGraceNote(0, 4);
-  mPartPreviewData.addGraceNote(0, 5);
-  mPartPreviewData.addGraceNote(0, 6);
-  mPartPreviewData.addGraceNote(0, 8);
-  mPartPreviewData.addGraceNote(0, 9);
-  mPartPreviewData.addGraceNote(0, 10);
+  mPartPreviewData.addGraceNote(bi, 4);
+  mPartPreviewData.addGraceNote(bi, 5);
+  mPartPreviewData.addGraceNote(bi, 6);
+  mPartPreviewData.addGraceNote(bi, 8);
+  mPartPreviewData.addGraceNote(bi, 9);
+  mPartPreviewData.addGraceNote(bi, 10);
   
   //krintan et meend sur 2ieme et 3ieme matra
   vector<NoteLocator> o1; o1.resize(4);
-  o1[0] = NoteLocator(0, 4); o1[1] = NoteLocator(0, 5);
-  o1[2] = NoteLocator(0, 6); o1[3] = NoteLocator(0, 7);
+  o1[0] = NoteLocator(bi, 4); o1[1] = NoteLocator(bi, 5);
+  o1[2] = NoteLocator(bi, 6); o1[3] = NoteLocator(bi, 7);
   vector<NoteLocator> o2; o2.resize(4);
-  o2[0] = NoteLocator(0, 8); o2[1] = NoteLocator(0, 9);
-  o2[2] = NoteLocator(0, 10); o2[3] = NoteLocator(0, 11);
+  o2[0] = NoteLocator(bi, 8); o2[1] = NoteLocator(bi, 9);
+  o2[2] = NoteLocator(bi, 10); o2[3] = NoteLocator(bi, 11);
   mPartPreviewData.addOrnement(otKrintan, o1);
   mPartPreviewData.addOrnement(otMeend, o2);
   
   //des strokes
-  mPartPreviewData.addStroke(0, stDa, 0);
-  mPartPreviewData.addStroke(0, stRa, 1);
-  mPartPreviewData.addStroke(0, stDa, 2);
-  mPartPreviewData.addStroke(0, stRa, 3);
+  mPartPreviewData.addStroke(bi, stDa, 0);
+  mPartPreviewData.addStroke(bi, stRa, 1);
+  mPartPreviewData.addStroke(bi, stDa, 2);
+  mPartPreviewData.addStroke(bi, stRa, 3);
   
-  mPartPreviewData.addStroke(0, stDa, 4);
-  mPartPreviewData.addStroke(0, stDa, 8);
+  mPartPreviewData.addStroke(bi, stDa, 4);
+  mPartPreviewData.addStroke(bi, stDa, 8);
   
-  mPartPreviewData.addStroke(0, stDa, 12);
-  mPartPreviewData.addStroke(0, stRa, 13);
-  mPartPreviewData.addStroke(0, stDa, 14);
-  mPartPreviewData.addStroke(0, stRa, 15);
+  mPartPreviewData.addStroke(bi, stDa, 12);
+  mPartPreviewData.addStroke(bi, stRa, 13);
+  mPartPreviewData.addStroke(bi, stDa, 14);
+  mPartPreviewData.addStroke(bi, stRa, 15);
   
   //un peu de texte
-  mPartPreviewData.setBarText(0, "Test string");
+  mPartPreviewData.setBarText(bi, "Test string");
   
   mpPartPreview->setComposition( &mPartPreviewData );
   updateUi();
@@ -292,7 +293,7 @@ void PreferencesDialog::updateUi()
 {
   mpPartPreview->setFontSize( mpFontSize->value() );
   mpPartPreview->setScript( (script)mpScriptCombo->currentIndex() );
-  QPixmap pix = QPixmap::fromImage(mpPartPreview->getBarAsImage(0));
+  QPixmap pix = QPixmap::fromImage(mpPartPreview->getBarAsImage(2));
   mpPreviewLabel->setPixmap(pix);
 }
 

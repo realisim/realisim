@@ -51,7 +51,6 @@ public:
   void commandRemoveSelectionFromGraceNotes();
   void commandRemoveStroke();
   void commandShiftNote();
-void generateRandomPartition();
 QImage getBarAsImage(int) const;
   Composition getComposition() const;
   int getCurrentBar() const;
@@ -91,7 +90,9 @@ signals:
   void interactionOccured(); //documenter...
   
 protected slots:
+  void addBarTextClicked();
   void addDescriptionBarClicked();
+  void addLineTextClicked();
   void removeDescriptionBarClicked();
   void resizeEditToContent();
   void stopBarTextEdit();
@@ -333,6 +334,8 @@ QRect getPageRegion( pageRegion, int ) const; //getRegion
   ThinLineEdit* mpDescriptionBarLabelEdit;
   QSpinBox* mpParenthesisEdit;
   QWidget* mpAddRemoveDescriptionBar;
+  QPushButton* mpAddLineTextButton;
+  QPushButton* mpAddBarTextButton;
   
   //--- data
   debugMode mDebugMode;
@@ -365,9 +368,7 @@ QRect getPageRegion( pageRegion, int ) const; //getRegion
   int mEditingLineIndex;
   int mEditingParentheseIndex;
   bool mEditingTitle;
-  int mAddLineTextHover;
   int mBarHoverIndex;
-  int mBarTextHover;
   int mDescriptionBarLabelHoverIndex;
   static Composition mDummyComposition;
   Composition* x; //jamais null...

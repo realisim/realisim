@@ -1,10 +1,21 @@
 
 PROJECT( sargam )
 
-SET( SOURCES ${SOURCES} "./CMakeLists.txt" )
-
 ADD_COMPONENT( "." "Application" )
-ADD_COMPONENT("../../reusables/utils" )
+
+#sources from utils
+INCLUDE_DIRECTORIES(../../reusables)
+FILE( GLOB utils
+  ../../reusables/utils/Command.*
+  ../../reusables/utils/CommandStack.*
+  ../../reusables/utils/Log.*
+  ../../reusables/utils/utilities.*
+)
+SOURCE_GROUP ("utils" FILES ${utils})
+
+SET( SOURCES ${SOURCES}
+  ${utils}
+  "./CMakeLists.txt" )
 
 ADD_QT_PRINTSUPPORT()
 ADD_QT_NETWORK()

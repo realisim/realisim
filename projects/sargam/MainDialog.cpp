@@ -164,9 +164,6 @@ void MainDialog::createUi()
   pPreferences->addAction( "Options...", this, SLOT( preferences() ) );
   
   //debug action
-  QShortcut* pRandomPart = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_G), this );
-  connect( pRandomPart, SIGNAL(activated()), this, SLOT(generateRandomPartition()) );
-  
   QShortcut* pDebugD = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_D), this );
   connect( pDebugD, SIGNAL(activated()), this, SLOT(toggleDebugging()) );
   QShortcut* pDebugT = new QShortcut( QKeySequence( Qt::CTRL + Qt::SHIFT + Qt::Key_T), this );
@@ -445,14 +442,6 @@ MainDialog::action MainDialog::findAction( QAction* ipA ) const
 //-----------------------------------------------------------------------------
 void MainDialog::generatePrintPreview( QPrinter* iP )
 { mpPartitionViewer->print( iP ); }
-//-----------------------------------------------------------------------------
-void MainDialog::generateRandomPartition()
-{
-  mpPartitionViewer->generateRandomPartition();
-  
-  if( isVerbose() )
-  { getLog().log( "MainDialog: random partition generated." ); }
-}
 //-----------------------------------------------------------------------------
 QString MainDialog::getSaveFileName() const
 { return QFileInfo(getSaveFilePath()).fileName(); }

@@ -102,9 +102,7 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
   mEditingLineIndex( -1 ),
   mEditingParentheseIndex( -1 ),
   mEditingTitle( false ),
-  mAddLineTextHover( -1 ),
   mBarHoverIndex( kNoBarIndex ),
-  mBarTextHover( -1 ),
   mDescriptionBarLabelHoverIndex(kNoBarIndex),
   x( &mDummyComposition ),
   mDefaultLog(),
@@ -151,10 +149,6 @@ PartitionViewer::PartitionViewer( QWidget* ipParent ) :
 
   mBaseParenthesisRect = QRectF( QPoint(0, 0),
     QSize(8, QFontMetrics(mBarFont).height() * 1.8) );
-
-  //les barres speciales de description sont initialisées ici
-//  mScale.mBarType = Bar::btDescription;
-//  mTarabTuning.mBarType = Bar::btDescription;
   
   //initialisation du Ui et premiere mise à jour.
   createUi();
@@ -178,11 +172,23 @@ void PartitionViewer::addBar( int iBarIndex )
   else{ mBars.push_back( Bar() ); }
 }
 //-----------------------------------------------------------------------------
+void PartitionViewer::addBarTextClicked()
+{
+  startBarTextEdit( getCurrentBar() );
+}
+//-----------------------------------------------------------------------------
 void PartitionViewer::addDescriptionBarClicked()
 {
   CommandAddDescriptionBar* c = new CommandAddDescriptionBar(this);
   c->execute();
   mUndoRedoStack.add(c);
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::addLineTextClicked()
+{
+  const int i = x->findLine(getCurrentBar());
+  setBarAsDirty( i, true );
+  startLineTextEdit( i );
 }
 //-----------------------------------------------------------------------------
 void PartitionViewer::addNoteToSelection( int iBar, int iNote )
@@ -213,8 +219,6 @@ void PartitionViewer::clear()
   mCurrentNote = -1;
   mSelectedNotes.clear();
   mParenthesis.clear();
-//  setBarAsDirty(dbScale, true);
-//  setBarAsDirty(dbTarabTuning, true);
   
   if( isVerbose() )
   { getLog().log( "PartitionViewer: clear." ); }
@@ -438,6 +442,22 @@ void PartitionViewer::createUi()
     pLyt->addWidget(pRemove);
     pLyt->addStretch(1);
   }
+  
+  //add line text button
+  mpAddLineTextButton = new QPushButton( this );
+  mpAddLineTextButton->setObjectName("partitionViewer");
+  mpAddLineTextButton->setFont(mLineFont);
+  mpAddLineTextButton->setText(" + ");
+  connect( mpAddLineTextButton, SIGNAL(clicked()),
+          this, SLOT( addLineTextClicked() ) );
+  
+  //add line text button
+  mpAddBarTextButton = new QPushButton( this );
+  mpAddBarTextButton->setObjectName("partitionViewer");
+  mpAddBarTextButton->setFont(mBarTextFont);
+  mpAddBarTextButton->setText(" + ");
+  connect( mpAddBarTextButton, SIGNAL(clicked()),
+          this, SLOT( addBarTextClicked() ) );
 }
 //-----------------------------------------------------------------------------
 /*Ajoute une barre apres la barre courante, les notes suivant le curseur sont
@@ -500,6 +520,7 @@ void PartitionViewer::doCommandAddDescriptionBar()
   
   addBar(iIndex);
   setBarAsDirty(iIndex, true);
+  setAsModified(true);
   updateUi();
 }
 //-----------------------------------------------------------------------------
@@ -865,6 +886,7 @@ void PartitionViewer::doCommandRemoveDescriptionBar()
     }
   }
   
+  setAsModified(true);
   updateUi();
 }
 //-----------------------------------------------------------------------------
@@ -1028,40 +1050,6 @@ void PartitionViewer::draw( QPaintDevice* iPaintDevice, QRect iPaintRegion ) con
     c.setAlpha( 255 - 255 *
       min( mCurrentBarTimer.elapsed()/(double)kBarFadeDuration, 1.0) );
     drawBarContour( &p, getCurrentBar(), c );
-  }
-  
-  //on dessine le bar text hot spot de la barre courante si la barre est
-  //courante et qu'il n'y a pas de texte
-  if( !hasBarTextEditionPending() && x->getBarText( getCurrentBar() ).isEmpty() )
-  {
-    p.save();
-    p.setRenderHints( p.renderHints() | QPainter::Antialiasing );
-    QPen pen = p.pen();
-    p.setFont(mBarTextFont);
-    pen.setColor( getColor( cHover ) );
-    p.setPen(pen);
-    QRect r = getBar( getCurrentBar() ).mTextScreenLayout;
-    p.drawRoundedRect( r, 2, 2 );
-    p.setBrush(getColor( cHover ));
-    p.drawText(r, Qt::AlignCenter, "+");
-    p.restore();
-  }
-  
-  //on dessine le hot spot des lignes
-  int currentLine = x->findLine( getCurrentBar() );
-  if( currentLine != -1 && !hasLineEditionPending() )
-  {
-    const Line& l = mLines[ currentLine ];
-    p.save();
-    p.setRenderHints( p.renderHints() | QPainter::Antialiasing );
-    p.setFont(mLineFont);
-    QPen pen = p.pen();
-    pen.setColor( getColor( cHover ) );
-    p.setPen( pen );
-    p.drawRoundedRect( l.mHotSpot, 2, 2 );
-    p.setBrush(getColor( cHover ));
-    p.drawText(l.mHotSpot, Qt::AlignCenter, "+");
-    p.restore();
   }
   
   drawPageFooters( &p );
@@ -1464,29 +1452,6 @@ void PartitionViewer::eraseOrnement( int iIndex )
     mOrnements.erase( mOrnements.begin() + iIndex );
     x->eraseOrnement( iIndex );
   }
-}
-//-----------------------------------------------------------------------------
-void PartitionViewer::generateRandomPartition()
-{
-//  clear();
-//  const int kNumBars = 52;
-//  for( int i = 0; i < kNumBars; ++i )
-//  {
-//    addBar( x->getNumberOfBars() );
-//    double norm = rand() / (double)RAND_MAX;
-//    int numNotes = 4 + norm * 16;
-//    for( int j = 0; j < numNotes; ++j )
-//    {
-//      norm = rand() / (double)RAND_MAX;
-//      int note = 1 + norm * 6; //entre 1 et 7
-//      int octave;
-//      if( norm < 0.33 ) octave = -1;
-//      else if( 0.33 <= norm && norm < 0.66 ) octave = 0;
-//      else octave = 1;
-//      x->addNote( i, Note( (noteValue)note, octave ) );
-//    }
-//  }
-//  updateUi();
 }
 //-----------------------------------------------------------------------------
 PartitionViewer::Bar& PartitionViewer::getBar( int iBar )
@@ -2135,7 +2100,6 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
   const Bar& b = getBar( getCurrentBar() );
   if( b.mTextScreenLayout.contains( pos ) )
   {
-    mBarTextHover = getCurrentBar();
     if( x->hasBarText( getCurrentBar() ) )
     { cs = Qt::IBeamCursor; }
   }
@@ -2164,17 +2128,8 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
   //intersection avec le texte des lignes
   for( int i = 0; i < x->getNumberOfLines(); ++i )
   {
-    if( mLines[i].mHotSpot.contains( pos ) )
-    {
-      mAddLineTextHover = i;
-    }
-    else if(mAddLineTextHover == i)
-    {
-      mAddLineTextHover = -1;
-    }
-      
     if( mLines[i].mTextScreenLayout.contains( pos ) )
-    { cs = Qt::IBeamCursor; }
+      { cs = Qt::IBeamCursor; }
   }
   
   //intersection avec le texte des parentheses
@@ -2211,7 +2166,6 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   const Bar& currentB = getBar( getCurrentBar() );
   if( currentB.mTextScreenLayout.contains( pos ) )
   {
-    mBarTextHover = -1;
     startBarTextEdit( getCurrentBar() );
   }
   
@@ -2276,13 +2230,6 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
   //intersection avec le texte des lignes
   for( int i = 0; i < x->getNumberOfLines(); ++i )
   {
-    if( mLines[i].mHotSpot.contains( pos ) )
-    {
-      mAddLineTextHover = -1;
-      setBarAsDirty( i, true );
-      startLineTextEdit( i );
-    }
-    
     if( mLines[i].mTextScreenLayout.contains( pos ) )
     { startLineTextEdit( i ); }
   }
@@ -3426,8 +3373,6 @@ void PartitionViewer::updateLayout()
   
   //layout des barres spéciale (gamme, accordage tarab, etc...)
   updateDescriptionBarLayout();
-//  updateDescriptionBarLayout( dbScale );
-//  updateDescriptionBarLayout( dbTarabTuning );
   
   //--- le layout des barres du sargam
   updateBarLayout();
@@ -3683,6 +3628,18 @@ void PartitionViewer::updateUi()
   }
   else{ mpTitleEdit->hide(); }
   
+  //place le line edit pour les barres de description
+  if( hasDescriptionBarLabelEditionPending() )
+  {
+    QPoint p = getRegion(dbrLabel, mEditingDescriptionBarLabel).topLeft();
+    p += QPoint(-1, 5);
+    //voir la creation de mpDescriptionBarLabelEdit pour explication mapping.
+    p = mapToParent(p);
+    mpDescriptionBarLabelEdit->move( p );
+    mpDescriptionBarLabelEdit->show();
+  }
+  else { mpDescriptionBarLabelEdit->hide(); }
+  
   //place le line edit pour les barres
   if( hasBarTextEditionPending() )
   {
@@ -3694,17 +3651,29 @@ void PartitionViewer::updateUi()
     mpBarTextEdit->show();
   }else { mpBarTextEdit->hide(); }
   
-  //place le line edit pour les barres de description
-  if( hasDescriptionBarLabelEditionPending() )
+  //place le bouton pour ajouter le texte aux lignes
+  const int currentLine = x->findLine( getCurrentBar() );
+  if( currentLine != -1 && !hasLineEditionPending() &&
+     x->getLineText(currentLine).isEmpty() )
   {
-    QPoint p = getRegion(dbrLabel, mEditingDescriptionBarLabel).topLeft();
-    p += QPoint(-1, 2);
-    //voir la creation de mpDescriptionBarLabelEdit pour explication mapping.
-    p = mapToParent(p);
-    mpDescriptionBarLabelEdit->move( p );
-    mpDescriptionBarLabelEdit->show();
+    const Line& l = mLines[ currentLine ];
+    const QPoint p = l.mHotSpot.topLeft();
+    mpAddLineTextButton->move( p );
+    mpAddLineTextButton->show();
   }
-  else { mpDescriptionBarLabelEdit->hide(); }
+  else{ mpAddLineTextButton->hide(); }
+  
+  //on dessine le bar text hot spot de la barre courante si la barre est
+  //courante et qu'il n'y a pas de texte
+  if( !hasBarTextEditionPending() &&
+     getCurrentBar() >= x->getNumberOfDescriptionBars() &&
+     x->getBarText( getCurrentBar() ).isEmpty() )
+  {
+    const QPoint p = getBar( getCurrentBar() ).mTextScreenLayout.topLeft();
+    mpAddBarTextButton->move( p );
+    mpAddBarTextButton->show();
+  }
+  else { mpAddBarTextButton->hide(); }
   
   //place la lineEdit pour les ligne
   if( hasLineEditionPending() )
