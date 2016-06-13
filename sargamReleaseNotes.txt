@@ -1,5 +1,34 @@
 <downloadPage>https://sargamdev.wordpress.com/download/</downloadPage>
 
+//-----------------------------------------------------------------------------
+
+<release>
+<version>0.8.0</version>
+<releaseNotes>
+
+<h1>Sargam v0.8.0</h1>
+<h3>Release notes</h3>
+<p>
+-Support for arbitrary number of description bars.<br>
+-Label of description bar is now editable.<br>
+-Enhanced UI for bar text and line text input.<br>
+</p>
+
+<h3>General</h3>
+<p>
+Feel free to donate via the paypal's button on the download page at https://sargamdev.wordpress.com/download/<br>
+</p>
+
+<p> 
+Thank you very much for using Sargam, please share with your friends!<br>
+Please report bugs and ideas at sargam.software@gmail.com
+</p>
+
+</releaseNotes>
+</release>
+
+//-----------------------------------------------------------------------------
+
 <release>
 <version>0.7.0</version>
 <releaseNotes>
