@@ -831,8 +831,9 @@ void PartitionViewer::doCommandErase()
        un début de ligne. Par contre, on ne peut pas effacer la ligne 0.*/
       if( x->isStartOfLine( cb ) && x->findLine( cb ) != 0 )
       { x->eraseLine( x->findLine( cb ) ); }
-      /*On ne peut pas effacer la derniere barre...*/
-      if( x->getNumberOfBars() > 1 )
+      /*On ne peut pas effacer les barres de descriptions, ni la premiere barre
+        qui suit les descriptions...*/
+      if( cb > x->getNumberOfDescriptionBars() )
       {
         int i = x->getNumberOfNotesInBar( cb - 1 ) - 1;
         eraseBar( cb );

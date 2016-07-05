@@ -38,7 +38,7 @@ public:
   QString getVersionAsQString() const;  
   int getVersionMajor() const {return 0;}
   int getVersionMinor() const {return 8;}
-  int getVersionRevision() const {return 0;}
+  int getVersionRevision() const {return 1;}
   bool isToolBarVisible() const {return mIsToolBarVisible;}
   bool isVerbose() const;
   void setAsVerbose( bool );

@@ -23,10 +23,18 @@ int main(int argc, char** argv)
   MainDialog m;
   m.show();
 
-  if ( startMainApp() == 0 )
+  try
   {
+    if ( startMainApp() == 0 )
+    {
       //we are closing!
+    }
   }
+  catch(...)
+  {
+    printf("oups! uncaught exception\n");
+  }
+  
 
   return 0;
 }
