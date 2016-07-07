@@ -1090,6 +1090,26 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
     {
       Note n = x->getNote(iBar, j);
       
+      /*Le script devanagari demande une barre sous la note Komal*/
+      if( getScript() == sDevanagari && n.getModification() == nmKomal )
+      {
+        barRegion br = x->isGraceNote(iBar, j) ? brGraceNoteKomalLineY :
+          brKomalLineY;
+        
+        int y = getBarRegion(br, b.mBarType);
+        
+        const QRectF noteRect = b.getNoteRect(j);
+        double e = noteRect.width() - noteRect.width() * kUnderineRatioLength;
+        float xStart = noteRect.left() + e / 2.0;
+        float xEnd = noteRect.right() - e / 2.0;
+        iP->save();
+        QPen pen = iP->pen();
+        pen.setWidth( 1 );
+        iP->setPen(pen);
+        iP->drawLine(QPointF(xStart, y), QPointF(xEnd, y));
+        iP->restore();
+      }
+      
       /*l'ocatave superieur (1) et représenté par un point sur la note.
        l'octave inférieur (-1) est représenté par un point sous la note.*/
       if( n.getOctave() != 0 )
@@ -1105,26 +1125,6 @@ void PartitionViewer::drawBar( QPainter* iP, int iBar ) const
         pen.setCapStyle(Qt::RoundCap);
         iP->setPen(pen);
         iP->drawPoint( QPointF(x,y) );
-        iP->restore();
-      }
-      
-      /*Le script devanagari demande une barre sur la note Tivra ou
-        une barre sous la note Komal*/
-      if( getScript() == sDevanagari && n.getModification() != nmShuddh )
-      {
-        barRegion br = x->isGraceNote(iBar, j) ? brGraceNoteUnderlineY :
-          brUnderlineY;
-        int y = getBarRegion(br, b.mBarType);
-        
-        const QRectF noteRect = b.getNoteRect(j);
-        double e = noteRect.width() - noteRect.width() * kUnderineRatioLength;
-        float xStart = noteRect.left() + e / 2.0;
-        float xEnd = noteRect.right() - e / 2.0;
-        iP->save();
-        QPen pen = iP->pen();
-        pen.setWidth( 1 );
-        iP->setPen(pen);
-        iP->drawLine(QPointF(xStart, y), QPointF(xEnd, y));
         iP->restore();
       }
     }
@@ -1511,7 +1511,7 @@ int PartitionViewer::getBarRegion( barRegion br, Bar::barType iBt ) const
    |    ornement
    |    upperOctave
    |    Notes
-   |    Komal/Tivra line - devanagari only
+   |    Komal line - devanagari only
    |    lowerOctave
    |    matra
    |    stroke
@@ -1523,33 +1523,32 @@ int PartitionViewer::getBarRegion( barRegion br, Bar::barType iBt ) const
   const QFontMetrics gnfm(mGraceNotesFont);
   const QFontMetrics barTextFm(mBarTextFont);
   
-  const double kLowerOctaveFactor = 0.1;
-  const int kUnderlineSpacing = getScript() == sDevanagari ? 4 : 0; //pour komal et tivra en devanagari
+  const int kKomalSpacing = getScript() == sDevanagari ? fm.descent() : 0;
+  const int kKomalGraceNoteSpacing = getScript() == sDevanagari ? gnfm.descent() : 0;
+  const int kLowerOctaveSpacing = getScript() == sDevanagari ? 4 : 1;
   
   switch( br )
   {
     case brTextY: r = 2; break;
     case brOrnementY: r = getBarRegion(brGraceNoteTopY, iBt) - kOrnementHeight ; break;
     case brUpperOctaveY: r = getBarRegion(brNoteTopY, iBt) ; break;
-    case brGraceNoteUpperOctaveY: r = getBarRegion(brGraceNoteTopY, iBt); break;
+    case brGraceNoteUpperOctaveY: r = getBarRegion(brGraceNoteTopY, iBt) ; break;
     case brNoteTopY: r = getBarHeight(iBt) / 2 - fm.height() / 2; break;
     case brGraceNoteTopY:
       r = getBarRegion( brNoteTopY, iBt ) - gnfm.height() / 4; break;
     case brGraceNoteBottomY:
       r = getBarRegion( brGraceNoteTopY, iBt ) + gnfm.height(); break;
     case brNoteBottomY: r = getBarHeight(iBt) / 2 + fm.height() / 2; break;
-    case brUnderlineY:
-      r = getBarRegion(brNoteBottomY, iBt) + fm.descent() + kUnderlineSpacing / 2;
+    case brKomalLineY:
+      r = getBarRegion(brNoteBottomY, iBt) + kKomalSpacing;
       break;
-    case brGraceNoteUnderlineY:
-      r = getBarRegion(brGraceNoteBottomY, iBt) + gnfm.descent() + kUnderlineSpacing / 2;
+    case brGraceNoteKomalLineY:
+      r = getBarRegion(brGraceNoteBottomY, iBt) + kKomalGraceNoteSpacing;
       break;
     case brGraceNoteLowerOctaveY:
-      r = getBarRegion(brGraceNoteBottomY, iBt) + gnfm.descent() + kUnderlineSpacing +
-      gnfm.height() * kLowerOctaveFactor; break;
+      r = getBarRegion(brGraceNoteBottomY, iBt) + kKomalGraceNoteSpacing + kLowerOctaveSpacing; break;
     case brLowerOctaveY:
-      r = getBarRegion(brNoteBottomY, iBt) + fm.descent() + kUnderlineSpacing +
-      fm.height() * kLowerOctaveFactor; break;
+      r = getBarRegion(brNoteBottomY, iBt) + kKomalSpacing + kLowerOctaveSpacing; break;
     case brMatraGroupY: r = getBarRegion(brLowerOctaveY, iBt) ; break;
     case brStrokeY: r = getBarRegion(brMatraGroupY, iBt) + kMatraHeight; break;
       
@@ -2518,10 +2517,10 @@ QString PartitionViewer::noteToString( Note iNote ) const
           r = QString::fromUtf8("\xE0\xA4\xB0") + QString::fromUtf8("\xE0\xA5\x93");
           break;
         case nvGa: r = ("\xE0\xA4\x97"); break;
-        case nvMa: r = ("\xE0\xA4\xAE"); break;
+        case nvMa: r = (nm == nmTivra) ?  QString::fromUtf8("\xE0\xA4\xAE") + QString::fromUtf8("\xE0\xA5\x91") : "\xE0\xA4\xAE"; break; //Ma + Stress Sign Udatta
         case nvPa: r = ("\xE0\xA4\xAA"); break;
         case nvDha: r =("\xE0\xA4\xA7"); break;
-        case nvNi: r = ("\xE0\xA4\x9E"); break;
+        case nvNi: r = QString::fromUtf8("\xE0\xA4\xA8") + QString::fromUtf8("\xE0\xA5\x80"); break; //na + vowel sign Ii
         case nvChik: r = ("\xE2\x9c\x93"); break; //check
         case nvRest: r = ("\xE2\x80\x94"); break; //barre horizontale
         case nvComma: r = ","; break;

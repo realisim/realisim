@@ -129,7 +129,7 @@ protected:
   enum barRegion { brNoteStartX, brNoteTopY, brNoteBottomY, brStrokeY,
     brOrnementY, brMatraGroupY, brGraceNoteTopY, brGraceNoteBottomY,
     brTextX, brTextY, brLowerOctaveY, brUpperOctaveY, brGraceNoteLowerOctaveY,
-    brGraceNoteUpperOctaveY, brUnderlineY, brGraceNoteUnderlineY };
+    brGraceNoteUpperOctaveY, brKomalLineY, brGraceNoteKomalLineY };
   enum descriptionBarRegion { dbrLabel, dbrBar };
   enum colors{ cHover, cSelection };
   enum debugMode{ dmNone = 0, dmNoteLayout, dmWordLayout, dmBarInfo,
