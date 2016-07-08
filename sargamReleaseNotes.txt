@@ -3,6 +3,31 @@
 //-----------------------------------------------------------------------------
 
 <release>
+<version>0.8.1</version>
+<releaseNotes>
+
+<h1>Sargam v0.8.1</h1>
+<h2>Release notes</h2>
+<p>
+-Fixed crashes when mashing backspace.<br>
+-Fixed display of devanagari Ni.<br>
+-Reduced lower octave (dot) spacing with Latin script.<br>
+-Fixed lower octave (dot) spacing with devanagari script.<br>
+-Fixed display of tivra Ma in devanagari.<br>
+-[internal] Release notes are now in master branch. No more fussing around!<br>
+</p>
+
+<p> 
+Thank you very much for using Sargam, please share with your friends!<br>
+Please report bugs and ideas at sargam.software@gmail.com
+</p>
+
+</releaseNotes>
+</release>
+
+//-----------------------------------------------------------------------------
+
+<release>
 <version>0.8.0</version>
 <releaseNotes>
 
