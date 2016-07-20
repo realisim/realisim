@@ -213,6 +213,19 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
     QRectF mClosingScreenLayout; //coordonnee ecran
     QRectF mTextScreenLayout; //coordonnee ecran
   };
+  
+  //information relatives aux selections par la souris.
+  //On decris aussi l'État de la souris.
+  enum MouseState {msIdle, msPressed, msDraging};
+  struct MouseSelection
+  {
+    MouseSelection() : mStart(), mEnd(), mPixelWhenPressed() {}
+    
+    NoteLocator mStart;
+    NoteLocator mEnd;
+    
+    QPoint mPixelWhenPressed;
+  };
 
   void addBar( int );
   void addNoteToSelection( int, int );
@@ -264,7 +277,9 @@ std::vector<QRectF> mWordScreenLayouts; //pas vraiment besoin autre que pour le 
   debugMode getDebugMode() const;
   QString getInterNoteSpacingAsQString(NoteLocator, NoteLocator) const;
   utils::Log& getLog();
+  MouseState getMouseState() const {return mMouseState;}
   NoteLocator getNext( const NoteLocator& ) const;
+  NoteLocator getNoteLocatorAtPosition(QPoint) const;
   int getNumberOfPages() const;
 QRect getPageRegion( pageRegion ) const; //getRegion
 QRect getPageRegion( pageRegion, int ) const; //getRegion
@@ -280,10 +295,11 @@ QRect getPageRegion( pageRegion, int ) const; //getRegion
   bool hasParenthesisEditionPending() const;
   bool hasTitleEditionPending() const {return mEditingTitle;}
   bool isNoteSelected( int, int ) const;
-  virtual void keyPressEvent( QKeyEvent* );
-  virtual void keyReleaseEvent( QKeyEvent* );
-  virtual void mouseMoveEvent( QMouseEvent* );
-  virtual void mouseReleaseEvent( QMouseEvent* );
+  virtual void keyPressEvent( QKeyEvent* ) override;
+  virtual void keyReleaseEvent( QKeyEvent* ) override;
+  virtual void mouseMoveEvent( QMouseEvent* ) override;
+  virtual void mousePressEvent(QMouseEvent*) override;
+  virtual void mouseReleaseEvent( QMouseEvent* ) override;
   void moveGraceNoteBackward( int, int );
   void moveGraceNoteForward( int, int );
   void moveMatraBackward( int, int );
@@ -305,6 +321,7 @@ QRect getPageRegion( pageRegion, int ) const; //getRegion
   void setCurrentBar(int);
   void setCurrentNote(int);
   void setCursorPosition( NoteLocator );
+  void setMouseState(MouseState ms) { mMouseState = ms; }
   void setNumberOfPage(int);
   virtual void showEvent(QShowEvent*) override;
   std::map< int, std::vector< int > > splitPerBar( std::vector< std::pair<int, int> > ) const;
@@ -380,6 +397,9 @@ QRect getPageRegion( pageRegion, int ) const; //getRegion
   script mScript;
   utils::CommandStack mUndoRedoStack;
   bool mHasModifications;
+  
+  MouseState mMouseState;
+  MouseSelection mMouseSelection;
 };
 
   

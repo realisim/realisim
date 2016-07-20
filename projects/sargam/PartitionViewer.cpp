@@ -802,19 +802,30 @@ void PartitionViewer::doCommandErase()
     {
       int bar = mSelectedNotes[i].first;
       int index = mSelectedNotes[i].second;
-      x->eraseNote( bar, index );
+      if(index != -1)
+      { x->eraseNote( bar, index ); }
+      else
+      {
+        //quand on efface la note -1, il faut enlever la barre
+        //et potentiellement la ligne
+        /*On efface la ligne si la note courante est -1 et que la barre est
+         un début de ligne. Par contre, on ne peut pas effacer la ligne 0.*/
+        if( x->isStartOfLine( bar ) && x->findLine( bar ) != 0 )
+        { x->eraseLine( x->findLine( bar ) ); }
+        /*On ne peut pas effacer les barres de descriptions, ni la premiere barre
+         qui suit les descriptions...*/
+        if( bar > x->getNumberOfDescriptionBars() )
+        { eraseBar( bar ); }
+      }
       
       if( x->isNoteInOrnement(bar, index) )
       {
         setBarsAsDirty( x->getBarsInvolvedByOrnement(
-                                                     x->findOrnement(bar, index) ), true );
+          x->findOrnement(bar, index) ), true );
       }
     }
     
-    /*Le -1 est parce que la premiere note selectionnée est effacée, il faut
-     donc aller à l'autre d'avant.*/
-    setCursorPosition( NoteLocator(mSelectedNotes[0].first,
-                                   mSelectedNotes[0].second - 1 ) );
+    setCursorPosition( getPrevious( NoteLocator(mSelectedNotes[0].first, mSelectedNotes[0].second) ) );
     clearSelection();
   }
   else
@@ -1422,6 +1433,9 @@ void PartitionViewer::eraseBar( int iBar )
   //transfer des notes dans la barre précédente
   for( int i = 0; i < x->getNumberOfNotesInBar( iBar ); ++i )
   { x->addNote(iBar - 1, x->getNote( iBar, i ) ); }
+
+  //on met la barre precedente comme dirty
+  setBarAsDirty(iBar - 1, true);
   
   //transfert des matra
   moveMatraBackward(iBar, moveToIndex);
@@ -1652,16 +1666,79 @@ QString PartitionViewer::getInterNoteSpacingAsQString( NoteLocator n1, NoteLocat
   return r;
 }
 //-----------------------------------------------------------------------------
+/*Retourne le NoteLocator suivant iC. Quand on atteint la fin de la
+  barre, on retourne la note -1 de la prochaine barre. Il est important
+  de retourner -1 pour que leffacement des barre et ligne se fasse
+  correctement. voir doCommandErase.
+  Quand il n'y a plus de note après iC, on retour iC*/
 NoteLocator PartitionViewer::getNext( const NoteLocator& iC ) const
 {
-  int bar = iC.getBar(), index = 0;
+  int bar = iC.getBar(), index = iC.getIndex();
   if( iC.getIndex() == x->getNumberOfNotesInBar( iC.getBar() ) - 1 )
   {
-    bar = iC.getBar() + 1;
-    index = 0;
+    if( iC.getBar() + 1 < x->getNumberOfBars() )
+    {
+      bar = iC.getBar() + 1;
+      index = -1;
+    }
   }
   else{ index = iC.getIndex() + 1; }
   return NoteLocator( bar, index );
+}
+//-----------------------------------------------------------------------------
+NoteLocator PartitionViewer::getNoteLocatorAtPosition(QPoint iP) const
+{
+  int barIndex = -1;
+  int noteIndex = -1;
+  //Trouvons dans quelles barre est le point iP
+  for(int i = 0; i < x->getNumberOfBars() && barIndex == -1; ++i)
+  {
+    if(mBars[i].mScreenLayout.contains(iP))
+    { barIndex = i; }
+  }
+  
+  if( barIndex != -1 )
+  {
+    const Bar& b = getBar(barIndex);
+    //intersection avec les notes de la barres, on met le
+    //curseur sur la note la plus proches. Si aucune notes
+    //cliquée, on met au début de la barre.
+    //intersection avec les mots de la barre
+    bool clickedOnWord = false;
+    for(int j = 0; j < (int)b.mWordScreenLayouts.size(); ++j )
+    {
+      if( b.mWordScreenLayouts[j].contains(iP) )
+      {
+        clickedOnWord = true;
+        break;
+      }
+    }
+    
+    if(clickedOnWord)
+    {
+      double shortestDistance = numeric_limits<double>::max();
+      for(size_t j = 0; j < b.mNoteScreenLayouts.size(); ++j )
+      {
+        QRectF r = b.mNoteScreenLayouts[j];
+        QPointF p(iP.x(), iP.y());
+        QPointF sub = r.center() - p;
+        double d = sub.x()*sub.x() + sub.y()*sub.y();
+        if( d < shortestDistance )
+        {
+          shortestDistance = d;
+          noteIndex = j;
+        }
+      }
+      
+      //si on click a gauche du centre, on prend la note précédente,
+      //sinon le note la plus pres du click.
+      if( (iP.x() -
+           b.mNoteScreenLayouts[noteIndex].center().x()) < 0)
+      { noteIndex = max(noteIndex - 1, -1); }
+    }
+  }
+
+  return NoteLocator(barIndex, noteIndex);
 }
 //-----------------------------------------------------------------------------
 int PartitionViewer::getNumberOfPages() const
@@ -1724,13 +1801,16 @@ QSizeF PartitionViewer::getPageSizeInInch() const
 //-----------------------------------------------------------------------------
 NoteLocator PartitionViewer::getPrevious( const NoteLocator& iC ) const
 {
-  int bar = 0, index = 0;
-  if (iC.getIndex() > 0)
+  int bar = iC.getBar(), index = iC.getIndex();
+  if (iC.getIndex() >= 0)
   { index = iC.getIndex() - 1; }
   else
   {
-    bar = iC.getBar() - 1;
-    index = x->getNumberOfNotesInBar( bar ) - 1;
+    if( iC.getBar() - 1 >= 0 )
+    {
+      bar = iC.getBar() - 1;
+      index = x->getNumberOfNotesInBar( bar ) - 1;
+    }
   }
   return NoteLocator( bar, index );
 }
@@ -1943,48 +2023,29 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
       bool shiftPressed = (ipE->modifiers() & Qt::ShiftModifier);
       if( !hasSelection() )
       {
+        const NoteLocator nl(getCurrentBar(), getCurrentNote());
+        const NoteLocator previous = getPrevious(nl);
+        
         if( shiftPressed )
-        {
-          int bar = getCurrentBar();
-          int index = getCurrentNote();
-          if( index == -1 && (bar - 1) < x->getNumberOfBars() )
-          {
-            bar--;
-            index = x->getNumberOfNotesInBar(bar) - 1;
-          }
-          addNoteToSelection( bar, index );
-        }
+        { addNoteToSelection( nl.getBar(), nl.getIndex() ); }
         else
-        {
-          mCurrentNote = std::max( --mCurrentNote, -2 );
-          if( mCurrentNote == -2 && getCurrentBar() > 0 )
-          {
-            const int previousBar = getCurrentBar() - 1;
-            NoteLocator nl( previousBar,
-                        x->getNumberOfNotesInBar( previousBar ) - 1 );
-            setCursorPosition(nl);
-          }
-        }
+        { setCursorPosition(previous); }
       }
       else
       {
+        int bar = mSelectedNotes[0].first;
+        int index = mSelectedNotes[0].second;
+        const NoteLocator nl(bar, index);
+        
         if( shiftPressed )
         {
           //ajoute la note a gauche de la premiere note selectionnee
-          int bar = mSelectedNotes[0].first;
-          int index = mSelectedNotes[0].second;
-          index = max( index - 1, -1 );
-          if( index < 0 && bar > 0 )
-          {
-            bar--;
-            index = x->getNumberOfNotesInBar(bar) - 1;
-          }
-          addNoteToSelection( bar, index );
+          const NoteLocator previous = getPrevious(nl);
+          addNoteToSelection( previous.getBar(), previous.getIndex() );
         }
         else
         {
-          int index = max( -1, mSelectedNotes[0].second - 1 );
-          setCursorPosition( NoteLocator(mSelectedNotes[0].first, index) );
+          setCursorPosition( nl );
           clearSelection();
         }
       }
@@ -2002,50 +2063,31 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
       bool shiftPressed = (ipE->modifiers() & Qt::ShiftModifier);
       if( !hasSelection() )
       {
-        int bar = getCurrentBar();
-        int nextNote = getCurrentNote() + 1;
+        const NoteLocator nextNl = getNext( NoteLocator(getCurrentBar(), getCurrentNote() ) );
+        int bar = nextNl.getBar();
+        int nextNote = nextNl.getIndex();
         
         if( shiftPressed )
         {
-          if( nextNote > x->getNumberOfNotesInBar( bar ) - 1 &&
-             x->getNumberOfBars() > bar + 1 )
-          {
-            bar++;
-            nextNote = 0;
-          }
           if( x->getNumberOfNotesInBar( bar ) > nextNote )
           { addNoteToSelection( bar, nextNote ); }
         }
         else
-        {
-          if( nextNote > x->getNumberOfNotesInBar( bar ) - 1 &&
-             x->getNumberOfBars() > bar + 1 )
-          {
-            bar++;
-            nextNote = -1;
-          }
-          nextNote = min( nextNote, x->getNumberOfNotesInBar( bar ) - 1 );
-          setCursorPosition( NoteLocator(bar, nextNote) );
-        }
+        { setCursorPosition( NoteLocator(bar, nextNote) ); }
       }
       else
       {
+        //on choisi la dernier note de la selection, pour étendre par
+        //la droite
         int bar = mSelectedNotes[ mSelectedNotes.size() - 1 ].first;
         int index = mSelectedNotes[ mSelectedNotes.size() - 1 ].second;
+        const NoteLocator nl(bar, index);
+        const NoteLocator next = getNext(nl);
         if( shiftPressed )
-        {
-          index += 1;
-          if( index > x->getNumberOfNotesInBar(bar) - 1 &&
-             x->getNumberOfBars() > bar + 1 )
-          {
-            bar++;
-            index = 0;
-          }
-          addNoteToSelection( bar, index );
-        }
+        { addNoteToSelection( next.getBar(), next.getIndex() ); }
         else
         {
-          setCursorPosition( NoteLocator(bar, index) );
+          setCursorPosition( nl );
           clearSelection();
         }
       }
@@ -2079,6 +2121,14 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
   
   QPoint pos = ipE->pos();
   Qt::CursorShape cs = Qt::ArrowCursor;
+  
+  //gestion du mouse state
+  if(getMouseState() == msPressed)
+  {
+    const QPoint p = ipE->pos() - mMouseSelection.mPixelWhenPressed;
+    if (p.manhattanLength() > 3)
+    { setMouseState(msDraging); }
+  }
   
   //intersection avec le titre
   if( mTitleScreenLayout.contains( pos ) )
@@ -2125,6 +2175,35 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
     }
   }
   
+  //gestion de la selection par la souris
+  if( getMouseState() == msDraging )
+  {
+    const NoteLocator nl = getNoteLocatorAtPosition(ipE->pos());
+    if( nl.isValid() )
+    {
+      mMouseSelection.mEnd = nl;
+      clearSelection();
+      mSelectedNotes.push_back( make_pair( mMouseSelection.mStart.getBar(), mMouseSelection.mStart.getIndex() ) );
+      
+printf("start: (%d, %d) end: (%d, %d)\n",
+       mMouseSelection.mStart.getBar(), mMouseSelection.mStart.getIndex(),
+       mMouseSelection.mEnd.getBar(), mMouseSelection.mEnd.getIndex() );
+      
+      if(mMouseSelection.mStart < mMouseSelection.mEnd)
+      {
+        NoteLocator next = getNext(mMouseSelection.mStart);
+        while (next < mMouseSelection.mEnd)
+        {
+printf("next: (%d, %d)\n", next.getBar(), next.getIndex());
+          mSelectedNotes.push_back( make_pair( next.getBar(), next.getIndex() ) );
+          next = getNext(next);
+        }
+      }
+      updateUi();
+    }
+    
+  }
+  
   //intersection avec le texte des lignes
   for( int i = 0; i < x->getNumberOfLines(); ++i )
   {
@@ -2144,6 +2223,32 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
   if( hasLogTiming() )
   {
     getLog().log("PartitionViewer::mouseMove: %.3f ms", _timer.nsecsElapsed() / 1000000.0 );
+  }
+}
+//-----------------------------------------------------------------------------
+void PartitionViewer::mousePressEvent(QMouseEvent* ipE)
+{
+  setMouseState(msPressed);
+  mMouseSelection.mPixelWhenPressed = ipE->pos();
+  
+  //selection de la barre et de la note
+  if( mBarHoverIndex != kNoBarIndex )
+  {
+    clearSelection();
+    
+    const NoteLocator nl = getNoteLocatorAtPosition(ipE->pos());
+    if(nl.isValid())
+    {
+      mMouseSelection.mStart = nl;
+      setCursorPosition(nl);
+    }
+    
+    //animation du highlight de la barre courante
+    if(mCurrentBarTimerId != 0) { killTimer(mCurrentBarTimerId); }
+    mCurrentBarTimerId = startTimer(60);
+    mCurrentBarTimer.start();
+    
+    updateUi();
   }
 }
 //-----------------------------------------------------------------------------
@@ -2169,64 +2274,6 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
     startBarTextEdit( getCurrentBar() );
   }
   
-  //intersection avec les barres
-  const Bar& hoveredB = getBar( mBarHoverIndex );
-  if( mBarHoverIndex != kNoBarIndex )
-  {
-    clearSelection();
-    
-    //intersection avec les notes de la barres, on met le
-    //curseur sur la note la plus proches. Si aucune notes
-    //cliquée, on met au début de la barre.
-    //intersection avec les mots de la barre
-    bool clickedOnWord = false;
-    for(int j = 0; j < (int)hoveredB.mWordScreenLayouts.size(); ++j )
-    {
-      if( hoveredB.mWordScreenLayouts[j].contains(pos) )
-      {
-        clickedOnWord = true;
-        break;
-      }
-    }
-    
-    if(clickedOnWord)
-    {
-      int closestNoteIndex = -1;
-      double shortestDistance = numeric_limits<double>::max();
-      for(size_t j = 0; j < hoveredB.mNoteScreenLayouts.size(); ++j )
-      {
-        QRectF r = hoveredB.mNoteScreenLayouts[j];
-        QPointF p(pos.x(), pos.y());
-        QPointF sub = r.center() - p;
-        double d = sub.x()*sub.x() + sub.y()*sub.y();
-        if( d < shortestDistance )
-        {
-          shortestDistance = d;
-          closestNoteIndex = j;
-        }
-      }
-      
-      //si on click a gauche du centre, on prend la note précédente,
-      //sinon le note la plus pres du click.
-      if( (pos.x() -
-         hoveredB.mNoteScreenLayouts[closestNoteIndex].center().x()) < 0)
-      { closestNoteIndex = max(closestNoteIndex - 1, -1); }
-      setCursorPosition( NoteLocator(mBarHoverIndex, closestNoteIndex) );
-    }
-    else
-    {
-      //-1 pour le début de la barre
-      setCursorPosition( NoteLocator(mBarHoverIndex, -1) );
-    }
-    
-    //animation du highlight de la barre courante
-    if(mCurrentBarTimerId != 0) { killTimer(mCurrentBarTimerId); }
-    mCurrentBarTimerId = startTimer(60);
-    mCurrentBarTimer.start();
-
-    updateUi();
-  }
-  
   //intersection avec le texte des lignes
   for( int i = 0; i < x->getNumberOfLines(); ++i )
   {
@@ -2240,6 +2287,9 @@ void PartitionViewer::mouseReleaseEvent( QMouseEvent* ipE )
     if( mParenthesis[i].mTextScreenLayout.contains(pos) )
     { startParentheseEdit(i); }
   }
+  
+  //gestion de la selection par dragging;
+  setMouseState(msIdle);
   
   emit interactionOccured();
 }

@@ -106,13 +106,21 @@ int NoteLocator::getIndex() const
 { return mIndex; }
 //------------------------------------------------------------------------------
 bool NoteLocator::isValid() const
-{ return mBar != -1 && mIndex != -1; }
+{ return mBar != -1; }
 //------------------------------------------------------------------------------
 bool NoteLocator::operator<( const NoteLocator& iRhs ) const
 {
   bool r = this->getBar() < iRhs.getBar();
   if( this->getBar() == iRhs.getBar() )
   { r = this->getIndex() < iRhs.getIndex(); }
+  return r;
+}
+//------------------------------------------------------------------------------
+bool NoteLocator::operator>( const NoteLocator& iRhs ) const
+{
+  bool r = this->getBar() > iRhs.getBar();
+  if( this->getBar() == iRhs.getBar() )
+  { r = this->getIndex() > iRhs.getIndex(); }
   return r;
 }
 //------------------------------------------------------------------------------
