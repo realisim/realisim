@@ -1688,33 +1688,33 @@ NoteLocator PartitionViewer::getNext( const NoteLocator& iC ) const
 //-----------------------------------------------------------------------------
 NoteLocator PartitionViewer::getNoteLocatorAtPosition(QPoint iP) const
 {
-  int barIndex = -1;
+  int barIndex = -1, tempBarIndex = -1;
   int noteIndex = -1;
   //Trouvons dans quelles barre est le point iP
-  for(int i = 0; i < x->getNumberOfBars() && barIndex == -1; ++i)
+  for(int i = 0; i < x->getNumberOfBars() && tempBarIndex == -1; ++i)
   {
     if(mBars[i].mScreenLayout.contains(iP))
-    { barIndex = i; }
+    { tempBarIndex = i; }
   }
   
-  if( barIndex != -1 )
+  if( tempBarIndex != -1 )
   {
-    const Bar& b = getBar(barIndex);
+    const Bar& b = getBar(tempBarIndex);
     //intersection avec les notes de la barres, on met le
     //curseur sur la note la plus proches. Si aucune notes
     //cliquée, on met au début de la barre.
     //intersection avec les mots de la barre
-    bool clickedOnWord = false;
+    bool onWord = false;
     for(int j = 0; j < (int)b.mWordScreenLayouts.size(); ++j )
     {
       if( b.mWordScreenLayouts[j].contains(iP) )
       {
-        clickedOnWord = true;
+        onWord = true;
         break;
       }
     }
     
-    if(clickedOnWord)
+    if(onWord)
     {
       double shortestDistance = numeric_limits<double>::max();
       for(size_t j = 0; j < b.mNoteScreenLayouts.size(); ++j )
@@ -1726,6 +1726,7 @@ NoteLocator PartitionViewer::getNoteLocatorAtPosition(QPoint iP) const
         if( d < shortestDistance )
         {
           shortestDistance = d;
+          barIndex = tempBarIndex;
           noteIndex = j;
         }
       }
@@ -2045,7 +2046,7 @@ void PartitionViewer::keyPressEvent( QKeyEvent* ipE )
         }
         else
         {
-          setCursorPosition( nl );
+          setCursorPosition( getPrevious(nl) );
           clearSelection();
         }
       }
@@ -2183,22 +2184,35 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
     {
       mMouseSelection.mEnd = nl;
       clearSelection();
-      mSelectedNotes.push_back( make_pair( mMouseSelection.mStart.getBar(), mMouseSelection.mStart.getIndex() ) );
       
-printf("start: (%d, %d) end: (%d, %d)\n",
-       mMouseSelection.mStart.getBar(), mMouseSelection.mStart.getIndex(),
-       mMouseSelection.mEnd.getBar(), mMouseSelection.mEnd.getIndex() );
-      
+      //on selectionne vers la droite
       if(mMouseSelection.mStart < mMouseSelection.mEnd)
       {
         NoteLocator next = getNext(mMouseSelection.mStart);
-        while (next < mMouseSelection.mEnd)
+        while (next <= mMouseSelection.mEnd)
         {
-printf("next: (%d, %d)\n", next.getBar(), next.getIndex());
           mSelectedNotes.push_back( make_pair( next.getBar(), next.getIndex() ) );
           next = getNext(next);
         }
       }
+      //on selectionne vers la gauche
+      else if(mMouseSelection.mStart > mMouseSelection.mEnd)
+      {
+        mSelectedNotes.push_back( make_pair( mMouseSelection.mStart.getBar(), mMouseSelection.mStart.getIndex() ) );
+        
+        NoteLocator previous = getPrevious(mMouseSelection.mStart);
+        while (previous >= mMouseSelection.mEnd)
+        {
+          mSelectedNotes.push_back( make_pair( previous.getBar(), previous.getIndex() ) );
+          previous = getPrevious(previous);
+        }
+        
+        //les notes doivent etre en ordre croissant pour
+        //que les fonctions de navigation (voir keyPressed)
+        //fonctionne correctement.
+        sort( mSelectedNotes.begin(), mSelectedNotes.end() );
+      }
+      else {}
       updateUi();
     }
     

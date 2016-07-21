@@ -56,7 +56,9 @@ public:
   NoteLocator();
   NoteLocator( int, int );
   bool operator<( const NoteLocator& ) const;
+  bool operator<=( const NoteLocator& ) const;
   bool operator>( const NoteLocator& ) const;
+  bool operator>=( const NoteLocator& ) const;
   bool operator==( const NoteLocator& ) const;
   bool operator!=( const NoteLocator& ) const;
   

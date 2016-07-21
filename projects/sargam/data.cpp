@@ -116,11 +116,27 @@ bool NoteLocator::operator<( const NoteLocator& iRhs ) const
   return r;
 }
 //------------------------------------------------------------------------------
+bool NoteLocator::operator<=( const NoteLocator& iRhs ) const
+{
+  bool r = this->getBar() < iRhs.getBar();
+  if( this->getBar() == iRhs.getBar() )
+  { r = this->getIndex() <= iRhs.getIndex(); }
+  return r;
+}
+//------------------------------------------------------------------------------
 bool NoteLocator::operator>( const NoteLocator& iRhs ) const
 {
   bool r = this->getBar() > iRhs.getBar();
   if( this->getBar() == iRhs.getBar() )
   { r = this->getIndex() > iRhs.getIndex(); }
+  return r;
+}
+//------------------------------------------------------------------------------
+bool NoteLocator::operator>=( const NoteLocator& iRhs ) const
+{
+  bool r = this->getBar() > iRhs.getBar();
+  if( this->getBar() == iRhs.getBar() )
+  { r = this->getIndex() >= iRhs.getIndex(); }
   return r;
 }
 //------------------------------------------------------------------------------
