@@ -61,7 +61,7 @@ MACRO(ADD_QT_OPENGL)
   IF(WIN32)
     #on ajoute GLEW sur windows, il est dans les thirdParties
     SET( OPENGL_INCLUDE_DIR ${OPENGL_INCLUDE_DIR} ${Realisim_SOURCE_DIR}/thirdParties/glew-1.13.0/include )
-    SET( OPENGL_LIBRARIES ${OPENGL_LIBRARIES} ${Realisim_SOURCE_DIR}/thirdParties/glew-1.13.0/lib/Release/Win32/glew32.lib)
+    SET( OPENGL_LIBRARIES ${OPENGL_LIBRARIES} ${Realisim_SOURCE_DIR}/thirdParties/glew-1.13.0/lib/Release/x64/glew32.lib)
   ENDIF(WIN32)
 
   #MESSAGE( "OPENGL_INCLUDE_DIR: ${OPENGL_INCLUDE_DIR}" )
