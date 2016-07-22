@@ -14,7 +14,7 @@ IF( PROTOTYPES_BUILDOPTION )
    #ADD_SUBDIRECTORY( soundTest )
    #ADD_SUBDIRECTORY( spaceTime ) # pas maintenu
    #ADD_SUBDIRECTORY( texte_et_texture )
-   ADD_SUBDIRECTORY(frameBuffer)
+   #ADD_SUBDIRECTORY(frameBuffer)
    #ADD_SUBDIRECTORY(genese) #
    #ADD_SUBDIRECTORY(imageFilter) #ne fonctionne plus
    #ADD_SUBDIRECTORY(network)
@@ -31,5 +31,6 @@ IF( PROTOTYPES_BUILDOPTION )
    #ADD_SUBDIRECTORY( jeuDePouvoir )
    #ADD_SUBDIRECTORY( Matrix4 )
    #ADD_SUBDIRECTORY( soundTest )
-   ADD_SUBDIRECTORY( statistics )
+   #ADD_SUBDIRECTORY( statistics )
+   ADD_SUBDIRECTORY( volumetricLighting )
 ENDIF( PROTOTYPES_BUILDOPTION )

@@ -1,14 +1,6 @@
-/*
- *  MainWindow.h
- *  Project
- *
- *  Created by Pierre-Olivier Beaudoin on 08/11/08.
- *  Copyright 2008 __MyCompanyName__. All rights reserved.
- *
- */
+/**/
 
-#ifndef MainDialog_hh
-#define MainDialog_hh
+#pragma once
 
 #include <QMainWindow>
 class QKeyEvent;
@@ -55,5 +47,3 @@ public slots:
 protected:
   Viewer* mpViewer;
 };
-
-#endif
