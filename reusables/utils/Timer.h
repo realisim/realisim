@@ -9,7 +9,7 @@ namespace realisim
 namespace utils
 {
   //Cette classe fonctionne comme un chronomètre. Elle sert a calculer
-  //des intervals de temps.
+  //des intervals de temps en secondes.
   
   class Timer
   {

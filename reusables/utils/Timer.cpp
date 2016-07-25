@@ -40,7 +40,7 @@ double Timer::getElapsed() const
       break;
   }
   
-  return timeSpan.count();;
+  return timeSpan.count();
 }
 
 //-------------------------------------------------------------------------

@@ -1,34 +1,28 @@
 
-#include <iostream>
+#include "Core.h"
 #include "MainDialog.h"
 #include <QApplication>
-#include <QIcon>
-
-
-int startMainApp()
-{
-    if ( qApp )
-    {
-        return qApp->exec();
-    }
-    else
-    {
-        printf("ERROR: unable to start RealEdit\n");
-        return 0;
-    }
-}
+#include <QHBoxLayout>
+#include "render/Renderer.h"
 
 
 int main(int argc, char** argv)
 {
-    QApplication app(argc, argv);
-    MainDialog m;
-    m.show();
+  QApplication app(argc, argv);
+  
+  engine3d::core::Core c;
+  
+  MainDialog m;
+  m.show();
+  
+  //add the viewer to the main window
+  QHBoxLayout *pLyt = new QHBoxLayout(m.centralWidget());
+  pLyt->setMargin(0);
+  
+  engine3d::render::Renderer& v = c.getHub().getRenderer();
+  pLyt->addWidget(&v);
+
+  c.start();
 	
-    if ( startMainApp() == 0 )
-    {
-        //we are closing!
-    }
-	
-    return 0;
+  return app.exec();
 }
