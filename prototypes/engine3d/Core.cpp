@@ -35,6 +35,7 @@ mpRenderer(nullptr)
 
 Core::~Core()
 {
+  mLog.log("Core::~Core()\n\n");
   mClients.clear();
 }
   
@@ -55,6 +56,9 @@ void Core::goToState(state iState)
             case sInitializing:
               mState = sInitializing;
               stateChanged();
+              
+              //mpSceneManagement->loadDemoScene();
+              
               mLoopTimerId = startTimer(16);
               mLoopTimer.start();
               goToState(sRunning); //from intializing, we go directly to running

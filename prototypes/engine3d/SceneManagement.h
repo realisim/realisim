@@ -4,7 +4,7 @@
 #include "Core.h"
 #include <utils/log.h>
 
-namespace engine3d{ namespace data {class Scene;} }
+namespace engine3d{ namespace data {struct Scene;} }
 
 namespace engine3d
 {
@@ -18,10 +18,11 @@ namespace engine3d
       SceneManagement();
       ~SceneManagement();
       
-      void clear();
-      void loadDemoScene();
-      
     protected:
+      virtual bool requestStateChange(Core::state from, Core::state to) override;
+      virtual void stateChanged(Core::state) override;
+      
+    private:
       void setScene(data::Scene*);
       
       data::Scene *mScene; //not owned. coming from broker      

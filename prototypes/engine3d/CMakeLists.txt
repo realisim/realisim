@@ -1,6 +1,11 @@
 
 PROJECT( Engine3d )
 
+#output apps in bin/engine3d
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/engine3d)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/engine3d)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/engine3d)
+
 SET( SOURCES ${SOURCES} "./CMakeLists.txt" )
 
 ADD_COMPONENT( "." "Application" )

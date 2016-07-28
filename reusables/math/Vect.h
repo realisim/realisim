@@ -589,7 +589,7 @@ namespace math
     explicit Vector2(const T&);
     template<class U> Vector2( const Vector2<U>& );
     Vector2(const T &, const T &);
-    Vector2(const Vector2<T> &);    
+    Vector2(const Vector2<T> &);
     Vector2(const Point2<T> &, const Point2<T> &);
     virtual ~Vector2();
     

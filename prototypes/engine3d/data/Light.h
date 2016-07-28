@@ -3,7 +3,9 @@
 #pragma once
 
 #include <QColor>
+#include <math/Matrix4.h>
 #include <vector>
+
 
 namespace engine3d
 {
@@ -14,9 +16,11 @@ namespace data
     Light();
     ~Light();
     
-    enum type{tOmnidirectional, tSpot};
+    enum type{tDirectional, tOmnidirectional, tSpot};
     
+    type mType;
     QColor mColor;
+    realisim::math::Matrix4 mTransform;
   };
   
 }

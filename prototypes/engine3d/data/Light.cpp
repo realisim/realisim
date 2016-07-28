@@ -5,7 +5,10 @@ using namespace engine3d;
   using namespace data;
 
 //-------------------------------------------------------------------
-Light::Light()
+Light::Light() :
+mType(tDirectional),
+mColor(Qt::white),
+mTransform()
 {}
 
 //-------------------------------------------------------------------

@@ -16,21 +16,21 @@ namespace data
     Mesh();
     ~Mesh();
     
-//    void computeNormals();
-    static Mesh makeFromObj(QString);
+    //void makeFromObj(QString);
     
     struct face
     {
       std::vector<unsigned int> mVertexIndices;
-      std::vector<unsigned int> mNormalIndices;
       std::vector<unsigned int> mTexture2dIndices;
       //std::vector<unsigned int> mTexture3dIndices;
+      std::vector<unsigned int> mNormalIndices;
     };
     
     std::vector<realisim::math::Point3d> mVertices;
-    std::vector<realisim::math::Vector3d> mNormals;
     std::vector<realisim::math::Vector2d> mTexture2dCoordinates;
     //std::vector<realisim::math::Vector3d> mTexture3dCoordinates;
+    std::vector<realisim::math::Vector3d> mNormals;
+    
     std::vector<face> mFaces;
   };
   

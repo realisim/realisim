@@ -24,15 +24,6 @@ QByteArray fromFile(const QString& iFile)
 
 //a deplacer dans netWorkutils...
 //-----------------------------------------------------------------------------
-//QString getGuid()
-//{
-//	QString r;
-//  r = getMacAddress();
-//  if( !r.isEmpty() )
-//  { r += QDateTime::currentDateTime().toString("yyyy-MM-dd_hh:mm:ss:zzz"); }
-//  return r;
-//}
-//-----------------------------------------------------------------------------
 //QString getMacAddress()
 //{
 //  foreach(QNetworkInterface netInterface, QNetworkInterface::allInterfaces())

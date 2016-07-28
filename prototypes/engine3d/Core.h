@@ -37,16 +37,19 @@ namespace core
       virtual ~Client();
       
       core::Hub& getHub() {return *mpHub;};
+      realisim::utils::Log& getLog() const;
       
     protected:
       virtual bool requestStateChange(state from, state to);
-      void setHub(core::Hub*);
-      void setLog(realisim::utils::Log*);
       virtual void stateChanged(state);
       virtual void update(double);
       
+    private:
+      void setHub(core::Hub*);
+      void setLog(realisim::utils::Log*);
+      
       core::Hub *mpHub; //not owned
-      realisim::utils::Log *mpLog; //not owned
+      mutable realisim::utils::Log *mpLog; //not owned
     };
     
     Hub& getHub() {return mHub;}

@@ -10,15 +10,11 @@ namespace engine3d
 {
 namespace data
 {
-  class Scene
+  struct Scene
   {
-  public:
     Scene();
     ~Scene();
     
-    void clear();
-    
-  protected:
     std::vector<Model> mModels;
     //std::vector<Model> mTransparentModels;
     std::vector<Light> mLights;

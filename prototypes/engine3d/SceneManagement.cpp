@@ -1,5 +1,6 @@
 /**/
 
+#include <Broker.h>
 #include <data/Scene.h>
 #include <SceneManagement.h>
 
@@ -16,12 +17,10 @@ SceneManagement::~SceneManagement()
 {}
 
 //---------------------------
-void SceneManagement::clear()
-{}
-
-//---------------------------
-void SceneManagement::loadDemoScene()
-{}
+bool SceneManagement::requestStateChange(Core::state from, Core::state to)
+{
+  return true;
+}
 
 //---------------------------
 void SceneManagement::setScene(data::Scene *ipS)
