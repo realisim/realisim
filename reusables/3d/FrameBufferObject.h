@@ -106,7 +106,7 @@ public:
   virtual Texture getDepthTexture() const {return mpGuts->mDepthTexture;}
   virtual GLuint getFrameBufferId() const {return mpGuts->mFrameBufferId;}
 	virtual int getHeight() const {return mpGuts->mHeight;}
-  virtual int getNumColorAttachment() const {return mpGuts->mColorAttachments.size();}
+  virtual int getNumColorAttachment() const {return (int)mpGuts->mColorAttachments.size();}
   virtual QImage getImageFrom(int) const;
   virtual math::Vector2i getSize() const;
   virtual Texture getTexture(int) const;

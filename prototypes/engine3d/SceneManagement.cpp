@@ -17,12 +17,6 @@ SceneManagement::~SceneManagement()
 {}
 
 //---------------------------
-bool SceneManagement::requestStateChange(Core::state from, Core::state to)
-{
-  return true;
-}
-
-//---------------------------
 void SceneManagement::setScene(data::Scene *ipS)
 { mScene = ipS; }
 

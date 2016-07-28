@@ -53,7 +53,7 @@ void Shader::addFragmentSource(QString iSource)
   if(!iSource.isEmpty())
   {
     mpGuts->mFragmentSources.push_back(iSource);
-    int fragmentIndex = mpGuts->mFragmentSources.size() - 1;
+    int fragmentIndex = (int)mpGuts->mFragmentSources.size() - 1;
     /*Puisque iSource peut venir d'une ressource (donc d'un QByteArray)
       il est important de passé par std string et ensuite const char*. 
       Par exemple, si on fait, .toAscii() et ensuite .data() il arrive
@@ -70,7 +70,7 @@ void Shader::addFragmentSource(QString iSource)
 
 //Print the info log when in debug mode
 #ifndef NDEBUG
-  int fragmentIndex = mpGuts->mFragmentSources.size() - 1;
+  int fragmentIndex = (int)mpGuts->mFragmentSources.size() - 1;
   printf("Log for fragment shader number: %d\n", fragmentIndex);
   printShaderInfoLog(getFragmentId(fragmentIndex));
 #endif
@@ -85,7 +85,7 @@ void Shader::addVertexSource(QString iSource)
   if(!iSource.isEmpty())
   {
     mpGuts->mVertexSources.push_back(iSource);
-    int vertexIndex = mpGuts->mVertexSources.size() - 1;
+    int vertexIndex = (int)mpGuts->mVertexSources.size() - 1;
     /*Puisque iSource peut venir d'une ressource (donc d'un QByteArray)
       il est important de passé par std string et ensuite const char*. 
       Par exemple, si on fait, .toAscii() et ensuite .data() il arrive
@@ -101,7 +101,7 @@ void Shader::addVertexSource(QString iSource)
   
 //Print the info log when in debug mode
 #ifndef NDEBUG
-  int vertexIndex = mpGuts->mVertexSources.size() - 1;
+  int vertexIndex = (int)mpGuts->mVertexSources.size() - 1;
   printf("Log for vertex shader number: %d\n", vertexIndex);
   printShaderInfoLog(getVertexId(vertexIndex));
 #endif

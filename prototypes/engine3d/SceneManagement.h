@@ -19,8 +19,6 @@ namespace engine3d
       ~SceneManagement();
       
     protected:
-      virtual bool requestStateChange(Core::state from, Core::state to) override;
-      virtual void stateChanged(Core::state) override;
       
     private:
       void setScene(data::Scene*);

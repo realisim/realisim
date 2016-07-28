@@ -73,9 +73,9 @@ public:
   virtual void end();
   virtual int getProgramId() const {return mpGuts->mProgramId;} 
   virtual QString getFragmentSource(int i) const {return mpGuts->mFragmentSources[i];}
-  virtual int getFragmentSourcesSize() const {return mpGuts->mFragmentSources.size();}
+  virtual int getFragmentSourcesSize() const {return (int)mpGuts->mFragmentSources.size();}
   virtual QString getVertexSource(int i) const {return mpGuts->mVertexSources[i];}
-  virtual int getVertexSourcesSize() const {return mpGuts->mVertexSources.size();}
+  virtual int getVertexSourcesSize() const {return (int)mpGuts->mVertexSources.size();}
   virtual bool isValid() const;
   virtual void link() const;
   

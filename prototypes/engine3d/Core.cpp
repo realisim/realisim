@@ -57,6 +57,7 @@ void Core::goToState(state iState)
               mState = sInitializing;
               stateChanged();
               
+              mpBroker->parseDirectories();
               //mpSceneManagement->loadDemoScene();
               
               mLoopTimerId = startTimer(16);

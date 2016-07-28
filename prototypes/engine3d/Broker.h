@@ -16,11 +16,14 @@ namespace core
     Broker();
     ~Broker();
 
-    loadDemoScene();
+    void loadDemoScene();
+    void parseDirectories();
     
-//    getNumberOfTiles()
-//    getTile(int) const;
-//    getTilesWithinDistanceFrom(Point3d pos, double distanceInMeter)
+//    int getNumberOfTiles();
+//    const Tile& getTile(int) const;//by index
+//    const Tile& getTile(int latitude, int longitude) const;
+//    const Tile& getTile(math::Point3d) const;
+//    std::vector<int> getTilesWithinDistanceFrom(Point3d pos, double distanceInMeter) const;
     
     //getNumberOfAirfield()
     //getAirfield(int)
@@ -29,12 +32,15 @@ namespace core
     const data::Scene& getScene() const {return mScene;}
     
   protected:
-    
+      void parseModelDirectories();
+      void parseTerrainDirectories();
+
     //cache pour le tiles
     //cache pour les airfield
     //thread pour le chargemnet du disque.
     
     data::Scene mScene;
+    std::map<Tile, >
   };
   
 }

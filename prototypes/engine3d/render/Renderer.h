@@ -5,7 +5,7 @@
 #include "Core.h"
 #include "3d/Widget3d.h"
 
-namespace engine3d{ namespace data {class Scene;} }
+namespace engine3d{ namespace data {struct Scene;} }
 
 namespace engine3d
 {

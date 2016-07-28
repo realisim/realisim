@@ -124,7 +124,7 @@ void FrameBufferObject::addColorAttachment(bool iUseTexture)
   glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &previousFb);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, getFrameBufferId());
 	
-  int index = mpGuts->mColorAttachments.size();
+  int index = (int)mpGuts->mColorAttachments.size();
   GLenum e = GL_COLOR_ATTACHMENT0_EXT + index;
 	if(iUseTexture == false)
 	{
