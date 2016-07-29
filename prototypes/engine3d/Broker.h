@@ -3,6 +3,8 @@
 #pragma once
 
 #include "data/Scene.h"
+#include "data/Tile.h"
+#include <math/Point.h>
 
 namespace engine3d
 {
@@ -32,15 +34,16 @@ namespace core
     const data::Scene& getScene() const {return mScene;}
     
   protected:
-      void parseModelDirectories();
-      void parseTerrainDirectories();
+    void parseAirfieldDirectories();
+    void parseModelDirectories();
+    void parseTerrainDirectories();
 
     //cache pour le tiles
     //cache pour les airfield
     //thread pour le chargemnet du disque.
     
     data::Scene mScene;
-    std::map<Tile, >
+    std::map<realisim::math::Point2d, data::Tile> mTiles;
   };
   
 }

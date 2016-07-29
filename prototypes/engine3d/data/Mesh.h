@@ -7,6 +7,8 @@
 #include <QString>
 #include <vector>
 
+
+// doit avoit du partage implicite
 namespace engine3d
 {
 namespace data

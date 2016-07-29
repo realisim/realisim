@@ -17,8 +17,15 @@ Broker::~Broker()
 //-------------------------------------------------------------------
 void Broker::parseDirectories()
 {
+    parseAirfieldDirectories();
     parseTerrainDirectories();
     parseModelDirectories();
+}
+
+//-------------------------------------------------------------------
+void Broker::parseAirfieldDirectories()
+{
+  
 }
 
 //-------------------------------------------------------------------
@@ -30,7 +37,7 @@ void Broker::parseModelDirectories()
 //-------------------------------------------------------------------
 void Broker::parseTerrainDirectories()
 {
-    const QDir terrainDir = "F:\\aXion_world\\HeightMaps\\";
+    const QDir terrainDir( "F:\\aXion_world\\HeightMaps\\" );
 
     QStringList latfilters;
     latfilters.push_back("lat*");

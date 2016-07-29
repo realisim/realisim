@@ -16,7 +16,7 @@ namespace data
     int mLatitude;
     int mLongitude;
 
-    //Image mAlbedo;
+    //Image mAlbedo; //image doit avoir du partage implicite...
     //Image mHeightMap;
     //Image mNormalMap;
     //Image mLightPoint;
