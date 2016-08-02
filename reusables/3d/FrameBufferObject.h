@@ -90,7 +90,7 @@ using namespace std;
 class FrameBufferObject
 {
 public:  
-  explicit FrameBufferObject(int = 0, int = 0);
+  explicit FrameBufferObject(int = 1, int = 1);
   FrameBufferObject(const FrameBufferObject&);
   virtual ~FrameBufferObject();
   virtual FrameBufferObject& operator=(const FrameBufferObject&);
@@ -109,7 +109,7 @@ public:
   virtual int getNumColorAttachment() const {return mpGuts->mColorAttachments.size();}
   virtual QImage getImageFrom(int) const;
   virtual math::Vector2i getSize() const;
-  virtual Texture getTexture(int) const;
+  virtual Texture getTexture(int) const; //renomer a getColorAttachement.
 	virtual int getWidth() const {return mpGuts->mWidth;}
   virtual void end();
   virtual bool isValid() const;

@@ -69,6 +69,7 @@ public:
   virtual void addFragmentSource(QString);
   virtual void addVertexSource(QString);
   virtual void begin();
+  virtual void clear();
   virtual Shader copy();
   virtual void end();
   virtual int getProgramId() const {return mpGuts->mProgramId;} 
@@ -101,11 +102,12 @@ public:
 //bindVextexAttrib et setVertexAttrib?
   
 protected:
-  virtual void validate() const;
-	virtual int getFragmentId(int i) const;
-	virtual int getVertexId(int i) const;
+  virtual void detachAndDeleteGlResources();
+  virtual int getFragmentId(int i) const;
+  virtual int getVertexId(int i) const;
   virtual void printProgramInfoLog(GLuint) const;
   virtual void printShaderInfoLog(GLuint) const;
+  virtual void validate() const;
 
   struct Guts
   {

@@ -50,7 +50,6 @@ namespace treeD
   void drawPoint(const Point2d&, double = 1.0 );
   void drawRectangle( const Rectangle& );
   void drawRectangle( const Point2d&, const Vector2d& );
-  void drawRectangle( const Texture&, const Point2d&, const Vector2d& );
   void drawRectangularPrism( const Point3d& , const Point3d& );
 	
 //Texture get1dNoiseTexture();  

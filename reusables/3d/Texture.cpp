@@ -7,7 +7,7 @@ using namespace realisim;
   using namespace treeD;
 
 Texture::Guts::Guts() : mTextureId(0),
-  mSize(),
+  mSize(2, 1), //init size at 1 by 1
   mType(tInvalid),
   mFormat(GL_RGBA),
   mDataType(GL_UNSIGNED_BYTE),

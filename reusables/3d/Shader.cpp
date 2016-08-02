@@ -8,7 +8,7 @@ using namespace std;
 
 Shader::Guts::Guts() : mRefCount(1),
   mFragmentIds(),
-  mProgramId(),
+  mProgramId(0),
   mVertexIds(),
   mFragmentSources(),
   mVertexSources(),
@@ -117,6 +117,13 @@ void Shader::begin()
 }
 
 //----------------------------------------------------------------------------
+void Shader::clear()
+{
+	detachAndDeleteGlResources();
+	mpGuts->mVertexSources.clear();
+	mpGuts->mFragmentSources.clear();
+}
+//----------------------------------------------------------------------------
 /*Cette méthode sert a copier le shader et d'y allouer de nouvelle ressources
   opengl (fragment shader, vertex shader et program). On ne peut pas utilisé
   le partage implicite sur cette classe et créer une nouvelle instance de Shader
@@ -133,6 +140,30 @@ Shader Shader::copy()
   for(int i = 0; i < getFragmentSourcesSize(); ++i)
     s.addFragmentSource(getFragmentSource(i));
   return s;
+}
+
+//----------------------------------------------------------------------------
+void Shader::detachAndDeleteGlResources()
+{
+	for (int i = 0; i < getVertexSourcesSize(); ++i)
+	{
+		glDetachShader(getProgramId(), getVertexId(i));
+		glDeleteShader(getVertexId(i));
+	}
+
+	for (int i = 0; i < getFragmentSourcesSize(); ++i)
+	{
+		glDetachShader(getProgramId(), getFragmentId(i));
+		glDeleteShader(getFragmentId(i));
+	}
+
+	glDeleteProgram(getProgramId());
+
+	mpGuts->mFragmentIds.clear();
+	mpGuts->mVertexIds.clear();
+	mpGuts->mProgramId = 0;
+
+	mpGuts->mIsValid = false;
 }
 
 //----------------------------------------------------------------------------
@@ -175,19 +206,8 @@ void Shader::deleteGuts()
 {
   if(mpGuts && --mpGuts->mRefCount == 0)
   {
-    for(int i = 0; i < getVertexSourcesSize(); ++i)
-    {
-      glDetachShader(getProgramId(), getVertexId(i));
-      glDeleteShader(getVertexId(i));
-    }
+	detachAndDeleteGlResources();
     
-    for(int i = 0; i < getFragmentSourcesSize(); ++i)
-    {
-    	glDetachShader(getProgramId(), getFragmentId(i));
-	    glDeleteShader(getFragmentId(i));
-    }
-
-    glDeleteProgram(getProgramId());
     delete mpGuts;
     mpGuts = 0;
   }

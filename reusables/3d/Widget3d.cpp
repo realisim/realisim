@@ -385,8 +385,7 @@ void Widget3d::popShader()
 }
 
 //-----------------------------------------------------------------------------
-void
-Widget3d::resizeGL(int iWidth, int iHeight)
+void Widget3d::resizeGL(int iWidth, int iHeight)
 {
   QGLWidget::resizeGL(iWidth, iHeight);
   mCam.setViewportSize(iWidth, iHeight);

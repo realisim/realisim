@@ -24,7 +24,7 @@ FrameBufferObject::Guts::Guts(int iW/*= 0*/, int iH /*= 0*/) : mFrameBufferId(0)
 {}
 
 //---
-FrameBufferObject::FrameBufferObject(int iW/*= 0*/, int iH /*= 0*/) : mpGuts(0)
+FrameBufferObject::FrameBufferObject(int iW/*= 1*/, int iH /*= 1*/) : mpGuts(0)
 { makeGuts(iW, iH); }
 
 FrameBufferObject::FrameBufferObject(const FrameBufferObject& iT) : mpGuts(0)

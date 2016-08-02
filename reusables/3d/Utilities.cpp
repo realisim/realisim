@@ -107,9 +107,13 @@ void drawPoint(const Point2d& iP, double iPointSize /*= 1.0*/)
 void drawRectangle( const Rectangle& iR )
 {
   glBegin(GL_QUADS);
+  glTexCoord2d(0.0, 0.0);
   glVertex2dv( iR.bottomLeft().getPtr() );
+  glTexCoord2d(0.0, 1.0);
   glVertex2dv( iR.topLeft().getPtr() );
+  glTexCoord2d(1.0, 1.0);
   glVertex2dv( iR.topRight().getPtr() );
+  glTexCoord2d(1.0, 0.0);
   glVertex2dv( iR.bottomRight().getPtr() );
   glEnd();
 }
@@ -119,25 +123,6 @@ void drawRectangle( const Rectangle& iR )
 /*dessine un rectangle dans le plan xy. origine iO et taille iS*/
 void drawRectangle( const Point2d& iO, const Vector2d& iS)
 { drawRectangle( Rectangle( iO, iS ) ); }
-
-//------------------------------------------------------------------------------
-/*dessine un rectangle dans le plan xy. origine iO et taille iS*/
-void drawRectangle( const Texture& iT, const Point2d& iO, const Vector2d& iS )
-{
-	glEnable( GL_TEXTURE_2D );
-  glBindTexture( GL_TEXTURE_2D, iT.getId() );
-  glBegin(GL_QUADS);
-  glTexCoord2d( 0.0, 0.0 );
-  glVertex2d( iO.x(), iO.y() );
-  glTexCoord2d( 0.0, 1.0 );
-  glVertex2d( iO.x(), iO.y() + iS.y() );
-  glTexCoord2d( 1.0, 1.0 );
-  glVertex2d( iO.x() + iS.x(), iO.y() + iS.y() );
-  glTexCoord2d( 1.0, 0.0 );
-  glVertex2d( iO.x() + iS.x(), iO.y() );
-  glEnd();
-	glDisable( GL_TEXTURE_2D );
-}
 
 //------------------------------------------------------------------------------
 void drawRectangularPrism( const Point3d& iLowerLeft, const Point3d& iTopRight )
