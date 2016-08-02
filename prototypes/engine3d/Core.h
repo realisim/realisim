@@ -49,6 +49,7 @@ namespace core
       void setLog(realisim::utils::Log*);
       
       core::Hub *mpHub; //not owned
+      mutable realisim::utils::Log mDummyLog;
       mutable realisim::utils::Log *mpLog; //not owned
     };
     

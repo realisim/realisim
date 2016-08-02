@@ -27,6 +27,7 @@ mpRenderer(nullptr)
   mpSceneManagement = new SceneManagement();
   mpRenderer = new render::Renderer(nullptr);
   
+  registerClient(mpBroker);
   registerClient(mpSceneManagement);
   registerClient(mpRenderer);
   
@@ -213,12 +214,29 @@ void Core::update(double iSecondsElapsed)
 //--- Core::Client
 //----------------------------------------------
 Core::Client::Client() :
-mpHub(nullptr)
-{}
+mpHub(nullptr),
+mpLog(nullptr)
+{
+  //dummy log does not log to console because
+  //it is intended to be replaced by the Core log
+  //and at that moment, entries will be transfered
+  //and logged to the core::Log.
+  //This is only to accumulate log during construction
+  //of the object.
+  mDummyLog.logToConsole(false);
+}
 
 //----------------------------------------------
 Core::Client::~Client()
 {}
+
+//----------------------------------------------
+realisim::utils::Log& Core::Client::getLog() const
+{
+  realisim::utils::Log* l = &mDummyLog;
+  if(mpLog) { l = mpLog;}
+  return *l;
+}
 
 //----------------------------------------------
 bool Core::Client::requestStateChange(Core::state from,
@@ -235,6 +253,8 @@ void Core::Client::setHub(core::Hub *ipHub)
 //----------------------------------------------
 void Core::Client::setLog(realisim::utils::Log *ipLog)
 {
+  if(mpLog == nullptr)
+  { ipLog->takeEntriesFrom(mDummyLog); }
   mpLog = ipLog;
 }
 

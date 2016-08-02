@@ -9,7 +9,7 @@ using namespace engine3d;
   using namespace core;
 
 //---------------------------
-SceneManagement::SceneManagement()
+SceneManagement::SceneManagement() : Core::Client()
 {}
 
 //---------------------------
