@@ -78,6 +78,7 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
 void Viewer::loadShaders()
 {
 	const QString cwd = QCoreApplication::applicationDirPath();
+  printf("cwd: %s\n", cwd.toStdString().c_str());
 	//init shaders
 	//intensity
 	{
