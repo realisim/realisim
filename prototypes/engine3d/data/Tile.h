@@ -1,26 +1,49 @@
 /**/
 
 #pragma once
-#include <math/Point.h>
+#include "Image.h"
 
 namespace engine3d
 {
 namespace data
 {
-  struct Tile
+  class Tile
   {
+  public:
     Tile();
-    Tile(int, int);
+	Tile(const Tile&);
+	Tile& operator=(const Tile&);
     ~Tile();
     
-    int mLatitude;
-    int mLongitude;
+	Image getAlbedoHighResolution();
+	Image getAlbedoLowResolution();
+	//Image getHeightMap();
+	//Image getNormalMap();
+	//Image getLightPointMap();
+	void setLatitude(double);
+	void setLongitude(double);
 
-    //Image mAlbedo; //image doit avoir du partage implicite...
-    //Image mHeightMap;
-    //Image mNormalMap;
-    //Image mLightPoint;
-    //Mesh mMesh;
+  private:
+	  struct Guts
+	  {
+		  Guts();
+
+		  int mRefCount;
+		  double mLatitude;
+		  double mLongitude;
+		  Image mAlbedoHighResolution; //image doit avoir du partage implicite...
+		  Image mAlbedoLowResolution; //image doit avoir du partage implicite...
+		  Image mHeightMap;
+		  Image mNormalMap;
+		  Image mLightPoint;
+		  //Mesh mMesh;
+	  };
+
+	  void makeGuts();
+	  void shareGuts(Guts*);
+	  void deleteGuts();
+
+	  Guts* mpGuts;
   };
   
 }

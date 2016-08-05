@@ -1,9 +1,12 @@
 
 #include "Broker.h"
+#include <math/Point.h>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <utils/Timer.h>
 
+using namespace realisim;
 using namespace engine3d;
   using namespace core;
 
@@ -70,7 +73,9 @@ void Broker::parseModelDirectories()
 //-------------------------------------------------------------------
 void Broker::parseTerrainDirectories()
 {
-    const QDir terrainDir( "F:\\aXion_world\\HeightMaps\\" );
+	utils::Timer _timer;
+
+    const QDir terrainDir( "F:\\aXion_world2\\HeightMaps\\" );
 
     QStringList latfilters;
     latfilters.push_back("lat*");
@@ -78,27 +83,115 @@ void Broker::parseTerrainDirectories()
     QStringList longfilters;
     longfilters.push_back("long*");
 
+	int tileIndex = 0;
     //latitudes
     QFileInfoList latEntries = terrainDir.entryInfoList(latfilters, QDir::Dirs);
     for (int i = 0; i < latEntries.size(); ++i)
     {
-        printf("%s\n", latEntries.at(i).absoluteFilePath().toStdString().c_str());
+        //printf("%s\n", latEntries.at(i).absoluteFilePath().toStdString().c_str());
 
         //longitudes
         QDir latDir = latEntries.at(i).absoluteFilePath();
         QFileInfoList longEntries = latDir.entryInfoList(longfilters, QDir::Dirs);
         for (int j = 0; j < longEntries.size(); ++j)
         {
-            printf("\t%s\n", longEntries.at(j).absoluteFilePath().toStdString().c_str());
+            //printf("\t%s\n", longEntries.at(j).absoluteFilePath().toStdString().c_str());
 
             //tile content - the images
             QDir longDir = longEntries.at(j).absoluteFilePath();
             QFileInfoList tileContent = longDir.entryInfoList(QDir::Files);
             for (int k = 0; k < tileContent.size(); ++k)
             {
-                printf("\t\t%s\n", tileContent.at(k).absoluteFilePath().toStdString().c_str());
+				QString f = tileContent.at(k).absoluteFilePath();
+				//printf("\t\t%s\n", tileContent.at(k).absoluteFilePath().toStdString().c_str());
+
+				//find lat
+				//group0: captured string: LatXX[NS]-LONGXX[EW]
+				//group1: Latitude
+				//group2: [NS]
+				//group3: Longitude
+				//group4: [EW]
+				QRegExp latLongRe("Lat([0-9]+\\.[0-9]+)([NS])-Long([0-9]+\\.[0-9]+)([EW])");
+				latLongRe.indexIn(f);
+				QStringList captured = latLongRe.capturedTexts();
+				if (captured.size() == 5)
+				{
+					double latitude = captured[1].toDouble();
+					latitude *= captured[2] == "N" ? 1 : -1;
+					double longitude = captured[3].toDouble();
+					longitude *= captured[4] == "E" ? 1 : -1;
+
+					//check if tile already exists. if so, grab that tile
+					//if not, create the tile and insert it in data structure
+					const math::Point2d latLong(latitude, longitude);
+					auto itTile = mPositionToTileIndex.find(latLong);
+					data::Tile t;
+					if (itTile != mPositionToTileIndex.end())
+					{
+						t = mTileIndexToTile[itTile->second];
+					}
+					else
+					{
+						t.setLatitude(latitude);
+						t.setLongitude(longitude);
+
+						mTileIndexToTile[tileIndex] = t;
+						mPositionToTileIndex[latLong] = tileIndex;
+						tileIndex++;
+					}
+
+					//get file extension
+					const QString extension = (tileContent.at(k).suffix());
+					if (extension == "dds")
+					{
+						//check low res first since it also contains -text as in the
+						//highres file.
+						//lowres
+						if(f.lastIndexOf("LR-text") != -1)
+						{ 
+							t.getAlbedoLowResolution().setFilePath(f);
+							t.getAlbedoLowResolution().setType(data::Image::tDds);
+						}
+						//highres
+						else if(f.lastIndexOf("-text") != -1)
+						{
+							t.getAlbedoHighResolution().setFilePath(f);
+							t.getAlbedoHighResolution().setType(data::Image::tDds);
+						}
+						//normal
+						else if (f.lastIndexOf("-norm") != -1)
+						{
+							//t.getNormalMap().setFilePath(f);
+							//t.getNormalMap().setType(Image::tDds);
+						}
+						else{}
+					}
+					else if (extension == "HM")
+					{
+						//t.getHeightMap().setFilePath(f);
+						//t.getHeightMap().setType(Image::tHeightMap);
+					}
+					else if (extension == "LP")
+					{
+						//t.getLightPointMap().setFilePath(f);
+						//t.getLightPointMap().setType(Image::tLightMap);
+					}
+					else
+					{
+						getLog().log("Unknown file extension while parsing terrain file %s\n", 
+							f.toStdString().c_str());
+					}
+				}
+				else
+				{
+					getLog().log("Tile file %s was found but does not match naming convention.",
+						f.toStdString().c_str());
+				}
             }
         }
     }
+
+	printf("Time to parse terrain directory: %f(sec)\n", _timer.getElapsed());
+	printf("number of tile files parsed %d\n", (int)mTileIndexToTile.size());
         
 }
