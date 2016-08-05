@@ -4,6 +4,7 @@
 
 #include <data/Light.h>
 #include <data/Model.h>
+#include <data/Tile.h>
 #include <vector>
 
 namespace engine3d
@@ -15,6 +16,7 @@ namespace data
     Scene();
     ~Scene();
     
+	std::vector<Tile> mTiles;
     std::vector<Model> mModels;
     //std::vector<Model> mTransparentModels;
     std::vector<Light> mLights;

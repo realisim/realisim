@@ -22,6 +22,7 @@ namespace render
     
   private:
     virtual void draw() override;
+    virtual void drawTiles(); 
     virtual void initializeGL() override;
     virtual bool requestStateChange(core::Core::state, core::Core::state) override;
     virtual void update(double) override;

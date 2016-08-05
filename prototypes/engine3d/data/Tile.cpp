@@ -1,6 +1,7 @@
 
 #include "Tile.h"
 
+using namespace realisim;
 using namespace engine3d;
 using namespace data;
 
@@ -10,6 +11,7 @@ using namespace data;
 Tile::Guts::Guts() : mRefCount(1),
 	mLatitude(0),
 	mLongitude(0),
+    mSize(0.11, 0.11),
 	mAlbedoHighResolution(),
 	mAlbedoLowResolution(),
 	mHeightMap(),
@@ -21,15 +23,11 @@ Tile::Guts::Guts() : mRefCount(1),
 //--- Tile
 //-------------------------------------------------------------------
 Tile::Tile() : mpGuts(nullptr)
-{
-	makeGuts();
-}
+{ makeGuts(); }
 
 //-------------------------------------------------------------------
 Tile::Tile(const Tile& iT) : mpGuts(nullptr)
-{
-	shareGuts(iT.mpGuts);
-}
+{ shareGuts(iT.mpGuts); }
 
 //-------------------------------------------------------------------
 Tile& Tile::operator=(const Tile& iT)
@@ -40,9 +38,7 @@ Tile& Tile::operator=(const Tile& iT)
 
 //-------------------------------------------------------------------
 Tile::~Tile()
-{
-	deleteGuts();
-}
+{ deleteGuts(); }
 
 //-------------------------------------------------------------------
 void Tile::deleteGuts()
@@ -57,33 +53,39 @@ void Tile::deleteGuts()
 
 //-------------------------------------------------------------------
 Image Tile::getAlbedoHighResolution()
-{
-	return mpGuts->mAlbedoHighResolution;
-}
+{ return mpGuts->mAlbedoHighResolution; }
 
 //-------------------------------------------------------------------
 Image Tile::getAlbedoLowResolution()
-{
-	return mpGuts->mAlbedoLowResolution;
-}
+{ return mpGuts->mAlbedoLowResolution; }
+
+//-------------------------------------------------------------------
+double Tile::getLatitude() const
+{ return mpGuts->mLatitude; }
+
+//-------------------------------------------------------------------
+double Tile::getLongitude() const
+{ return mpGuts->mLongitude; }
+
+//-------------------------------------------------------------------
+math::Vector2d Tile::getSize() const
+{ return mpGuts->mSize; }
 
 //-------------------------------------------------------------------
 void Tile::makeGuts()
-{
-	mpGuts = new Guts();
-}
+{ mpGuts = new Guts(); }
 
 //-------------------------------------------------------------------
 void Tile::setLatitude(double iLat)
-{
-	mpGuts->mLatitude = iLat;
-}
+{ mpGuts->mLatitude = iLat; }
 
 //-------------------------------------------------------------------
 void Tile::setLongitude(double iLong)
-{
-	mpGuts->mLongitude = iLong;
-}
+{ mpGuts->mLongitude = iLong; }
+
+//-------------------------------------------------------------------
+void Tile::setSize(math::Vector2d iSize)
+{ mpGuts->mSize = iSize; }
 
 //-------------------------------------------------------------------
 void Tile::shareGuts(Guts *ipGuts)

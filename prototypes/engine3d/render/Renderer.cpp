@@ -1,7 +1,9 @@
 
 
+#include <3d/Utilities.h>
 #include <Broker.h>
 #include <data/Scene.h>
+#include <data/Tile.h>
 #include "Renderer.h"
 
 using namespace realisim;
@@ -26,8 +28,21 @@ Renderer::~Renderer()
 //-----------------------------------------------------------------------------
 void Renderer::draw()
 {
-  showFps();
-  const data::Scene& s = getHub().getBroker().getScene();
+  showFps();  
+
+  drawTiles();
+}
+
+//-----------------------------------------------------------------------------
+void Renderer::drawTiles()
+{
+	const data::Scene& s = getHub().getBroker().getScene();
+	for (size_t i = 0; i < s.mTiles.size(); ++i)
+	{
+		const data::Tile& t = s.mTiles[i];
+		treeD::drawRectangle( math::Point2d(t.getLatitude(), t.getLongitude()),
+            t.getSize() );
+	}
 }
 
 //-----------------------------------------------------------------------------

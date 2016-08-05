@@ -2,6 +2,7 @@
 
 #pragma once
 #include "Image.h"
+#include <math/Vect.h>
 
 namespace engine3d
 {
@@ -14,14 +15,18 @@ namespace data
 	Tile(const Tile&);
 	Tile& operator=(const Tile&);
     ~Tile();
-    
+    	
 	Image getAlbedoHighResolution();
 	Image getAlbedoLowResolution();
 	//Image getHeightMap();
-	//Image getNormalMap();
+	double getLatitude() const;
 	//Image getLightPointMap();
+	double getLongitude() const;	
+	//Image getNormalMap();
+	realisim::math::Vector2d getSize() const;
 	void setLatitude(double);
 	void setLongitude(double);
+    void setSize(realisim::math::Vector2d);
 
   private:
 	  struct Guts
@@ -31,6 +36,7 @@ namespace data
 		  int mRefCount;
 		  double mLatitude;
 		  double mLongitude;
+          realisim::math::Vector2d mSize;
 		  Image mAlbedoHighResolution; //image doit avoir du partage implicite...
 		  Image mAlbedoLowResolution; //image doit avoir du partage implicite...
 		  Image mHeightMap;

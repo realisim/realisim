@@ -18,7 +18,10 @@ namespace engine3d
       SceneManagement();
       ~SceneManagement();
       
+	  void clearScene();
+
     protected:
+		virtual void update(double) override; //from Core::Client
       
     private:
       void setScene(data::Scene*);

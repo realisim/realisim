@@ -242,20 +242,16 @@ namespace math
 
   //----------------------------------------------------------------------------
   template<class U>
-  bool Point2<U>::operator> (const Point2<U>& iP) const
+  bool Point2<U>::operator> (const Point2<U>& iRhs) const
   {
-    //Voir operateur < et corriger ici au besoin
-    return x() > iP.x() && 
-      y() > iP.y();
+    return !operator<=(iRhs);
   }
   
   //----------------------------------------------------------------------------
   template<class U>
-  bool Point2<U>::operator>= (const Point2<U>& iP) const
+  bool Point2<U>::operator>= (const Point2<U>& iRhs) const
   {
-    //Voir operateur <= et corriger ici au besoin
-    return x() >= iP.x() && 
-      y() >= iP.y();
+    return !operator<(iRhs);
   }
   
 //------------------------------------------------------------------------------

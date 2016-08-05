@@ -21,6 +21,11 @@ Broker::~Broker()
 {}
 
 //-------------------------------------------------------------------
+void Broker::addTile(data::Tile iT)
+{
+    mPositionToTile[ math::Point2d(iT.getLatitude(), iT.getLongitude()) ] = iT;
+}
+//-------------------------------------------------------------------
 void Broker::findResourcesFolderPath()
 {
   QDir appDirPath(QCoreApplication::applicationDirPath());
@@ -50,6 +55,30 @@ void Broker::parseDirectories()
     parseAirfieldDirectories();
     parseTerrainDirectories();
     parseModelDirectories();
+}
+
+//-------------------------------------------------------------------
+data::Tile Broker::getTile(double iLat, double iLong) const
+{
+    data::Tile r;
+
+    auto it = mPositionToTile.upper_bound( math::Point2d(iLat, iLong) );
+    if( it != mPositionToTile.end() )
+    {
+        data::Tile t = it->second;
+        printf("asked %f, %f -> got %f, %f\n", iLat, iLong, t.getLatitude(), t.getLongitude());
+
+        math::Point2d p1(iLat, iLong);
+        math::Point2d p2(t.getLatitude(), t.getLongitude());
+
+        23434564567
+    }
+    else
+    {
+        //tile is not present, we need to parse the folder where
+        //that tile could be....
+    }
+    return r;
 }
 
 //-------------------------------------------------------------------
@@ -124,20 +153,18 @@ void Broker::parseTerrainDirectories()
 					//check if tile already exists. if so, grab that tile
 					//if not, create the tile and insert it in data structure
 					const math::Point2d latLong(latitude, longitude);
-					auto itTile = mPositionToTileIndex.find(latLong);
+					auto itTile = mPositionToTile.find(latLong);
 					data::Tile t;
-					if (itTile != mPositionToTileIndex.end())
+					if (itTile != mPositionToTile.end())
 					{
-						t = mTileIndexToTile[itTile->second];
+						t = itTile->second;
 					}
 					else
 					{
 						t.setLatitude(latitude);
 						t.setLongitude(longitude);
-
-						mTileIndexToTile[tileIndex] = t;
-						mPositionToTileIndex[latLong] = tileIndex;
-						tileIndex++;
+                        t.setSize(math::Vector2d(0.11, 0.11));
+                        addTile(t);
 					}
 
 					//get file extension
@@ -191,7 +218,17 @@ void Broker::parseTerrainDirectories()
         }
     }
 
+    for(auto it = mPositionToTile.begin(); it != mPositionToTile.end(); ++it)
+        printf("lat %f, long %f\n", it->second.getLatitude(), it->second.getLongitude());
+
 	printf("Time to parse terrain directory: %f(sec)\n", _timer.getElapsed());
-	printf("number of tile files parsed %d\n", (int)mTileIndexToTile.size());
-        
+	printf("number of tile files parsed %d\n", (int)mPositionToTile.size());
+}
+
+//-------------------------------------------------------------------
+void Broker::update(double iSecElapsed)
+{
+	//decrease ref count on all tiles
+
+	//cleanup tile with refcount 0
 }
