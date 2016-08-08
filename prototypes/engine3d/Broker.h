@@ -27,7 +27,7 @@ namespace core
 //    int getNumberOfTiles();
 //    const Tile& getTile(int) const;//by index
 //    Tile getTileWithPayload(int) const;
-      data::Tile getTile(double, double) const;
+      data::Tile getTile(double, double);
 //    const Tile& getTile(math::Point3d) const;
 //    std::vector<int> getTilesWithinDistanceFrom(Point3d pos, double distanceInMeter) const;
     
@@ -43,7 +43,7 @@ namespace core
 	QString getResourcesFolderPath() const;
     void parseAirfieldDirectories();
     void parseModelDirectories();
-    void parseTerrainDirectories();
+    bool parseTerrainDirectory(int iLat, int iLong);
 	virtual void update(double) override; //from Core:Client
 
     //cache pour le tiles
@@ -55,7 +55,9 @@ namespace core
         
 	//std::vector<data::Tile> mTileFiles;
 	//std::map<int, data::Tile> mTileIndexToTile; //humm... semble superflu...
+    std::map<realisim::math::Point2i, int> m5DegTilesCache;
     std::map<realisim::math::Point2d, data::Tile> mPositionToTile;
+
   };
   
 }

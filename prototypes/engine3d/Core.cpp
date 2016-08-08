@@ -9,6 +9,11 @@
 using namespace engine3d;
 using namespace core;
 
+namespace
+{
+    const int kMsPerFrame = 16;
+}
+
 //----------------------------------------------
 //--- Core
 //----------------------------------------------
@@ -61,7 +66,7 @@ void Core::goToState(state iState)
               mpBroker->parseDirectories();
               //mpSceneManagement->loadDemoScene();
               
-              mLoopTimerId = startTimer(16);
+              mLoopTimerId = startTimer(kMsPerFrame);
               mLoopTimer.start();
               goToState(sRunning); //from intializing, we go directly to running
               break;
@@ -80,7 +85,7 @@ void Core::goToState(state iState)
             case sRunning:
               mState = sRunning;
               stateChanged();
-              mLoopTimerId = startTimer(16);
+              mLoopTimerId = startTimer(kMsPerFrame);
               mLoopTimer.start();
               break;
             case sQuitting:
@@ -117,7 +122,7 @@ void Core::goToState(state iState)
             case sRunning:
               mState = sRunning;
               stateChanged();
-              mLoopTimerId = startTimer(16);
+              mLoopTimerId = startTimer(kMsPerFrame);
               mLoopTimer.start();
               break;
             case sQuitting:

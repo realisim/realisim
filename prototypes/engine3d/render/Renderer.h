@@ -24,6 +24,7 @@ namespace render
     virtual void draw() override;
     virtual void drawTiles(); 
     virtual void initializeGL() override;
+    virtual void mouseMoveEvent(QMouseEvent*) override;
     virtual bool requestStateChange(core::Core::state, core::Core::state) override;
     virtual void update(double) override;
     
