@@ -261,7 +261,8 @@ bool Broker::parseTerrainDirectory(int iLat, int iLong)
 //-------------------------------------------------------------------
 void Broker::update(double iSecElapsed)
 {
-	//decrease ref count on all tiles
+    //cleanup 5deg tiles with refcount 0
+    //unload all tile from cleaned up 5deg tiles.
 
-	//cleanup tile with refcount 0
+	//decrease ref count on all 5deg tiles
 }

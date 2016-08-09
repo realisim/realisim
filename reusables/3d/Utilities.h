@@ -48,6 +48,7 @@ namespace treeD
   void drawCircle( const Point2d&, double );  
   void drawLine( const Point2d&, const Point2d& );
   void drawPoint(const Point2d&, double = 1.0 );
+  void drawPoint(const Point3d&, double = 1.0);
   void drawRectangle( const Rectangle& );
   void drawRectangle( const Point2d&, const Vector2d& );
   void drawRectangle( const Texture&, const Point2d&, const Vector2d& );

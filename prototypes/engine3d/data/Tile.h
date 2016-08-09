@@ -2,6 +2,7 @@
 
 #pragma once
 #include "Image.h"
+#include <math/Point.h>
 #include <math/Vect.h>
 
 namespace engine3d
@@ -20,12 +21,14 @@ namespace data
 	Image getAlbedoLowResolution();
 	//Image getHeightMap();
 	double getLatitude() const;
+    realisim::math::Point2d getLatLong() const;
 	//Image getLightPointMap();
 	double getLongitude() const;	
 	//Image getNormalMap();
 	realisim::math::Vector2d getSize() const;
 	void setLatitude(double);
 	void setLongitude(double);
+    void setSize(double, double);
     void setSize(realisim::math::Vector2d);
 
   private:

@@ -101,16 +101,25 @@ void drawPoint(const Point2d& iP, double iPointSize /*= 1.0*/)
   glVertex2dv( iP.getPtr() );
   glEnd();
 }
+
+//------------------------------------------------------------------------------
+void drawPoint(const Point3d& iP, double iPointSize /*= 1.0*/)
+{
+    glPointSize(iPointSize);
+    glBegin(GL_POINTS);
+    glVertex3dv(iP.getPtr());
+    glEnd();
+}
   
 //------------------------------------------------------------------------------
-/*dessine un rectangle dans le plan xy.*/
+/*dessine un rectangle dans le plan xy. CCW*/
 void drawRectangle( const Rectangle& iR )
 {
   glBegin(GL_QUADS);
   glVertex2dv( iR.bottomLeft().getPtr() );
+  glVertex2dv(iR.bottomRight().getPtr());
+  glVertex2dv(iR.topRight().getPtr());
   glVertex2dv( iR.topLeft().getPtr() );
-  glVertex2dv( iR.topRight().getPtr() );
-  glVertex2dv( iR.bottomRight().getPtr() );
   glEnd();
 }
 

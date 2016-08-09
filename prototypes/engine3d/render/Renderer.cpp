@@ -2,6 +2,7 @@
 
 #include <3d/Utilities.h>
 #include <Broker.h>
+#include <Conversion.h>
 #include <data/Scene.h>
 #include <data/Tile.h>
 #include "Renderer.h"
@@ -22,9 +23,12 @@ Renderer::Renderer(QWidget* ipParent /*=0*/) : Widget3d(ipParent),
   setFocusPolicy(Qt::StrongFocus);
 
   Camera c = getCamera();
-  c.set(Point3d(0.0, -100, 50.0),
+  //c.set(Point3d(40000.0, -79800, 1000.0), //40N 75W
+  //    Point3d(0.0, 0.0, 0.0),
+  //    Vector3d(0.0, 0.0, 1.0) );
+  c.set(Point3d(0, -100, 100.0), 
       Point3d(0.0, 0.0, 0.0),
-      Vector3d(0.0, 0.0, 1.0) );
+      Vector3d(0.0, 0.0, 1.0));
   c.setPerspectiveProjection( 65.0, 1.0, 1.0, 150000 );
   setCamera(c, false);
   setControlType(Widget3d::ctFree);
@@ -56,8 +60,9 @@ void Renderer::drawTiles()
 	for (size_t i = 0; i < s.mTiles.size(); ++i)
 	{
 		const data::Tile& t = s.mTiles[i];
-		treeD::drawRectangle( math::Point2d(t.getLatitude(), t.getLongitude()),
-            t.getSize() );
+		//treeD::drawRectangle( t.getLatLong(), t.getSize() );
+        //treeD::drawRectangle( t.getLatLong(), t.getSize());
+        treeD::drawPoint( latLongToCartesian(t.getLatLong()), 2.0 );
 	}
 
     glEnable(GL_LIGHTING);
@@ -69,6 +74,7 @@ void Renderer::initializeGL()
 {
   Widget3d::initializeGL();
 
+  glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
 
   mGlIsInitialized = true;

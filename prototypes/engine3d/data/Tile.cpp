@@ -64,6 +64,10 @@ double Tile::getLatitude() const
 { return mpGuts->mLatitude; }
 
 //-------------------------------------------------------------------
+math::Point2d Tile::getLatLong() const
+{ return math::Point2d( mpGuts->mLatitude, mpGuts->mLongitude ); }
+
+//-------------------------------------------------------------------
 double Tile::getLongitude() const
 { return mpGuts->mLongitude; }
 
@@ -84,6 +88,11 @@ void Tile::setLongitude(double iLong)
 { mpGuts->mLongitude = iLong; }
 
 //-------------------------------------------------------------------
+void Tile::setSize(double iDeltaLat, double iDeltaLong)
+{ setSize( math::Vector2d(iDeltaLat, iDeltaLong) ); }
+
+//-------------------------------------------------------------------
+//size in lat-long
 void Tile::setSize(math::Vector2d iSize)
 { mpGuts->mSize = iSize; }
 

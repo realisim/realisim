@@ -8,6 +8,7 @@
 #ifndef realisim_math_POINT_H
 #define realisim_math_POINT_H
 
+#include <algorithm>
 #include "MathDef.h"
 #include <iostream>
 

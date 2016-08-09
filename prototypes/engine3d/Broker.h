@@ -28,8 +28,9 @@ namespace core
 //    const Tile& getTile(int) const;//by index
 //    Tile getTileWithPayload(int) const;
       data::Tile getTile(double, double);
+      //data::Tile getTile(math::Point2d iLatLong);
 //    const Tile& getTile(math::Point3d) const;
-//    std::vector<int> getTilesWithinDistanceFrom(Point3d pos, double distanceInMeter) const;
+    //std::vector<data::Tile> getTilesWithinDistanceFrom(Point3d pos, double distanceInMeter) const;
     
     //getNumberOfAirfield()
     //getAirfield(int)
