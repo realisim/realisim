@@ -189,7 +189,7 @@ void Sprite::set(const Texture& t, QRect r)
 void Sprite::set(QImage i)
 {
 	Texture t;
-  t.set(i);
+  t.set(i, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
   t.setFilter( GL_NEAREST, GL_NEAREST );
   t.setWrapMode( GL_CLAMP );
 	set(t, QRect(0, 0, t.width(), t.height() ));

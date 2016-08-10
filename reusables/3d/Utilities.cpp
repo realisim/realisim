@@ -103,18 +103,18 @@ void drawPoint(const Point2d& iP, double iPointSize /*= 1.0*/)
 }
   
 //------------------------------------------------------------------------------
-/*dessine un rectangle dans le plan xy.*/
+/*dessine un rectangle dans le plan xy en CCW.*/
 void drawRectangle( const Rectangle& iR )
 {
   glBegin(GL_QUADS);
   glTexCoord2d(0.0, 0.0);
   glVertex2dv( iR.bottomLeft().getPtr() );
+  glTexCoord2d(1.0, 0.0);
+  glVertex2dv(iR.bottomRight().getPtr());
+  glTexCoord2d(1.0, 1.0);
+  glVertex2dv(iR.topRight().getPtr());
   glTexCoord2d(0.0, 1.0);
   glVertex2dv( iR.topLeft().getPtr() );
-  glTexCoord2d(1.0, 1.0);
-  glVertex2dv( iR.topRight().getPtr() );
-  glTexCoord2d(1.0, 0.0);
-  glVertex2dv( iR.bottomRight().getPtr() );
   glEnd();
 }
 
@@ -229,7 +229,7 @@ Texture get3dNoiseTexture(const Vector3i& iSize)
 
 	vector<int> s; s.resize(3);
   s[0] = iSize.x(); s[1] = iSize.y(); s[2] = iSize.z();
-  r.set( noise3dTexPtr, s );
+  r.set( noise3dTexPtr, s, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
   free(noise3dTexPtr);
   return r;
 }
