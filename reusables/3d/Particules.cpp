@@ -322,7 +322,7 @@ void Particules::setDirection( const Vector3d& iD )
 { mDirection = iD; mDirection.normalise(); }
 //-----------------------------------------------------------------------------
 void Particules::setImage( QImage iImage )
-{ mTexture.set( iImage ); }
+{ mTexture.set( iImage, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE); }
 //-----------------------------------------------------------------------------
 void Particules::setLifeRange( int iLowerBound, int iUpperBound )
 { mLifeRange = make_pair( iLowerBound, iUpperBound ); }

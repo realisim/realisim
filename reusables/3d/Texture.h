@@ -62,9 +62,11 @@
       Dans le cas de la texture 2d, mSize aura toujours un 0 dans la 
       composante z du vecteur.
     mType: Le type de la texture; 2d ou 3d.
-    mFormat: Le format de la texture (voir la doc OpenGL glTexImagexD).
+    mFormat: Le format de la texture (voir la doc OpenGL glTexImage2D).
       GL_LUMINANCE
-      GL_RGBA ...
+      GL_RGBA
+      GL_SRGB...
+    mInternalFormat: (voir la doc OpenGL glTexImage2D)
     mDataType: Le type de donné (voir la doc OpenGL glTexImagexD).
        GL_UNSIGNED_BYTE
        GL_UNSIGNED_SHORT ...
@@ -94,6 +96,7 @@ public:
   virtual void generateMipmap();
   virtual GLenum getDataType() const {return mpGuts->mDataType;}
   virtual GLenum getFormat() const {return mpGuts->mFormat;}
+  virtual GLenum getInternalFormat() const { return mpGuts->mInternalFormat; }
   virtual GLenum getMagnificationFilter() const;
   virtual GLenum getMinificationFilter() const;      
   virtual GLuint getId() const {return mpGuts->mTextureId;}
@@ -106,13 +109,10 @@ public:
   virtual void resize( const std::vector<int>& );
   virtual void resize( int, int );
   virtual void resize( int, int, int );
-	virtual void set( QImage, GLenum = GL_RGBA );
-  virtual void set( void*, const math::Vector2i&, GLenum = GL_RGBA,
-    GLenum = GL_UNSIGNED_BYTE );
-  virtual void set( void*, const math::Vector3i&, GLenum = GL_RGBA,
-    GLenum = GL_UNSIGNED_BYTE );
-  virtual void set( void*, const std::vector<int>&, GLenum = GL_RGBA,
-    GLenum = GL_UNSIGNED_BYTE );
+  virtual void set( QImage, GLenum internalFormat, GLenum format, GLenum dataType);
+  virtual void set( void*, const math::Vector2i&, GLenum internalFormat, GLenum format, GLenum dataType);
+  virtual void set( void*, const math::Vector3i&, GLenum internalFormat, GLenum format, GLenum dataType );
+  virtual void set( void*, const std::vector<int>&, GLenum internalFormat, GLenum format, GLenum dataType);
   virtual void setFilter( GLenum );
   virtual void setFilter( GLenum, GLenum );
   virtual void setMinificationFilter( GLenum );
@@ -136,6 +136,7 @@ protected:
     std::vector<int> mSize;
     type mType;
     GLenum mFormat;
+    GLenum mInternalFormat;
     GLenum mDataType;
     GLenum mMinificationFilter;
     GLenum mMagnificationFilter;
@@ -149,6 +150,7 @@ protected:
   virtual void makeGuts();
   virtual void setDataType(GLenum iT) {mpGuts->mDataType = iT;}
   virtual void setFormat(GLenum iF) {mpGuts->mFormat = iF;}
+  virtual void setInternalFormat(GLenum iF) { mpGuts->mInternalFormat = iF; }
   virtual void setType(type iT) {mpGuts->mType = iT;}
   virtual void shareGuts(Guts*);
 

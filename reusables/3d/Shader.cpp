@@ -66,7 +66,6 @@ void Shader::addFragmentSource(QString iSource)
     glCompileShader(getFragmentId(fragmentIndex));
     glAttachShader(getProgramId(), getFragmentId(fragmentIndex));
   }
-  link();
 
 //Print the info log when in debug mode
 #ifndef NDEBUG
@@ -114,6 +113,8 @@ void Shader::begin()
   glGetIntegerv(GL_CURRENT_PROGRAM, &p);
   mpGuts->mPreviousShaders.push_back( p );
   if( isValid() ) glUseProgram( getProgramId() );
+  else
+  { printf("Shader is not valid. Either it did not link properly or was never linked...\n"); }
 }
 
 //----------------------------------------------------------------------------
@@ -234,8 +235,7 @@ int Shader::getVertexId(int i) const
 //----------------------------------------------------------------------------
 bool Shader::isValid() const
 {
-	if( !mpGuts->mIsValid ) link();
-  return mpGuts->mIsValid;
+    return mpGuts->mIsValid;
 }
 
 //----------------------------------------------------------------------------

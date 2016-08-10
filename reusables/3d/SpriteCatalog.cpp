@@ -222,7 +222,7 @@ void SpriteCatalog::fromBinary( const QByteArray& iBa )
     in >> wrapT;
     
     Texture t;
-    t.set( image );
+    t.set( image, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
     t.setMinificationFilter( (GLenum)minFilter );
     t.setMagnificationFilter( (GLenum)magFilter );
     t.setWrapRMode( (GLenum)wrapR );

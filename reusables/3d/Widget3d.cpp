@@ -155,12 +155,19 @@ void Widget3d::keyPressEvent(QKeyEvent* ipE)
 //-----------------------------------------------------------------------------
 void Widget3d::keyReleaseEvent( QKeyEvent* ipE )
 { 
-  map< int, bool >::iterator it = mKeys.find( ipE->key() );
-  if( it != mKeys.end() )
-  { mKeys.erase( it ); }
-  
-  if( mKeys.empty() && mCameraControlTimerId != 0)
-  { killTimer( mCameraControlTimerId ); mCameraControlTimerId = 0; }
+  if( !ipE->isAutoRepeat() )
+  {
+      map< int, bool >::iterator it = mKeys.find(ipE->key());
+      if (it != mKeys.end())
+      {
+          mKeys.erase(it);
+      }
+
+      if (mKeys.empty() && mCameraControlTimerId != 0)
+      {
+          killTimer(mCameraControlTimerId); mCameraControlTimerId = 0;
+      }
+  }
 }
 
 //-----------------------------------------------------------------------------

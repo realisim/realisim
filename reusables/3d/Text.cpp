@@ -159,12 +159,12 @@ void Text::render() const
     p.end();
     
     //on met le texte en noire dans la texture
-    mTexture.set( im2 );
+    mTexture.set( im2, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
     mTexture.setWrapMode( GL_CLAMP );
     
     FrameBufferObject fbo;
     fbo.resize( r.width(), r.height() );
-    fbo.addColorAttachment( true );    
+    fbo.addColorAttachment();    
     fbo.begin();
     fbo.drawTo( 0 );
     glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT | GL_COLOR_BUFFER_BIT | GL_VIEWPORT_BIT);
@@ -189,7 +189,7 @@ void Text::render() const
     vector< double > f = meanKernel2D( kernelSize );
     vector<int> fs(2, 0); fs[0] = kernelSize; fs[1] = kernelSize;
     Texture filter;
-    filter.set( &f[0], fs, GL_LUMINANCE, GL_DOUBLE );
+    filter.set( &f[0], fs, GL_LUMINANCE, GL_LUMINANCE, GL_DOUBLE );
     filter.setWrapMode( GL_CLAMP );
     
     Shader s;
@@ -210,13 +210,13 @@ void Text::render() const
     s.end();
     
     //on dessine le texte.
-    mTexture.set( im );
+    mTexture.set( im, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
     mTexture.setFilter( GL_LINEAR );
     mTexture.setWrapMode( GL_CLAMP ); 
 		draw();
     
     //on recupere le resultat
-    mTexture = fbo.getTexture( 0 ).copy();
+    mTexture = fbo.getColorAttachment( 0 ).copy();
     mTexture.setFilter( GL_LINEAR );
     mTexture.setWrapMode( GL_CLAMP );
     
@@ -227,7 +227,7 @@ void Text::render() const
   }
   else 
   {  	
-    mTexture.set( im );
+    mTexture.set( im, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
     mTexture.setFilter( GL_LINEAR );
     mTexture.setWrapMode( GL_CLAMP ); 
   }
