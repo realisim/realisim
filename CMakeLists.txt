@@ -1,10 +1,9 @@
 # ROOT CMakeList
 PROJECT( Realisim )
 
-INCLUDE( "macro_component.cmake" )
-
 cmake_minimum_required (VERSION 2.8.11)
 
+SET(THIRDPARTIESDIR thirdParties)
 SET(SOURCES)  #all .cpp files
 SET(INCLUDES) #all .h files
 SET(RESOURCES) #all resources files 
@@ -13,7 +12,9 @@ SET(MAC_ICONS) #icones pour mac, le path doit etre un path absolu vers le fichie
                   
 SET(PROJECT_INCLUDE_DIRS) #additional include directory to add
 SET(PROJECT_LINK_LIBRAIRIES) #additional link librairies                 
-SET(BINDIR ${CMAKE_SOURCE_DIR}/distribution/bin)
+
+INCLUDE( "macro_component.cmake" )
+INCLUDE( "CMakeModules/tinyObjLoader.cmake" )
 
 #Set a global group for all cxx files ( usualy moc'ed files )
 # Find includes in corresponding build directories
@@ -31,7 +32,6 @@ MACRO( GENERATE_EXE iExecutableName )
 #   Message("QT_PLUGINS_DIR: ${QT_PLUGINS_DIR}")
 #   MESSAGE( "sources: ${SOURCES}" )
 #   MESSAGE( "executable: ${iExecutableName}" )
-#   MESSAGE( "BINDIR: ${BINDIR}" )
 #   MESSAGE( "MAC_ICONS: ${MAC_ICONS}" )
   
   SET( PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} )

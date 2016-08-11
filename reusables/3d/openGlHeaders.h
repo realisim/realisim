@@ -10,6 +10,7 @@
 
 #ifdef __APPLE__
     #include <OpenGL/glu.h>
+    #include <OpenGL/glext.h>
 #endif
 
 #include <QtOpenGL/qgl.h>
