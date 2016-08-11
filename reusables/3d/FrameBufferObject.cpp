@@ -227,10 +227,12 @@ void FrameBufferObject::init()
         return;
     }
 
-    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS_EXT, &mpGuts->mMaxColorAttachment);
-
     if (getFrameBufferId() == 0)
+    {
         glGenFramebuffersEXT(1, &mpGuts->mFrameBufferId);
+        glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS_EXT, &mpGuts->mMaxColorAttachment);
+    }
+        
 }
 
 //----------------------------------------------------------------------------
@@ -313,7 +315,6 @@ void FrameBufferObject::resize(int iWidth, int iHeight)
         Texture t = getColorAttachment(i);
         t.resize(getWidth(), getHeight());
         glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getId(), 0);
-        
     }
 
     if (isDepthAttachmentUsed())

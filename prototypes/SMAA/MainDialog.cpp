@@ -8,6 +8,9 @@
 #include <QCoreApplication>
 #include <QHBoxLayout>
 
+//include jiminez smaa lookup textures
+#include <JimenezSmaa/71c806a/include/AreaTex.h>
+#include <JimenezSmaa/71c806a/include/SearchTex.h>
 
 using namespace realisim;
 using namespace math;
@@ -38,17 +41,13 @@ Viewer::~Viewer()
 {}
 
 //-----------------------------------------------------------------------------
-void Viewer::blitToScreen(Texture t, Vector2d size)
+//draws a rectancle in screenspace starting at 0.0 to size. If a texure
+//isbound to GL_TEXTURE0, the rectangle will be textured
+void Viewer::blitToScreen(Vector2d size)
 {
-    glDisable(GL_LIGHTING);
     ScreenSpaceProjection sp(size);
-    {
-        //glColor3ub(255, 255, 255);
-        glEnable(GL_TEXTURE_2D);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, t.getId());
+    {        
         drawRectangle(Point2d(0.0), size);
-        glBindTexture(GL_TEXTURE_2D, 0);
     }
 }
 
@@ -63,7 +62,7 @@ void Viewer::draw()
     }
     else
     {
-        const Camera& cam = getCamera();
+        const Camera& cam = getCamera();        
 
         mFbo.begin();
         {
@@ -74,6 +73,7 @@ void Viewer::draw()
                 drawScene();
             }
             
+            glDisable(GL_LIGHTING);
             //disable all depth test for the post processing stages...
             glDisable(GL_DEPTH_TEST);
             //--- post processing
@@ -84,8 +84,11 @@ void Viewer::draw()
                 mGammaCorrection.begin();
                 mGammaCorrection.setUniform("uOffScreen", 0);
 
-                Texture t0 = mFbo.getColorAttachment(0);
-                blitToScreen(t0, cam.getViewport().getSize());       
+                Texture t = mFbo.getColorAttachment(0);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, t.getId());
+                blitToScreen(cam.getViewport().getSize());       
+                glBindTexture(GL_TEXTURE_2D, 0);
 
                 mGammaCorrection.end();
             }
@@ -96,19 +99,60 @@ void Viewer::draw()
             {
                 glClear(GL_COLOR_BUFFER_BIT);
                 mMLAAShader.begin();
-                mMLAAShader.setUniform("uOffScreen", 0);
+                mMLAAShader.setUniform("uColorTex", 0);
+                mMLAAShader.setUniform("uAreaTex", 1);
+                mMLAAShader.setUniform("uSearchTex", 2);
+                mMLAAShader.setUniform("uFirstPass", 1);
+                mMLAAShader.setUniform("uSecondPass", 0);
+                mMLAAShader.setUniform("uThirdPass", 0);
 
                 Texture t = mFbo.getColorAttachment(1);
-                blitToScreen(t, cam.getViewport().getSize());
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, t.getId());
+                blitToScreen(cam.getViewport().getSize());
+                glBindTexture(GL_TEXTURE_2D, 0);
+
                 mMLAAShader.end();
             }
+
+            //SMAA - Luma edge detection blentex
+            //mFbo.drawTo(3);
+            //{
+            //    glClear(GL_COLOR_BUFFER_BIT);
+            //    mMLAAShader.begin();
+            //    mMLAAShader.setUniform("uColorTex", 0);
+            //    mMLAAShader.setUniform("uAreaTex", 1);
+            //    mMLAAShader.setUniform("uSearchTex", 2);
+            //    mMLAAShader.setUniform("uFirstPass", 0);
+            //    mMLAAShader.setUniform("uSecondPass", 1);
+            //    mMLAAShader.setUniform("uThirdPass", 0);
+
+            //    glActiveTexture(GL_TEXTURE1);
+            //    glBindTexture(GL_TEXTURE_2D, mSmaaAreaTexture.getId());
+
+            //    glActiveTexture(GL_TEXTURE2);
+            //    glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
+
+            //    Texture t = mFbo.getColorAttachment(2);
+            //    glActiveTexture(GL_TEXTURE0);
+            //    glBindTexture(GL_TEXTURE_2D, t.getId());
+            //    blitToScreen(cam.getViewport().getSize());
+            //    glBindTexture(GL_TEXTURE_2D, 0);
+
+            //    mMLAAShader.end();
+            //}
             
         }
         mFbo.end();
 
         //Draw final result has full screen quad
-        Texture finalT = mFbo.getColorAttachment(gFrameBufferToDisplay);
-        blitToScreen(finalT, cam.getViewport().getSize());
+        Texture finalT = mFbo.getColorAttachment(gFrameBufferToDisplay);        
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, finalT.getId());
+        blitToScreen(cam.getViewport().getSize());
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        glEnable(GL_LIGHTING);
         glEnable(GL_DEPTH_TEST);
     }
 }
@@ -131,12 +175,18 @@ void Viewer::drawScene()
     case scUnigine01: //uEngine test image 1
     {
         Vector2d size(mUnigine01.width(), mUnigine01.height());
-        blitToScreen(mUnigine01, size);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, mUnigine01.getId());
+        blitToScreen(size);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }break;
     case scUnigine02: //uEngine test image 2
     {
         Vector2d size(mUnigine02.width(), mUnigine02.height());
-        blitToScreen(mUnigine02, size);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, mUnigine02.getId());
+        blitToScreen(size);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }break;
     }
     
@@ -149,11 +199,13 @@ void Viewer::initializeGL()
 	glClearColor(0.0, 0.0, 0.0, 0.0);
     //glClearColor(1.0, 1.0, 1.0, 1.0);
 
+    glEnable(GL_TEXTURE_2D);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
 	//init mFbo
 	mFbo.addColorAttachment();
+    mFbo.addColorAttachment();
     mFbo.addColorAttachment();
     mFbo.addColorAttachment();
     mFbo.getColorAttachment(0).setFilter(GL_LINEAR);
@@ -162,6 +214,8 @@ void Viewer::initializeGL()
     mFbo.getColorAttachment(1).setWrapMode(GL_CLAMP);
     mFbo.getColorAttachment(2).setFilter(GL_LINEAR);
     mFbo.getColorAttachment(2).setWrapMode(GL_CLAMP);
+    mFbo.getColorAttachment(3).setFilter(GL_LINEAR);
+    mFbo.getColorAttachment(3).setWrapMode(GL_CLAMP);
 
     mFbo.addDepthAttachment();
 
@@ -224,13 +278,40 @@ void Viewer::loadShaders()
         mGammaCorrection.addFragmentSource(content);
         mGammaCorrection.link();
     }
+
+    {
+        mTestShader.clear();
+
+        QFile f(cwd + "/../assets/test.frag");
+        f.open(QIODevice::ReadOnly);
+        QString content = f.readAll();
+
+        mTestShader.addFragmentSource(content);
+        mTestShader.link();
+    }
 }
 
 //-----------------------------------------------------------------------------
 void Viewer::loadTextures()
 {
     const QString cwd = QCoreApplication::applicationDirPath();
-    QImage im(cwd + "/../assets/Unigine01.png", "PNG");
+    
+    //Area texture
+    math::Vector2i areaTexSize(AREATEX_WIDTH, AREATEX_HEIGHT);
+    mSmaaAreaTexture.set((void*)areaTexBytes, areaTexSize, GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
+    mSmaaAreaTexture.setFilter(GL_LINEAR);
+    mSmaaAreaTexture.setWrapMode(GL_CLAMP);
+
+    //SearcTexture
+    //Area texture
+    math::Vector2i searchTexSize(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT);
+    mSmaaSearchTexture.set((void*)searchTexBytes, searchTexSize, GL_R8, GL_R, GL_UNSIGNED_BYTE);
+    mSmaaSearchTexture.setFilter(GL_LINEAR);
+    mSmaaSearchTexture.setWrapMode(GL_CLAMP);
+
+    QImage im;
+    //demo Unigine01    
+    im = QImage(cwd + "/../assets/Unigine01.png", "PNG");
     if (!im.isNull())
     {
         mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
@@ -238,6 +319,7 @@ void Viewer::loadTextures()
         mUnigine01.setWrapMode(GL_CLAMP);
     }
 
+    //demo Unigine01
     im = QImage(cwd + "/../assets/Unigine02.png", "PNG");
     if (!im.isNull())
     {
@@ -367,6 +449,7 @@ void MainDialog::updateUi()
         case 0: break;
         case 1: passName = "Gamma correction"; break;
         case 2: passName = "Edge detection"; break;
+        case 3: passName = "Blend weight"; break;
         default: passName = "Unknown"; break;
     }
     mpPassDisplayed->setText(passName);

@@ -23,7 +23,7 @@ public:
 	~Viewer();
 
 private:
-    void blitToScreen(realisim::treeD::Texture, realisim::math::Vector2d);
+    void blitToScreen(realisim::math::Vector2d);
 	virtual void draw() override;
     void drawScene();
 	virtual void keyPressEvent(QKeyEvent*);
@@ -37,6 +37,9 @@ private:
 	realisim::treeD::FrameBufferObject mFbo;
     realisim::treeD::Shader mMLAAShader;
     realisim::treeD::Shader mGammaCorrection;
+    realisim::treeD::Shader mTestShader;
+    realisim::treeD::Texture mSmaaAreaTexture;
+    realisim::treeD::Texture mSmaaSearchTexture;
     realisim::treeD::Texture mUnigine01;
     realisim::treeD::Texture mUnigine02;
 };

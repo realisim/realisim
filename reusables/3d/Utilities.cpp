@@ -107,13 +107,13 @@ void drawPoint(const Point2d& iP, double iPointSize /*= 1.0*/)
 void drawRectangle( const Rectangle& iR )
 {
   glBegin(GL_QUADS);
-  glTexCoord2d(0.0, 0.0);
+  glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0);
   glVertex2dv( iR.bottomLeft().getPtr() );
-  glTexCoord2d(1.0, 0.0);
+  glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0);
   glVertex2dv(iR.bottomRight().getPtr());
-  glTexCoord2d(1.0, 1.0);
+  glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0);
   glVertex2dv(iR.topRight().getPtr());
-  glTexCoord2d(0.0, 1.0);
+  glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0);
   glVertex2dv( iR.topLeft().getPtr() );
   glEnd();
 }
