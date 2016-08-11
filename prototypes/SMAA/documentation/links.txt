@@ -1,2 +1,3 @@
 http://www.iryoku.com/smaa/
 http://iryoku.com/mlaa/
+https://github.com/iryoku/smaa
