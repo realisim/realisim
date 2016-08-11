@@ -56,7 +56,6 @@ namespace treeD
   Texture get2dNoiseTexture(int, int);//const Vector2i&);
   Texture get3dNoiseTexture(const Vector3i&);
   QColor idToColor(unsigned int);
-
 }//treeD
 }//realisim
 

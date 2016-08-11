@@ -256,7 +256,7 @@ Widget3d::paintGL()
 
   draw();
 
-#ifdef NDEBUG
+#ifndef NDEBUG
   if(glGetError())
   {
     QString error("glError: ");

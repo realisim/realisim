@@ -10,10 +10,11 @@ namespace realisim
 namespace utils 
 {
 
-QByteArray fromFile(const QString&);
-//QString getGuid();
-//QString getMacAddress();
-bool toFile(const QString&, const QByteArray&);
+  QByteArray fromFile(const QString&);
+  QString getAssetFolder();
+  //QString getGuid();
+  //QString getMacAddress();
+  bool toFile(const QString&, const QByteArray&);
 
 }
 }

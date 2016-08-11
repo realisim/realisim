@@ -82,6 +82,7 @@ void Viewer::loadShaders()
 	//init shaders
 	//intensity
 	{
+        mHighIntensityFilter.clear();
 		QFile f(cwd + "/../assets/highIntensityFilter.frag");
 		f.open(QIODevice::ReadOnly);
 		QString content = f.readAll();
