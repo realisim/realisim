@@ -73,10 +73,6 @@ public:
   virtual Shader copy();
   virtual void end();
   virtual int getProgramId() const {return mpGuts->mProgramId;} 
-  virtual QString getFragmentSource(int i) const {return mpGuts->mFragmentSources[i];}
-  virtual int getFragmentSourcesSize() const {return mpGuts->mFragmentSources.size();}
-  virtual QString getVertexSource(int i) const {return mpGuts->mVertexSources[i];}
-  virtual int getVertexSourcesSize() const {return mpGuts->mVertexSources.size();}
   virtual bool isValid() const;
   virtual void link() const;
   
@@ -104,7 +100,11 @@ public:
 protected:
   virtual void detachAndDeleteGlResources();
   virtual int getFragmentId(int i) const;
+  virtual QString getFragmentSource(int i) const { return mpGuts->mFragmentSources[i]; }
+  virtual int getFragmentSourcesSize() const { return mpGuts->mFragmentSources.size(); }
   virtual int getVertexId(int i) const;
+  virtual QString getVertexSource(int i) const {return mpGuts->mVertexSources[i];}
+  virtual int getVertexSourcesSize() const {return mpGuts->mVertexSources.size();}
   virtual void printProgramInfoLog(GLuint) const;
   virtual void printShaderInfoLog(GLuint) const;
   virtual void validate() const;

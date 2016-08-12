@@ -2,230 +2,260 @@
 #include "VertexBufferObject.h"
 
 using namespace realisim;
-	using namespace math;
-  using namespace treeD;
+using namespace math;
+using namespace treeD;
 
 #define BUFFER_OFFSET(i) ((char*)NULL + (i))
 
+namespace
+{
+    enum layoutPosition { lpVertex = 0, lpNormal, lpColor, lp2dTextureCoord };
+}
 //---------------------------------------------------------------------------
 //--- Guts
 //----------------------------------------------------------------------------
 VertexBufferObject::Guts::Guts() :
-  mRefCount(1),
-  mArrayId(0),
-  mElementArrayId(0),
-  mNormalOffset(0),
-  mColorOffset(0),
-  mTextureOffset(0),
-  mNumberOfIndices(0),
-  mIsBaked(false),
-  mHasVertices(false),
-  mHasIndices(false),
-  mHasNormals(false),
-  mHasColors(false),
-  mHas2dTextureCoordinates(false),
-  mHas3dTextureCoordinates(false)
-{}
+    mRefCount(1),
+    mVaoId(0),
+    mBuffers(),
+    mNumberOfIndices(0),
+    mIsBaked(false)
+{
+    for(int i = 0; i < btCount; ++i){ mBuffers[i] = 0; }
+}
 
 //---------------------------------------------------------------------------
 //--- Vertex Buffer
 //----------------------------------------------------------------------------
 VertexBufferObject::VertexBufferObject() : mpGuts(nullptr)
-{ makeGuts(); }
+{
+    makeGuts();
+}
 
 //----------------------------------------------------------------------------
 VertexBufferObject::VertexBufferObject(const VertexBufferObject& iT) :
-  mpGuts(nullptr)
-{ shareGuts(iT.mpGuts); }
+    mpGuts(nullptr)
+{
+    shareGuts(iT.mpGuts);
+}
 
 //----------------------------------------------------------------------------
 VertexBufferObject::~VertexBufferObject()
-{ deleteGuts(); }
+{
+    deleteGuts();
+}
 
 //----------------------------------------------------------------------------
 VertexBufferObject& VertexBufferObject::operator=(const VertexBufferObject& iT)
 {
-  shareGuts(iT.mpGuts);
-  return *this;
+    shareGuts(iT.mpGuts);
+    return *this;
 }
 
 //----------------------------------------------------------------------------
 void VertexBufferObject::deleteGuts()
 {
-  if(mpGuts && --mpGuts->mRefCount == 0)
-  {
-    /*On relache toutes les ressources openGL.*/
-    delete mpGuts;
-    mpGuts = nullptr;
-  }
+    if (mpGuts && --mpGuts->mRefCount == 0)
+    {
+        /*On relache toutes les ressources openGL.*/
+        clear();
+        delete mpGuts;
+        mpGuts = nullptr;
+    }
 }
 
 //----------------------------------------------------------------------------
 void VertexBufferObject::bake()
 {
-  bakeArray();
-  bakeElementArray();
-  mpGuts->mIsBaked = true;
+    clear();
+
+    glGenVertexArrays(1, &mpGuts->mVaoId);
+    glBindVertexArray(mpGuts->mVaoId);
+    bakeArrays();    
+    glBindVertexArray(0);
+
+    mpGuts->mIsBaked = true;
 }
 
 //----------------------------------------------------------------------------
-//(VVVVNNNNCCCCT1T1T1T1T2T2T2T2T...)
-void VertexBufferObject::bakeArray()
+void VertexBufferObject::bakeArrays()
 {
-  if( getArrayId() == 0 )
-  {
-    glGenBuffersARB(1, &(mpGuts->mArrayId));
-  }
-
-  //allocate buffer to accomodate all values
-  std::vector<math::Point3d>& v = mpGuts->mVertices;
-  std::vector<math::Vector3d>& n = mpGuts->mNormals;
-  std::vector<float>& c = mpGuts->mColors;
-  
-  const int vSize = sizeof(float) * 3 * v.size();
-  const int nSize = sizeof(float) * 3 * n.size();
-  const int cSize = sizeof(float) * c.size();
-  const int totalBufferSize = vSize + cSize + nSize;
-  
-  mpGuts->mHasVertices = vSize;
-  mpGuts->mHasNormals = nSize;
-  mpGuts->mHasColors = cSize;
-  mpGuts->mHas2dTextureCoordinates = false;
-  mpGuts->mHas3dTextureCoordinates = false;
-  
-  mpGuts->mNormalOffset = vSize;
-  mpGuts->mColorOffset = mpGuts->mNormalOffset + nSize;
-  mpGuts->mTextureOffset = mpGuts->mColorOffset + cSize;
-  
-  //convert double vertices to float;
-  GLfloat *vf = new GLfloat[3*v.size()];
-  for(size_t i = 0; i < v.size(); ++i)
-  {
-    vf[i*3 + 0] = (float)v[i].x();
-    vf[i*3 + 1] = (float)v[i].y();
-    vf[i*3 + 2] = (float)v[i].z();
-  }
-
-  // bind VBO in order to use
-  glBindBufferARB(GL_ARRAY_BUFFER_ARB, getArrayId());
-  
-  //allocate buffer but bo data transfered yet. We will use sub buffer
-  glBufferDataARB(GL_ARRAY_BUFFER_ARB, totalBufferSize,
-                  nullptr, GL_STATIC_DRAW_ARB);
-  
-  //vertex
-  if(hasVertices())
-  { glBufferSubDataARB(GL_ARRAY_BUFFER, 0, mpGuts->mNormalOffset, vf); }
-  
-  //normal
-  if(hasNormals())
-  { glBufferSubDataARB(GL_ARRAY_BUFFER, mpGuts->mNormalOffset, nSize, &n[0]); }
-  
-  //color
-  if(hasColors())
-  {glBufferSubDataARB(GL_ARRAY_BUFFER, mpGuts->mNormalOffset, cSize, &c[0]);}
-  
-  //Texture
-  if(has2dTextureCoordinates())
-  //glBufferSubDataARB(GL_ARRAY_BUFFER, mpGuts->mTextureOffset, totalBufferSize, t[0]);
-  
-  glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-  
-  // it is safe to delete after copying data to VBO
-  delete [] vf;
-  mpGuts->mVertices.clear();
-  mpGuts->mColors.clear();
-}
-
-//----------------------------------------------------------------------------
-void VertexBufferObject::bakeElementArray()
-{
-  mpGuts->mHasIndices = mpGuts->mIndices.size();
- 
-  if(hasIndices())
-  {
-    if( getElementArrayId() == 0 )
+    //vertex
+    std::vector<float>& v = mpGuts->mVertices;
+    const int vSize = sizeof(float) * (int)v.size();
+    if(vSize > 0)
     {
-      glGenBuffersARB(1, &(mpGuts->mElementArrayId));
+        glGenBuffersARB(1, &(mpGuts->mBuffers[btVertex]));
+        glBindBufferARB(GL_ARRAY_BUFFER_ARB, mpGuts->mBuffers[btVertex]);
+        glBufferDataARB(GL_ARRAY_BUFFER_ARB, vSize, &v[0], GL_STATIC_DRAW_ARB);
+        glEnableVertexAttribArray(lpVertex);
+        glVertexAttribPointer(lpVertex, 3, GL_FLOAT, GL_FALSE, 0, 0);
     }
     
-    glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, getElementArrayId());
-    glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB,
-                    sizeof(int) * mpGuts->mIndices.size(),
-                    &mpGuts->mIndices[0], GL_STATIC_DRAW);
-    
-    mpGuts->mNumberOfIndices = mpGuts->mIndices.size();
-    
-    glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-    mpGuts->mIndices.clear();
-  }
+    //normal
+    std::vector<float>& n = mpGuts->mNormals;
+    const int nSize = sizeof(float) * (int)n.size();
+    if (nSize > 0)
+    {
+        glGenBuffersARB(1, &(mpGuts->mBuffers[btNormal]));
+        glBindBufferARB(GL_ARRAY_BUFFER_ARB, mpGuts->mBuffers[btNormal]);
+        glBufferDataARB(GL_ARRAY_BUFFER_ARB, nSize, &n[0], GL_STATIC_DRAW_ARB);
+        glEnableVertexAttribArray(lpNormal);
+        glVertexAttribPointer(lpNormal, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    }
+
+    //color
+    std::vector<float>& c = mpGuts->mColors;
+    const int cSize = sizeof(float) * (int)c.size();
+    if (cSize > 0)
+    {
+        glGenBuffersARB(1, &(mpGuts->mBuffers[btColor]));
+        glBindBufferARB(GL_ARRAY_BUFFER_ARB, mpGuts->mBuffers[btColor]);
+        glBufferDataARB(GL_ARRAY_BUFFER_ARB, cSize, &c[0], GL_STATIC_DRAW_ARB);
+        glEnableVertexAttribArray(lpColor);
+        glVertexAttribPointer(lpColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    }
+
+    //2d Texture coords
+    std::vector<float>& t2d = mpGuts->m2dTextureCoordinates;
+    const int t2dSize = sizeof(float) * (int)t2d.size();
+    if (t2dSize > 0)
+    {
+        glGenBuffersARB(1, &(mpGuts->mBuffers[bt2dTexture]));
+        glBindBufferARB(GL_ARRAY_BUFFER_ARB, mpGuts->mBuffers[bt2dTexture]);
+        glBufferDataARB(GL_ARRAY_BUFFER_ARB, t2dSize, &t2d[0], GL_STATIC_DRAW_ARB);
+        glEnableVertexAttribArray(lp2dTextureCoord);
+        glVertexAttribPointer(lp2dTextureCoord, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    }
+
+    //elements (indices)
+    std::vector<int>& i = mpGuts->mIndices;
+    const int iSize = sizeof(int) * i.size();
+    if (iSize > 0)
+    {
+        glGenBuffersARB(1, &(mpGuts->mBuffers[btElement]));
+        glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, mpGuts->mBuffers[btElement]);
+        glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, iSize, &i[0], GL_STATIC_DRAW);
+        //keep how many indices because we are going to clear the indices vector!
+        mpGuts->mNumberOfIndices = (int)i.size();
+    }
+
+    // it is safe to delete after copying data to VBO
+    mpGuts->mVertices.clear();
+    mpGuts->mNormals.clear();
+    mpGuts->mColors.clear();
+    mpGuts->m2dTextureCoordinates.clear();
 }
-  
+
+//----------------------------------------------------------------------------
+void VertexBufferObject::clear()
+{
+    if (getVertexArrayObjectId() != 0)
+    {
+        glDeleteBuffersARB(btCount, mpGuts->mBuffers);
+        glDeleteVertexArrays(1, &mpGuts->mVaoId);
+        for(int i = 0; i < btCount; ++i){ mpGuts->mBuffers[i] = 0; }
+        mpGuts->mVaoId = 0;
+        mpGuts->mNumberOfIndices = 0;
+        mpGuts->mIsBaked = false;
+        mpGuts->mVertices.clear();
+        mpGuts->mNormals.clear();
+        mpGuts->mColors.clear();
+        mpGuts->m2dTextureCoordinates.clear();
+    }
+
+
+}
+
 //----------------------------------------------------------------------------
 void VertexBufferObject::draw() const
 {
-  if(mpGuts->mIsBaked)
-  {
-    glBindBufferARB(GL_ARRAY_BUFFER_ARB, getArrayId());
-
-    if(hasVertices())
+    if (mpGuts->mIsBaked)
     {
-      glEnableClientState(GL_VERTEX_ARRAY);
-      glVertexPointer(3, GL_FLOAT, 0, BUFFER_OFFSET(0));
+        glBindVertexArray(getVertexArrayObjectId());
+        glDrawElements(GL_TRIANGLES, mpGuts->mNumberOfIndices, GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
     }
-    if(hasColors())
+    else
     {
-      glEnableClientState(GL_COLOR_ARRAY);
-      glColorPointer(4, GL_FLOAT, 0, BUFFER_OFFSET(mpGuts->mColorOffset));
+        printf("Vbo cannot be drawm because it is not yet baked!\n");
     }
-    
-    glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, getElementArrayId());
-    glDrawElements(GL_TRIANGLES, mpGuts->mNumberOfIndices, GL_UNSIGNED_INT, 0);
-    
-    //cleanup
-    glDisableClientState(GL_COLOR_ARRAY);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    
-    glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-    glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
-  }
-  else
-  {
-    printf("Vbo cannot be drawm because it is not yet baked!\n");
-  }
 }
 
 //----------------------------------------------------------------------------
-int VertexBufferObject::getElementArrayId() const
-{ return mpGuts->mElementArrayId; }
-
-//----------------------------------------------------------------------------
-int VertexBufferObject::getArrayId() const
-{ return mpGuts->mArrayId; }
-
-//----------------------------------------------------------------------------
 void VertexBufferObject::makeGuts()
-{ mpGuts = new Guts(); }
+{
+    mpGuts = new Guts();
+}
+
+//----------------------------------------------------------------------------
+void VertexBufferObject::set2dTextureCoordinates( int iNumberOfCoords, float *ipCoords)
+{
+    mpGuts->m2dTextureCoordinates.clear();
+    mpGuts->m2dTextureCoordinates.resize(iNumberOfCoords);
+    for (int i = 0; i < iNumberOfCoords; ++i)
+    {
+        mpGuts->m2dTextureCoordinates[i] = ipCoords[i];
+    }
+}
 
 //----------------------------------------------------------------------------
 void VertexBufferObject::setColors(const std::vector<float>& iColors)
-{ mpGuts->mColors = iColors; }
+{
+    mpGuts->mColors = iColors;
+}
+
+//----------------------------------------------------------------------------
+//pointer to an array of 3d vertices.
+void VertexBufferObject::setIndices(int iNum, int *ipIndices)
+{
+    mpGuts->mIndices.clear();
+    mpGuts->mIndices.resize(iNum);
+    for (int i = 0; i < iNum; ++i)
+    {
+        mpGuts->mIndices[i] = ipIndices[i];
+    }
+}
 
 //----------------------------------------------------------------------------
 void VertexBufferObject::setIndices(const std::vector<int>& iIndices)
-{ mpGuts->mIndices = iIndices; }
+{
+    mpGuts->mIndices = iIndices;
+}
+
+//----------------------------------------------------------------------------
+//pointer to an array of 3d vertices.
+void VertexBufferObject::setVertices(int iNumVertives, float *ipVertices)
+{
+    mpGuts->mVertices.clear();
+    mpGuts->mVertices.resize(iNumVertives);
+    for (int i = 0; i < iNumVertives; ++i)
+    {
+        mpGuts->mVertices[i] = ipVertices[i];
+    }
+}
 
 //----------------------------------------------------------------------------
 void VertexBufferObject::setVertices(const std::vector<math::Point3d>& iVertices)
-{ mpGuts->mVertices = iVertices; }
+{
+    mpGuts->mVertices.clear();
+    mpGuts->mVertices.resize(3 * iVertices.size());
+
+    for (int i = 0; i < iVertices.size(); ++i)
+    {
+        mpGuts->mVertices[i * 3 + 0] = (float)iVertices[i].x();
+        mpGuts->mVertices[i * 3 + 1] = (float)iVertices[i].y();
+        mpGuts->mVertices[i * 3 + 2] = (float)iVertices[i].z();
+    }
+}
 
 //----------------------------------------------------------------------------
 void VertexBufferObject::shareGuts(Guts* g)
 {
-  if(mpGuts != g)
-  {
-    deleteGuts();
-    mpGuts = g;
-    ++mpGuts->mRefCount;
-  }
+    if (mpGuts != g)
+    {
+        deleteGuts();
+        mpGuts = g;
+        ++mpGuts->mRefCount;
+    }
 }
