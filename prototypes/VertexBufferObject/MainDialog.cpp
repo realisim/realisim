@@ -22,23 +22,14 @@ Viewer::Viewer(QWidget* ipParent /*=0*/) : Widget3d(ipParent)
 Viewer::~Viewer()
 {}
 
-void Viewer::draw()
-{
-	Widget3d::draw();
-  
-  glDisable(GL_LIGHTING);
-  glColor3ub(0, 255, 0);
-  mVbo.draw();
-}
-
 void Viewer::initializeGL()
 {
 	Widget3d::initializeGL();
 	glClearColor(0.2, 0.2, 0.2, 0.0);
 
 	//init mFbo
-	mFbo.addColorAttachment(true);
-	mFbo.getTexture(0).setMinificationFilter(GL_LINEAR);
+	mFbo.addColorAttachment();
+	mFbo.getColorAttachment(0).setMinificationFilter(GL_LINEAR);
 
   //init Vbo
   std::vector<Point3d> vertices;
@@ -63,7 +54,17 @@ void Viewer::initializeGL()
   mVbo.setColors(colors);
   mVbo.bake();
   
-	loadModels();
+  //--- load texture
+  const QString assetsPath = utils::getAssetFolder();
+  QImage im(assetsPath + "t1.jpg", "JPG");
+  if(!im.isNull())
+  {
+      mTexture.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+      mTexture.setFilter(GL_LINEAR);
+  }
+
+  loadShaders();
+  loadModels();
 }
 
 //-----------------------------------------------------------------------------
@@ -71,7 +72,7 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
 {
 	switch (ipE->key())
 	{
-	case Qt::Key_F5: ; break;
+	case Qt::Key_F5: loadShaders(); break;
 	default: break;
 	}
 	update();
@@ -92,9 +93,78 @@ void Viewer::loadModels()
 }
 
 //-----------------------------------------------------------------------------
+void Viewer::loadShaders()
+{
+    const QString assetsPath = utils::getAssetFolder();
+    
+    //texturedMaterial
+    {
+        mTexturedShader.clear();
+    	QFile f(assetsPath + "/../assets/texturedMaterial.frag");
+    	f.open(QIODevice::ReadOnly);
+    	QString content = f.readAll();
+        mTexturedShader.addFragmentSource(content);
+        f.close();
+
+        f.setFileName(assetsPath + "/../assets/main.vert");
+        f.open(QIODevice::ReadOnly);
+        content = f.readAll();
+        mTexturedShader.addVertexSource(content);
+        f.close();
+        mTexturedShader.link();
+    }
+
+    //untexturedMaterial
+    {
+        mUntexturedShader.clear();
+        QFile f(assetsPath + "/../assets/untexturedMaterial.frag");
+        f.open(QIODevice::ReadOnly);
+        QString content = f.readAll();
+        mUntexturedShader.addFragmentSource(content);
+        f.close();
+
+        f.setFileName(assetsPath + "/../assets/main.vert");
+        f.open(QIODevice::ReadOnly);
+        content = f.readAll();
+        mUntexturedShader.addVertexSource(content);
+        f.close();
+        mUntexturedShader.link();
+    }
+
+}
+
+//-----------------------------------------------------------------------------
 void Viewer::paintGL()
 {
-	Widget3d::paintGL();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+   
+    {
+        mUntexturedShader.begin();
+        mUntexturedShader.setUniform("modelViewMatrix", getCamera().getViewMatrix());
+        mUntexturedShader.setUniform("projectionMatrix", getCamera().getProjectionMatrix());
+
+        glDisable(GL_LIGHTING);
+        mVbo.draw();
+
+        mUntexturedShader.end();
+    }
+
+    {
+        glEnable(GL_TEXTURE_2D);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, mTexture.getId());
+
+        mTexturedShader.begin();
+        mTexturedShader.setUniform("modelViewMatrix", getCamera().getViewMatrix());
+        mTexturedShader.setUniform("projectionMatrix", getCamera().getProjectionMatrix());
+        mTexturedShader.setUniform("texture0", 0);
+
+        drawRectangle(Point2d(80, 80), Vector2d(40, 75));
+        mTexturedShader.end();
+
+        glDisable(GL_TEXTURE_2D);
+    }
+
 }
 
 //-----------------------------------------------------------------------------
@@ -133,7 +203,7 @@ mpViewer(0)
 	}
 
 	treeD::Camera c = mpViewer->getCamera();
-	c.set(Point3d(0.0, 0.0, 100),
+	c.set(Point3d(0.0, 0.0, 200),
 		Point3d(), Vector3d(0, 1, 0));
 	mpViewer->setCamera(c);
 	mpViewer->setControlType(treeD::Widget3d::ctPan);

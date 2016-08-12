@@ -1,6 +1,7 @@
 
 #include "3d/Camera.h"
 #include "3d/Utilities.h"
+#include "3d/VertexBufferObject.h"
 #include "math/Noise.h"
 #include "math/PlatonicSolid.h"
 
@@ -106,16 +107,30 @@ void drawPoint(const Point2d& iP, double iPointSize /*= 1.0*/)
 /*dessine un rectangle dans le plan xy en CCW.*/
 void drawRectangle( const Rectangle& iR )
 {
-  glBegin(GL_QUADS);
-  glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0);
-  glVertex2dv( iR.bottomLeft().getPtr() );
-  glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0);
-  glVertex2dv(iR.bottomRight().getPtr());
-  glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0);
-  glVertex2dv(iR.topRight().getPtr());
-  glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0);
-  glVertex2dv( iR.topLeft().getPtr() );
-  glEnd();
+    VertexBufferObject vbo;
+
+    float v[12] = {
+        iR.bottomLeft().x(), iR.bottomLeft().y(), 0,
+        iR.bottomRight().x(), iR.bottomRight().y(), 0,
+        iR.topRight().x(), iR.topRight().y(), 0,
+        iR.topLeft().x(), iR.topLeft().y(), 0 };
+
+    int i[6] = {
+        0, 1, 3,
+        1, 2, 3 };
+
+    float t[8] = {
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0
+    };
+
+    vbo.setVertices(12, v);
+    vbo.setIndices(6, i);
+    vbo.set2dTextureCoordinates(8, t);
+    vbo.bake();
+    vbo.draw();
 }
 
 

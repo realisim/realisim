@@ -23,16 +23,19 @@ public:
 	~Viewer();
 
 private:
-	virtual void draw() override;
 	virtual void keyPressEvent(QKeyEvent*);
 	virtual void loadModels();
+    virtual void loadShaders();
 	virtual void initializeGL() override;
 	virtual void paintGL() override;
 	virtual void resizeGL(int, int) override;
 
+
+    realisim::treeD::Shader mTexturedShader;
+    realisim::treeD::Shader mUntexturedShader;
 	realisim::treeD::Texture mTexture;
 	realisim::treeD::FrameBufferObject mFbo;
-  realisim::treeD::VertexBufferObject mVbo;
+    realisim::treeD::VertexBufferObject mVbo;
 };
 
 

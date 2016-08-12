@@ -39,7 +39,7 @@ namespace utils
       found = childs.indexOf("assets") != -1;
     }
     
-    return found ? appDirPath.absolutePath() + "/assets" : QString();
+    return found ? appDirPath.absolutePath() + "/assets/" : QString();
   }
   
   //a deplacer dans netWorkutils...

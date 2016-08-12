@@ -45,65 +45,23 @@ Shader& Shader::operator=(const Shader& iT)
 }
 
 //----------------------------------------------------------------------------
+//adds a fragment source to be compiled when method link() will be called.
 void Shader::addFragmentSource(QString iSource)
-{
-  if(getProgramId() == 0)
-    mpGuts->mProgramId = glCreateProgram();
-    
+{   
   if(!iSource.isEmpty())
   {
     mpGuts->mFragmentSources.push_back(iSource);
-    int fragmentIndex = mpGuts->mFragmentSources.size() - 1;
-    /*Puisque iSource peut venir d'une ressource (donc d'un QByteArray)
-      il est important de passé par std string et ensuite const char*. 
-      Par exemple, si on fait, .toAscii() et ensuite .data() il arrive
-      fréquement que le shader ne compile pas parce qu'il y a un \0
-      en plein milieu du QByteArray.*/
-    std::string s = iSource.toStdString();
-    const char* d = s.c_str();
-    mpGuts->mFragmentIds.push_back(glCreateShader(GL_FRAGMENT_SHADER));
-    glShaderSource(getFragmentId(fragmentIndex), 1, &d, NULL);
-    glCompileShader(getFragmentId(fragmentIndex));
-    glAttachShader(getProgramId(), getFragmentId(fragmentIndex));
   }
 
-//Print the info log when in debug mode
-#ifndef NDEBUG
-  int fragmentIndex = mpGuts->mFragmentSources.size() - 1;
-  printf("Log for fragment shader number: %d\n", fragmentIndex);
-  printShaderInfoLog(getFragmentId(fragmentIndex));
-#endif
 }
 
 //----------------------------------------------------------------------------
 void Shader::addVertexSource(QString iSource)
 {
-  if(getProgramId() == 0)
-    mpGuts->mProgramId = glCreateProgram();
-
   if(!iSource.isEmpty())
   {
     mpGuts->mVertexSources.push_back(iSource);
-    int vertexIndex = mpGuts->mVertexSources.size() - 1;
-    /*Puisque iSource peut venir d'une ressource (donc d'un QByteArray)
-      il est important de passé par std string et ensuite const char*. 
-      Par exemple, si on fait, .toAscii() et ensuite .data() il arrive
-      fréquement que le shader ne compile pas parce qu'il y a un \0
-      en plein milieu du QByteArray.*/
-    std::string s = iSource.toStdString();
-    const char* d = s.c_str();
-    mpGuts->mVertexIds.push_back(glCreateShader(GL_VERTEX_SHADER));
-    glShaderSource(getVertexId(vertexIndex), 1, &d, NULL);
-    glCompileShader(getVertexId(vertexIndex));
-    glAttachShader(getProgramId(), getVertexId(vertexIndex));
   }
-  
-//Print the info log when in debug mode
-#ifndef NDEBUG
-  int vertexIndex = mpGuts->mVertexSources.size() - 1;
-  printf("Log for vertex shader number: %d\n", vertexIndex);
-  printShaderInfoLog(getVertexId(vertexIndex));
-#endif
 }
 
 //----------------------------------------------------------------------------
@@ -241,9 +199,43 @@ bool Shader::isValid() const
 //----------------------------------------------------------------------------
 void Shader::link() const
 {
-  glLinkProgram(getProgramId());
-  validate();
-  //Print the info log when in debug mode
+    if (getProgramId() == 0)
+        mpGuts->mProgramId = glCreateProgram();
+
+    //compile all vertex
+    for (int i = 0; i < (int)mpGuts->mVertexSources.size(); ++i)
+    {
+        mpGuts->mVertexIds.push_back(glCreateShader(GL_VERTEX_SHADER));
+        /*Puisque iSource peut venir d'une ressource (donc d'un QByteArray)
+        il est important de passé par std string et ensuite const char*.
+        Par exemple, si on fait, .toAscii() et ensuite .data() il arrive
+        fréquement que le shader ne compile pas parce qu'il y a un \0
+        en plein milieu du QByteArray.*/
+        std::string s = mpGuts->mVertexSources[i].toStdString();
+        const char* d = s.c_str();
+        glShaderSource(getVertexId(i), 1, &d, NULL);
+        glCompileShader(getVertexId(i));
+        glAttachShader(getProgramId(), getVertexId(i));       
+    }
+    mpGuts->mVertexSources.clear();
+
+    //compile all fragment
+    for(int i = 0; i < (int)mpGuts->mFragmentSources.size(); ++i )
+    {
+        mpGuts->mFragmentIds.push_back(glCreateShader(GL_FRAGMENT_SHADER));
+        
+        std::string s = mpGuts->mFragmentSources[i].toStdString();
+        const char* d = s.c_str();
+        glShaderSource(getFragmentId(i), 1, &d, NULL);
+        glCompileShader(getFragmentId(i));
+        glAttachShader(getProgramId(), getFragmentId(i));
+    }
+    mpGuts->mFragmentSources.clear();
+
+    glLinkProgram(getProgramId());
+    validate();
+
+    //Print the info log when in debug mode
 #ifndef NDEBUG
   printProgramInfoLog(getProgramId());
 #endif
