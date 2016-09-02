@@ -40,22 +40,27 @@ Shader& Shader::operator=(const Shader& iT)
 
 //----------------------------------------------------------------------------
 //adds a fragment source to be compiled when method link() will be called.
-void Shader::addFragmentSource(QString iSource)
-{   
-  if(!iSource.isEmpty())
-  {
-    mpGuts->mFragmentSources.push_back(iSource);
-  }
-
+int Shader::addFragmentSource(QString iSource)
+{  
+    int r = -1;
+    if (!iSource.isEmpty())
+    {
+        mpGuts->mFragmentSources.push_back(iSource);
+        r = (int)mpGuts->mFragmentSources.size() - 1;
+    }
+    return r;
 }
 
 //----------------------------------------------------------------------------
-void Shader::addVertexSource(QString iSource)
+int Shader::addVertexSource(QString iSource)
 {
-  if(!iSource.isEmpty())
-  {
-    mpGuts->mVertexSources.push_back(iSource);
-  }
+    int r = -1;
+    if (!iSource.isEmpty())
+    {
+        mpGuts->mVertexSources.push_back(iSource);
+        r = (int)mpGuts->mVertexSources.size() - 1;
+    }
+    return r;
 }
 
 //----------------------------------------------------------------------------

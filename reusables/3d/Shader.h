@@ -4,6 +4,7 @@
 
 #include "openGlHeaders.h"
 #include <QString>
+#include <map>
 #include <math/Matrix4.h>
 #include <math/Point.h>
 #include <math/Vect.h>
@@ -65,13 +66,21 @@ public:
 
 //void addFragmentShader(QString); a partir d'un fichier
 //void addVertexShader(QString); a partir d'un fichier
-  virtual void addFragmentSource(QString);
-  virtual void addVertexSource(QString);
+
+  !!!!add define to shaders!!!!
+  //virtual void addDefineToFragmentSource(int iSourceId, QString iName, int iValue);
+  //virtual void addDefineToVertexSource(int iSourceId, QString iName, int iValue);
+  virtual int addFragmentSource(QString);
+  virtual int addVertexSource(QString);
   virtual void begin();
   virtual void clear();
   virtual Shader copy();
   virtual void end();
+  //virtual QString getFragmentDefineName(int) const;
+  //virtual int getFragmentDefineValue(int) const;
   virtual int getProgramId() const {return mpGuts->mProgramId;} 
+  //virtual int getNumberOfDefineForFragment(int) const;
+  //virtual int getNumberOfDefineForVertex(int) const;
   virtual bool isValid() const;
   virtual void link() const;
   
@@ -108,6 +117,12 @@ protected:
   virtual void printShaderInfoLog(GLuint) const;
   virtual void validate() const;
 
+  struct shaderDefine
+  {
+      QString mName;
+      int mValue;
+  };
+
   struct Guts
   {
     explicit Guts();
@@ -119,6 +134,8 @@ protected:
     std::vector<QString> mFragmentSources;
     std::vector<QString> mVertexSources;
     std::vector<GLuint> mPreviousShaders;
+    //std::map<int, vector< shaderDefine > mFragmentDefineList;
+    //std::map<int, vector< shaderDefine > mVertexDefineList;
     mutable bool mIsValid;
   };
   

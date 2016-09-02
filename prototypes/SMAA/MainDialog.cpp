@@ -27,7 +27,7 @@ namespace
     bool gMlaaActivated = true;
     int gFrameBufferToDisplay = 0;
 
-    enum sceneContent{ sc3d = 0, scUnigine01, scUnigine02, scContentCount };
+    enum sceneContent{ sc3d = 0, scUnigine01, scUnigine02, scMandelbrot, scContentCount };
     sceneContent gSceneContent = sc3d;
 }
 
@@ -107,6 +107,12 @@ void Viewer::drawScene()
         Vector2d size(mUnigine02.width(), mUnigine02.height());
         drawStillImage(mUnigine02.getId(), size);
     }break;
+    case scMandelbrot: //uEngine test image 2
+    {
+        Vector2d size(mMandelbrot.width(), mMandelbrot.height());
+        drawStillImage(mMandelbrot.getId(), size);
+    }break;
+    
     default: break;
     }
 
@@ -184,12 +190,25 @@ void Viewer::loadShaders()
     printf("cwd: %s\n", cwd.toStdString().c_str());
     //init shaders
     {
-        mMLAAShader.clear();
-        addVertexSource(&mMLAAShader, cwd + "/../assets/utilities.vert");
-        addVertexSource(&mMLAAShader, cwd + "/../assets/SMAA.vert");
-        addFragmentSource(&mMLAAShader, cwd + "/../assets/SMAA.frag");
-        addFragmentSource(&mMLAAShader, cwd + "/../assets/SMAA.hlsl");
-        mMLAAShader.link();
+        mSmaaShader.clear();
+        addVertexSource(&mSmaaShader, cwd + "/../assets/utilities.vert");
+        addVertexSource(&mSmaaShader, cwd + "/../assets/SMAA.vert");
+        addFragmentSource(&mSmaaShader, cwd + "/../assets/SMAA.frag");
+        addFragmentSource(&mSmaaShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaaShader.link();
+    }
+
+    {
+        mSmaa2ndPassShader.clear();
+        addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/utilities.vert");
+        //mSmaa2ndPassShader.addVertexSource("#define SMAA_INCLUDE_PS 0\n");
+        addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA_vert.hlsl");
+        addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA_secondPass.vert");
+
+        addFragmentSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA_secondPass.frag");
+        //mSmaa2ndPassShader.addFragmentSource("#define SMAA_INCLUDE_VS 0\n#define SMAA_INCLUDE_PS 1\n");
+        addFragmentSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaa2ndPassShader.link();
     }
 
     {
@@ -223,7 +242,7 @@ void Viewer::loadTextures()
     //SearcTexture
     //Area texture
     math::Vector2i searchTexSize(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT);
-    mSmaaSearchTexture.set((void*)searchTexBytes, searchTexSize, GL_R8, GL_R, GL_UNSIGNED_BYTE);
+    mSmaaSearchTexture.set((void*)searchTexBytes, searchTexSize, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
     mSmaaSearchTexture.setFilter(GL_LINEAR);
     mSmaaSearchTexture.setWrapMode(GL_CLAMP);
 
@@ -246,6 +265,15 @@ void Viewer::loadTextures()
         mUnigine02.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
         mUnigine02.setFilter(GL_NEAREST);
         mUnigine02.setWrapMode(GL_CLAMP);
+    }
+
+    //demo mandelbrot
+    im = QImage(cwd + "/../assets/mandelbrot.jpg", "JPG");
+    if (!im.isNull())
+    {
+        mMandelbrot.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mMandelbrot.setFilter(GL_NEAREST);
+        mMandelbrot.setWrapMode(GL_CLAMP);
     }
 } 
 
@@ -278,17 +306,12 @@ void Viewer::paintGL()
             mFbo.drawTo(1);
             {
                 glClear(GL_COLOR_BUFFER_BIT);
-                pushShader(mMLAAShader);
+                pushShader(mSmaaShader);
                 ScreenSpaceProjection sp(cam.getViewport().getSize());
-                mMLAAShader.setUniform("modelViewMatrix", sp.mViewMatrix);
-                mMLAAShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+                mSmaaShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+                mSmaaShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
 
-                mMLAAShader.setUniform("uColorTex", 0);
-                //mMLAAShader.setUniform("uAreaTex", 1);
-                //mMLAAShader.setUniform("uSearchTex", 2);
-                mMLAAShader.setUniform("uFirstPass", 1);
-                //mMLAAShader.setUniform("uSecondPass", 0);
-                //mMLAAShader.setUniform("uThirdPass", 0);
+                mSmaaShader.setUniform("uColorTex", 0);
 
                 Texture t = mFbo.getColorAttachment(0);
                 drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
@@ -297,32 +320,30 @@ void Viewer::paintGL()
 
             }
 
-            //SMAA - Luma edge detection blentex
-            //mFbo.drawTo(2);
-            //{
-            //    glClear(GL_COLOR_BUFFER_BIT);
-            //    mMLAAShader.begin();
-            //    mMLAAShader.setUniform("uColorTex", 0);
-            //    mMLAAShader.setUniform("uAreaTex", 1);
-            //    mMLAAShader.setUniform("uSearchTex", 2);
-            //    mMLAAShader.setUniform("uFirstPass", 0);
-            //    mMLAAShader.setUniform("uSecondPass", 1);
-            //    mMLAAShader.setUniform("uThirdPass", 0);
+            //SMAA - 2nd pass - blend weight
+            mFbo.drawTo(2);
+            {
+                glClear(GL_COLOR_BUFFER_BIT);
+                mSmaa2ndPassShader.begin();
 
-            //    glActiveTexture(GL_TEXTURE1);
-            //    glBindTexture(GL_TEXTURE_2D, mSmaaAreaTexture.getId());
+                ScreenSpaceProjection sp(cam.getViewport().getSize());
+                mSmaaShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+                mSmaaShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+                mSmaa2ndPassShader.setUniform("uEdgeTex", 0);
+                mSmaa2ndPassShader.setUniform("uAreaTex", 1);
+                mSmaa2ndPassShader.setUniform("uSearchTex", 2);
 
-            //    glActiveTexture(GL_TEXTURE2);
-            //    glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, mSmaaAreaTexture.getId());
 
-            //    Texture t = mFbo.getColorAttachment(2);
-            //    glActiveTexture(GL_TEXTURE0);
-            //    glBindTexture(GL_TEXTURE_2D, t.getId());
-            //    drawRectangle(cam.getViewport().getSize());
-            //    glBindTexture(GL_TEXTURE_2D, 0);
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
 
-            //    mMLAAShader.end();
-            //}
+                Texture t = mFbo.getColorAttachment(1);                
+                drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+                mSmaa2ndPassShader.end();
+            }
 
         }
         mFbo.end();
@@ -473,6 +494,8 @@ void MainDialog::updateUi()
     case sc3d: sceneContent = "3d"; break;
     case scUnigine01: sceneContent = "Unigine01"; break;
     case scUnigine02: sceneContent = "Unigine02"; break;
+    case scMandelbrot: sceneContent = "Mandelbrot"; break;
+        
     default: sceneContent = "unknown"; break;
     }
     mpSceneContent->setText(sceneContent);
