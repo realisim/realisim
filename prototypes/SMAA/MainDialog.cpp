@@ -34,177 +34,110 @@ namespace
 Viewer::Viewer(QWidget* ipParent, MainDialog* ipM) : Widget3d(ipParent),
     mpMainDialog(ipM)
 {
-	setFocusPolicy(Qt::StrongFocus);
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 Viewer::~Viewer()
 {}
 
 //-----------------------------------------------------------------------------
-//draws a rectancle in screenspace starting at 0.0 to size. If a texure
-//isbound to GL_TEXTURE0, the rectangle will be textured
-void Viewer::blitToScreen(Vector2d size)
+void Viewer::addFragmentSource(Shader* ipShader, QString iFileName)
 {
-    ScreenSpaceProjection sp(size);
-    {        
-        drawRectangle(Point2d(0.0), size);
-    }
+    QFile f(iFileName);
+    f.open(QIODevice::ReadOnly);
+    QString content = f.readAll();
+    ipShader->addFragmentSource(content);
+    f.close();
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::draw()
+void Viewer::addVertexSource(Shader* ipShader, QString iFileName)
 {
-	Widget3d::draw();
+    QFile f(iFileName);
+    f.open(QIODevice::ReadOnly);
+    QString content = f.readAll();
+    ipShader->addVertexSource(content);
+    f.close();
+}
 
-    if(!gMlaaActivated)
-    {
-        drawScene();
-    }
-    else
-    {
-        const Camera& cam = getCamera();        
-
-        mFbo.begin();
-        {
-            //-- drawScene offscreen
-            mFbo.drawTo(0);
-            {
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                drawScene();
-            }
-            
-            glDisable(GL_LIGHTING);
-            //disable all depth test for the post processing stages...
-            glDisable(GL_DEPTH_TEST);
-            //--- post processing
-            //1- gamma correction
-            mFbo.drawTo(1);
-            {
-                glClear(GL_COLOR_BUFFER_BIT);
-                mGammaCorrection.begin();
-                mGammaCorrection.setUniform("uOffScreen", 0);
-
-                Texture t = mFbo.getColorAttachment(0);
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, t.getId());
-                blitToScreen(cam.getViewport().getSize());       
-                glBindTexture(GL_TEXTURE_2D, 0);
-
-                mGammaCorrection.end();
-            }
-
-            //post processing
-            //SMAA - Luma edge detection edgeTex
-            mFbo.drawTo(2);
-            {
-                glClear(GL_COLOR_BUFFER_BIT);
-                mMLAAShader.begin();
-                mMLAAShader.setUniform("uColorTex", 0);
-                mMLAAShader.setUniform("uAreaTex", 1);
-                mMLAAShader.setUniform("uSearchTex", 2);
-                mMLAAShader.setUniform("uFirstPass", 1);
-                mMLAAShader.setUniform("uSecondPass", 0);
-                mMLAAShader.setUniform("uThirdPass", 0);
-
-                Texture t = mFbo.getColorAttachment(1);
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, t.getId());
-                blitToScreen(cam.getViewport().getSize());
-                glBindTexture(GL_TEXTURE_2D, 0);
-
-                mMLAAShader.end();
-            }
-
-            //SMAA - Luma edge detection blentex
-            //mFbo.drawTo(3);
-            //{
-            //    glClear(GL_COLOR_BUFFER_BIT);
-            //    mMLAAShader.begin();
-            //    mMLAAShader.setUniform("uColorTex", 0);
-            //    mMLAAShader.setUniform("uAreaTex", 1);
-            //    mMLAAShader.setUniform("uSearchTex", 2);
-            //    mMLAAShader.setUniform("uFirstPass", 0);
-            //    mMLAAShader.setUniform("uSecondPass", 1);
-            //    mMLAAShader.setUniform("uThirdPass", 0);
-
-            //    glActiveTexture(GL_TEXTURE1);
-            //    glBindTexture(GL_TEXTURE_2D, mSmaaAreaTexture.getId());
-
-            //    glActiveTexture(GL_TEXTURE2);
-            //    glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
-
-            //    Texture t = mFbo.getColorAttachment(2);
-            //    glActiveTexture(GL_TEXTURE0);
-            //    glBindTexture(GL_TEXTURE_2D, t.getId());
-            //    blitToScreen(cam.getViewport().getSize());
-            //    glBindTexture(GL_TEXTURE_2D, 0);
-
-            //    mMLAAShader.end();
-            //}
-            
-        }
-        mFbo.end();
-
-        //Draw final result has full screen quad
-        Texture finalT = mFbo.getColorAttachment(gFrameBufferToDisplay);        
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, finalT.getId());
-        blitToScreen(cam.getViewport().getSize());
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-        glEnable(GL_LIGHTING);
-        glEnable(GL_DEPTH_TEST);
-    }
+//-----------------------------------------------------------------------------
+//draws a rectancle in screenspace starting at 0.0 to size. If a texure
+//isbound to GL_TEXTURE0, the rectangle will be textured
+void Viewer::drawRectangle(int iTextureId, Vector2d size)
+{    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, iTextureId);
+    treeD::drawRectangle(Point2d(0.0), size);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 //-----------------------------------------------------------------------------
 void Viewer::drawScene()
 {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    
     switch(gSceneContent)
     {
     case sc3d: //cube
     {
-        glEnable(GL_LIGHTING);
-        glPushMatrix();
-        glRotated(gRotx, 1, 0, 0);
-        glRotated(gRoty, 0, 1, 0);
-        glRotated(gRotz, 0, 0, 1);
+        mSceneShader.begin();
+        mSceneShader.setUniform("modelViewMatrix", getCamera().getViewMatrix());
+        mSceneShader.setUniform("projectionMatrix", getCamera().getProjectionMatrix());
+        //glDisable(GL_LIGHTING);
+        //glPushMatrix();
+        //glRotated(gRotx, 1, 0, 0);
+        //glRotated(gRoty, 0, 1, 0);
+        //glRotated(gRotz, 0, 0, 1);
         treeD::drawRectangularPrism(math::Point3d(-5), math::Point3d(5));
-        glPopMatrix();
+
+        //treeD::drawRectangle(math::Point2d(-5), math::Vector2d(10));
+
+        //glPopMatrix();
+
+        mSceneShader.end();
     }break;
     case scUnigine01: //uEngine test image 1
     {
         Vector2d size(mUnigine01.width(), mUnigine01.height());
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, mUnigine01.getId());
-        blitToScreen(size);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        drawStillImage(mUnigine01.getId(), size);
     }break;
     case scUnigine02: //uEngine test image 2
     {
         Vector2d size(mUnigine02.width(), mUnigine02.height());
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, mUnigine02.getId());
-        blitToScreen(size);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        drawStillImage(mUnigine02.getId(), size);
     }break;
+    default: break;
     }
+
     
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::drawStillImage(int iTextureId, realisim::math::Vector2d iSize)
+{
+    ScreenSpaceProjection sp(getCamera().getViewport().getSize());
+
+    pushShader(mStillImageShader);
+    mStillImageShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+    mStillImageShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+    mStillImageShader.setUniform("uTexture0", 0);
+    drawRectangle(iTextureId, iSize);
+    popShader();
 }
 
 //-----------------------------------------------------------------------------
 void Viewer::initializeGL()
 {
-	Widget3d::initializeGL();
-	glClearColor(0.0, 0.0, 0.0, 0.0);
+    Widget3d::initializeGL();
+    glClearColor(0.0, 0.0, 0.0, 0.0);
     //glClearColor(1.0, 1.0, 1.0, 1.0);
 
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
-	//init mFbo
-	mFbo.addColorAttachment();
+    //init mFbo
     mFbo.addColorAttachment();
     mFbo.addColorAttachment();
     mFbo.addColorAttachment();
@@ -214,13 +147,11 @@ void Viewer::initializeGL()
     mFbo.getColorAttachment(1).setWrapMode(GL_CLAMP);
     mFbo.getColorAttachment(2).setFilter(GL_LINEAR);
     mFbo.getColorAttachment(2).setWrapMode(GL_CLAMP);
-    mFbo.getColorAttachment(3).setFilter(GL_LINEAR);
-    mFbo.getColorAttachment(3).setWrapMode(GL_CLAMP);
 
     mFbo.addDepthAttachment();
 
     //init shaders
-	loadShaders();
+    loadShaders();
 
     //init textures
     loadTextures();
@@ -233,16 +164,16 @@ void Viewer::initializeGL()
 //-----------------------------------------------------------------------------
 void Viewer::keyPressEvent(QKeyEvent* ipE)
 {
-	switch (ipE->key())
-	{
+    switch (ipE->key())
+    {
     case Qt::Key_C: gSceneContent = (sceneContent)((gSceneContent + 1) % scContentCount); break;
     case Qt::Key_F: gFrameBufferToDisplay = (gFrameBufferToDisplay + 1) % mFbo.getNumColorAttachment(); break;
     case Qt::Key_P: gMlaaActivated = !gMlaaActivated; break;
     case Qt::Key_R: gRotateCube = !gRotateCube; break;
-	case Qt::Key_F5: loadShaders(); break;
+    case Qt::Key_F5: loadShaders(); break;
     default: Widget3d::keyPressEvent(ipE); break;
-	}
-	update();
+    }
+    update();
     mpMainDialog->updateUi();
 }
 
@@ -254,40 +185,27 @@ void Viewer::loadShaders()
     //init shaders
     {
         mMLAAShader.clear();
-
-        QFile f2(cwd + "/../assets/SMAA.frag");
-        f2.open(QIODevice::ReadOnly);
-        QString content2 = f2.readAll();
-        mMLAAShader.addFragmentSource(content2);
-
-        QFile f(cwd + "/../assets/SMAA.hlsl");
-        f.open(QIODevice::ReadOnly);
-        QString content = f.readAll();
-
-        mMLAAShader.addFragmentSource(content);
+        addVertexSource(&mMLAAShader, cwd + "/../assets/utilities.vert");
+        addVertexSource(&mMLAAShader, cwd + "/../assets/SMAA.vert");
+        addFragmentSource(&mMLAAShader, cwd + "/../assets/SMAA.frag");
+        addFragmentSource(&mMLAAShader, cwd + "/../assets/SMAA.hlsl");
         mMLAAShader.link();
     }
 
     {
-        mGammaCorrection.clear();
-
-        QFile f(cwd + "/../assets/gammaCorrection.frag");
-        f.open(QIODevice::ReadOnly);
-        QString content = f.readAll();
-
-        mGammaCorrection.addFragmentSource(content);
-        mGammaCorrection.link();
+        mSceneShader.clear();
+        addVertexSource(&mSceneShader, cwd + "/../assets/utilities.vert");
+        addVertexSource(&mSceneShader, cwd + "/../assets/main.vert");        
+        addFragmentSource(&mSceneShader, cwd + "/../assets/untexturedMaterial.frag");                
+        mSceneShader.link();
     }
 
     {
-        mTestShader.clear();
-
-        QFile f(cwd + "/../assets/test.frag");
-        f.open(QIODevice::ReadOnly);
-        QString content = f.readAll();
-
-        mTestShader.addFragmentSource(content);
-        mTestShader.link();
+        mStillImageShader.clear();
+        addVertexSource(&mStillImageShader, cwd + "/../assets/utilities.vert");
+        addVertexSource(&mStillImageShader, cwd + "/../assets/main.vert");
+        addFragmentSource(&mStillImageShader, cwd + "/../assets/texturedMaterial.frag");
+        mStillImageShader.link();
     }
 }
 
@@ -314,8 +232,9 @@ void Viewer::loadTextures()
     im = QImage(cwd + "/../assets/Unigine01.png", "PNG");
     if (!im.isNull())
     {
-        mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mUnigine01.setFilter(GL_LINEAR);
+        //mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine01.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine01.setFilter(GL_NEAREST);
         mUnigine01.setWrapMode(GL_CLAMP);
     }
 
@@ -323,20 +242,115 @@ void Viewer::loadTextures()
     im = QImage(cwd + "/../assets/Unigine02.png", "PNG");
     if (!im.isNull())
     {
-        mUnigine02.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mUnigine02.setFilter(GL_LINEAR);
+        //mUnigine02.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine02.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine02.setFilter(GL_NEAREST);
         mUnigine02.setWrapMode(GL_CLAMP);
     }
 } 
+
+//-----------------------------------------------------------------------------
+void Viewer::paintGL()
+{
+    if (!gMlaaActivated)
+    {
+        drawScene();
+    }
+    else
+    {
+        const Camera& cam = getCamera();
+
+        mFbo.begin();
+        {
+            //-- drawScene offscreen
+            mFbo.drawTo(0);
+            {
+                drawScene();
+            }
+
+            glDisable(GL_LIGHTING);
+            //disable all depth test for the post processing stages...
+            glDisable(GL_DEPTH_TEST);
+            //--- post processing
+
+            //post processing
+            //SMAA - Luma edge detection edgeTex
+            mFbo.drawTo(1);
+            {
+                glClear(GL_COLOR_BUFFER_BIT);
+                pushShader(mMLAAShader);
+                ScreenSpaceProjection sp(cam.getViewport().getSize());
+                mMLAAShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+                mMLAAShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+
+                mMLAAShader.setUniform("uColorTex", 0);
+                //mMLAAShader.setUniform("uAreaTex", 1);
+                //mMLAAShader.setUniform("uSearchTex", 2);
+                mMLAAShader.setUniform("uFirstPass", 1);
+                //mMLAAShader.setUniform("uSecondPass", 0);
+                //mMLAAShader.setUniform("uThirdPass", 0);
+
+                Texture t = mFbo.getColorAttachment(0);
+                drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+                popShader();
+
+            }
+
+            //SMAA - Luma edge detection blentex
+            //mFbo.drawTo(2);
+            //{
+            //    glClear(GL_COLOR_BUFFER_BIT);
+            //    mMLAAShader.begin();
+            //    mMLAAShader.setUniform("uColorTex", 0);
+            //    mMLAAShader.setUniform("uAreaTex", 1);
+            //    mMLAAShader.setUniform("uSearchTex", 2);
+            //    mMLAAShader.setUniform("uFirstPass", 0);
+            //    mMLAAShader.setUniform("uSecondPass", 1);
+            //    mMLAAShader.setUniform("uThirdPass", 0);
+
+            //    glActiveTexture(GL_TEXTURE1);
+            //    glBindTexture(GL_TEXTURE_2D, mSmaaAreaTexture.getId());
+
+            //    glActiveTexture(GL_TEXTURE2);
+            //    glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
+
+            //    Texture t = mFbo.getColorAttachment(2);
+            //    glActiveTexture(GL_TEXTURE0);
+            //    glBindTexture(GL_TEXTURE_2D, t.getId());
+            //    drawRectangle(cam.getViewport().getSize());
+            //    glBindTexture(GL_TEXTURE_2D, 0);
+
+            //    mMLAAShader.end();
+            //}
+
+        }
+        mFbo.end();
+
+        //Draw final result has full screen quad
+        glColor3ub(255, 255, 255);
+        Texture finalT = mFbo.getColorAttachment(gFrameBufferToDisplay);
+        GLenum minFilter = finalT.getMinificationFilter();
+        GLenum maxFilter = finalT.getMagnificationFilter();
+        finalT.setFilter(GL_NEAREST);
+        drawStillImage(finalT.getId(), Vector2d(finalT.width(), finalT.height()));
+        finalT.setMinificationFilter(minFilter);
+        finalT.setMagnificationFilter(maxFilter);
+
+        glEnable(GL_LIGHTING);
+        glEnable(GL_DEPTH_TEST);
+    }
+}
+
 //-----------------------------------------------------------------------------
 void Viewer::resizeGL(int iW, int iH)
 {
-	Widget3d::resizeGL(iW, iH);
+    Widget3d::resizeGL(iW, iH);
 
-	if (!(mFbo.getWidth() == iW && mFbo.getHeight() == iH))
-	{
-		mFbo.resize(iW, iH);
-	}
+    if (!(mFbo.getWidth() == iW && mFbo.getHeight() == iH))
+    {
+        mFbo.resize(iW, iH);
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -346,17 +360,17 @@ MainDialog::MainDialog() : QMainWindow(),
 mpViewer(0),
 mTimerEventId(0)
 {
-	resize(1280, 720);
+    resize(1280, 720);
 
-	QWidget *pCentralWidget = new QWidget(this);
-	setCentralWidget(pCentralWidget);
+    QWidget *pCentralWidget = new QWidget(this);
+    setCentralWidget(pCentralWidget);
 
-	QHBoxLayout* pLyt = new QHBoxLayout(pCentralWidget);
-	pLyt->setMargin(2);
+    QHBoxLayout* pLyt = new QHBoxLayout(pCentralWidget);
+    pLyt->setMargin(2);
     pLyt->setSpacing(5);
-	{
-		QVBoxLayout *pControlLyt = new QVBoxLayout();
-		{
+    {
+        QVBoxLayout *pControlLyt = new QVBoxLayout();
+        {
             QHBoxLayout *pL0 = new QHBoxLayout();
             {
                 QLabel* l = new QLabel("Rotate (R):", pCentralWidget);
@@ -404,20 +418,20 @@ mTimerEventId(0)
             pControlLyt->addStretch(1);
         }
 
-		mpViewer = new Viewer(pCentralWidget, this);
+        mpViewer = new Viewer(pCentralWidget, this);
 
-		pLyt->addLayout(pControlLyt, 1);
-		pLyt->addWidget(mpViewer, 4);
-	}
+        pLyt->addLayout(pControlLyt, 1);
+        pLyt->addWidget(mpViewer, 4);
+    }
 
-	treeD::Camera c = mpViewer->getCamera();
-	c.set(Point3d(0.0, 0.0, 50),
-		Point3d(), Vector3d(0, 1, 0));
-	mpViewer->setCamera(c);
-	mpViewer->setControlType(treeD::Widget3d::ctFree);
+    treeD::Camera c = mpViewer->getCamera();
+    c.set(Point3d(0.0, 0.0, 50),
+        Point3d(), Vector3d(0, 1, 0));
+    mpViewer->setCamera(c);
+    mpViewer->setControlType(treeD::Widget3d::ctFree);
 
     mTimerEventId = startTimer(16);
-	updateUi();
+    updateUi();
 }
 
 //-----------------------------------------------------------------------------
@@ -447,9 +461,8 @@ void MainDialog::updateUi()
     switch(gFrameBufferToDisplay)
     {
         case 0: break;
-        case 1: passName = "Gamma correction"; break;
-        case 2: passName = "Edge detection"; break;
-        case 3: passName = "Blend weight"; break;
+        case 1: passName = "Edge detection"; break;
+        case 2: passName = "Blend weight"; break;
         default: passName = "Unknown"; break;
     }
     mpPassDisplayed->setText(passName);
@@ -464,6 +477,6 @@ void MainDialog::updateUi()
     }
     mpSceneContent->setText(sceneContent);
 
-	update();
-	mpViewer->update();
+    update();
+    mpViewer->update();
 }

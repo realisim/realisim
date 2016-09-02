@@ -16,28 +16,31 @@
 class MainDialog;
 class Viewer : public realisim::treeD::Widget3d
 {
-	friend class MainDialog;
+    friend class MainDialog;
 
 public:
-	Viewer(QWidget*, MainDialog*);
-	~Viewer();
+    Viewer(QWidget*, MainDialog*);
+    ~Viewer();
 
 private:
-    void blitToScreen(realisim::math::Vector2d);
-	virtual void draw() override;
+    void addFragmentSource(realisim::treeD::Shader*, QString iFileName);
+    void addVertexSource(realisim::treeD::Shader*, QString iFileName);
+    void drawRectangle(int, realisim::math::Vector2d);
+    void drawStillImage(int, realisim::math::Vector2d);
     void drawScene();
-	virtual void keyPressEvent(QKeyEvent*);
+    virtual void keyPressEvent(QKeyEvent*);
     void loadTextures();
-	void loadShaders();
-	virtual void initializeGL() override;
-	virtual void resizeGL(int, int) override;
+    void loadShaders();
+    virtual void initializeGL() override;
+    virtual void paintGL() override;
+    virtual void resizeGL(int, int) override;
 
     MainDialog* mpMainDialog;
 
-	realisim::treeD::FrameBufferObject mFbo;
+    realisim::treeD::FrameBufferObject mFbo;
     realisim::treeD::Shader mMLAAShader;
-    realisim::treeD::Shader mGammaCorrection;
-    realisim::treeD::Shader mTestShader;
+    realisim::treeD::Shader mSceneShader;
+    realisim::treeD::Shader mStillImageShader;
     realisim::treeD::Texture mSmaaAreaTexture;
     realisim::treeD::Texture mSmaaSearchTexture;
     realisim::treeD::Texture mUnigine01;
@@ -47,24 +50,24 @@ private:
 
 class MainDialog : public QMainWindow
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	MainDialog();
-	~MainDialog() {};
+    MainDialog();
+    ~MainDialog() {};
 
     void updateUi();
 
 protected:
     virtual void timerEvent(QTimerEvent*) override;
 
-	//--- ui
-	Viewer* mpViewer;
+    //--- ui
+    Viewer* mpViewer;
     QLabel* mpRotationState;
     QLabel* mpPostProcessingState;
     QLabel* mpPassDisplayed;
     QLabel* mpSceneContent;
 
-	//--- data
+    //--- data
     int mTimerEventId;
 };
 

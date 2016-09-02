@@ -22,16 +22,11 @@ ScreenSpaceProjection::ScreenSpaceProjection( const math::Vector2d& iS )
   c.setProjection( 0, iS.x(), 
     0, iS.y(), 0.5, 100.0,
     Camera::Projection::tOrthogonal );
-  c.pushAndApplyMatrices();
+
+  mViewMatrix = c.getViewMatrix();
+  mProjectionMatrix = c.getProjectionMatrix();
 }
 
-ScreenSpaceProjection::~ScreenSpaceProjection()
-{
-  glMatrixMode( GL_PROJECTION );
-  glPopMatrix();
-  glMatrixMode( GL_MODELVIEW );
-  glPopMatrix();
-}
 
 //-----------------------------------------------------------------------------
 //decode un QColor en id. Voir méthode idToColor
@@ -60,7 +55,7 @@ void draw( const PlatonicSolid& iPs )
   rayon iR*/
 void drawCircle( Vector3d iN, const Point3d& iP, double iR )
 {
-	//on trouve l'angle entre iN et Z (parce qu'on dessine en sur le plan z)
+    //on trouve l'angle entre iN et Z (parce qu'on dessine en sur le plan z)
   double rot = acos( iN.normalise() * Vector3d( 0.0, 0.0, 1.0 ) );
   //on trouve le vecteur perpendiculaire a la rotation
   Vector3d r = iN ^ Vector3d( 0.0, 0.0, 1.0 );
@@ -70,11 +65,11 @@ void drawCircle( Vector3d iN, const Point3d& iP, double iR )
   glPushMatrix();
   glTranslated( iP.x(), iP.y(), iP.z() );
   glRotated( rot * 180 / PI, r.x(), r.y(), r.z() );
-	glBegin( GL_LINE_LOOP );
-  	for( int i = 0; i < 360; i += 2 )
+    glBegin( GL_LINE_LOOP );
+      for( int i = 0; i < 360; i += 2 )
     {
-    	a = i * 3.1415629 / 180.0;
-    	glVertex3d( cos( a ) * iR, sin( a ) * iR, 0.0 );	
+        a = i * 3.1415629 / 180.0;
+        glVertex3d( cos( a ) * iR, sin( a ) * iR, 0.0 );    
     }
   glEnd();
   glPopMatrix();
@@ -89,7 +84,7 @@ void drawCircle( const Point2d& iP, double iR )
 /*dessine un rectangle dans le plan xy.*/
 void drawLine( const Point2d& ip1, const Point2d& ip2 )
 {
-	glBegin( GL_LINES );
+    glBegin( GL_LINES );
   glVertex2dv( ip1.getPtr() ); glVertex2dv( ip2.getPtr() );
   glEnd();
 }
@@ -97,7 +92,7 @@ void drawLine( const Point2d& ip1, const Point2d& ip2 )
 //------------------------------------------------------------------------------
 void drawPoint(const Point2d& iP, double iPointSize /*= 1.0*/)
 {
-	glPointSize( iPointSize );
+    glPointSize( iPointSize );
   glBegin(GL_POINTS);
   glVertex2dv( iP.getPtr() );
   glEnd();
@@ -110,10 +105,10 @@ void drawRectangle( const Rectangle& iR )
     VertexBufferObject vbo;
 
     float v[12] = {
-        iR.bottomLeft().x(), iR.bottomLeft().y(), 0,
-        iR.bottomRight().x(), iR.bottomRight().y(), 0,
-        iR.topRight().x(), iR.topRight().y(), 0,
-        iR.topLeft().x(), iR.topLeft().y(), 0 };
+        iR.bottomLeft().x(), iR.bottomLeft().y(), 0.0f,
+        iR.bottomRight().x(), iR.bottomRight().y(), 0.0f,
+        iR.topRight().x(), iR.topRight().y(), 0.0f,
+        iR.topLeft().x(), iR.topLeft().y(), 0.0f };
 
     int i[6] = {
         0, 1, 3,
@@ -142,54 +137,119 @@ void drawRectangle( const Point2d& iO, const Vector2d& iS)
 //------------------------------------------------------------------------------
 void drawRectangularPrism( const Point3d& iLowerLeft, const Point3d& iTopRight )
 {
-	Point3d minCorner = iLowerLeft;
-	Point3d maxCorner = iTopRight;
+    Point3d minCorner = iLowerLeft;
+    Point3d maxCorner = iTopRight;
 
-  glBegin(GL_QUADS);
-  
-  //cote X
-  glNormal3d( 1.0, 0.0, 0.0 );
-  glVertex3d(maxCorner.x(), maxCorner.y(), maxCorner.z());
-  glVertex3d(maxCorner.x(), minCorner.y(), maxCorner.z());
-  glVertex3d(maxCorner.x(), minCorner.y(), minCorner.z());
-  glVertex3d(maxCorner.x(), maxCorner.y(), minCorner.z());    
-  
-  //cote -X
-  glNormal3d( -1.0, 0.0, 0.0 );
-  glVertex3d(minCorner.x(), minCorner.y(), minCorner.z());
-  glVertex3d(minCorner.x(), minCorner.y(), maxCorner.z());
-  glVertex3d(minCorner.x(), maxCorner.y(), maxCorner.z());
-  glVertex3d(minCorner.x(), maxCorner.y(), minCorner.z());
-  
-  //cote -Z
-  glNormal3d( 0.0, 0.0, -1.0 );
-  glVertex3d(minCorner.x(), minCorner.y(), minCorner.z());
-  glVertex3d(minCorner.x(), maxCorner.y(), minCorner.z());
-  glVertex3d(maxCorner.x(), maxCorner.y(), minCorner.z());
-  glVertex3d(maxCorner.x(), minCorner.y(), minCorner.z());    
-  
-  //cote Z
-  glNormal3d( 0.0, 0.0, 1.0 );
-  glVertex3d(maxCorner.x(), maxCorner.y(), maxCorner.z());
-  glVertex3d(minCorner.x(), maxCorner.y(), maxCorner.z());
-  glVertex3d(minCorner.x(), minCorner.y(), maxCorner.z());
-  glVertex3d(maxCorner.x(), minCorner.y(), maxCorner.z());
-  
-  //cote Y
-  glNormal3d( 0.0, 1.0, 0.0 );
-  glVertex3d(maxCorner.x(), maxCorner.y(), maxCorner.z());
-  glVertex3d(maxCorner.x(), maxCorner.y(), minCorner.z());
-  glVertex3d(minCorner.x(), maxCorner.y(), minCorner.z());
-  glVertex3d(minCorner.x(), maxCorner.y(), maxCorner.z());
-  
-  //cote -Y
-  glNormal3d( 0.0, -1.0, 0.0 );
-  glVertex3d(minCorner.x(), minCorner.y(), minCorner.z());
-  glVertex3d(maxCorner.x(), minCorner.y(), minCorner.z());
-  glVertex3d(maxCorner.x(), minCorner.y(), maxCorner.z());
-  glVertex3d(minCorner.x(), minCorner.y(), maxCorner.z());
-  
-  glEnd();
+  const int numVertices = 72;
+  float v[numVertices] = {
+      //z
+      maxCorner.x(), maxCorner.y(), maxCorner.z(), //0
+      minCorner.x(), maxCorner.y(), maxCorner.z(), //1
+      minCorner.x(), minCorner.y(), maxCorner.z(), //2
+      maxCorner.x(), minCorner.y(), maxCorner.z(), //3
+
+      //-x
+      minCorner.x(), minCorner.y(), minCorner.z(),  //4
+      minCorner.x(), minCorner.y(), maxCorner.z(),  //5
+      minCorner.x(), maxCorner.y(), maxCorner.z(),  //6
+      minCorner.x(), maxCorner.y(), minCorner.z(),  //7
+
+      //-y
+      minCorner.x(), minCorner.y(), minCorner.z(),  //8
+      maxCorner.x(), minCorner.y(), minCorner.z(),  //9
+      maxCorner.x(), minCorner.y(), maxCorner.z(),  //10
+      minCorner.x(), minCorner.y(), maxCorner.z(),  //11
+
+      //x
+      maxCorner.x(), maxCorner.y(), maxCorner.z(),  //12
+      maxCorner.x(), minCorner.y(), maxCorner.z(),
+      maxCorner.x(), minCorner.y(), minCorner.z(),
+      maxCorner.x(), maxCorner.y(), minCorner.z(),  //15
+
+      //y
+      maxCorner.x(), maxCorner.y(), maxCorner.z(),  //16
+      maxCorner.x(), maxCorner.y(), minCorner.z(),
+      minCorner.x(), maxCorner.y(), minCorner.z(),
+      minCorner.x(), maxCorner.y(), maxCorner.z(),  //19
+
+      //-z
+      minCorner.x(), minCorner.y(), minCorner.z(), //20
+      minCorner.x(), maxCorner.y(), minCorner.z(),
+      maxCorner.x(), maxCorner.y(), minCorner.z(),
+      maxCorner.x(), minCorner.y(), minCorner.z() //23
+  };
+
+  const int numIndices = 36;
+  int i[numIndices] = {
+
+      //z
+      0,1,3,
+      1,2,3,
+
+      //-x
+      4,5,6,
+      6,7,4,
+
+      //-y
+      8,9,10,
+      10,11,8,
+
+      //x
+      12,13,14,
+      14,15,12,
+
+      //y
+      16,17,18,
+      18,19,16,
+
+      //-z
+      20,21,22,
+      22,23,20
+  };
+
+  //3 normal par vertex, 8 vertex, 3 float par normal -> 3*8*3 =
+  const float x0 = 1.0, x1 = 0.0, x2 = 0.0;
+  const float y0 = 0.0, y1 = 1.0, y2 = 0.0;
+  const float z0 = 0.0, z1 = 0.0, z2 = 1.0;
+  const int numNormals = 72;
+  float n[numNormals] = {
+      z0, z1, z2,
+      z0, z1, z2,
+      z0, z1, z2,
+      z0, z1, z2,
+
+      -x0, -x1, -x2,
+      -x0, -x1, -x2,
+      -x0, -x1, -x2,
+      -x0, -x1, -x2,
+
+      -y0, -y1, -y2,
+      -y0, -y1, -y2,
+      -y0, -y1, -y2,
+      -y0, -y1, -y2,
+
+      x0, x1, x2,
+      x0, x1, x2,
+      x0, x1, x2,
+      x0, x1, x2,
+
+      y0, y1, y2,
+      y0, y1, y2,
+      y0, y1, y2,
+      y0, y1, y2,
+
+      -z0, -z1, -z2,
+      -z0, -z1, -z2,
+      -z0, -z1, -z2,
+      -z0, -z1, -z2,
+  };
+
+  VertexBufferObject vbo;
+  vbo.setVertices(numVertices, v);
+  vbo.setIndices(numIndices, i);
+  vbo.setNormals(numNormals, n);
+  vbo.bake();
+  vbo.draw();
 }
 
 
@@ -242,7 +302,7 @@ Texture get3dNoiseTexture(const Vector3i& iSize)
     }
   }
 
-	vector<int> s; s.resize(3);
+    vector<int> s; s.resize(3);
   s[0] = iSize.x(); s[1] = iSize.y(); s[2] = iSize.z();
   r.set( noise3dTexPtr, s, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
   free(noise3dTexPtr);

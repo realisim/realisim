@@ -89,7 +89,7 @@ public:
   virtual Texture& operator=(const Texture&);
   
   virtual QByteArray asBuffer( GLenum, GLenum ) const;
-	virtual QImage asQImage() const;
+    virtual QImage asQImage() const;
   virtual Texture copy();
   virtual int depth() const;
 //virtual void fromBinary() const; voir spriteCatalog
@@ -130,7 +130,7 @@ public:
 protected:
   struct Guts
   {
-		explicit Guts();
+        explicit Guts();
     
     GLuint mTextureId;
     std::vector<int> mSize;

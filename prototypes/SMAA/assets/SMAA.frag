@@ -1,13 +1,17 @@
 #version 440 compatibility
 
-layout(binding=0) uniform sampler2D uColorTex;
-layout(binding=1) uniform sampler2D uAreaTex;
-layout(binding=2) uniform sampler2D uSearchTex;
+uniform sampler2D uColorTex;
+uniform sampler2D uAreaTex;
+uniform sampler2D uSearchTex;
 uniform int uFirstPass;
 uniform int uSecondPass;
 uniform int uThirdPass;
 
-out vec4 color;
+// Interpolated values from the vertex shaders
+in vec4 color;
+in vec2 UV0;
+
+out vec4 frag_color;
 
 //forward declaration for SMAA.hlsl
 vec2 SMAALumaEdgeDetectionPS(vec2 texcoord,
@@ -29,7 +33,7 @@ vec2 SMAALumaEdgeDetectionPS(vec2 texcoord,
 //first pass
 vec2 lumaEdgeDetection()
 {
-    vec2 tc = gl_TexCoord[0].xy;
+    vec2 tc = UV0;
     ivec2 texSize = textureSize(uColorTex, 0);
 
     vec4 offset[3];
@@ -37,7 +41,7 @@ vec2 lumaEdgeDetection()
     offset[1] = vec4(tc.x + 0.5/texSize.x, tc.y, tc.x,  tc.y - 0.5/texSize.y);
     offset[2] = vec4(tc.x - 1.5/texSize.x, tc.y, tc.x,  tc.y + 1.5/texSize.y);
 
-    vec2 edge = SMAALumaEdgeDetectionPS( gl_TexCoord[0].xy, 
+    vec2 edge = SMAALumaEdgeDetectionPS( tc, 
         offset,
         uColorTex );
 
@@ -96,9 +100,9 @@ void main()
     if(uThirdPass > 0)
     {}
 
-    color = c;
+    
 
-    //vec4 c = texture(uColorTex, gl_TexCoord[0].xy);
-    //gl_FragColor = c;
-    //gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0 );
+    //c = texture(uColorTex, UV0);
+    //frag_color = vec4( 0.0, 1.0, 0.0, 1.0 );
+    frag_color = c;
 }

@@ -6,6 +6,8 @@ using namespace realisim;
   using namespace treeD;
 using namespace std;
 
+#define WARN_WHEN_UNIFORM_NOT_FOUND(iLoc, iName) if (iLoc < 0) { printf("uniform %s not found\n", iName); }
+
 Shader::Guts::Guts() : mRefCount(1),
   mFragmentIds(),
   mProgramId(0),
@@ -19,14 +21,6 @@ Shader::Guts::Guts() : mRefCount(1),
 //---
 Shader::Shader() : mpGuts(0)
 {makeGuts();}
-
-Shader::Shader(QString iVertexSource, QString iFragmentSource) : mpGuts(0)
-{ 
-  makeGuts();
-  addVertexSource(iVertexSource);
-  addFragmentSource(iFragmentSource);
-  link();
-}
 
 Shader::Shader(const Shader& iT) : mpGuts(0)
 { shareGuts(iT.mpGuts); }
@@ -78,9 +72,9 @@ void Shader::begin()
 //----------------------------------------------------------------------------
 void Shader::clear()
 {
-	detachAndDeleteGlResources();
-	mpGuts->mVertexSources.clear();
-	mpGuts->mFragmentSources.clear();
+    detachAndDeleteGlResources();
+    mpGuts->mVertexSources.clear();
+    mpGuts->mFragmentSources.clear();
 }
 //----------------------------------------------------------------------------
 /*Cette méthode sert a copier le shader et d'y allouer de nouvelle ressources
@@ -93,7 +87,7 @@ void Shader::clear()
   completement un nouveau Shader!*/
 Shader Shader::copy()
 {
-	Shader s;
+    Shader s;
   for(int i = 0; i < getVertexSourcesSize(); ++i)
     s.addVertexSource(getVertexSource(i));
   for(int i = 0; i < getFragmentSourcesSize(); ++i)
@@ -104,34 +98,34 @@ Shader Shader::copy()
 //----------------------------------------------------------------------------
 void Shader::detachAndDeleteGlResources()
 {
-	for (int i = 0; i < getVertexSourcesSize(); ++i)
-	{
-		glDetachShader(getProgramId(), getVertexId(i));
-		glDeleteShader(getVertexId(i));
-	}
+    for (int i = 0; i < getVertexSourcesSize(); ++i)
+    {
+        glDetachShader(getProgramId(), getVertexId(i));
+        glDeleteShader(getVertexId(i));
+    }
 
-	for (int i = 0; i < getFragmentSourcesSize(); ++i)
-	{
-		glDetachShader(getProgramId(), getFragmentId(i));
-		glDeleteShader(getFragmentId(i));
-	}
+    for (int i = 0; i < getFragmentSourcesSize(); ++i)
+    {
+        glDetachShader(getProgramId(), getFragmentId(i));
+        glDeleteShader(getFragmentId(i));
+    }
 
-	glDeleteProgram(getProgramId());
+    glDeleteProgram(getProgramId());
 
-	mpGuts->mFragmentIds.clear();
-	mpGuts->mVertexIds.clear();
-	mpGuts->mProgramId = 0;
+    mpGuts->mFragmentIds.clear();
+    mpGuts->mVertexIds.clear();
+    mpGuts->mProgramId = 0;
 
-	mpGuts->mIsValid = false;
+    mpGuts->mIsValid = false;
 }
 
 //----------------------------------------------------------------------------
 void Shader::end()
 {
-	GLuint p = 0;
+    GLuint p = 0;
   if( mpGuts->mPreviousShaders.size() > 0 )
   {
-  	p = mpGuts->mPreviousShaders.back();
+      p = mpGuts->mPreviousShaders.back();
     mpGuts->mPreviousShaders.pop_back();
   }
   glUseProgram( p );
@@ -165,7 +159,7 @@ void Shader::deleteGuts()
 {
   if(mpGuts && --mpGuts->mRefCount == 0)
   {
-	detachAndDeleteGlResources();
+    detachAndDeleteGlResources();
     
     delete mpGuts;
     mpGuts = 0;
@@ -175,9 +169,9 @@ void Shader::deleteGuts()
 //----------------------------------------------------------------------------
 int Shader::getFragmentId(int i) const
 {
-	int r = 0;
+    int r = 0;
   if(i >= 0 && (uint)i < mpGuts->mFragmentIds.size())
-  	r = mpGuts->mFragmentIds[i];
+      r = mpGuts->mFragmentIds[i];
   return r;
 }
 
@@ -186,7 +180,7 @@ int Shader::getVertexId(int i) const
 {
   int r = 0;
   if(i >= 0 && (uint)i < mpGuts->mVertexIds.size())
-  	r = mpGuts->mVertexIds[i];
+      r = mpGuts->mVertexIds[i];
   return r;
 }
 
@@ -260,7 +254,7 @@ void Shader::printProgramInfoLog(GLuint iObj) const
 
   if (infologLength > 0)
   {
-  	printf("link log for program %d\n", iObj);
+      printf("link log for program %d\n", iObj);
     infoLog = (char *)malloc(infologLength);
     glGetProgramInfoLog(iObj, infologLength, &charsWritten, infoLog);
     printf("%s\n",infoLog);
@@ -290,22 +284,24 @@ void Shader::printShaderInfoLog(GLuint iObj) const
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, int iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform1i(loc, iValue);
+WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, float iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform1f(loc, iValue);
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
@@ -318,6 +314,7 @@ bool Shader::setUniform(const char* iName, int iSize, const float* iData)
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform1fv(loc, iSize, iData);
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
@@ -334,7 +331,7 @@ bool Shader::setUniform(const char* iName, int iSize, const double* iData)
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform1fv(loc, iSize, d);
-
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   delete[] d;
   return loc >= 0 ? true : false;
 }
@@ -342,34 +339,37 @@ bool Shader::setUniform(const char* iName, int iSize, const double* iData)
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, double iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform1f(loc, (float)iValue);
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const math::Point2i& iV)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform2i( loc, iV.x(), iV.y() );
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const math::Point2d& iV)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
   
   Point2f v( iV );
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform2f( loc, v.x(), v.y() );
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
@@ -381,63 +381,69 @@ bool Shader::setUniform(const char* iName, const math::Vector2i& iV)
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform2i( loc, iV.x(), iV.y() );
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const math::Vector2d& iV)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
   
   Vector2f v( iV );
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform2f( loc, v.x(), v.y() );
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const Point3i& iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform3i(loc, iValue.x(), iValue.y(), iValue.z());
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const Point3d& iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
   
   Point3f t(iValue.x(), iValue.y(), iValue.z());
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform3f(loc, t.x(), t.y(), t.z());
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const Point3f& iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform3f(loc, iValue.x(), iValue.y(), iValue.z());
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const Vector3i& iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform3i(loc, iValue.x(), iValue.y(), iValue.z());
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
@@ -450,6 +456,7 @@ bool Shader::setUniform(const char* iName, int iSize, const math::Vector3i* iDat
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform3iv(loc, iSize, iData->getPtr());
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
@@ -457,23 +464,25 @@ bool Shader::setUniform(const char* iName, int iSize, const math::Vector3i* iDat
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const Vector3d& iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
     
   Point3f t(iValue.x(), iValue.y(), iValue.z());
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform3f(loc, t.x(), t.y(), t.z());
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const Vector3f& iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform3f(loc, iValue.x(), iValue.y(), iValue.z());
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
@@ -486,21 +495,23 @@ bool Shader::setUniform(const char* iName, int iSize, const math::Vector3f* iDat
     
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniform3fv(loc, iSize, iData->getPtr());
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const Matrix4& iValue)
 {
-	if(!isValid())
+    if(!isValid())
     return false;
 
   float f[16];
   for( int i = 0; i < 4; ++i )
-	  for( int j = 0; j < 4; ++j )
+      for( int j = 0; j < 4; ++j )
     { f[ i*4 + j] = (float)iValue(j, i); }
   GLint loc = glGetUniformLocation(getProgramId(), iName);
   glUniformMatrix4fv(loc, 1, false, f);
+  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
 }
 

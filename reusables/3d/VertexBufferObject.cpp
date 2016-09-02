@@ -223,6 +223,16 @@ void VertexBufferObject::setIndices(const std::vector<int>& iIndices)
     mpGuts->mIndices = iIndices;
 }
 
+void VertexBufferObject::setNormals(int iNumberOfNormales, float *ipNormals)
+{
+    mpGuts->mNormals.clear();
+    mpGuts->mNormals.resize(iNumberOfNormales);
+    for (int i = 0; i < iNumberOfNormales; ++i)
+    {
+        mpGuts->mNormals[i] = ipNormals[i];
+    }
+}
+
 //----------------------------------------------------------------------------
 //pointer to an array of 3d vertices.
 void VertexBufferObject::setVertices(int iNumVertives, float *ipVertices)

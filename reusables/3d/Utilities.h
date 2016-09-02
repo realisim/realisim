@@ -19,7 +19,7 @@ namespace realisim {namespace math {class PlatonicSolid;} }
   Typiquement:
   
   {
-  	ScreenSpaceProjection( 100, 100 );
+      ScreenSpaceProjection( 100, 100 );
     glBegin(...);
     ...
     glEnd();
@@ -33,14 +33,17 @@ namespace realisim
 namespace treeD
 {
 
-	using namespace math;
+    using namespace math;
 
-	class ScreenSpaceProjection
-  {
-  	public:
-  	explicit ScreenSpaceProjection( const math::Vector2d& );
-    ~ScreenSpaceProjection();
-  };
+    class ScreenSpaceProjection
+    {
+    public:
+        explicit ScreenSpaceProjection(const math::Vector2d&);
+        ~ScreenSpaceProjection() {}
+
+        Matrix4 mViewMatrix;
+        Matrix4 mProjectionMatrix;
+    };
 
   unsigned int colorToId(const QColor&);
   void draw(const PlatonicSolid&);
@@ -51,7 +54,7 @@ namespace treeD
   void drawRectangle( const Rectangle& );
   void drawRectangle( const Point2d&, const Vector2d& );
   void drawRectangularPrism( const Point3d& , const Point3d& );
-	
+    
 //Texture get1dNoiseTexture();  
   Texture get2dNoiseTexture(int, int);//const Vector2i&);
   Texture get3dNoiseTexture(const Vector3i&);

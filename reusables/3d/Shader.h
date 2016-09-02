@@ -29,8 +29,8 @@
    Il est possible d'ajouter plusieurs vertex shader ainsi que plusieurs
    fragment shader comme spécifié par la norme.
 
-	membres:
-  	mpGuts: pointeur sur les guts qui contiennent toutes les ressources openGL
+    membres:
+      mpGuts: pointeur sur les guts qui contiennent toutes les ressources openGL
             propre au shaders et program.
   
   membre de Guts:
@@ -59,7 +59,6 @@ class Shader
 {
 public:
   Shader();
-  Shader(QString, QString);
   Shader(const Shader&);
   virtual ~Shader();
   virtual Shader& operator=(const Shader&);

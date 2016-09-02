@@ -72,8 +72,8 @@ namespace math
     PlatonicSolid& operator=(const PlatonicSolid&);
     virtual ~PlatonicSolid();
   
-    virtual int getNumberOfPolygons() const { return mPolygons.size(); }
-    virtual int getNumberOfVertices() const { return mVertex.size(); } 
+    virtual int getNumberOfPolygons() const { return (int)mPolygons.size(); }
+    virtual int getNumberOfVertices() const { return (int)mVertex.size(); } 
     virtual const Polygon& getPolygon( int ) const;
     virtual const vector<Polygon>& getPolygons() const { return mPolygons; } 
     virtual const type getType() const {return mType;}
@@ -82,7 +82,7 @@ namespace math
     virtual const vector<Point3d>& getVertices() const {return mVertex;}
     
   protected:
-  	virtual void addPolygon( int, int, int );
+      virtual void addPolygon( int, int, int );
     virtual void addPolygon( int, int, int, int );
     virtual void makeCube();
     virtual void makeIsocahedron();
