@@ -40,8 +40,10 @@ private:
     realisim::treeD::FrameBufferObject mFbo;
     realisim::treeD::Shader mSmaaShader;
     realisim::treeD::Shader mSmaa2ndPassShader;
+	realisim::treeD::Shader mSmaa3rdPassShader;
     realisim::treeD::Shader mSceneShader;
     realisim::treeD::Shader mStillImageShader;
+    realisim::treeD::Shader mGammaCorrection;
     realisim::treeD::Texture mSmaaAreaTexture;
     realisim::treeD::Texture mSmaaSearchTexture;
     realisim::treeD::Texture mUnigine01;

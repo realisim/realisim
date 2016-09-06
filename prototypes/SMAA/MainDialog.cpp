@@ -99,6 +99,15 @@ void Viewer::drawScene()
     }break;
     case scUnigine01: //uEngine test image 1
     {
+		//apply gamma 
+		/*ScreenSpaceProjection sp(getCamera().getViewport().getSize());
+		mGammaCorrection.begin();
+		mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
+		mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
+		mGammaCorrection.setUniform("uOffScreen", 0);
+		drawRectangle(mUnigine01.getId(), Vector2d(mUnigine01.width(), mUnigine01.height()));
+		mGammaCorrection.end();*/
+
         Vector2d size(mUnigine01.width(), mUnigine01.height());
         drawStillImage(mUnigine01.getId(), size);
     }break;
@@ -147,12 +156,15 @@ void Viewer::initializeGL()
     mFbo.addColorAttachment();
     mFbo.addColorAttachment();
     mFbo.addColorAttachment();
+	mFbo.addColorAttachment();
     mFbo.getColorAttachment(0).setFilter(GL_LINEAR);
-    mFbo.getColorAttachment(0).setWrapMode(GL_CLAMP);
+    mFbo.getColorAttachment(0).setWrapMode(GL_CLAMP_TO_EDGE);
     mFbo.getColorAttachment(1).setFilter(GL_LINEAR);
-    mFbo.getColorAttachment(1).setWrapMode(GL_CLAMP);
+    mFbo.getColorAttachment(1).setWrapMode(GL_CLAMP_TO_EDGE);
     mFbo.getColorAttachment(2).setFilter(GL_LINEAR);
-    mFbo.getColorAttachment(2).setWrapMode(GL_CLAMP);
+    mFbo.getColorAttachment(2).setWrapMode(GL_CLAMP_TO_EDGE);
+	mFbo.getColorAttachment(3).setFilter(GL_LINEAR);
+	mFbo.getColorAttachment(3).setWrapMode(GL_CLAMP_TO_EDGE);
 
     mFbo.addDepthAttachment();
 
@@ -174,6 +186,7 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
     {
     case Qt::Key_C: gSceneContent = (sceneContent)((gSceneContent + 1) % scContentCount); break;
     case Qt::Key_F: gFrameBufferToDisplay = (gFrameBufferToDisplay + 1) % mFbo.getNumColorAttachment(); break;
+	case Qt::Key_D: --gFrameBufferToDisplay; if(gFrameBufferToDisplay < 0) gFrameBufferToDisplay = mFbo.getNumColorAttachment() - 1; break;
     case Qt::Key_P: gMlaaActivated = !gMlaaActivated; break;
     case Qt::Key_R: gRotateCube = !gRotateCube; break;
     case Qt::Key_F5: loadShaders(); break;
@@ -211,6 +224,20 @@ void Viewer::loadShaders()
         mSmaa2ndPassShader.link();
     }
 
+	{
+		mSmaa3rdPassShader.clear();
+		addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/utilities.vert");
+		//mSmaa2ndPassShader.addVertexSource("#define SMAA_INCLUDE_PS 0\n");
+		addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_vert.hlsl");
+		addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.vert");
+
+		addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.frag");
+		//mSmaa2ndPassShader.addFragmentSource("#define SMAA_INCLUDE_VS 0\n#define SMAA_INCLUDE_PS 1\n");
+		addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA.hlsl");
+		mSmaa3rdPassShader.link();
+	}
+	
+
     {
         mSceneShader.clear();
         addVertexSource(&mSceneShader, cwd + "/../assets/utilities.vert");
@@ -226,6 +253,14 @@ void Viewer::loadShaders()
         addFragmentSource(&mStillImageShader, cwd + "/../assets/texturedMaterial.frag");
         mStillImageShader.link();
     }
+
+    {
+        mGammaCorrection.clear();
+        addVertexSource(&mGammaCorrection, cwd + "/../assets/utilities.vert");
+        addVertexSource(&mGammaCorrection, cwd + "/../assets/main.vert");
+        addFragmentSource(&mGammaCorrection, cwd + "/../assets/gammaCorrection.frag");
+        mGammaCorrection.link();
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -234,17 +269,34 @@ void Viewer::loadTextures()
     const QString cwd = QCoreApplication::applicationDirPath();
     
     //Area texture
-    math::Vector2i areaTexSize(AREATEX_WIDTH, AREATEX_HEIGHT);
-    mSmaaAreaTexture.set((void*)areaTexBytes, areaTexSize, GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
-    mSmaaAreaTexture.setFilter(GL_LINEAR);
-    mSmaaAreaTexture.setWrapMode(GL_CLAMP);
-
+	{
+		std::vector<unsigned char> tempBuffer(AREATEX_SIZE);
+		for (unsigned int y = 0; y < AREATEX_HEIGHT; y++) {
+			unsigned int srcY = AREATEX_HEIGHT - 1 - y;
+			//unsigned int srcY = y;
+			memcpy(&tempBuffer[y * AREATEX_PITCH], areaTexBytes + srcY * AREATEX_PITCH, AREATEX_PITCH);
+		}
+		math::Vector2i areaTexSize(AREATEX_WIDTH, AREATEX_HEIGHT);
+		mSmaaAreaTexture.set((void*)&tempBuffer[0], areaTexSize, GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
+		mSmaaAreaTexture.setFilter(GL_LINEAR);
+		mSmaaAreaTexture.setWrapMode(GL_CLAMP_TO_EDGE);
+	}
+	
     //SearcTexture
     //Area texture
-    math::Vector2i searchTexSize(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT);
-    mSmaaSearchTexture.set((void*)searchTexBytes, searchTexSize, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
-    mSmaaSearchTexture.setFilter(GL_LINEAR);
-    mSmaaSearchTexture.setWrapMode(GL_CLAMP);
+	{
+		std::vector<unsigned char> tempBuffer(SEARCHTEX_SIZE);
+		for (unsigned int y = 0; y < SEARCHTEX_HEIGHT; y++) {
+			unsigned int srcY = SEARCHTEX_HEIGHT - 1 - y;
+			//unsigned int srcY = y;
+			memcpy(&tempBuffer[y * SEARCHTEX_PITCH], searchTexBytes + srcY * SEARCHTEX_PITCH, SEARCHTEX_PITCH);
+		}
+		math::Vector2i searchTexSize(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT);
+		mSmaaSearchTexture.set((void*)&tempBuffer[0], searchTexSize, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
+		mSmaaSearchTexture.setFilter(GL_LINEAR);
+		mSmaaSearchTexture.setWrapMode(GL_CLAMP_TO_EDGE);
+	}
+    
 
     QImage im;
     //demo Unigine01    
@@ -295,7 +347,7 @@ void Viewer::paintGL()
             {
                 drawScene();
             }
-
+			
             glDisable(GL_LIGHTING);
             //disable all depth test for the post processing stages...
             glDisable(GL_DEPTH_TEST);
@@ -327,8 +379,8 @@ void Viewer::paintGL()
                 mSmaa2ndPassShader.begin();
 
                 ScreenSpaceProjection sp(cam.getViewport().getSize());
-                mSmaaShader.setUniform("modelViewMatrix", sp.mViewMatrix);
-                mSmaaShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+				mSmaa2ndPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+				mSmaa2ndPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
                 mSmaa2ndPassShader.setUniform("uEdgeTex", 0);
                 mSmaa2ndPassShader.setUniform("uAreaTex", 1);
                 mSmaa2ndPassShader.setUniform("uSearchTex", 2);
@@ -339,12 +391,32 @@ void Viewer::paintGL()
                 glActiveTexture(GL_TEXTURE2);
                 glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
 
-                Texture t = mFbo.getColorAttachment(1);                
+                Texture t = mFbo.getColorAttachment(1);
                 drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
                 mSmaa2ndPassShader.end();
             }
 
+			//SMAA - 3rd pass perform the neighbour blending
+			mFbo.drawTo(3);
+			{
+				glClear(GL_COLOR_BUFFER_BIT);
+				mSmaa3rdPassShader.begin();
+
+				ScreenSpaceProjection sp(cam.getViewport().getSize());
+				mSmaa3rdPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+				mSmaa3rdPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+				mSmaa3rdPassShader.setUniform("uColorTex", 0);
+				mSmaa3rdPassShader.setUniform("uBlendTex", 1);
+
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, mFbo.getColorAttachment(2).getId());
+
+				Texture t = mFbo.getColorAttachment(0);
+				drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+				mSmaa3rdPassShader.end();
+			}
         }
         mFbo.end();
 
@@ -354,7 +426,19 @@ void Viewer::paintGL()
         GLenum minFilter = finalT.getMinificationFilter();
         GLenum maxFilter = finalT.getMagnificationFilter();
         finalT.setFilter(GL_NEAREST);
+
+        //do not apply gamma to final pass
         drawStillImage(finalT.getId(), Vector2d(finalT.width(), finalT.height()));
+
+        //apply gamma to final pass
+        //ScreenSpaceProjection sp(cam.getViewport().getSize());
+        //mGammaCorrection.begin();
+        //mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
+        //mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
+        //mGammaCorrection.setUniform("uOffScreen", 0);
+        //drawRectangle(finalT.getId(), Vector2d(finalT.width(), finalT.height()));
+        //mGammaCorrection.end();
+
         finalT.setMinificationFilter(minFilter);
         finalT.setMagnificationFilter(maxFilter);
 
@@ -371,6 +455,7 @@ void Viewer::resizeGL(int iW, int iH)
     if (!(mFbo.getWidth() == iW && mFbo.getHeight() == iH))
     {
         mFbo.resize(iW, iH);
+        printf("FBO size: %d, %d\n", iW, iH);
     }
 }
 
@@ -484,6 +569,7 @@ void MainDialog::updateUi()
         case 0: break;
         case 1: passName = "Edge detection"; break;
         case 2: passName = "Blend weight"; break;
+		case 3: passName = "Final result"; break;
         default: passName = "Unknown"; break;
     }
     mpPassDisplayed->setText(passName);

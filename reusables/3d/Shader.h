@@ -67,7 +67,12 @@ public:
 //void addFragmentShader(QString); a partir d'un fichier
 //void addVertexShader(QString); a partir d'un fichier
 
-  !!!!add define to shaders!!!!
+  //!!!!add define to shaders!!!!
+  //!!!!add define to shaders!!!!
+  //!!!!add define to shaders!!!!
+  //!!!!add define to shaders!!!!
+  //!!!!add define to shaders!!!!
+
   //virtual void addDefineToFragmentSource(int iSourceId, QString iName, int iValue);
   //virtual void addDefineToVertexSource(int iSourceId, QString iName, int iValue);
   virtual int addFragmentSource(QString);

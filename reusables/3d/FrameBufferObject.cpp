@@ -105,36 +105,42 @@ void FrameBufferObject::deleteGuts()
 //----------------------------------------------------------------------------
 void FrameBufferObject::addColorAttachment()
 {
-    init();
+	addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+}
 
-    if (mpGuts->mColorAttachments.size() >= (unsigned int)getMaxColorAttachment())
-    {
-        qDebug("The maximum number of color attachment has been reach. Cannot add \
+//----------------------------------------------------------------------------
+void FrameBufferObject::addColorAttachment(GLenum internalFormat, GLenum format, GLenum dataType)
+{
+	init();
+
+	if (mpGuts->mColorAttachments.size() >= (unsigned int)getMaxColorAttachment())
+	{
+		qDebug("The maximum number of color attachment has been reach. Cannot add \
 		  any more.");
-        return;
-    }
+		return;
+	}
 
-    //early out
-    if (!getFrameBufferId())
-        return;
+	//early out
+	if (!getFrameBufferId())
+		return;
 
-    GLint previousFb = 0;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &previousFb);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, getFrameBufferId());
+	GLint previousFb = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &previousFb);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, getFrameBufferId());
 
-    int index = (int)mpGuts->mColorAttachments.size();
-    GLenum e = GL_COLOR_ATTACHMENT0_EXT + index;
-    
-    Texture t;
-    vector<int> s(2, 0); s[0] = getWidth(); s[1] = getHeight();
-    t.set(0, s, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-    t.setWrapMode(GL_CLAMP);
-    mpGuts->mColorAttachments.push_back(t);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getId(), 0);
-    
+	int index = (int)mpGuts->mColorAttachments.size();
+	GLenum e = GL_COLOR_ATTACHMENT0_EXT + index;
 
-    validate();
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, previousFb);
+	Texture t;
+	vector<int> s(2, 0); s[0] = getWidth(); s[1] = getHeight();
+	t.set(0, s, internalFormat, format, dataType);
+	t.setWrapMode(GL_CLAMP);
+	mpGuts->mColorAttachments.push_back(t);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getId(), 0);
+
+
+	validate();
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, previousFb);
 }
 
 //----------------------------------------------------------------------------
