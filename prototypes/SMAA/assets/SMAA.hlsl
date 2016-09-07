@@ -296,16 +296,14 @@
 //-----------------------------------------------------------------------------
 // SMAA Presets
 #version 440
-//#define SMAA_RT_METRICS float4(1.0 / 1280.0, 1.0 / 720.0, 1280.0, 720.0)
-#define SMAA_RT_METRICS float4(1.0 / 1017.0, 1.0 / 716.0, 1017.0, 716.0)
+
+
 #define SMAA_GLSL_4
 //#define SMAA_PRESET_HIGH
 #define SMAA_THRESHOLD 0.05
 #define SMAA_MAX_SEARCH_STEPS 16
 #define SMAA_MAX_SEARCH_STEPS_DIAG 8
 #define SMAA_CORNER_ROUNDING 25
-#define SMAA_INCLUDE_PS 1
-#define SMAA_INCLUDE_VS 0
 
 /**
  * Note that if you use one of these presets, the following configuration

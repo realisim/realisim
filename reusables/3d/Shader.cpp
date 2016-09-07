@@ -9,6 +9,7 @@ using namespace std;
 #define WARN_WHEN_UNIFORM_NOT_FOUND(iLoc, iName) if (iLoc < 0) { printf("uniform %s not found\n", iName); }
 
 Shader::Guts::Guts() : mRefCount(1),
+  mName("no name"),
   mFragmentIds(),
   mProgramId(0),
   mVertexIds(),
@@ -38,6 +39,62 @@ Shader& Shader::operator=(const Shader& iT)
   return *this;
 }
 
+//----------------------------------------------------------------------------
+void Shader::addDefine(QString iName, QString iValue, vector<ShaderDefine> &iV)
+{
+    ShaderDefine sd;
+    sd.mName = iName;
+    sd.mValue = iValue;
+    iV.push_back(sd);
+
+    /*This code checks if the define is already present and replaces the value... 
+    Not needed at the moment*/
+    //bool alreadyPresent = false;
+    ////check if there is already a define with that name and replace value if it is the case
+    //for(size_t i = 0; i < iV.size() && !alreadyPresent; ++i)
+    //{
+    //    if (iV[i].mName == iName)
+    //    {
+    //        iV[i].mValue = iValue;
+    //        alreadyPresent = true;
+    //    }
+    //}
+
+    //if(!alreadyPresent)
+    //{ iV.push_back(sd); }
+}
+
+//----------------------------------------------------------------------------
+//this will inject a define in the fragment source located at iSourceId. This
+//will only have effect if the program is not yet linked (via ::link())
+//The injection will happen right before compile see link() method.
+void Shader::addDefineToFragmentSource(int iSourceId, QString iName, QString iValue)
+{    
+    if(iSourceId >= 0 && iSourceId < (int)mpGuts->mFragmentSources.size())
+    {
+        auto it = mpGuts->mFragmentDefineMap.find(iSourceId);
+        if(it == mpGuts->mFragmentDefineMap.end())
+        { it = mpGuts->mFragmentDefineMap.insert( make_pair(iSourceId, vector<ShaderDefine>()) ).first; }
+
+        addDefine(iName, iValue, it->second);        
+    }
+}
+
+//----------------------------------------------------------------------------
+//see Shader::addDefineToFragmentSource
+void Shader::addDefineToVertexSource(int iSourceId, QString iName, QString iValue)
+{
+    if (iSourceId >= 0 && iSourceId < (int)mpGuts->mVertexSources.size())
+    {
+        auto it = mpGuts->mVertexDefineMap.find(iSourceId);
+        if (it == mpGuts->mVertexDefineMap.end())
+        {
+            it = mpGuts->mVertexDefineMap.insert(make_pair(iSourceId, vector<ShaderDefine>())).first;
+        }
+
+        addDefine(iName, iValue, it->second);
+    }
+}
 //----------------------------------------------------------------------------
 //adds a fragment source to be compiled when method link() will be called.
 int Shader::addFragmentSource(QString iSource)
@@ -71,7 +128,7 @@ void Shader::begin()
   mpGuts->mPreviousShaders.push_back( p );
   if( isValid() ) glUseProgram( getProgramId() );
   else
-  { printf("Shader is not valid. Either it did not link properly or was never linked...\n"); }
+  { printf("Shader %s is not valid. Either it did not link properly or was never linked...\n", mpGuts->mName.toStdString().c_str()); }
 }
 
 //----------------------------------------------------------------------------
@@ -79,7 +136,9 @@ void Shader::clear()
 {
     detachAndDeleteGlResources();
     mpGuts->mVertexSources.clear();
+    mpGuts->mVertexDefineMap.clear();
     mpGuts->mFragmentSources.clear();
+    mpGuts->mFragmentDefineMap.clear();
 }
 //----------------------------------------------------------------------------
 /*Cette méthode sert a copier le shader et d'y allouer de nouvelle ressources
@@ -196,11 +255,58 @@ bool Shader::isValid() const
 }
 
 //----------------------------------------------------------------------------
-void Shader::link() const
+void Shader::injectDefines(QString &iSouce, const vector<ShaderDefine> &iShaderDefines )
+{
+    //bake the #define string for the current fragment source
+    QString defineString = "\n";
+    for (size_t i = 0; i < iShaderDefines.size(); ++i)
+    {
+        ShaderDefine sd = iShaderDefines[i];
+        defineString += "#define " + sd.mName + " " + sd.mValue + "\n";
+    }
+
+    //find occurence of #version and insert the define string right under.
+    QRegExp regExp("#version[ \\w]+");
+    int p = iSouce.lastIndexOf(regExp);
+    if (p == -1)
+    {
+        printf("Shader::injectDefines did not find #version tag. Define string "
+            " will be added at top of shader code.\n");
+        p = 0;
+    }
+    iSouce.insert(p + max(regExp.matchedLength(), 0), defineString);
+}
+
+//----------------------------------------------------------------------------
+void Shader::injectFragmentDefines()
+{
+    auto it = mpGuts->mFragmentDefineMap.begin();
+    for(; it != mpGuts->mFragmentDefineMap.end(); ++it)
+    {
+        QString& s = mpGuts->mFragmentSources[ it->first ];
+        injectDefines(s, it->second);        
+    }
+}
+
+//----------------------------------------------------------------------------
+void Shader::injectVertexDefines()
+{
+    auto it = mpGuts->mVertexDefineMap.begin();
+    for (; it != mpGuts->mVertexDefineMap.end(); ++it)
+    {
+        QString& s = mpGuts->mVertexSources[it->first];
+        injectDefines(s, it->second);
+    }
+}
+
+//----------------------------------------------------------------------------
+void Shader::link()
 {
     if (getProgramId() == 0)
         mpGuts->mProgramId = glCreateProgram();
 
+    //inject all user define for fragment sources
+    injectVertexDefines();
     //compile all vertex
     for (int i = 0; i < (int)mpGuts->mVertexSources.size(); ++i)
     {
@@ -218,6 +324,8 @@ void Shader::link() const
     }
     mpGuts->mVertexSources.clear();
 
+    //inject all user define for fragment sources
+    injectFragmentDefines();
     //compile all fragment
     for(int i = 0; i < (int)mpGuts->mFragmentSources.size(); ++i )
     {
@@ -259,7 +367,7 @@ void Shader::printProgramInfoLog(GLuint iObj) const
 
   if (infologLength > 0)
   {
-      printf("link log for program %d\n", iObj);
+    printf("link log for program %s id: %d\n", mpGuts->mName.toStdString().c_str(), iObj);
     infoLog = (char *)malloc(infologLength);
     glGetProgramInfoLog(iObj, infologLength, &charsWritten, infoLog);
     printf("%s\n",infoLog);

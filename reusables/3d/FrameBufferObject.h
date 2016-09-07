@@ -92,7 +92,7 @@ namespace treeD
         virtual void addDepthAttachment();
         virtual void addStencilAttachment();
         virtual void addColorAttachment();
-		virtual void addColorAttachment(GLenum internalFormat, GLenum format, GLenum dataType);
+        virtual void addColorAttachment(GLenum internalFormat, GLenum format, GLenum dataType);
         virtual void begin();
         virtual void clear();
         virtual FrameBufferObject copy(); //detach voir Shader::copy  

@@ -62,32 +62,25 @@ public:
   Shader();
   Shader(const Shader&);
   virtual ~Shader();
-  virtual Shader& operator=(const Shader&);
+  virtual Shader& operator=(const Shader&);  
 
-//void addFragmentShader(QString); a partir d'un fichier
-//void addVertexShader(QString); a partir d'un fichier
-
-  //!!!!add define to shaders!!!!
-  //!!!!add define to shaders!!!!
-  //!!!!add define to shaders!!!!
-  //!!!!add define to shaders!!!!
-  //!!!!add define to shaders!!!!
-
-  //virtual void addDefineToFragmentSource(int iSourceId, QString iName, int iValue);
-  //virtual void addDefineToVertexSource(int iSourceId, QString iName, int iValue);
+  virtual void addDefineToFragmentSource(int iSourceId, QString iName, QString iValue);
+  virtual void addDefineToVertexSource(int iSourceId, QString iName, QString iValue);
   virtual int addFragmentSource(QString);
   virtual int addVertexSource(QString);
   virtual void begin();
   virtual void clear();
   virtual Shader copy();
   virtual void end();
-  //virtual QString getFragmentDefineName(int) const;
-  //virtual int getFragmentDefineValue(int) const;
+  //virtual ShaderDefine getFragmentDefine(int) const;
+  //virtual ShaderDefine getVertexDefine(int) const;  
   virtual int getProgramId() const {return mpGuts->mProgramId;} 
-  //virtual int getNumberOfDefineForFragment(int) const;
-  //virtual int getNumberOfDefineForVertex(int) const;
+  virtual QString getName() const {return mpGuts->mName;}
+  virtual int getNumberOfDefineForFragment(int) const {return (int)mpGuts->mFragmentDefineMap.size();}
+  virtual int getNumberOfDefineForVertex(int) const { return (int)mpGuts->mVertexDefineMap.size(); }
   virtual bool isValid() const;
-  virtual void link() const;
+  virtual void link();
+  virtual void setName(QString iName) { mpGuts->mName = iName; }
   
   virtual bool setUniform(const char*, int);
   virtual bool setUniform(const char*, float);
@@ -111,36 +104,41 @@ public:
 //bindVextexAttrib et setVertexAttrib?
   
 protected:
+    struct ShaderDefine
+    {
+        QString mName;
+        QString mValue;
+    };
+
+  virtual void addDefine(QString iName, QString iValue, std::vector<ShaderDefine>&);
   virtual void detachAndDeleteGlResources();
   virtual int getFragmentId(int i) const;
   virtual QString getFragmentSource(int i) const { return mpGuts->mFragmentSources[i]; }
-  virtual int getFragmentSourcesSize() const { return mpGuts->mFragmentSources.size(); }
+  virtual int getFragmentSourcesSize() const { return (int)mpGuts->mFragmentSources.size(); }
   virtual int getVertexId(int i) const;
   virtual QString getVertexSource(int i) const {return mpGuts->mVertexSources[i];}
-  virtual int getVertexSourcesSize() const {return mpGuts->mVertexSources.size();}
+  virtual int getVertexSourcesSize() const {return (int)mpGuts->mVertexSources.size();}
+  virtual void injectDefines(QString &iSouce, const std::vector<ShaderDefine> &iShaderDefines);
+  virtual void injectFragmentDefines();
+  virtual void injectVertexDefines();
   virtual void printProgramInfoLog(GLuint) const;
   virtual void printShaderInfoLog(GLuint) const;
   virtual void validate() const;
-
-  struct shaderDefine
-  {
-      QString mName;
-      int mValue;
-  };
 
   struct Guts
   {
     explicit Guts();
     unsigned int mRefCount;
     
+    QString mName;
     std::vector<int> mFragmentIds;
     int mProgramId;  
     std::vector<int> mVertexIds;
     std::vector<QString> mFragmentSources;
     std::vector<QString> mVertexSources;
     std::vector<GLuint> mPreviousShaders;
-    //std::map<int, vector< shaderDefine > mFragmentDefineList;
-    //std::map<int, vector< shaderDefine > mVertexDefineList;
+    std::map<int, std::vector<ShaderDefine> > mFragmentDefineMap;
+    std::map<int, std::vector<ShaderDefine> > mVertexDefineMap;
     mutable bool mIsValid;
   };
   

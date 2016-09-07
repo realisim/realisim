@@ -79,12 +79,12 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
   }
   p = new char[ numberOfComponent ];
 
-	GLint previousId = 0;
+    GLint previousId = 0;
   switch( getType() )
   {
   case t2d:
   {
-  	glEnable( GL_TEXTURE_2D );
+      glEnable( GL_TEXTURE_2D );
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);    
     glBindTexture( GL_TEXTURE_2D, getId() );
     glGetTexImage( GL_TEXTURE_2D, 0, iF, iDt, p );
@@ -94,8 +94,8 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
   break;
   case t3d:
   {
-  	glEnable( GL_TEXTURE_3D );
-  	glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);    
+      glEnable( GL_TEXTURE_3D );
+      glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);    
     glBindTexture( GL_TEXTURE_3D, getId() );
     glGetTexImage( GL_TEXTURE_3D, 0, iF, iDt, p );
     glBindTexture( GL_TEXTURE_3D, previousId );
@@ -105,7 +105,7 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
   default: break;
   }
 
-	QByteArray r( p, numberOfComponent );
+    QByteArray r( p, numberOfComponent );
   if( p ) { delete[] p; p = 0; };  
   return r;
 }
@@ -113,8 +113,8 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
 //----------------------------------------------------------------------------
 QImage Texture::asQImage() const
 {
-	//GL_BGRA pour Qt
-	QByteArray b = asBuffer( GL_BGRA, GL_UNSIGNED_BYTE );
+    //GL_BGRA pour Qt
+    QByteArray b = asBuffer( GL_BGRA, GL_UNSIGNED_BYTE );
   QImage r( width(), height(), QImage::Format_ARGB32 );
   memcpy( r.bits(), b.constData(), b.size() );
   //opengl et Qt on l'axe y inversé
@@ -137,7 +137,7 @@ Texture Texture::copy()
   t.mpGuts->mWrapRMode = getWrapRMode();
   
   t.set( (void*)asBuffer( getInternalFormat(), getDataType() ).constData(), size(),
-  	getInternalFormat(), getFormat(), getDataType() );
+      getInternalFormat(), getFormat(), getDataType() );
 
    return t;
 }
@@ -155,8 +155,8 @@ void Texture::deleteGuts()
 //----------------------------------------------------------------------------
 void Texture::generateMipmap()
 { 
-	GLint previousId = 0;
-	switch( getType() )
+    GLint previousId = 0;
+    switch( getType() )
   {
     case t2d:
       glEnable(GL_TEXTURE_2D);
@@ -172,7 +172,7 @@ void Texture::generateMipmap()
       glGenerateMipmapEXT(GL_TEXTURE_3D);
       glBindTexture(GL_TEXTURE_3D, previousId);
     break;
-  	default: break;
+      default: break;
   }
 }
 
@@ -225,11 +225,11 @@ bool Texture::isValid() const
   la texture résultante possède la bonne taille.*/
 void Texture::resize( const vector<int>& iS)
 {
-	GLint previousId = 0;
-	switch (getType()) 
+    GLint previousId = 0;
+    switch (getType()) 
   {
     case t2d:
-    	assert( iS.size() == 2 );
+        assert( iS.size() == 2 );
       mpGuts->mSize = iS;
       glPushAttrib(GL_ENABLE_BIT);
       glEnable(GL_TEXTURE_2D);
@@ -241,7 +241,7 @@ void Texture::resize( const vector<int>& iS)
       glPopAttrib();
       break;
     case t3d:
-	    assert( iS.size() == 3 );
+        assert( iS.size() == 3 );
       mpGuts->mSize = iS;
       glPushAttrib(GL_ENABLE_BIT);
       glEnable(GL_TEXTURE_3D);
@@ -251,7 +251,7 @@ void Texture::resize( const vector<int>& iS)
         depth(), 0, getFormat(), getDataType(), 0);
       glBindTexture(GL_TEXTURE_3D, previousId);
       glPopAttrib();
-    	break;
+        break;
     default:
       break;
   }
@@ -261,7 +261,7 @@ void Texture::resize( const vector<int>& iS)
 //voir resize( std::vector<int> )
 void Texture::resize(int iW, int iH )
 {
-	vector<int> s;
+    vector<int> s;
   s.push_back( iW ); s.push_back( iH ); resize( s );
 }
 
@@ -269,7 +269,7 @@ void Texture::resize(int iW, int iH )
 //voir resize( std::vector<int> )
 void Texture::resize(int iW, int iH, int iD )
 {
-	vector<int> s;
+    vector<int> s;
   s.push_back( iW ); s.push_back( iH ); s.push_back( iD ); resize( s );
 }
 
@@ -278,7 +278,7 @@ void Texture::set(QImage i, GLenum iInternalFormat,
     GLenum iFormat,
     GLenum iDataType)
 {
-	if(!i.isNull())
+    if(!i.isNull())
   { i = QGLWidget::convertToGLFormat(i); }
 
   vector<int> s;
@@ -292,7 +292,7 @@ void Texture::set(void* iPtr, const Vector2i& iS,
     GLenum iFormat,
     GLenum iDataType)
 {
-	vector<int> s(2, 0); s[0] = iS.x(); s[1] = iS.y();
+    vector<int> s(2, 0); s[0] = iS.x(); s[1] = iS.y();
   set( iPtr, s, iInternalFormat, iFormat, iDataType );
 }
 
@@ -302,7 +302,7 @@ void Texture::set(void* iPtr, const Vector3i& iS,
     GLenum iFormat,
     GLenum iDataType)
 {
-	vector<int> s(3, 0); s[0] = iS.x(); s[1] = iS.y(); s[2] = iS.z();
+    vector<int> s(3, 0); s[0] = iS.x(); s[1] = iS.y(); s[2] = iS.z();
   set( iPtr, s, iInternalFormat, iFormat, iDataType );
 }
 
@@ -312,8 +312,8 @@ void Texture::set(void* iPtr, const vector<int>& iS,
     GLenum iFormat,
     GLenum iDataType)
 {
-	GLint previousId = 0;
-	switch ( iS.size() ) 
+    GLint previousId = 0;
+    switch ( iS.size() ) 
   {
     case 2:
       if(!isValid()) glGenTextures(1, &mpGuts->mTextureId);
@@ -376,35 +376,35 @@ void Texture::set(void* iPtr, const vector<int>& iS,
 
 //----------------------------------------------------------------------------
 void Texture::setFilter( GLenum iF )
-{ setFilter( iF, iF );	}
+{ setFilter( iF, iF );    }
 
 //----------------------------------------------------------------------------
 void Texture::setFilter( GLenum iMin, GLenum iMag )
 {
-	setMinificationFilter( iMin );
+    setMinificationFilter( iMin );
   setMagnificationFilter( iMag );
 }
 //----------------------------------------------------------------------------
 void Texture::setMinificationFilter( GLenum iI )
 {
-	GLint previousId = 0;
-	mpGuts->mMinificationFilter = iI;
+    GLint previousId = 0;
+    mpGuts->mMinificationFilter = iI;
   switch (getType()) 
   {
     case t2d:
-			glEnable(GL_TEXTURE_2D);
+            glEnable(GL_TEXTURE_2D);
       glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);
       glBindTexture(GL_TEXTURE_2D, getId());
       glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
-      	getMinificationFilter() );
+          getMinificationFilter() );
       glBindTexture(GL_TEXTURE_2D, previousId);
       break;
     case t3d:
-			glEnable(GL_TEXTURE_3D);
+            glEnable(GL_TEXTURE_3D);
       glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);
       glBindTexture(GL_TEXTURE_3D, getId());
       glTexParameteri(GL_TEXTURE_3D,GL_TEXTURE_MIN_FILTER,
-      	getMinificationFilter() );
+          getMinificationFilter() );
       glBindTexture(GL_TEXTURE_3D, previousId);
       break;
     default:
@@ -414,24 +414,24 @@ void Texture::setMinificationFilter( GLenum iI )
 //----------------------------------------------------------------------------
 void Texture::setMagnificationFilter( GLenum iI )
 {
-	GLint previousId = 0;
-	mpGuts->mMagnificationFilter = iI;
+    GLint previousId = 0;
+    mpGuts->mMagnificationFilter = iI;
   switch (getType()) 
   {
     case t2d:
-			glEnable(GL_TEXTURE_2D);
+            glEnable(GL_TEXTURE_2D);
       glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);
       glBindTexture(GL_TEXTURE_2D, getId());
       glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
-      	getMagnificationFilter() );
+          getMagnificationFilter() );
       glBindTexture(GL_TEXTURE_2D, previousId);
       break;
     case t3d:
-			glEnable(GL_TEXTURE_3D);
+            glEnable(GL_TEXTURE_3D);
       glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);
       glBindTexture(GL_TEXTURE_3D, getId());
       glTexParameteri(GL_TEXTURE_3D,GL_TEXTURE_MAG_FILTER,
-      	getMagnificationFilter() );
+          getMagnificationFilter() );
       glBindTexture(GL_TEXTURE_3D, previousId);
       break;
     default:
@@ -454,19 +454,19 @@ void Texture::setWrapMode( GLenum iS, GLenum iT, GLenum iR )
 //----------------------------------------------------------------------------
 void Texture::setWrapSMode( GLenum iS )
 {
-	GLint previousId = 0;
-	mpGuts->mWrapSMode = iS;
+    GLint previousId = 0;
+    mpGuts->mWrapSMode = iS;
   switch (getType()) 
   {
     case t2d:
-			glEnable(GL_TEXTURE_2D);
+            glEnable(GL_TEXTURE_2D);
       glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);
       glBindTexture(GL_TEXTURE_2D, getId());
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, getWrapSMode() );
       glBindTexture(GL_TEXTURE_2D, previousId);
       break;
     case t3d:
-			glEnable(GL_TEXTURE_3D);
+            glEnable(GL_TEXTURE_3D);
       glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);
       glBindTexture(GL_TEXTURE_3D, getId());
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, getWrapSMode() );
@@ -480,19 +480,19 @@ void Texture::setWrapSMode( GLenum iS )
 //----------------------------------------------------------------------------
 void Texture::setWrapTMode( GLenum iT )
 {
-	GLint previousId = 0;
-	mpGuts->mWrapTMode = iT;
+    GLint previousId = 0;
+    mpGuts->mWrapTMode = iT;
   switch (getType()) 
   {
     case t2d:
-			glEnable(GL_TEXTURE_2D);
+            glEnable(GL_TEXTURE_2D);
       glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);
       glBindTexture(GL_TEXTURE_2D, getId());
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, getWrapTMode() );
       glBindTexture(GL_TEXTURE_2D, previousId);
       break;
     case t3d:
-			glEnable(GL_TEXTURE_3D);
+            glEnable(GL_TEXTURE_3D);
       glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);
       glBindTexture(GL_TEXTURE_3D, getId());
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, getWrapTMode() );
@@ -506,19 +506,19 @@ void Texture::setWrapTMode( GLenum iT )
 //----------------------------------------------------------------------------
 void Texture::setWrapRMode( GLenum iR )
 {
-	GLint previousId = 0;
-	mpGuts->mWrapRMode = iR;
+    GLint previousId = 0;
+    mpGuts->mWrapRMode = iR;
   switch (getType()) 
   {
     case t2d:
-			glEnable(GL_TEXTURE_2D);
+            glEnable(GL_TEXTURE_2D);
       glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);
       glBindTexture(GL_TEXTURE_2D, getId());
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, getWrapRMode() );
       glBindTexture(GL_TEXTURE_2D, previousId);
       break;
     case t3d:
-			glEnable(GL_TEXTURE_3D);
+            glEnable(GL_TEXTURE_3D);
       glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);
       glBindTexture(GL_TEXTURE_3D, getId());
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, getWrapRMode() );

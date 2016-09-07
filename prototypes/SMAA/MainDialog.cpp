@@ -7,6 +7,7 @@
 #include "MainDialog.h"
 #include <QCoreApplication>
 #include <QHBoxLayout>
+#include <utils/Timer.h>
 
 //include jiminez smaa lookup textures
 #include <JimenezSmaa/71c806a/include/AreaTex.h>
@@ -41,23 +42,27 @@ Viewer::~Viewer()
 {}
 
 //-----------------------------------------------------------------------------
-void Viewer::addFragmentSource(Shader* ipShader, QString iFileName)
+int Viewer::addFragmentSource(Shader* ipShader, QString iFileName)
 {
+    int r = -1;
     QFile f(iFileName);
     f.open(QIODevice::ReadOnly);
     QString content = f.readAll();
-    ipShader->addFragmentSource(content);
+    r = ipShader->addFragmentSource(content);
     f.close();
+    return r;
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::addVertexSource(Shader* ipShader, QString iFileName)
+int Viewer::addVertexSource(Shader* ipShader, QString iFileName)
 {
+    int r = -1;
     QFile f(iFileName);
     f.open(QIODevice::ReadOnly);
     QString content = f.readAll();
-    ipShader->addVertexSource(content);
+    r = ipShader->addVertexSource(content);
     f.close();
+    return r;
 }
 
 //-----------------------------------------------------------------------------
@@ -99,17 +104,25 @@ void Viewer::drawScene()
     }break;
     case scUnigine01: //uEngine test image 1
     {
-		//apply gamma 
-		/*ScreenSpaceProjection sp(getCamera().getViewport().getSize());
-		mGammaCorrection.begin();
-		mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
-		mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
-		mGammaCorrection.setUniform("uOffScreen", 0);
-		drawRectangle(mUnigine01.getId(), Vector2d(mUnigine01.width(), mUnigine01.height()));
-		mGammaCorrection.end();*/
+        //apply gamma 
+        /*ScreenSpaceProjection sp(getCamera().getViewport().getSize());
+        mGammaCorrection.begin();
+        mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
+        mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
+        mGammaCorrection.setUniform("uOffScreen", 0);
+        drawRectangle(mUnigine01.getId(), Vector2d(mUnigine01.width(), mUnigine01.height()));
+        mGammaCorrection.end();*/
 
         Vector2d size(mUnigine01.width(), mUnigine01.height());
         drawStillImage(mUnigine01.getId(), size);
+
+        /*pushShader(mStillImageShader);
+        mStillImageShader.setUniform("modelViewMatrix", getCamera().getViewMatrix());
+        mStillImageShader.setUniform("projectionMatrix", getCamera().getProjectionMatrix());
+        mStillImageShader.setUniform("uTexture0", 0);
+        drawRectangle(mUnigine01.getId(), Vector2d(mUnigine01.width(), mUnigine01.height()));
+        popShader();*/
+
     }break;
     case scUnigine02: //uEngine test image 2
     {
@@ -156,15 +169,15 @@ void Viewer::initializeGL()
     mFbo.addColorAttachment();
     mFbo.addColorAttachment();
     mFbo.addColorAttachment();
-	mFbo.addColorAttachment();
+    mFbo.addColorAttachment();
     mFbo.getColorAttachment(0).setFilter(GL_LINEAR);
     mFbo.getColorAttachment(0).setWrapMode(GL_CLAMP_TO_EDGE);
     mFbo.getColorAttachment(1).setFilter(GL_LINEAR);
     mFbo.getColorAttachment(1).setWrapMode(GL_CLAMP_TO_EDGE);
     mFbo.getColorAttachment(2).setFilter(GL_LINEAR);
     mFbo.getColorAttachment(2).setWrapMode(GL_CLAMP_TO_EDGE);
-	mFbo.getColorAttachment(3).setFilter(GL_LINEAR);
-	mFbo.getColorAttachment(3).setWrapMode(GL_CLAMP_TO_EDGE);
+    mFbo.getColorAttachment(3).setFilter(GL_LINEAR);
+    mFbo.getColorAttachment(3).setWrapMode(GL_CLAMP_TO_EDGE);
 
     mFbo.addDepthAttachment();
 
@@ -186,7 +199,7 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
     {
     case Qt::Key_C: gSceneContent = (sceneContent)((gSceneContent + 1) % scContentCount); break;
     case Qt::Key_F: gFrameBufferToDisplay = (gFrameBufferToDisplay + 1) % mFbo.getNumColorAttachment(); break;
-	case Qt::Key_D: --gFrameBufferToDisplay; if(gFrameBufferToDisplay < 0) gFrameBufferToDisplay = mFbo.getNumColorAttachment() - 1; break;
+    case Qt::Key_G: --gFrameBufferToDisplay; if(gFrameBufferToDisplay < 0) gFrameBufferToDisplay = mFbo.getNumColorAttachment() - 1; break;
     case Qt::Key_P: gMlaaActivated = !gMlaaActivated; break;
     case Qt::Key_R: gRotateCube = !gRotateCube; break;
     case Qt::Key_F5: loadShaders(); break;
@@ -201,42 +214,60 @@ void Viewer::loadShaders()
 {
     const QString cwd = QCoreApplication::applicationDirPath();
     printf("cwd: %s\n", cwd.toStdString().c_str());
+
+    char smaaRtMetrics[512];
+    //float4(1.0 / 1017.0, 1.0 / 716.0, 1017.0, 716.0)
+    const double w = width(), h = height();
+    sprintf(&smaaRtMetrics[0], "float4(1.0 / %f, 1.0 / %f, %f, %f)", w, h, w, h);
+
     //init shaders
     {
         mSmaaShader.clear();
         addVertexSource(&mSmaaShader, cwd + "/../assets/utilities.vert");
-        addVertexSource(&mSmaaShader, cwd + "/../assets/SMAA.vert");
-        addFragmentSource(&mSmaaShader, cwd + "/../assets/SMAA.frag");
-        addFragmentSource(&mSmaaShader, cwd + "/../assets/SMAA.hlsl");
+        addVertexSource(&mSmaaShader, cwd + "/../assets/SMAA_firstPass.vert");
+        addFragmentSource(&mSmaaShader, cwd + "/../assets/SMAA_firstPass.frag");
+
+        int smaaFragmentSourceId = addFragmentSource(&mSmaaShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaaShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
+        mSmaaShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_PS", "1");
+        mSmaaShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
         mSmaaShader.link();
     }
 
     {
         mSmaa2ndPassShader.clear();
         addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/utilities.vert");
-        //mSmaa2ndPassShader.addVertexSource("#define SMAA_INCLUDE_PS 0\n");
-        addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA_vert.hlsl");
         addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA_secondPass.vert");
+        int smaaVertexSourceId = addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaa2ndPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_VS", "1");
+        mSmaa2ndPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
+        mSmaa2ndPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
 
         addFragmentSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA_secondPass.frag");
-        //mSmaa2ndPassShader.addFragmentSource("#define SMAA_INCLUDE_VS 0\n#define SMAA_INCLUDE_PS 1\n");
-        addFragmentSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA.hlsl");
+        int smaaFragmentSourceId = addFragmentSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaa2ndPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
+        mSmaa2ndPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_PS", "1");
+        mSmaa2ndPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
         mSmaa2ndPassShader.link();
     }
 
-	{
-		mSmaa3rdPassShader.clear();
-		addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/utilities.vert");
-		//mSmaa2ndPassShader.addVertexSource("#define SMAA_INCLUDE_PS 0\n");
-		addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_vert.hlsl");
-		addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.vert");
+    {
+        mSmaa3rdPassShader.clear();
+        addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/utilities.vert");
+        addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.vert");
+        int smaaVertexSourceId = addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_VS", "1");
+        mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
+        mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
 
-		addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.frag");
-		//mSmaa2ndPassShader.addFragmentSource("#define SMAA_INCLUDE_VS 0\n#define SMAA_INCLUDE_PS 1\n");
-		addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA.hlsl");
-		mSmaa3rdPassShader.link();
-	}
-	
+        addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.frag");
+        int smaaFragmentSourceId = addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaa3rdPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
+        mSmaa3rdPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_PS", "1");
+        mSmaa3rdPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
+        mSmaa3rdPassShader.link();
+    }
+    
 
     {
         mSceneShader.clear();
@@ -269,33 +300,33 @@ void Viewer::loadTextures()
     const QString cwd = QCoreApplication::applicationDirPath();
     
     //Area texture
-	{
-		std::vector<unsigned char> tempBuffer(AREATEX_SIZE);
-		for (unsigned int y = 0; y < AREATEX_HEIGHT; y++) {
-			unsigned int srcY = AREATEX_HEIGHT - 1 - y;
-			//unsigned int srcY = y;
-			memcpy(&tempBuffer[y * AREATEX_PITCH], areaTexBytes + srcY * AREATEX_PITCH, AREATEX_PITCH);
-		}
-		math::Vector2i areaTexSize(AREATEX_WIDTH, AREATEX_HEIGHT);
-		mSmaaAreaTexture.set((void*)&tempBuffer[0], areaTexSize, GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
-		mSmaaAreaTexture.setFilter(GL_LINEAR);
-		mSmaaAreaTexture.setWrapMode(GL_CLAMP_TO_EDGE);
-	}
-	
+    {
+        std::vector<unsigned char> tempBuffer(AREATEX_SIZE);
+        for (unsigned int y = 0; y < AREATEX_HEIGHT; y++) {
+            unsigned int srcY = AREATEX_HEIGHT - 1 - y;
+            //unsigned int srcY = y;
+            memcpy(&tempBuffer[y * AREATEX_PITCH], areaTexBytes + srcY * AREATEX_PITCH, AREATEX_PITCH);
+        }
+        math::Vector2i areaTexSize(AREATEX_WIDTH, AREATEX_HEIGHT);
+        mSmaaAreaTexture.set((void*)&tempBuffer[0], areaTexSize, GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
+        mSmaaAreaTexture.setFilter(GL_LINEAR);
+        mSmaaAreaTexture.setWrapMode(GL_CLAMP_TO_EDGE);
+    }
+    
     //SearcTexture
     //Area texture
-	{
-		std::vector<unsigned char> tempBuffer(SEARCHTEX_SIZE);
-		for (unsigned int y = 0; y < SEARCHTEX_HEIGHT; y++) {
-			unsigned int srcY = SEARCHTEX_HEIGHT - 1 - y;
-			//unsigned int srcY = y;
-			memcpy(&tempBuffer[y * SEARCHTEX_PITCH], searchTexBytes + srcY * SEARCHTEX_PITCH, SEARCHTEX_PITCH);
-		}
-		math::Vector2i searchTexSize(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT);
-		mSmaaSearchTexture.set((void*)&tempBuffer[0], searchTexSize, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
-		mSmaaSearchTexture.setFilter(GL_LINEAR);
-		mSmaaSearchTexture.setWrapMode(GL_CLAMP_TO_EDGE);
-	}
+    {
+        std::vector<unsigned char> tempBuffer(SEARCHTEX_SIZE);
+        for (unsigned int y = 0; y < SEARCHTEX_HEIGHT; y++) {
+            unsigned int srcY = SEARCHTEX_HEIGHT - 1 - y;
+            //unsigned int srcY = y;
+            memcpy(&tempBuffer[y * SEARCHTEX_PITCH], searchTexBytes + srcY * SEARCHTEX_PITCH, SEARCHTEX_PITCH);
+        }
+        math::Vector2i searchTexSize(SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT);
+        mSmaaSearchTexture.set((void*)&tempBuffer[0], searchTexSize, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
+        mSmaaSearchTexture.setFilter(GL_LINEAR);
+        mSmaaSearchTexture.setWrapMode(GL_CLAMP_TO_EDGE);
+    }
     
 
     QImage im;
@@ -305,8 +336,8 @@ void Viewer::loadTextures()
     {
         //mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
         mUnigine01.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mUnigine01.setFilter(GL_NEAREST);
-        mUnigine01.setWrapMode(GL_CLAMP);
+        mUnigine01.setFilter(GL_LINEAR);
+        mUnigine01.setWrapMode(GL_CLAMP_TO_EDGE);
     }
 
     //demo Unigine01
@@ -315,8 +346,8 @@ void Viewer::loadTextures()
     {
         //mUnigine02.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
         mUnigine02.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mUnigine02.setFilter(GL_NEAREST);
-        mUnigine02.setWrapMode(GL_CLAMP);
+        mUnigine02.setFilter(GL_LINEAR);
+        mUnigine02.setWrapMode(GL_CLAMP_TO_EDGE);
     }
 
     //demo mandelbrot
@@ -324,14 +355,15 @@ void Viewer::loadTextures()
     if (!im.isNull())
     {
         mMandelbrot.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mMandelbrot.setFilter(GL_NEAREST);
-        mMandelbrot.setWrapMode(GL_CLAMP);
+        mMandelbrot.setFilter(GL_LINEAR);
+        mMandelbrot.setWrapMode(GL_CLAMP_TO_EDGE);
     }
 } 
 
 //-----------------------------------------------------------------------------
 void Viewer::paintGL()
 {
+    utils::Timer aTimer;
     if (!gMlaaActivated)
     {
         drawScene();
@@ -339,7 +371,6 @@ void Viewer::paintGL()
     else
     {
         const Camera& cam = getCamera();
-
         mFbo.begin();
         {
             //-- drawScene offscreen
@@ -347,7 +378,7 @@ void Viewer::paintGL()
             {
                 drawScene();
             }
-			
+            
             glDisable(GL_LIGHTING);
             //disable all depth test for the post processing stages...
             glDisable(GL_DEPTH_TEST);
@@ -379,8 +410,8 @@ void Viewer::paintGL()
                 mSmaa2ndPassShader.begin();
 
                 ScreenSpaceProjection sp(cam.getViewport().getSize());
-				mSmaa2ndPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
-				mSmaa2ndPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+                mSmaa2ndPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+                mSmaa2ndPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
                 mSmaa2ndPassShader.setUniform("uEdgeTex", 0);
                 mSmaa2ndPassShader.setUniform("uAreaTex", 1);
                 mSmaa2ndPassShader.setUniform("uSearchTex", 2);
@@ -397,35 +428,35 @@ void Viewer::paintGL()
                 mSmaa2ndPassShader.end();
             }
 
-			//SMAA - 3rd pass perform the neighbour blending
-			mFbo.drawTo(3);
-			{
-				glClear(GL_COLOR_BUFFER_BIT);
-				mSmaa3rdPassShader.begin();
+            //SMAA - 3rd pass perform the neighbour blending
+            mFbo.drawTo(3);
+            {
+                glClear(GL_COLOR_BUFFER_BIT);
+                mSmaa3rdPassShader.begin();
 
-				ScreenSpaceProjection sp(cam.getViewport().getSize());
-				mSmaa3rdPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
-				mSmaa3rdPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
-				mSmaa3rdPassShader.setUniform("uColorTex", 0);
-				mSmaa3rdPassShader.setUniform("uBlendTex", 1);
+                ScreenSpaceProjection sp(cam.getViewport().getSize());
+                mSmaa3rdPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+                mSmaa3rdPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+                mSmaa3rdPassShader.setUniform("uColorTex", 0);
+                mSmaa3rdPassShader.setUniform("uBlendTex", 1);
 
-				glActiveTexture(GL_TEXTURE1);
-				glBindTexture(GL_TEXTURE_2D, mFbo.getColorAttachment(2).getId());
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, mFbo.getColorAttachment(2).getId());
 
-				Texture t = mFbo.getColorAttachment(0);
-				drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+                Texture t = mFbo.getColorAttachment(0);
+                drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
-				mSmaa3rdPassShader.end();
-			}
+                mSmaa3rdPassShader.end();
+            }
         }
         mFbo.end();
 
         //Draw final result has full screen quad
         glColor3ub(255, 255, 255);
         Texture finalT = mFbo.getColorAttachment(gFrameBufferToDisplay);
-        GLenum minFilter = finalT.getMinificationFilter();
-        GLenum maxFilter = finalT.getMagnificationFilter();
-        finalT.setFilter(GL_NEAREST);
+        //GLenum minFilter = finalT.getMinificationFilter();
+        //GLenum maxFilter = finalT.getMagnificationFilter();
+        //finalT.setFilter(GL_NEAREST);
 
         //do not apply gamma to final pass
         drawStillImage(finalT.getId(), Vector2d(finalT.width(), finalT.height()));
@@ -439,12 +470,14 @@ void Viewer::paintGL()
         //drawRectangle(finalT.getId(), Vector2d(finalT.width(), finalT.height()));
         //mGammaCorrection.end();
 
-        finalT.setMinificationFilter(minFilter);
-        finalT.setMagnificationFilter(maxFilter);
+        //finalT.setMinificationFilter(minFilter);
+        //finalT.setMagnificationFilter(maxFilter);
 
         glEnable(GL_LIGHTING);
         glEnable(GL_DEPTH_TEST);
     }
+    mTimeToDrawInSec = aTimer.getElapsed();
+    //printf("time to draw: %f (sec)\n", mTimeToDrawInSec);
 }
 
 //-----------------------------------------------------------------------------
@@ -455,6 +488,7 @@ void Viewer::resizeGL(int iW, int iH)
     if (!(mFbo.getWidth() == iW && mFbo.getHeight() == iH))
     {
         mFbo.resize(iW, iH);
+        loadShaders();
         printf("FBO size: %d, %d\n", iW, iH);
     }
 }
@@ -499,7 +533,7 @@ mTimerEventId(0)
 
             QHBoxLayout *pL2 = new QHBoxLayout();
             {
-                QLabel* l = new QLabel("Pass displayed (F):", pCentralWidget);
+                QLabel* l = new QLabel("Pass displayed (F/G):", pCentralWidget);
                 mpPassDisplayed = new QLabel("0", pCentralWidget);
 
                 pL2->addWidget(l);
@@ -569,7 +603,7 @@ void MainDialog::updateUi()
         case 0: break;
         case 1: passName = "Edge detection"; break;
         case 2: passName = "Blend weight"; break;
-		case 3: passName = "Final result"; break;
+        case 3: passName = "Final result"; break;
         default: passName = "Unknown"; break;
     }
     mpPassDisplayed->setText(passName);

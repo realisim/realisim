@@ -23,8 +23,8 @@ public:
     ~Viewer();
 
 private:
-    void addFragmentSource(realisim::treeD::Shader*, QString iFileName);
-    void addVertexSource(realisim::treeD::Shader*, QString iFileName);
+    int addFragmentSource(realisim::treeD::Shader*, QString iFileName);
+    int addVertexSource(realisim::treeD::Shader*, QString iFileName);
     void drawRectangle(int, realisim::math::Vector2d);
     void drawStillImage(int, realisim::math::Vector2d);
     void drawScene();
@@ -40,7 +40,7 @@ private:
     realisim::treeD::FrameBufferObject mFbo;
     realisim::treeD::Shader mSmaaShader;
     realisim::treeD::Shader mSmaa2ndPassShader;
-	realisim::treeD::Shader mSmaa3rdPassShader;
+    realisim::treeD::Shader mSmaa3rdPassShader;
     realisim::treeD::Shader mSceneShader;
     realisim::treeD::Shader mStillImageShader;
     realisim::treeD::Shader mGammaCorrection;
@@ -49,6 +49,8 @@ private:
     realisim::treeD::Texture mUnigine01;
     realisim::treeD::Texture mUnigine02;
     realisim::treeD::Texture mMandelbrot;
+
+    double mTimeToDrawInSec;
 };
 
 
