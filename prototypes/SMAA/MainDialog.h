@@ -4,6 +4,7 @@
 #ifndef MainDialog_hh
 #define MainDialog_hh
 
+#include "3d/MultisampleFrameBufferObject.h"
 #include "3d/Shader.h"
 #include "3d/Texture.h"
 #include "3d/Widget3d.h"
@@ -18,9 +19,10 @@
 #include <utils/Timer.h>
 #include <vector>
 
-enum antiAliasingMode { aamNoAA, aamSmaa1x, aamSmaaT2x, aamFSAA2x, aamCount };
+enum antiAliasingMode { aamNoAA, aamSmaa1x, aamSmaaT2x, aamMSAA2x, aamMSAA4x, aamMSAA8x, aamMSAA16x, aamCount };
 enum renderTarget{ rtSRGB=0, rtRGB, rtEdge, rtBlendWeight, rtFinal_0,
 	rtFinal_1, rtCount};
+enum msaaRenderTarget{msaaRtSRGB=0, msaaRtCount};
 
 using namespace realisim;
 
@@ -36,8 +38,9 @@ public:
 private:
     int addFragmentSource(treeD::Shader*, QString iFileName);
     int addVertexSource(treeD::Shader*, QString iFileName);	
-	void displayPass(int);
-	void doNoSmaa();
+	void displayPass(treeD::FrameBufferObject, int);
+	void doMsaa(int iX);
+	void doNoAA();
 	void doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt);
 	void doSmaa1x(renderTarget iFinalRt);
     void drawRectangle(int, math::Vector2d);
@@ -55,8 +58,8 @@ private:
 
     MainDialog* mpMainDialog;
 
-    treeD::FrameBufferObject mSmaaFbo;
-	treeD::FrameBufferObject mFsaaFbo;
+    treeD::FrameBufferObject mColorFbo;
+	treeD::MultisampleFrameBufferObject mMultisampleFbo;
     treeD::Shader mSmaaShader;
     treeD::Shader mSmaa2ndPassShader;
     treeD::Shader mSmaa3rdPassShader;

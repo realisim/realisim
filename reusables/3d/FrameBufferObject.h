@@ -84,7 +84,7 @@ namespace treeD
     class FrameBufferObject
     {
     public:
-        explicit FrameBufferObject(int = 1, int = 1);
+         FrameBufferObject();
         FrameBufferObject(const FrameBufferObject&);
         virtual ~FrameBufferObject();
         virtual FrameBufferObject& operator=(const FrameBufferObject&);
@@ -124,7 +124,7 @@ namespace treeD
 
         struct Guts
         {
-            explicit Guts(int = 0, int = 0);
+            Guts();
 
             GLuint mFrameBufferId;
             GLuint mStencilRenderBufferId;
@@ -139,7 +139,7 @@ namespace treeD
         };
 
         virtual void deleteGuts();
-        virtual void makeGuts(int = 0, int = 0);
+        virtual void makeGuts();
         virtual void shareGuts(Guts*);
 
         Guts* mpGuts;

@@ -9,11 +9,11 @@ using namespace math;
 using namespace treeD;
 
 
-FrameBufferObject::Guts::Guts(int iW/*= 0*/, int iH /*= 0*/) : mFrameBufferId(0),
+FrameBufferObject::Guts::Guts() : mFrameBufferId(0),
 mStencilRenderBufferId(0),
 mIsValid(false),
-mWidth(iW),
-mHeight(iH),
+mWidth(1),
+mHeight(1),
 mColorAttachments(),
 mDepthTexture(),
 mMaxColorAttachment(0),
@@ -22,9 +22,9 @@ mRefCount(1)
 {}
 
 //---
-FrameBufferObject::FrameBufferObject(int iW/*= 1*/, int iH /*= 1*/) : mpGuts(0)
+FrameBufferObject::FrameBufferObject() : mpGuts(0)
 {
-    makeGuts(iW, iH);
+    makeGuts();
 }
 
 FrameBufferObject::FrameBufferObject(const FrameBufferObject& iT) : mpGuts(0)
@@ -60,7 +60,7 @@ void FrameBufferObject::clear()
     mpGuts->mColorAttachments.clear();
     mpGuts->mDepthTexture = Texture();
     if (getStencilRenderBufferId() != 0)
-        glDeleteRenderbuffersEXT(1, &mpGuts->mStencilRenderBufferId);
+        glDeleteRenderbuffers(1, &mpGuts->mStencilRenderBufferId);
 }
 
 //----------------------------------------------------------------------------
@@ -96,7 +96,7 @@ void FrameBufferObject::deleteGuts()
         /*On relache toutes les ressources openGL.*/
         clear();
         if (mpGuts->mFrameBufferId != 0)
-            glDeleteFramebuffersEXT(1, &mpGuts->mFrameBufferId);
+            glDeleteFramebuffers(1, &mpGuts->mFrameBufferId);
         delete mpGuts;
         mpGuts = 0;
     }
@@ -125,22 +125,22 @@ void FrameBufferObject::addColorAttachment(GLenum internalFormat, GLenum format,
         return;
 
     GLint previousFb = 0;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &previousFb);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, getFrameBufferId());
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFb);
+    glBindFramebuffer(GL_FRAMEBUFFER, getFrameBufferId());
 
     int index = (int)mpGuts->mColorAttachments.size();
-    GLenum e = GL_COLOR_ATTACHMENT0_EXT + index;
+    GLenum e = GL_COLOR_ATTACHMENT0 + index;
 
     Texture t;
     vector<int> s(2, 0); s[0] = getWidth(); s[1] = getHeight();
     t.set(0, s, internalFormat, format, dataType);
     t.setWrapMode(GL_CLAMP);
     mpGuts->mColorAttachments.push_back(t);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getId(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, e, GL_TEXTURE_2D, t.getId(), 0);
 
 
     validate();
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, previousFb);
+    glBindFramebuffer(GL_FRAMEBUFFER, previousFb);
 }
 
 //----------------------------------------------------------------------------
@@ -153,19 +153,19 @@ void FrameBufferObject::addDepthAttachment()
         return;
 
     GLint previousFb = 0;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &previousFb);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, getFrameBufferId());
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFb);
+    glBindFramebufferEXT(GL_FRAMEBUFFER, getFrameBufferId());
 
     Texture t;
     vector<int> s(2, 0); s[0] = getWidth(); s[1] = getHeight();
     t.set(0, s, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT);
     t.setFilter(GL_LINEAR, GL_LINEAR);
     mpGuts->mDepthTexture = t;
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
         GL_TEXTURE_2D, getDepthAttachment().getId(), 0);
 
     validate();
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, previousFb);
+    glBindFramebuffer(GL_FRAMEBUFFER, previousFb);
 }
 
 //----------------------------------------------------------------------------
@@ -178,36 +178,36 @@ void FrameBufferObject::addStencilAttachment()
         return;
 
     GLint previousFb = 0;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &previousFb);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, getFrameBufferId());
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFb);
+    glBindFramebuffer(GL_FRAMEBUFFER, getFrameBufferId());
     if (getStencilRenderBufferId() == 0)
-        glGenRenderbuffersEXT(1, &mpGuts->mStencilRenderBufferId);
-    glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, getStencilRenderBufferId());
-    glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_STENCIL_INDEX,
+        glGenRenderbuffers(1, &mpGuts->mStencilRenderBufferId);
+    glBindRenderbuffer(GL_RENDERBUFFER, getStencilRenderBufferId());
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX,
         getWidth(), getHeight());
-    glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
     //on attache le depth
-    glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT,
-        GL_RENDERBUFFER_EXT, getStencilRenderBufferId());
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+        GL_RENDERBUFFER, getStencilRenderBufferId());
 
     validate();
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, previousFb);
+    glBindFramebuffer(GL_FRAMEBUFFER, previousFb);
 }
 
 //----------------------------------------------------------------------------
 void FrameBufferObject::begin()
 {
     GLint previousFboId = 0;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &previousFboId);
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFboId);
     mpGuts->mPreviousFrameBuffers.push_back(previousFboId);
-    if (isValid()) glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, getFrameBufferId());
+    if (isValid()) glBindFramebuffer(GL_FRAMEBUFFER, getFrameBufferId());
 }
 
 //----------------------------------------------------------------------------
 void FrameBufferObject::drawTo(int iIndex)
 {
-    GLenum e = GL_COLOR_ATTACHMENT0_EXT + iIndex;
+    GLenum e = GL_COLOR_ATTACHMENT0 + iIndex;
     glDrawBuffersARB(1, &e);
 }
 
@@ -220,7 +220,7 @@ void FrameBufferObject::end()
         previousFboId = mpGuts->mPreviousFrameBuffers.back();
         mpGuts->mPreviousFrameBuffers.pop_back();
     }
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, previousFboId);
+    glBindFramebuffer(GL_FRAMEBUFFER, previousFboId);
 }
 
 //----------------------------------------------------------------------------
@@ -235,8 +235,8 @@ void FrameBufferObject::init()
 
     if (getFrameBufferId() == 0)
     {
-        glGenFramebuffersEXT(1, &mpGuts->mFrameBufferId);
-        glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS_EXT, &mpGuts->mMaxColorAttachment);
+        glGenFramebuffers(1, &mpGuts->mFrameBufferId);
+        glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &mpGuts->mMaxColorAttachment);
     }
         
 }
@@ -296,9 +296,9 @@ bool FrameBufferObject::isValid() const
 }
 
 //----------------------------------------------------------------------------
-void FrameBufferObject::makeGuts(int iW/*= 0*/, int iH /*= 0*/)
+void FrameBufferObject::makeGuts()
 {
-    mpGuts = new Guts(iW, iH);
+    mpGuts = new Guts();
 }
 
 //----------------------------------------------------------------------------
@@ -312,36 +312,36 @@ void FrameBufferObject::resize(int iWidth, int iHeight)
     mpGuts->mHeight = iHeight;
 
     GLint previousFb = 0;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &previousFb);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, getFrameBufferId());
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFb);
+    glBindFramebuffer(GL_FRAMEBUFFER, getFrameBufferId());
 
     for (int i = 0; i < getNumColorAttachment(); ++i)
     {
-        GLenum e = GL_COLOR_ATTACHMENT0_EXT + i;        
+        GLenum e = GL_COLOR_ATTACHMENT0 + i;        
         Texture t = getColorAttachment(i);
         t.resize(getWidth(), getHeight());
-        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, e, GL_TEXTURE_2D, t.getId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, e, GL_TEXTURE_2D, t.getId(), 0);
     }
 
     if (isDepthAttachmentUsed())
     {
         mpGuts->mDepthTexture.resize(getWidth(), getHeight());
-        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
             GL_TEXTURE_2D, getDepthAttachment().getId(), 0);
     }
 
     if (isStencilAttachmentUsed())
     {
-        glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, getStencilRenderBufferId());
-        glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_STENCIL_INDEX,
+        glBindRenderbuffer(GL_RENDERBUFFER, getStencilRenderBufferId());
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX,
             getWidth(), getHeight());
-        glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
-        glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT,
-            GL_RENDERBUFFER_EXT, getStencilRenderBufferId());
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+            GL_RENDERBUFFER, getStencilRenderBufferId());
     }
 
     validate();
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, previousFb);
+    glBindFramebuffer(GL_FRAMEBUFFER, previousFb);
 }
 
 //----------------------------------------------------------------------------
@@ -362,27 +362,27 @@ void FrameBufferObject::validate()
 {
     mpGuts->mIsValid = false;
     QString s("Framebuffer " + QString::number(getFrameBufferId()) + " ");
-    GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     switch (status)
     {
-    case GL_FRAMEBUFFER_COMPLETE_EXT:
+    case GL_FRAMEBUFFER_COMPLETE:
         s += "complete.";
         mpGuts->mIsValid = true;
         break;
-    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT:
+    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
         s += "incomplete: Attachment is NOT complete."; break;
-    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT:
+    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
         s += "incomplete: No image is attached to FBO."; break;
     case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
         s += "incomplete: Attached images have different dimensions."; break;
     case GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT:
         s += "incomplete: Color attached images have different internal formats.";
         break;
-    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER_EXT:
+    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
         s += "incomplete: Draw buffer."; break;
-    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER_EXT:
+    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
         s += "incomplete: Read buffer."; break;
-    case GL_FRAMEBUFFER_UNSUPPORTED_EXT:
+    case GL_FRAMEBUFFER_UNSUPPORTED:
         s += "Unsupported by FBO implementation."; break;
     default: s += "Unknow error."; break;
     }

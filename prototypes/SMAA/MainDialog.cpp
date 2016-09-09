@@ -61,7 +61,7 @@ int Viewer::addVertexSource(Shader* ipShader, QString iFileName)
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::displayPass(int iPass)
+void Viewer::displayPass(FrameBufferObject iFbo, int iPass)
 {
 	glDisable(GL_LIGHTING);
 	//disable all depth test for the post processing stages...
@@ -71,13 +71,15 @@ void Viewer::displayPass(int iPass)
 	//since the fbo is the same size as the screen, we want it to be pixel perfect, so
 	//we activate GL_NEAREST filtering on the texture.
 	glColor3ub(255, 255, 255);
-	Texture t = mSmaaFbo.getColorAttachment(iPass);
+	Texture t = iFbo.getColorAttachment(iPass);
+
 	GLenum minFilter = t.getMinificationFilter();
 	GLenum maxFilter = t.getMagnificationFilter();
 	t.setFilter(GL_NEAREST);
 
-	ScreenSpaceProjection sp(getCamera().getViewport().getSize());
-	drawStillImage(t.getId(), Vector2d(t.width(), t.height()), sp.mViewMatrix, sp.mProjectionMatrix);
+	Vector2i textureSize(t.width(), t.height());
+	ScreenSpaceProjection sp(textureSize);
+	drawStillImage(t.getId(), textureSize, sp.mViewMatrix, sp.mProjectionMatrix);
 
 	t.setMinificationFilter(minFilter);
 	t.setMagnificationFilter(maxFilter);
@@ -87,14 +89,66 @@ void Viewer::displayPass(int iPass)
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::doNoSmaa()
+void Viewer::doMsaa(int iX)
+{	
+	mMultisampleFbo.setNumberOfSamples(iX);
+	mMultisampleFbo.begin();
+	{
+		//-- drawScene offscreen into the multisample buffer.
+		//pass 0 - no gamma correction
+		mMultisampleFbo.drawTo(msaaRtSRGB);
+		{
+			drawScene();
+		}	
+	}
+	mMultisampleFbo.end();
+
+	//resolve the multisample buffer to normal renderable buffer
+	mMultisampleFbo.resolveTo(msaaRtSRGB, mColorFbo, rtSRGB);
+
+	//perform gamma correction
+	mColorFbo.begin();
+	{
+		glDisable(GL_LIGHTING);
+		//disable all depth test for the post processing stages...
+		glDisable(GL_DEPTH_TEST);
+
+		//--- post processing
+		//pass 1
+		//gamma corretion 
+		mColorFbo.drawTo(rtFinal_0);
+		{
+			glClear(GL_COLOR_BUFFER_BIT);
+			ScreenSpaceProjection sp(getCamera().getViewport().getSize());
+			mGammaCorrection.begin();
+			mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
+			mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
+			mGammaCorrection.setUniform("uColorTex", 0);
+
+			Texture t = mColorFbo.getColorAttachment(rtSRGB);
+			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+			mGammaCorrection.end();
+		}
+	}
+	mColorFbo.end();
+
+	//show on screen.
+	displayPass(mColorFbo, rtFinal_0);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::doNoAA()
 {
 	const Camera& cam = getCamera();
-	mSmaaFbo.begin();
+	mColorFbo.begin();
 	{
 		//-- drawScene offscreen
 		//pass 0 - no gamma correction
-		mSmaaFbo.drawTo(rtSRGB);
+		mColorFbo.drawTo(rtSRGB);
 		{
 			drawScene();
 		}
@@ -106,7 +160,7 @@ void Viewer::doNoSmaa()
 		//--- post processing
 		//pass 1
 		//gamma corretion 
-		mSmaaFbo.drawTo(rtFinal_0);
+		mColorFbo.drawTo(rtFinal_0);
 		{
 			glClear(GL_COLOR_BUFFER_BIT);
 			ScreenSpaceProjection sp(cam.getViewport().getSize());
@@ -115,13 +169,13 @@ void Viewer::doNoSmaa()
 			mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
 			mGammaCorrection.setUniform("uColorTex", 0);
 
-			Texture t = mSmaaFbo.getColorAttachment(rtSRGB);
+			Texture t = mColorFbo.getColorAttachment(rtSRGB);
 			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
 			mGammaCorrection.end();
 		}
 	}
-	mSmaaFbo.end();
+	mColorFbo.end();
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
@@ -133,9 +187,9 @@ void Viewer::doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt
 	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);	
 
-	mSmaaFbo.begin();
+	mColorFbo.begin();
 	{
-		mSmaaFbo.drawTo(iFinalRt);
+		mColorFbo.drawTo(iFinalRt);
 		ScreenSpaceProjection sp(getCamera().getViewport().getSize());
 		mReprojectionShader.begin();
 		mReprojectionShader.setUniform("modelViewMatrix", sp.mViewMatrix);
@@ -144,9 +198,9 @@ void Viewer::doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt
 		mReprojectionShader.setUniform("uPreviousColorTex", 1);
 
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, mSmaaFbo.getColorAttachment(iPreviousFinalRt).getId());
+		glBindTexture(GL_TEXTURE_2D, mColorFbo.getColorAttachment(iPreviousFinalRt).getId());
 
-		Texture t = mSmaaFbo.getColorAttachment(iFinalRt);
+		Texture t = mColorFbo.getColorAttachment(iFinalRt);
 		drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
 		glActiveTexture(GL_TEXTURE1);
@@ -155,7 +209,7 @@ void Viewer::doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt
 
 		mReprojectionShader.end();
 	}
-	mSmaaFbo.end();
+	mColorFbo.end();
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
@@ -165,11 +219,11 @@ void Viewer::doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt
 void Viewer::doSmaa1x(renderTarget iFinalRt)
 {
 	const Camera& cam = getCamera();
-	mSmaaFbo.begin();
+	mColorFbo.begin();
 	{
 		//-- drawScene offscreen
 		//pass 0 - no gamma correction
-		mSmaaFbo.drawTo(rtSRGB);
+		mColorFbo.drawTo(rtSRGB);
 		{
 			drawScene();
 		}
@@ -181,7 +235,7 @@ void Viewer::doSmaa1x(renderTarget iFinalRt)
 		//--- post processing
 		//pass 1
 		//gamma corretion 
-		mSmaaFbo.drawTo(rtRGB);
+		mColorFbo.drawTo(rtRGB);
 		{
 			glClear(GL_COLOR_BUFFER_BIT);
 			ScreenSpaceProjection sp(cam.getViewport().getSize());
@@ -190,7 +244,7 @@ void Viewer::doSmaa1x(renderTarget iFinalRt)
 			mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
 			mGammaCorrection.setUniform("uColorTex", 0);
 
-			Texture t = mSmaaFbo.getColorAttachment(rtSRGB);
+			Texture t = mColorFbo.getColorAttachment(rtSRGB);
 			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
 			mGammaCorrection.end();
@@ -199,7 +253,7 @@ void Viewer::doSmaa1x(renderTarget iFinalRt)
 		//pass 2
 		//SMAA - Luma edge detection edgeTex
 		//this requires a gamma corrected input texture
-		mSmaaFbo.drawTo(rtEdge);
+		mColorFbo.drawTo(rtEdge);
 		{
 			glClear(GL_COLOR_BUFFER_BIT);
 			mSmaaShader.begin();
@@ -208,7 +262,7 @@ void Viewer::doSmaa1x(renderTarget iFinalRt)
 			mSmaaShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
 			mSmaaShader.setUniform("uColorTex", 0);
 
-			Texture t = mSmaaFbo.getColorAttachment(rtRGB);
+			Texture t = mColorFbo.getColorAttachment(rtRGB);
 			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
 			mSmaaShader.end();
@@ -216,7 +270,7 @@ void Viewer::doSmaa1x(renderTarget iFinalRt)
 
 		//pass 3
 		//SMAA - 2nd pass - blend weight
-		mSmaaFbo.drawTo(rtBlendWeight);
+		mColorFbo.drawTo(rtBlendWeight);
 		{
 			glClear(GL_COLOR_BUFFER_BIT);
 			mSmaa2ndPassShader.begin();
@@ -235,7 +289,7 @@ void Viewer::doSmaa1x(renderTarget iFinalRt)
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
 
-			Texture t = mSmaaFbo.getColorAttachment(rtEdge);
+			Texture t = mColorFbo.getColorAttachment(rtEdge);
 			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
 			glActiveTexture(GL_TEXTURE2);
@@ -251,7 +305,7 @@ void Viewer::doSmaa1x(renderTarget iFinalRt)
 		//pass 4
 		//SMAA - 3rd pass perform the neighbour blending and gamma correction again.
 		//		
-		mSmaaFbo.drawTo(iFinalRt);
+		mColorFbo.drawTo(iFinalRt);
 		{
 			glClear(GL_COLOR_BUFFER_BIT);
 			mSmaa3rdPassShader.begin();
@@ -263,10 +317,10 @@ void Viewer::doSmaa1x(renderTarget iFinalRt)
 			mSmaa3rdPassShader.setUniform("uBlendTex", 1);
 
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, mSmaaFbo.getColorAttachment(rtBlendWeight).getId());
+			glBindTexture(GL_TEXTURE_2D, mColorFbo.getColorAttachment(rtBlendWeight).getId());
 
 			//the texture required must be in linear space (no-gamma)
-			Texture t = mSmaaFbo.getColorAttachment(rtSRGB);
+			Texture t = mColorFbo.getColorAttachment(rtSRGB);
 			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
 			glActiveTexture(GL_TEXTURE1);
@@ -279,7 +333,7 @@ void Viewer::doSmaa1x(renderTarget iFinalRt)
 		glEnable(GL_LIGHTING);
 		glEnable(GL_DEPTH_TEST);
 	}
-	mSmaaFbo.end();
+	mColorFbo.end();
 }
 
 //-----------------------------------------------------------------------------
@@ -448,12 +502,20 @@ void Viewer::initializeGL()
     //init mFbo
 	for (int i = 0; i < rtCount; ++i)
 	{
-		mSmaaFbo.addColorAttachment();
-		mSmaaFbo.getColorAttachment(i).setFilter(GL_LINEAR);
-		mSmaaFbo.getColorAttachment(i).setWrapMode(GL_CLAMP_TO_EDGE);
+		mColorFbo.addColorAttachment();
+		mColorFbo.getColorAttachment(i).setFilter(GL_LINEAR);
+		mColorFbo.getColorAttachment(i).setWrapMode(GL_CLAMP_TO_EDGE);
 	}
+	mColorFbo.addDepthAttachment();
 
-    mSmaaFbo.addDepthAttachment();
+	//FSAA
+	for (int i = 0; i < msaaRtCount; ++i)
+	{
+		mMultisampleFbo.addColorAttachment();
+		//mMsaaFbo.getColorAttachment(i).setFilter(GL_LINEAR);
+		//mMsaaFbo.getColorAttachment(i).setWrapMode(GL_CLAMP_TO_EDGE);
+	}	
+	mMultisampleFbo.addDepthAttachment();
 
     //init shaders
     loadShaders();
@@ -664,7 +726,7 @@ void Viewer::loadTextures()
 void Viewer::paintGL()
 {
     utils::Timer perFrameTimer;
-    
+
 	renderTarget finalRt[2] = {rtFinal_0, rtFinal_1};
 	int finalRtIndex = mFrameIndex % 2;
 	int previousFinalRtIndex = (finalRtIndex + 1)%2;
@@ -672,22 +734,44 @@ void Viewer::paintGL()
 	switch (mpMainDialog->getAntiAliasingMode())
 	{
 	case aamNoAA: 
-		doNoSmaa();
-		displayPass( mpMainDialog->getPassToDisplay() );
+		doNoAA();
+		displayPass( mColorFbo, mpMainDialog->getPassToDisplay() );
 		break;
 	case aamSmaa1x: 
 	{
 		doSmaa1x(rtFinal_0);
-		displayPass( mpMainDialog->getPassToDisplay() );
+		displayPass( mColorFbo, mpMainDialog->getPassToDisplay() );
 	}break;
 	case aamSmaaT2x:
 	{
 		doSmaa1x(finalRt[finalRtIndex]);
 		doReprojection(finalRt[previousFinalRtIndex], finalRt[finalRtIndex]);
-		displayPass( mpMainDialog->getPassToDisplay() );
-
-		//mPreviousFrame = mFbo.getColorAttachment(rtFinal).copy();
+		displayPass( mColorFbo, mpMainDialog->getPassToDisplay() );
 	} break;
+	case aamMSAA2x:
+	{
+		glEnable(GL_MULTISAMPLE);
+		doMsaa(2);		
+		glDisable(GL_MULTISAMPLE);
+	}break;
+	case aamMSAA4x:
+	{
+		glEnable(GL_MULTISAMPLE);
+		doMsaa(4);
+		glDisable(GL_MULTISAMPLE);
+	}break;
+	case aamMSAA8x:
+	{
+		glEnable(GL_MULTISAMPLE);
+		doMsaa(8);
+		glDisable(GL_MULTISAMPLE);
+	}break;
+	case aamMSAA16x:
+	{
+		glEnable(GL_MULTISAMPLE);
+		doMsaa(16);
+		glDisable(GL_MULTISAMPLE);
+	}break;
 	default: break;
 	}
 
@@ -703,9 +787,10 @@ void Viewer::resizeGL(int iW, int iH)
 {
     Widget3d::resizeGL(iW, iH);
 
-    if (!(mSmaaFbo.getWidth() == iW && mSmaaFbo.getHeight() == iH))
+    if (!(mColorFbo.getWidth() == iW && mColorFbo.getHeight() == iH))
     {
-        mSmaaFbo.resize(iW, iH);
+        mColorFbo.resize(iW, iH);
+		mMultisampleFbo.resize(iW, iH);
         loadShaders();
         printf("FBO size: %d, %d\n", iW, iH);
     }
@@ -978,7 +1063,10 @@ QString MainDialog::toQString(antiAliasingMode iMode) const
 	case aamNoAA: r = "No AA"; break;
 	case aamSmaa1x: r = "SMAA 1X"; break;
 	case aamSmaaT2x: r = "SMAA T2x"; break;
-	case aamFSAA2x: r = "FSAA 2X"; break;
+	case aamMSAA2x: r = "MSAA 2X"; break;
+	case aamMSAA4x: r = "MSAA 4X"; break;
+	case aamMSAA8x: r = "MSAA 8X"; break;
+	case aamMSAA16x: r = "MSAA 16X"; break;
 	default: break;
 	}
 	return r;
