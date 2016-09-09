@@ -8,13 +8,24 @@
 #include "3d/Texture.h"
 #include "3d/Widget3d.h"
 
+#include <QCheckBox>
+#include <QComboBox>
 #include <QKeyEvent>
-#include <QMainWindow>
 #include <QLabel>
+#include <QMainWindow>
+#include <QPushButton>
+#include <utils/Statistics.h>
+#include <utils/Timer.h>
 #include <vector>
 
+enum antiAliasingMode { aamNoAA, aamSmaa1x, aamSmaaT2x, aamFSAA2x, aamCount };
+enum renderTarget{ rtSRGB=0, rtRGB, rtEdge, rtBlendWeight, rtFinal_0,
+	rtFinal_1, rtCount};
+
+using namespace realisim;
+
 class MainDialog;
-class Viewer : public realisim::treeD::Widget3d
+class Viewer : public treeD::Widget3d
 {
     friend class MainDialog;
 
@@ -23,34 +34,49 @@ public:
     ~Viewer();
 
 private:
-    int addFragmentSource(realisim::treeD::Shader*, QString iFileName);
-    int addVertexSource(realisim::treeD::Shader*, QString iFileName);
-    void drawRectangle(int, realisim::math::Vector2d);
-    void drawStillImage(int, realisim::math::Vector2d);
+    int addFragmentSource(treeD::Shader*, QString iFileName);
+    int addVertexSource(treeD::Shader*, QString iFileName);	
+	void displayPass(int);
+	void doNoSmaa();
+	void doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt);
+	void doSmaa1x(renderTarget iFinalRt);
+    void drawRectangle(int, math::Vector2d);
+    void drawStillImage(int, math::Vector2d, const math::Matrix4& iView, const math::Matrix4& iProj);
     void drawScene();
+	math::Matrix4 getJitterMatrix() const;
+	math::Vector4d getSubsampleIndices() const;
     virtual void keyPressEvent(QKeyEvent*);
     void loadTextures();
     void loadShaders();
     virtual void initializeGL() override;
     virtual void paintGL() override;
     virtual void resizeGL(int, int) override;
+	void tiltMatrix(math::Matrix4*) const;
 
     MainDialog* mpMainDialog;
 
-    realisim::treeD::FrameBufferObject mFbo;
-    realisim::treeD::Shader mSmaaShader;
-    realisim::treeD::Shader mSmaa2ndPassShader;
-    realisim::treeD::Shader mSmaa3rdPassShader;
-    realisim::treeD::Shader mSceneShader;
-    realisim::treeD::Shader mStillImageShader;
-    realisim::treeD::Shader mGammaCorrection;
-    realisim::treeD::Texture mSmaaAreaTexture;
-    realisim::treeD::Texture mSmaaSearchTexture;
-    realisim::treeD::Texture mUnigine01;
-    realisim::treeD::Texture mUnigine02;
-    realisim::treeD::Texture mMandelbrot;
+    treeD::FrameBufferObject mSmaaFbo;
+	treeD::FrameBufferObject mFsaaFbo;
+    treeD::Shader mSmaaShader;
+    treeD::Shader mSmaa2ndPassShader;
+    treeD::Shader mSmaa3rdPassShader;
+	treeD::Shader mReprojectionShader;
+    treeD::Shader mSceneShader;
+    treeD::Shader mStillImageShader;
+    treeD::Shader mGammaCorrection;
+    treeD::Texture mSmaaAreaTexture;
+    treeD::Texture mSmaaSearchTexture;
+    treeD::Texture mUnigine01;
+    treeD::Texture mUnigine02;
+    treeD::Texture mMandelbrot;
 
-    double mTimeToDrawInSec;
+	int mFrameIndex;
+	utils::Timer mInterFrameTimer;
+	utils::Statistics mTimePerFrameStats;
+	utils::Statistics mTimeInterFrameStats;
+		
+	math::Matrix4 mPreviousWorldView;
+	math::Matrix4 mPreviousWorldProj;
 };
 
 
@@ -60,21 +86,51 @@ class MainDialog : public QMainWindow
 public:
     MainDialog();
     ~MainDialog() {};
+	void displayNextDebugPass();
+	void displayPreviousDebugPass();
+	antiAliasingMode getAntiAliasingMode() const {return mAntiAliasingMode;}
+	renderTarget getPassToDisplay() const;
+	bool has3dControlEnabled() const {return mHas3dControlEnabled;}
+	bool hasDebugPassEnabled() const {return mHasDebugPassEnabled;}
+	bool isCameraNodding() const {return mIsCameraNodding;}
+	void updateUi();
 
-    void updateUi();
+protected slots:
+	void clearProfilingClicked();
+	void enable3dControlsClicked();
+	void enableCameraNodding();
+	void enableDebugPassClicked();
+	void antiAliasingModeChanged(int);
 
 protected:
+	void setAntiAliasingMode(antiAliasingMode iM);
+	QString toQString(antiAliasingMode) const;
     virtual void timerEvent(QTimerEvent*) override;
+	void updateUiHighFrequency();
 
     //--- ui
     Viewer* mpViewer;
-    QLabel* mpRotationState;
-    QLabel* mpPostProcessingState;
+
+	QComboBox* mpAntiAliasingModeCombo;
+	QCheckBox *mpDebugPassEnabled;
     QLabel* mpPassDisplayed;
     QLabel* mpSceneContent;
 
+	//--- camera control
+	QCheckBox* mpEnable3dControls;
+	QCheckBox* mpEnableCameraNodding;
+
+	//--- profile info
+	QLabel* mpPerFrameStats;
+	QLabel* mpInterFrameStats;
+
     //--- data
     int mTimerEventId;
+	antiAliasingMode mAntiAliasingMode;
+	bool mHas3dControlEnabled;
+	bool mIsCameraNodding;
+	bool mHasDebugPassEnabled;
+	int mDebugPassToDisplay;
 };
 
 #endif

@@ -33,6 +33,7 @@ namespace utils
     void add(double);
     void add(const std::vector<double>&);
     void add(const double*, unsigned int);
+	void clear();
     double getMax() const {return mMax;}
     double getMean() const;
     double getMin() const {return mMin;}
@@ -43,9 +44,7 @@ namespace utils
     void keepSamples(bool iK) {mKeepSamples = iK;}
     
   protected:
-    Statistics& operator=(const Statistics&);
-    
-    void clear();
+    Statistics& operator=(const Statistics&);    
     
     bool mKeepSamples;
     std::vector<double> mSamples;

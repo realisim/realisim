@@ -47,12 +47,13 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
   int componentPerPixel = 3, numberOfComponent = 0;
   switch( iF )
   {
-  case GL_BGR: componentPerPixel = 3; break;
-  case GL_BGRA: componentPerPixel = 4; break;
+  case GL_RED: componentPerPixel = 1; break;
+  case GL_RG: componentPerPixel = 2; break;
   case GL_RGB: componentPerPixel = 3; break;
   case GL_RGBA: componentPerPixel = 4; break;
+  case GL_BGRA: componentPerPixel = 4; break;	  
   case GL_LUMINANCE: componentPerPixel = 1; break;
-  default: break;
+  default: assert(false && "unhandled internal format for Texture::asBuffer."); break;
   }
 
   switch( getType() )
@@ -136,7 +137,7 @@ Texture Texture::copy()
   t.mpGuts->mWrapTMode = getWrapTMode();
   t.mpGuts->mWrapRMode = getWrapRMode();
   
-  t.set( (void*)asBuffer( getInternalFormat(), getDataType() ).constData(), size(),
+  t.set( (void*)asBuffer( getFormat(), getDataType() ).constData(), size(),
       getInternalFormat(), getFormat(), getDataType() );
 
    return t;

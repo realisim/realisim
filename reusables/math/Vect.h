@@ -8,8 +8,10 @@
 #ifndef VECT_H
 #define VECT_H
 
+#include <iomanip>
 #include "Point.h"
 #include "MathDef.h"
+#include <sstream>
 
 //!-----------------------------------------------------------------------------
 //! \brief Classe gerant les fonctionalites associees a un vecteur
@@ -50,7 +52,7 @@ namespace math
     inline void get(Vector3<T> &vect) const;
     inline void xYZ(T &x, T &y, T &z) const;
     inline const T* getPtr() const;
-//inline std::String toString() const;
+	inline std::string toString(int iPrecision =3) const;
     
     // --------------- fonction utiles -----------------------------------------
     inline void minCoord (const Vector3<T>& iVect);
@@ -282,10 +284,21 @@ namespace math
     z = mData[2];
   }
   
+  //----------------------------------------------------------------------------
   template<class T>
   inline const T* Vector3<T>::getPtr() const
   { return &mData[0]; }
   
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline std::string Vector3<T>::toString(int iPrecision /*=3*/) const
+  { 
+	  std::stringstream iss;
+	  iss << std::fixed << std::setprecision(iPrecision);
+	  iss << "(" << x() << ", " << y() << ", " << z() << ")";
+	  return iss.str();
+  }
+
   //----------------------------------------------------------------------------
   template<class T>
   inline void Vector3<T>::minCoord (const Vector3<T>& iVect)
@@ -577,6 +590,40 @@ namespace math
     return res;
   }
 
+
+  //-----------------------------------------------------------------------------
+  //--- Vector4d
+  //-----------------------------------------------------------------------------
+  class Vector4d
+  {
+  public:
+	  Vector4d();	  
+	  Vector4d(double x, double y, double z, double w);
+	  Vector4d(const Vector3<double>& v3, double w);
+	  Vector4d(double v);
+	  Vector4d(const Vector4d&);
+	  Vector4d& operator=(const Vector4d&);
+	  ~Vector4d();
+
+	  Vector4d operator+ (const Vector4d&);
+	  Vector4d& operator+= (const Vector4d&);
+	  Vector4d operator- (const Vector4d&);
+	  Vector4d& operator-= (const Vector4d&);
+	  void set(double x, double y, double z, double w);
+	  void setX(double x);
+	  void setY(double y);
+	  void setZ(double z);
+	  void setW(double w);
+	  std::string toString(int iPrecision = 3) const;
+	  double x() const;
+	  double y() const;
+	  double z() const;
+	  double w() const;
+
+  private:
+	  double mData[4];
+  };
+
 //-----------------------------------------------------------------------------
 //--- Vector2
 //-----------------------------------------------------------------------------
@@ -603,6 +650,7 @@ namespace math
     virtual const T& x() const;
     virtual const T& y() const;
     virtual const T* getPtr() const;
+	inline std::string toString(int iPrecision =3) const;
     
     // --------------- fonction utiles -----------------------------------------
     inline Vector2<T> getUnit() const;
@@ -748,6 +796,16 @@ namespace math
   inline const T* Vector2<T>::getPtr() const
   { return &mData[0]; }
   
+  //----------------------------------------------------------------------------
+  template<class T>
+  inline std::string Vector2<T>::toString(int iPrecision /*=3*/) const
+  { 
+	  std::stringstream iss;
+	  iss << std::fixed << std::setprecision(iPrecision);
+	  iss << "(" << x() << ", " << y() << ")";
+	  return iss.str();
+  }
+
   //----------------------------------------------------------------------------
   template<class T>
   inline Vector2<T> Vector2<T>::getUnit() const

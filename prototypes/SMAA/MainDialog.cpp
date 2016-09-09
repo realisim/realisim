@@ -2,38 +2,33 @@
 
 #include <3d/Camera.h>
 #include <3d/Utilities.h>
+#include <3d/VertexBufferObject.h>
+#include <iomanip>
+#include <iostream>
+//include jiminez smaa lookup textures
+#include <JimenezSmaa/71c806a/include/AreaTex.h>
+#include <JimenezSmaa/71c806a/include/SearchTex.h>
 #include <math/Point.h>
 #include <math/Vect.h>
 #include "MainDialog.h"
 #include <QCoreApplication>
+#include <QGroupBox>
 #include <QHBoxLayout>
-#include <utils/Timer.h>
-
-//include jiminez smaa lookup textures
-#include <JimenezSmaa/71c806a/include/AreaTex.h>
-#include <JimenezSmaa/71c806a/include/SearchTex.h>
+#include <sstream>
 
 using namespace realisim;
 using namespace math;
 using namespace treeD;
 
 namespace
-{
-    double gRotx = 0.0;
-    double gRoty = 0.0;
-    double gRotz = 0.0;
-
-    bool gRotateCube = false;
-    
-    bool gMlaaActivated = true;
-    int gFrameBufferToDisplay = 0;
-
+{   
     enum sceneContent{ sc3d = 0, scUnigine01, scUnigine02, scMandelbrot, scContentCount };
     sceneContent gSceneContent = sc3d;
 }
 
 Viewer::Viewer(QWidget* ipParent, MainDialog* ipM) : Widget3d(ipParent),
-    mpMainDialog(ipM)
+    mpMainDialog(ipM),
+	mFrameIndex(0)
 {
     setFocusPolicy(Qt::StrongFocus);
 }
@@ -66,6 +61,228 @@ int Viewer::addVertexSource(Shader* ipShader, QString iFileName)
 }
 
 //-----------------------------------------------------------------------------
+void Viewer::displayPass(int iPass)
+{
+	glDisable(GL_LIGHTING);
+	//disable all depth test for the post processing stages...
+	glDisable(GL_DEPTH_TEST);
+
+	//Draw final result has full screen quad
+	//since the fbo is the same size as the screen, we want it to be pixel perfect, so
+	//we activate GL_NEAREST filtering on the texture.
+	glColor3ub(255, 255, 255);
+	Texture t = mSmaaFbo.getColorAttachment(iPass);
+	GLenum minFilter = t.getMinificationFilter();
+	GLenum maxFilter = t.getMagnificationFilter();
+	t.setFilter(GL_NEAREST);
+
+	ScreenSpaceProjection sp(getCamera().getViewport().getSize());
+	drawStillImage(t.getId(), Vector2d(t.width(), t.height()), sp.mViewMatrix, sp.mProjectionMatrix);
+
+	t.setMinificationFilter(minFilter);
+	t.setMagnificationFilter(maxFilter);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::doNoSmaa()
+{
+	const Camera& cam = getCamera();
+	mSmaaFbo.begin();
+	{
+		//-- drawScene offscreen
+		//pass 0 - no gamma correction
+		mSmaaFbo.drawTo(rtSRGB);
+		{
+			drawScene();
+		}
+
+		glDisable(GL_LIGHTING);
+		//disable all depth test for the post processing stages...
+		glDisable(GL_DEPTH_TEST);
+
+		//--- post processing
+		//pass 1
+		//gamma corretion 
+		mSmaaFbo.drawTo(rtFinal_0);
+		{
+			glClear(GL_COLOR_BUFFER_BIT);
+			ScreenSpaceProjection sp(cam.getViewport().getSize());
+			mGammaCorrection.begin();
+			mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
+			mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
+			mGammaCorrection.setUniform("uColorTex", 0);
+
+			Texture t = mSmaaFbo.getColorAttachment(rtSRGB);
+			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+			mGammaCorrection.end();
+		}
+	}
+	mSmaaFbo.end();
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt)
+{
+	glDisable(GL_LIGHTING);
+	glDisable(GL_DEPTH_TEST);	
+
+	mSmaaFbo.begin();
+	{
+		mSmaaFbo.drawTo(iFinalRt);
+		ScreenSpaceProjection sp(getCamera().getViewport().getSize());
+		mReprojectionShader.begin();
+		mReprojectionShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+		mReprojectionShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+		mReprojectionShader.setUniform("uColorTex", 0);
+		mReprojectionShader.setUniform("uPreviousColorTex", 1);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, mSmaaFbo.getColorAttachment(iPreviousFinalRt).getId());
+
+		Texture t = mSmaaFbo.getColorAttachment(iFinalRt);
+		drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glActiveTexture(GL_TEXTURE0);
+
+		mReprojectionShader.end();
+	}
+	mSmaaFbo.end();
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::doSmaa1x(renderTarget iFinalRt)
+{
+	const Camera& cam = getCamera();
+	mSmaaFbo.begin();
+	{
+		//-- drawScene offscreen
+		//pass 0 - no gamma correction
+		mSmaaFbo.drawTo(rtSRGB);
+		{
+			drawScene();
+		}
+
+		glDisable(GL_LIGHTING);
+		//disable all depth test for the post processing stages...
+		glDisable(GL_DEPTH_TEST);
+
+		//--- post processing
+		//pass 1
+		//gamma corretion 
+		mSmaaFbo.drawTo(rtRGB);
+		{
+			glClear(GL_COLOR_BUFFER_BIT);
+			ScreenSpaceProjection sp(cam.getViewport().getSize());
+			mGammaCorrection.begin();
+			mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
+			mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
+			mGammaCorrection.setUniform("uColorTex", 0);
+
+			Texture t = mSmaaFbo.getColorAttachment(rtSRGB);
+			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+			mGammaCorrection.end();
+		}
+
+		//pass 2
+		//SMAA - Luma edge detection edgeTex
+		//this requires a gamma corrected input texture
+		mSmaaFbo.drawTo(rtEdge);
+		{
+			glClear(GL_COLOR_BUFFER_BIT);
+			mSmaaShader.begin();
+			ScreenSpaceProjection sp(cam.getViewport().getSize());
+			mSmaaShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+			mSmaaShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+			mSmaaShader.setUniform("uColorTex", 0);
+
+			Texture t = mSmaaFbo.getColorAttachment(rtRGB);
+			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+			mSmaaShader.end();
+		}
+
+		//pass 3
+		//SMAA - 2nd pass - blend weight
+		mSmaaFbo.drawTo(rtBlendWeight);
+		{
+			glClear(GL_COLOR_BUFFER_BIT);
+			mSmaa2ndPassShader.begin();
+
+			ScreenSpaceProjection sp(cam.getViewport().getSize());
+			mSmaa2ndPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+			mSmaa2ndPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+			mSmaa2ndPassShader.setUniform("uSubsampleIndices", getSubsampleIndices());
+			mSmaa2ndPassShader.setUniform("uEdgeTex", 0);
+			mSmaa2ndPassShader.setUniform("uAreaTex", 1);
+			mSmaa2ndPassShader.setUniform("uSearchTex", 2);
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, mSmaaAreaTexture.getId());
+
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
+
+			Texture t = mSmaaFbo.getColorAttachment(rtEdge);
+			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			glActiveTexture(GL_TEXTURE0);
+
+			mSmaa2ndPassShader.end();
+		}
+
+		//pass 4
+		//SMAA - 3rd pass perform the neighbour blending and gamma correction again.
+		//		
+		mSmaaFbo.drawTo(iFinalRt);
+		{
+			glClear(GL_COLOR_BUFFER_BIT);
+			mSmaa3rdPassShader.begin();
+
+			ScreenSpaceProjection sp(cam.getViewport().getSize());
+			mSmaa3rdPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
+			mSmaa3rdPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+			mSmaa3rdPassShader.setUniform("uColorTex", 0);
+			mSmaa3rdPassShader.setUniform("uBlendTex", 1);
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, mSmaaFbo.getColorAttachment(rtBlendWeight).getId());
+
+			//the texture required must be in linear space (no-gamma)
+			Texture t = mSmaaFbo.getColorAttachment(rtSRGB);
+			drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glActiveTexture(GL_TEXTURE0);
+
+			mSmaa3rdPassShader.end();
+		}
+
+		glEnable(GL_LIGHTING);
+		glEnable(GL_DEPTH_TEST);
+	}
+	mSmaaFbo.end();
+}
+
+//-----------------------------------------------------------------------------
 //draws a rectancle in screenspace starting at 0.0 to size. If a texure
 //isbound to GL_TEXTURE0, the rectangle will be textured
 void Viewer::drawRectangle(int iTextureId, Vector2d size)
@@ -80,69 +297,141 @@ void Viewer::drawRectangle(int iTextureId, Vector2d size)
 void Viewer::drawScene()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	//--- get view and projection matrices for the scene
+	// here a jitter is added depending on the antiAliasingMode
+	ScreenSpaceProjection sp(getCamera().getViewport().getSize());
+	Matrix4 view = sp.mViewMatrix;
+	Matrix4 proj = sp.mProjectionMatrix;
+	if (mpMainDialog->has3dControlEnabled())
+	{
+		view = getCamera().getViewMatrix();
+		proj = getCamera().getProjectionMatrix();
+	}
+	view = getJitterMatrix() * view;
 
-    
+	//adjust view when camera is nodding
+	if(mpMainDialog->isCameraNodding())
+	{ tiltMatrix(&view); }
+
     switch(gSceneContent)
     {
-    case sc3d: //cube
-    {
-        mSceneShader.begin();
-        mSceneShader.setUniform("modelViewMatrix", getCamera().getViewMatrix());
-        mSceneShader.setUniform("projectionMatrix", getCamera().getProjectionMatrix());
-        //glDisable(GL_LIGHTING);
-        //glPushMatrix();
-        //glRotated(gRotx, 1, 0, 0);
-        //glRotated(gRoty, 0, 1, 0);
-        //glRotated(gRotz, 0, 0, 1);
-        treeD::drawRectangularPrism(math::Point3d(-5), math::Point3d(5));
+    case sc3d: //3d grid
+    {		
+        mSceneShader.begin();        
+        mSceneShader.setUniform("projectionMatrix", proj);
+        
+		const int kNumInstancesPerAxis = 40;
+		const double displacementPerIter = 5;
+		const double thickness = 0.5;
+		const double length = ( (kNumInstancesPerAxis+1)+(kNumInstancesPerAxis*(displacementPerIter-thickness)) );
+		VertexBufferObject vbo = treeD::getRectangularPrism( 
+			Point3d(-length, -thickness/2.0, -thickness/2.0),
+			Point3d(length, thickness/2.0, thickness/2.0));
+		
+		for (int i = -kNumInstancesPerAxis; i <= kNumInstancesPerAxis; ++i)
+		{
+			Matrix4 t( Vector3d(0, i * displacementPerIter, 0.0));
+			mSceneShader.setUniform("modelViewMatrix", view*t);
+			vbo.draw();
+		}	
 
-        //treeD::drawRectangle(math::Point2d(-5), math::Vector2d(10));
-
-        //glPopMatrix();
-
+		Matrix4 r(3.14156/2.0, Vector3d(0.0, 0.0, 1.0));
+		for (int i = -kNumInstancesPerAxis; i <= kNumInstancesPerAxis; ++i)
+		{
+			Matrix4 t( Vector3d(0, i * displacementPerIter, 0.0));
+			mSceneShader.setUniform("modelViewMatrix", view*r*t);
+			vbo.draw();
+		}
         mSceneShader.end();
     }break;
     case scUnigine01: //uEngine test image 1
     {
         Vector2d size(mUnigine01.width(), mUnigine01.height());
-        drawStillImage(mUnigine01.getId(), size);
-
-        /*pushShader(mStillImageShader);
-        mStillImageShader.setUniform("modelViewMatrix", getCamera().getViewMatrix());
-        mStillImageShader.setUniform("projectionMatrix", getCamera().getProjectionMatrix());
-        mStillImageShader.setUniform("uTexture0", 0);
-        drawRectangle(mUnigine01.getId(), Vector2d(mUnigine01.width(), mUnigine01.height()));
-        popShader();*/
+        drawStillImage(mUnigine01.getId(), size, view, proj);
 
     }break;
     case scUnigine02: //uEngine test image 2
     {
         Vector2d size(mUnigine02.width(), mUnigine02.height());
-        drawStillImage(mUnigine02.getId(), size);
+        drawStillImage(mUnigine02.getId(), size, view, proj);
     }break;
     case scMandelbrot: //uEngine test image 2
     {
         Vector2d size(mMandelbrot.width(), mMandelbrot.height());
-        drawStillImage(mMandelbrot.getId(), size);
+        drawStillImage(mMandelbrot.getId(), size, view, proj);
     }break;
     
     default: break;
     }
 
-    
+    mPreviousWorldView = view;
+	mPreviousWorldProj = proj;
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::drawStillImage(int iTextureId, realisim::math::Vector2d iSize)
-{
-    ScreenSpaceProjection sp(getCamera().getViewport().getSize());
-
+void Viewer::drawStillImage(int iTextureId, realisim::math::Vector2d iSize, 
+	const realisim::math::Matrix4& iView, const realisim::math::Matrix4& iProj)
+{    
     pushShader(mStillImageShader);
-    mStillImageShader.setUniform("modelViewMatrix", sp.mViewMatrix);
-    mStillImageShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
+    mStillImageShader.setUniform("modelViewMatrix", iView);
+    mStillImageShader.setUniform("projectionMatrix", iProj);
     mStillImageShader.setUniform("uTexture0", 0);
     drawRectangle(iTextureId, iSize);
     popShader();
+}
+
+//-----------------------------------------------------------------------------
+realisim::math::Vector4d Viewer::getSubsampleIndices() const
+{
+	Vector4d r(0.0);
+
+	const int passIndex = mFrameIndex % 2;
+	switch (mpMainDialog->getAntiAliasingMode())
+	{
+	case aamSmaa1x:
+		r.set(0.0, 0.0, 0.0, 0.0);
+		break;
+	//case mSmaaS2x:
+	case aamSmaaT2x:
+		if (passIndex == 0)
+			r.set(1.0, 1.0, 1.0, 0.0);
+		else
+			r.set(2.0, 2.0, 2.0, 0.0);
+		break;
+	default: break;
+	}
+
+	return r;
+}
+
+//-----------------------------------------------------------------------------
+realisim::math::Matrix4 Viewer::getJitterMatrix() const
+{
+	const int passIndex = mFrameIndex % 2;
+	Vector3d jitter;
+	switch (mpMainDialog->getAntiAliasingMode())
+	{
+	case aamSmaa1x: jitter = Vector3d(0.0, 0.0, 0.0); break;
+		//case mSmaa2x: jitter = Vector2d(0.0, 0.0); break;
+	case aamSmaaT2x:
+		if (passIndex == 0)
+			jitter = Vector3d(-0.25, 0.25, 0.0);
+		else
+			jitter = Vector3d(0.25, -0.25, 0.0);
+		break;
+		/*case mSmaa4x:
+		if (pass == 0)
+		jitter = Vector2d(-0.125, 0.125, 0.0);
+		else
+		jitter = Vector2d(0.125, -0.125, 0.0);
+		break;*/
+	default: break;
+	}
+
+	jitter = Vector3d( 2 * jitter.x()/(double)width(), 2 * jitter.x() / (double)height(), 0.0);
+//printf("jitter: %s\n", jitter.toString(6).c_str() );
+	return Matrix4(jitter);
 }
 
 //-----------------------------------------------------------------------------
@@ -157,31 +446,20 @@ void Viewer::initializeGL()
     glCullFace(GL_BACK);
 
     //init mFbo
-    mFbo.addColorAttachment();
-    mFbo.addColorAttachment();
-    mFbo.addColorAttachment();
-    mFbo.addColorAttachment();
-    mFbo.addColorAttachment();
-    mFbo.getColorAttachment(0).setFilter(GL_LINEAR);
-    mFbo.getColorAttachment(0).setWrapMode(GL_CLAMP_TO_EDGE);
-    mFbo.getColorAttachment(1).setFilter(GL_LINEAR);
-    mFbo.getColorAttachment(1).setWrapMode(GL_CLAMP_TO_EDGE);
-    mFbo.getColorAttachment(2).setFilter(GL_LINEAR);
-    mFbo.getColorAttachment(2).setWrapMode(GL_CLAMP_TO_EDGE);
-    mFbo.getColorAttachment(3).setFilter(GL_LINEAR);
-    mFbo.getColorAttachment(3).setWrapMode(GL_CLAMP_TO_EDGE);
-    mFbo.getColorAttachment(4).setFilter(GL_LINEAR);
-    mFbo.getColorAttachment(4).setWrapMode(GL_CLAMP_TO_EDGE);
+	for (int i = 0; i < rtCount; ++i)
+	{
+		mSmaaFbo.addColorAttachment();
+		mSmaaFbo.getColorAttachment(i).setFilter(GL_LINEAR);
+		mSmaaFbo.getColorAttachment(i).setWrapMode(GL_CLAMP_TO_EDGE);
+	}
 
-    mFbo.addDepthAttachment();
+    mSmaaFbo.addDepthAttachment();
 
     //init shaders
     loadShaders();
 
     //init textures
     loadTextures();
-
-    gFrameBufferToDisplay = mFbo.getNumColorAttachment() - 1;
 
     mpMainDialog->updateUi();
 }
@@ -192,10 +470,8 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
     switch (ipE->key())
     {
     case Qt::Key_C: gSceneContent = (sceneContent)((gSceneContent + 1) % scContentCount); break;
-    case Qt::Key_F: --gFrameBufferToDisplay; if (gFrameBufferToDisplay < 0) gFrameBufferToDisplay = mFbo.getNumColorAttachment() - 1; break;
-    case Qt::Key_G: gFrameBufferToDisplay = (gFrameBufferToDisplay + 1) % mFbo.getNumColorAttachment(); break; 
-    case Qt::Key_P: gMlaaActivated = !gMlaaActivated; break;
-    case Qt::Key_R: gRotateCube = !gRotateCube; break;
+	case Qt::Key_F: mpMainDialog->displayPreviousDebugPass(); break;
+	case Qt::Key_G: mpMainDialog->displayNextDebugPass(); break;
     case Qt::Key_F5: loadShaders(); break;
     default: Widget3d::keyPressEvent(ipE); break;
     }
@@ -217,6 +493,7 @@ void Viewer::loadShaders()
     //init shaders
     {
         mSmaaShader.clear();
+		mSmaaShader.setName("SMAA_firstPass");
         addVertexSource(&mSmaaShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mSmaaShader, cwd + "/../assets/SMAA_firstPass.vert");
         addFragmentSource(&mSmaaShader, cwd + "/../assets/SMAA_firstPass.frag");
@@ -230,6 +507,7 @@ void Viewer::loadShaders()
 
     {
         mSmaa2ndPassShader.clear();
+		mSmaa2ndPassShader.setName("SMAA_secondPass");
         addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA_secondPass.vert");
         int smaaVertexSourceId = addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA.hlsl");
@@ -247,6 +525,7 @@ void Viewer::loadShaders()
 
     {
         mSmaa3rdPassShader.clear();
+		mSmaa3rdPassShader.setName("SMAA_thirdPass");
         addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.vert");
         int smaaVertexSourceId = addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA.hlsl");
@@ -254,6 +533,7 @@ void Viewer::loadShaders()
         mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
         mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
 
+		addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/utilities.frag");
         addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.frag");
         int smaaFragmentSourceId = addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA.hlsl");
         mSmaa3rdPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
@@ -262,9 +542,27 @@ void Viewer::loadShaders()
         mSmaa3rdPassShader.link();
     }
     
+	{
+		mReprojectionShader.clear();
+		mReprojectionShader.setName("SMAA_reprojection");
+		addVertexSource(&mReprojectionShader, cwd + "/../assets/utilities.vert");
+		addVertexSource(&mReprojectionShader, cwd + "/../assets/SMAA_reprojection.vert");
+		int smaaVertexSourceId = addVertexSource(&mReprojectionShader, cwd + "/../assets/SMAA.hlsl");
+		mReprojectionShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_VS", "1");
+		mReprojectionShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
+		mReprojectionShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
+
+		addFragmentSource(&mReprojectionShader, cwd + "/../assets/SMAA_reprojection.frag");
+		int smaaFragmentSourceId = addFragmentSource(&mReprojectionShader, cwd + "/../assets/SMAA.hlsl");
+		mReprojectionShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
+		mReprojectionShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_PS", "1");
+		mReprojectionShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
+		mReprojectionShader.link();
+	}
 
     {
         mSceneShader.clear();
+		mSceneShader.setName("Scene shader");
         addVertexSource(&mSceneShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mSceneShader, cwd + "/../assets/main.vert");        
         addFragmentSource(&mSceneShader, cwd + "/../assets/untexturedMaterial.frag");                
@@ -273,6 +571,7 @@ void Viewer::loadShaders()
 
     {
         mStillImageShader.clear();
+		mStillImageShader.setName("still image shader");
         addVertexSource(&mStillImageShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mStillImageShader, cwd + "/../assets/main.vert");
         addFragmentSource(&mStillImageShader, cwd + "/../assets/texturedMaterial.frag");
@@ -281,8 +580,11 @@ void Viewer::loadShaders()
 
     {
         mGammaCorrection.clear();
+		mGammaCorrection.setName("gamma correction");
         addVertexSource(&mGammaCorrection, cwd + "/../assets/utilities.vert");
         addVertexSource(&mGammaCorrection, cwd + "/../assets/main.vert");
+
+		addFragmentSource(&mGammaCorrection, cwd + "/../assets/utilities.frag");
         addFragmentSource(&mGammaCorrection, cwd + "/../assets/gammaCorrection.frag");
         mGammaCorrection.link();
     }
@@ -330,8 +632,11 @@ void Viewer::loadTextures()
     {
         mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
         //mUnigine01.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mUnigine01.setFilter(GL_LINEAR);
+		mUnigine01.generateMipmap();
+        mUnigine01.setMagnificationFilter(GL_LINEAR);
+		mUnigine01.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
         mUnigine01.setWrapMode(GL_CLAMP_TO_EDGE);
+		
     }
 
     //demo Unigine01
@@ -358,147 +663,39 @@ void Viewer::loadTextures()
 //-----------------------------------------------------------------------------
 void Viewer::paintGL()
 {
-    utils::Timer aTimer;
-    if (!gMlaaActivated)
-    {
-        drawScene();
-    }
-    else
-    {
-        int pass = 0;
-        const Camera& cam = getCamera();
-        mFbo.begin();
-        {
-            //-- drawScene offscreen
-            //pass 0 - no gamma correction
-            mFbo.drawTo(pass++);
-            {
-                drawScene();
-            }
-            
-            glDisable(GL_LIGHTING);
-            //disable all depth test for the post processing stages...
-            glDisable(GL_DEPTH_TEST);
-            //--- post processing
+    utils::Timer perFrameTimer;
+    
+	renderTarget finalRt[2] = {rtFinal_0, rtFinal_1};
+	int finalRtIndex = mFrameIndex % 2;
+	int previousFinalRtIndex = (finalRtIndex + 1)%2;
 
-            //post processing
-            //pass 1
-            //gamma corretion 
-            mFbo.drawTo(pass++);
-            {
-                glClear(GL_COLOR_BUFFER_BIT);
-                ScreenSpaceProjection sp(cam.getViewport().getSize());
-                mGammaCorrection.begin();
-                mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
-                mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
-                mGammaCorrection.setUniform("uColorTex", 0);
+	switch (mpMainDialog->getAntiAliasingMode())
+	{
+	case aamNoAA: 
+		doNoSmaa();
+		displayPass( mpMainDialog->getPassToDisplay() );
+		break;
+	case aamSmaa1x: 
+	{
+		doSmaa1x(rtFinal_0);
+		displayPass( mpMainDialog->getPassToDisplay() );
+	}break;
+	case aamSmaaT2x:
+	{
+		doSmaa1x(finalRt[finalRtIndex]);
+		doReprojection(finalRt[previousFinalRtIndex], finalRt[finalRtIndex]);
+		displayPass( mpMainDialog->getPassToDisplay() );
 
-                Texture t = mFbo.getColorAttachment(0);
-                drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
+		//mPreviousFrame = mFbo.getColorAttachment(rtFinal).copy();
+	} break;
+	default: break;
+	}
 
-                mGammaCorrection.end();
-            }
+	++mFrameIndex;
 
-            //pass 2
-            //SMAA - Luma edge detection edgeTex
-            //this requires a gamma corrected input texture
-            mFbo.drawTo(pass++);
-            {
-                glClear(GL_COLOR_BUFFER_BIT);
-                mSmaaShader.begin();
-                ScreenSpaceProjection sp(cam.getViewport().getSize());
-                mSmaaShader.setUniform("modelViewMatrix", sp.mViewMatrix);
-                mSmaaShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
-                mSmaaShader.setUniform("uColorTex", 0);
-
-                Texture t = mFbo.getColorAttachment(1);
-                drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
-
-                mSmaaShader.end();
-            }
-
-            //pass 3
-            //SMAA - 2nd pass - blend weight
-            mFbo.drawTo(pass++);
-            {
-                glClear(GL_COLOR_BUFFER_BIT);
-                mSmaa2ndPassShader.begin();
-
-                ScreenSpaceProjection sp(cam.getViewport().getSize());
-                mSmaa2ndPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
-                mSmaa2ndPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
-                mSmaa2ndPassShader.setUniform("uEdgeTex", 0);
-                mSmaa2ndPassShader.setUniform("uAreaTex", 1);
-                mSmaa2ndPassShader.setUniform("uSearchTex", 2);
-
-                glActiveTexture(GL_TEXTURE1);
-                glBindTexture(GL_TEXTURE_2D, mSmaaAreaTexture.getId());
-
-                glActiveTexture(GL_TEXTURE2);
-                glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
-
-                Texture t = mFbo.getColorAttachment(2);
-                drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
-
-                mSmaa2ndPassShader.end();
-            }
-
-            //pass 4
-            //SMAA - 3rd pass perform the neighbour blending and gamma correction again.
-            //
-            mFbo.drawTo(pass++);
-            {
-                glClear(GL_COLOR_BUFFER_BIT);
-                mSmaa3rdPassShader.begin();
-
-                ScreenSpaceProjection sp(cam.getViewport().getSize());
-                mSmaa3rdPassShader.setUniform("modelViewMatrix", sp.mViewMatrix);
-                mSmaa3rdPassShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
-                mSmaa3rdPassShader.setUniform("uColorTex", 0);
-                mSmaa3rdPassShader.setUniform("uBlendTex", 1);
-
-                glActiveTexture(GL_TEXTURE1);
-                glBindTexture(GL_TEXTURE_2D, mFbo.getColorAttachment(3).getId());
-
-                //the texture required must be in linear space (no-gamma)
-                Texture t = mFbo.getColorAttachment(0);
-                drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
-
-                mSmaa3rdPassShader.end();
-
-                //apply gamma correction again!!!
-                //this could be optimized by doing the gamma correction directly in the 3rdpass shader...
-                mGammaCorrection.begin();
-                mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
-                mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
-                mGammaCorrection.setUniform("uColorTex", 0);
-
-                t = mFbo.getColorAttachment(4);
-                drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
-
-                mGammaCorrection.end();
-            }
-        }
-        mFbo.end();
-
-        //Draw final result has full screen quad
-        glColor3ub(255, 255, 255);
-        Texture finalT = mFbo.getColorAttachment(gFrameBufferToDisplay);
-        GLenum minFilter = finalT.getMinificationFilter();
-        GLenum maxFilter = finalT.getMagnificationFilter();
-        finalT.setFilter(GL_NEAREST);
-
-        //do not apply gamma to final pass
-        drawStillImage(finalT.getId(), Vector2d(finalT.width(), finalT.height()));
-
-        finalT.setMinificationFilter(minFilter);
-        finalT.setMagnificationFilter(maxFilter);
-
-        glEnable(GL_LIGHTING);
-        glEnable(GL_DEPTH_TEST);
-    }
-    mTimeToDrawInSec = aTimer.getElapsed();
-    //printf("time to draw: %f (sec)\n", mTimeToDrawInSec);
+	mTimeInterFrameStats.add(mInterFrameTimer.getElapsed());
+	mTimePerFrameStats.add(perFrameTimer.getElapsed());	
+	mInterFrameTimer.start();	
 }
 
 //-----------------------------------------------------------------------------
@@ -506,20 +703,41 @@ void Viewer::resizeGL(int iW, int iH)
 {
     Widget3d::resizeGL(iW, iH);
 
-    if (!(mFbo.getWidth() == iW && mFbo.getHeight() == iH))
+    if (!(mSmaaFbo.getWidth() == iW && mSmaaFbo.getHeight() == iH))
     {
-        mFbo.resize(iW, iH);
+        mSmaaFbo.resize(iW, iH);
         loadShaders();
         printf("FBO size: %d, %d\n", iW, iH);
     }
 }
+
+static double sNoddingIncrement = 0.0001;
+static double sCameraNoddingAngle = 0.0;
+//-----------------------------------------------------------------------------
+void Viewer::tiltMatrix(realisim::math::Matrix4* iM) const
+{
+	const double maxAngle = 0.05;
+	if(sCameraNoddingAngle > maxAngle )
+		sNoddingIncrement *= -1;
+	if(sCameraNoddingAngle < -maxAngle )
+		sNoddingIncrement *= -1;
+	sCameraNoddingAngle += sNoddingIncrement;
+
+	*iM = Matrix4(sCameraNoddingAngle, Vector3d(1.0, 0.0, 0.0 )) * (*iM);
+}
+
 
 //-----------------------------------------------------------------------------
 //--- MainDialog
 //-----------------------------------------------------------------------------
 MainDialog::MainDialog() : QMainWindow(),
 mpViewer(0),
-mTimerEventId(0)
+mTimerEventId(0),
+mAntiAliasingMode(aamSmaa1x),
+mHas3dControlEnabled(false),
+mIsCameraNodding(false),
+mHasDebugPassEnabled(false),
+mDebugPassToDisplay(rtRGB)
 {
     resize(1280, 720);
 
@@ -532,51 +750,115 @@ mTimerEventId(0)
     {
         QVBoxLayout *pControlLyt = new QVBoxLayout();
         {
-            QHBoxLayout *pL0 = new QHBoxLayout();
-            {
-                QLabel* l = new QLabel("Rotate (R):", pCentralWidget);
-                mpRotationState = new QLabel("Off", pCentralWidget);
+			//--- anti aliasing mode
+			QGroupBox *pAntiAlisingMode = new QGroupBox(pCentralWidget);
+			{
+				QVBoxLayout *pLyt = new QVBoxLayout(pAntiAlisingMode);
+				{
+					QHBoxLayout *pL_1 = new QHBoxLayout();
+					{
+						QLabel* l = new QLabel("Smaa mode:", pAntiAlisingMode);
+						mpAntiAliasingModeCombo = new QComboBox(pAntiAlisingMode);
+						for(int i = 0; i < aamCount; ++i)
+						{ mpAntiAliasingModeCombo->addItem(toQString( (antiAliasingMode)i )); }
+						connect(mpAntiAliasingModeCombo, SIGNAL(activated(int)), 
+							this, SLOT(antiAliasingModeChanged(int)));
 
-                pL0->addWidget(l);
-                pL0->addWidget(mpRotationState);
-                pL0->addStretch(1);
-            }
+						pL_1->addWidget(l);
+						pL_1->addWidget(mpAntiAliasingModeCombo);
+						pL_1->addStretch(1);
+					}
 
-            QHBoxLayout *pL1 = new QHBoxLayout();
-            {
-                QLabel* l = new QLabel("Post processing (P):", pCentralWidget);
-                mpPostProcessingState = new QLabel("Deactivated", pCentralWidget);
+					mpDebugPassEnabled = new QCheckBox("Debug pass", pAntiAlisingMode);
+					connect(mpDebugPassEnabled, SIGNAL(clicked()), this, SLOT(enableDebugPassClicked()));
 
-                pL1->addWidget(l);
-                pL1->addWidget(mpPostProcessingState);
-                pL1->addStretch(1);
-            }
+					QHBoxLayout *pL1 = new QHBoxLayout();
+					{
+						QLabel* l = new QLabel("Pass displayed (F/G):", pAntiAlisingMode);
+						mpPassDisplayed = new QLabel("0", pAntiAlisingMode);
 
-            QHBoxLayout *pL2 = new QHBoxLayout();
-            {
-                QLabel* l = new QLabel("Pass displayed (F/G):", pCentralWidget);
-                mpPassDisplayed = new QLabel("0", pCentralWidget);
+						pL1->addWidget(l);
+						pL1->addWidget(mpPassDisplayed);
+						pL1->addStretch(1);
+					}
 
-                pL2->addWidget(l);
-                pL2->addWidget(mpPassDisplayed);
-                pL2->addStretch(1);
-            }
+					QHBoxLayout *pL2 = new QHBoxLayout();
+					{
+						QLabel* l = new QLabel("Scene content (C):", pAntiAlisingMode);
+						mpSceneContent = new QLabel("3d", pAntiAlisingMode);
 
-            QHBoxLayout *pL3 = new QHBoxLayout();
-            {
-                QLabel* l = new QLabel("Scene content (C):", pCentralWidget);
-                mpSceneContent = new QLabel("3d", pCentralWidget);
+						pL2->addWidget(l);
+						pL2->addWidget(mpSceneContent);
+						pL2->addStretch(1);
+					}
 
-                pL3->addWidget(l);
-                pL3->addWidget(mpSceneContent);
-                pL3->addStretch(1);
-            }
+					pLyt->addLayout(pL_1);
+					pLyt->addWidget(mpDebugPassEnabled);
+					pLyt->addLayout(pL1);
+					pLyt->addLayout(pL2);
+				}				
+			}
+			
+			//--- camera controls
+			QGroupBox *pCameraControls = new QGroupBox("Camera controls", pCentralWidget);
+			{
+				QVBoxLayout *pL = new QVBoxLayout(pCameraControls);
+				{
+					mpEnable3dControls = new QCheckBox("Enable 3d controls", pCameraControls);
+					connect(mpEnable3dControls, SIGNAL(clicked()), this, SLOT(enable3dControlsClicked()));
 
-            pControlLyt->addLayout(pL0);
-            pControlLyt->addLayout(pL1);
-            pControlLyt->addLayout(pL2);
-            pControlLyt->addLayout(pL3);
+					mpEnableCameraNodding = new QCheckBox("Enable camera nodding", pCameraControls);
+					connect(mpEnableCameraNodding, SIGNAL(clicked()), this, SLOT(enableCameraNodding()));
+
+					pL->addWidget(mpEnable3dControls);
+					pL->addWidget(mpEnableCameraNodding);
+				}				
+			}
+
+			QGroupBox *pProfiling = new QGroupBox("Profiling", pCentralWidget);
+			{
+				QVBoxLayout *pL = new QVBoxLayout(pProfiling);
+				{
+					QLabel *info = new QLabel("timing - [mean (ms), std (ms)]", pProfiling);
+
+					QHBoxLayout *pL1 = new QHBoxLayout();
+					{
+						QLabel *l = new QLabel("per frame:");
+						mpPerFrameStats = new QLabel("n/a");
+
+						pL1->addWidget(l);
+						pL1->addWidget(mpPerFrameStats);
+					}
+
+					QHBoxLayout *pL2 = new QHBoxLayout();
+					{
+						QLabel *l = new QLabel("inter frame:");
+						mpInterFrameStats = new QLabel("n/a");
+
+						pL2->addWidget(l);
+						pL2->addWidget(mpInterFrameStats);
+					}
+
+					QHBoxLayout *pL3 = new QHBoxLayout();
+					{
+						QPushButton *pClear = new QPushButton("Clear");
+						connect(pClear, SIGNAL(clicked()), this, SLOT(clearProfilingClicked()));
+
+						pL3->addStretch(1);
+						pL3->addWidget(pClear);
+					}
+
+					pL->addWidget(info);
+					pL->addLayout(pL1);
+					pL->addLayout(pL2);
+					pL->addLayout(pL3);
+				}
+			}
+
+			pControlLyt->addWidget(pAntiAlisingMode);
             pControlLyt->addStretch(1);
+			pControlLyt->addWidget(pCameraControls);
+			pControlLyt->addWidget(pProfiling);
         }
 
         mpViewer = new Viewer(pCentralWidget, this);
@@ -596,40 +878,139 @@ mTimerEventId(0)
 }
 
 //-----------------------------------------------------------------------------
+void MainDialog::clearProfilingClicked()
+{
+	mpViewer->mTimePerFrameStats.clear();
+	mpViewer->mTimeInterFrameStats.clear();
+	updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::displayNextDebugPass()
+{
+	mDebugPassToDisplay = (mDebugPassToDisplay + 1) % rtCount;
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::displayPreviousDebugPass()
+{
+	--mDebugPassToDisplay;
+	if (mDebugPassToDisplay < 0)
+	{ mDebugPassToDisplay = rtCount - 1; }
+	updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::enable3dControlsClicked()
+{
+	mHas3dControlEnabled = mpEnable3dControls->isChecked();
+	updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::enableCameraNodding()
+{
+	mIsCameraNodding = mpEnableCameraNodding->isChecked();
+	updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::enableDebugPassClicked()
+{
+	mHasDebugPassEnabled = mpDebugPassEnabled->isChecked();
+	updateUi();
+}
+
+//-----------------------------------------------------------------------------
+renderTarget MainDialog::getPassToDisplay() const
+{
+	renderTarget rt;
+
+	if (hasDebugPassEnabled())
+	{
+		rt = (renderTarget)mDebugPassToDisplay;
+	}
+	else
+	{
+		switch ( getAntiAliasingMode() )
+		{
+		case aamNoAA: rt = rtFinal_0; break;
+		case aamSmaa1x: rt = rtFinal_0; break;
+		case aamSmaaT2x: 
+		{
+			rt = (renderTarget)(rtFinal_0 + (mpViewer->mFrameIndex % 2));
+		}break;
+		default: rt = rtFinal_0; break;
+		}
+	}
+	return rt;
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::antiAliasingModeChanged(int iIndex)
+{
+	setAntiAliasingMode( (antiAliasingMode)iIndex );
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::setAntiAliasingMode(antiAliasingMode iM)
+{
+	mAntiAliasingMode = iM;
+	updateUi();
+}
+
+//-----------------------------------------------------------------------------
 void MainDialog::timerEvent(QTimerEvent *ipE)
 {
     if(ipE->timerId() == mTimerEventId)
     {
-        if(gRotateCube)
-        {
-            gRotx += 0.5;
-            gRoty += 0.5;
-            gRotz += 0.5;
-        }
     }
 
-    mpViewer->update();
+	updateUiHighFrequency();
 }
 
 //-----------------------------------------------------------------------------
+QString MainDialog::toQString(antiAliasingMode iMode) const
+{
+	QString r("unknown");
+	switch(iMode)
+	{
+	case aamNoAA: r = "No AA"; break;
+	case aamSmaa1x: r = "SMAA 1X"; break;
+	case aamSmaaT2x: r = "SMAA T2x"; break;
+	case aamFSAA2x: r = "FSAA 2X"; break;
+	default: break;
+	}
+	return r;
+}
+//-----------------------------------------------------------------------------
 void MainDialog::updateUi()
 {
-    mpRotationState->setText( gRotateCube ? "On" : "Off" );
+	//--- smaa mode
+	int index = mpAntiAliasingModeCombo->currentIndex();
+	if(index != getAntiAliasingMode())
+	{
+		mpAntiAliasingModeCombo->setCurrentIndex(getAntiAliasingMode());
+	 }
 
-    mpPostProcessingState->setText( gMlaaActivated ? "Activated" : "Deactivated" );
-
-    QString passName = "raw scene";
-    switch(gFrameBufferToDisplay)
-    {
-        case 0: break;
-        case 1: passName = "gamma correction"; break;
-        case 2: passName = "Edge detection"; break;
-        case 3: passName = "Blend weight"; break;
-        case 4: passName = "Final result"; break;
-        default: passName = "Unknown"; break;
-    }
+	//--- show pass name
+    QString passName = "Raw scene";
+	
+	switch ( getPassToDisplay() )
+	{
+	case rtSRGB: passName = "Raw scene"; break;
+	case rtRGB: passName = "Gamma correction"; break;
+	case rtEdge: passName = "Edge detection"; break;
+	case rtBlendWeight: passName = "Blend weight"; break;
+	case rtFinal_0: passName = "Final_0"; break;
+	case rtFinal_1: passName = "Final_1"; break;
+	default: passName = "Unknown"; break;
+	}
+	
     mpPassDisplayed->setText(passName);
+	mpPassDisplayed->setVisible( getAntiAliasingMode() != aamNoAA );
 
+	//--- show scene content
     QString sceneContent = "3d";
     switch (gSceneContent)
     {
@@ -642,6 +1023,38 @@ void MainDialog::updateUi()
     }
     mpSceneContent->setText(sceneContent);
 
+	//--- camera control
+	mpEnableCameraNodding->setEnabled( mpEnable3dControls->isChecked() );
+
+	//--- profiling
+	stringstream iss;
+	iss << setprecision(3) << fixed;
+	iss << mpViewer->mTimePerFrameStats.getMean() * 1000.0 << ", " << mpViewer->mTimePerFrameStats.getStandardDeviation() * 1000.0;
+	mpPerFrameStats->setText( QString::fromStdString( iss.str() ) );
+
+	iss = stringstream();
+	iss << setprecision(3) << fixed;
+	iss << mpViewer->mTimeInterFrameStats.getMean() * 1000.0 << ", " << mpViewer->mTimeInterFrameStats.getStandardDeviation() * 1000.0;
+	mpInterFrameStats->setText( QString::fromStdString( iss.str() ) );
+
     update();
     mpViewer->update();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::updateUiHighFrequency()
+{
+	//--- profiling
+	stringstream iss;
+	iss << setprecision(3) << fixed;
+	iss << mpViewer->mTimePerFrameStats.getMean() * 1000.0 << ", " << mpViewer->mTimePerFrameStats.getStandardDeviation() * 1000.0;
+	mpPerFrameStats->setText( QString::fromStdString( iss.str() ) );
+
+	iss = stringstream();
+	iss << setprecision(3) << fixed;
+	iss << mpViewer->mTimeInterFrameStats.getMean() * 1000.0 << ", " << mpViewer->mTimeInterFrameStats.getStandardDeviation() * 1000.0;
+	mpInterFrameStats->setText( QString::fromStdString( iss.str() ) );
+
+	update();
+	mpViewer->update();
 }

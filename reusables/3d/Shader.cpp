@@ -590,13 +590,13 @@ bool Shader::setUniform(const char* iName, const Vector3d& iValue)
 //----------------------------------------------------------------------------
 bool Shader::setUniform(const char* iName, const Vector3f& iValue)
 {
-    if(!isValid())
-    return false;
-    
-  GLint loc = glGetUniformLocation(getProgramId(), iName);
-  glUniform3f(loc, iValue.x(), iValue.y(), iValue.z());
-  WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
-  return loc >= 0 ? true : false;
+	if (!isValid())
+		return false;
+
+	GLint loc = glGetUniformLocation(getProgramId(), iName);
+	glUniform3f(loc, iValue.x(), iValue.y(), iValue.z());
+	WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
+	return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------
@@ -610,6 +610,18 @@ bool Shader::setUniform(const char* iName, int iSize, const math::Vector3f* iDat
   glUniform3fv(loc, iSize, iData->getPtr());
   WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
   return loc >= 0 ? true : false;
+}
+
+//----------------------------------------------------------------------------
+bool Shader::setUniform(const char* iName, const math::Vector4d& iValue)
+{
+	if (!isValid())
+		return false;
+
+	GLint loc = glGetUniformLocation(getProgramId(), iName);
+	glUniform4f(loc, iValue.x(), iValue.y(), iValue.z(), iValue.w());
+	WARN_WHEN_UNIFORM_NOT_FOUND(loc, iName);
+	return loc >= 0 ? true : false;
 }
 
 //----------------------------------------------------------------------------

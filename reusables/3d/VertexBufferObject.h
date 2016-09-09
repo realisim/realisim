@@ -63,10 +63,11 @@ public:
     virtual GLuint getVertexArrayObjectId() const { return mpGuts->mVaoId; }
     virtual void set2dTextureCoordinates(int iNumberOfCoords, float *ipCoords);
     //virtual void set3dTextureCoordinates(GLenum target, int iNumberOfCoords, float *ipCoords);
+	virtual void setColors(int iNum, float *ipColors);
     virtual void setColors(const std::vector<float>&);
     virtual void setIndices(int iNum, int *ipIndices);
     virtual void setIndices(const std::vector<int>&);
-    virtual void setNormals(int iNumberOfNormales, float *ipNormals);
+    virtual void setNormals(int iNumberOfNormals, float *ipNormals);
     //  virtual void setNormals(const std::vector<math::Vector3d>&);
     virtual void setVertices(int iNumVertices, float *ipVertices);
     virtual void setVertices(const std::vector<math::Point3d>&);

@@ -4,6 +4,7 @@
 #define Realisim_TreeD_Utilities_hh
 
 #include "3d/Texture.h"
+#include "3d/VertexbufferObject.h"
 #include <cassert>
 #include <QByteArray>
 #include "math/Point.h"
@@ -58,6 +59,7 @@ namespace treeD
 //Texture get1dNoiseTexture();  
   Texture get2dNoiseTexture(int, int);//const Vector2i&);
   Texture get3dNoiseTexture(const Vector3i&);
+  VertexBufferObject getRectangularPrism(const Point3d& , const Point3d&);
   QColor idToColor(unsigned int);
 }//treeD
 }//realisim

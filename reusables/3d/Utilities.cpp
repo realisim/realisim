@@ -137,119 +137,7 @@ void drawRectangle( const Point2d& iO, const Vector2d& iS)
 //------------------------------------------------------------------------------
 void drawRectangularPrism( const Point3d& iLowerLeft, const Point3d& iTopRight )
 {
-    Point3d minCorner = iLowerLeft;
-    Point3d maxCorner = iTopRight;
-
-  const int numVertices = 72;
-  float v[numVertices] = {
-      //z
-      maxCorner.x(), maxCorner.y(), maxCorner.z(), //0
-      minCorner.x(), maxCorner.y(), maxCorner.z(), //1
-      minCorner.x(), minCorner.y(), maxCorner.z(), //2
-      maxCorner.x(), minCorner.y(), maxCorner.z(), //3
-
-      //-x
-      minCorner.x(), minCorner.y(), minCorner.z(),  //4
-      minCorner.x(), minCorner.y(), maxCorner.z(),  //5
-      minCorner.x(), maxCorner.y(), maxCorner.z(),  //6
-      minCorner.x(), maxCorner.y(), minCorner.z(),  //7
-
-      //-y
-      minCorner.x(), minCorner.y(), minCorner.z(),  //8
-      maxCorner.x(), minCorner.y(), minCorner.z(),  //9
-      maxCorner.x(), minCorner.y(), maxCorner.z(),  //10
-      minCorner.x(), minCorner.y(), maxCorner.z(),  //11
-
-      //x
-      maxCorner.x(), maxCorner.y(), maxCorner.z(),  //12
-      maxCorner.x(), minCorner.y(), maxCorner.z(),
-      maxCorner.x(), minCorner.y(), minCorner.z(),
-      maxCorner.x(), maxCorner.y(), minCorner.z(),  //15
-
-      //y
-      maxCorner.x(), maxCorner.y(), maxCorner.z(),  //16
-      maxCorner.x(), maxCorner.y(), minCorner.z(),
-      minCorner.x(), maxCorner.y(), minCorner.z(),
-      minCorner.x(), maxCorner.y(), maxCorner.z(),  //19
-
-      //-z
-      minCorner.x(), minCorner.y(), minCorner.z(), //20
-      minCorner.x(), maxCorner.y(), minCorner.z(),
-      maxCorner.x(), maxCorner.y(), minCorner.z(),
-      maxCorner.x(), minCorner.y(), minCorner.z() //23
-  };
-
-  const int numIndices = 36;
-  int i[numIndices] = {
-
-      //z
-      0,1,3,
-      1,2,3,
-
-      //-x
-      4,5,6,
-      6,7,4,
-
-      //-y
-      8,9,10,
-      10,11,8,
-
-      //x
-      12,13,14,
-      14,15,12,
-
-      //y
-      16,17,18,
-      18,19,16,
-
-      //-z
-      20,21,22,
-      22,23,20
-  };
-
-  //3 normal par vertex, 8 vertex, 3 float par normal -> 3*8*3 =
-  const float x0 = 1.0, x1 = 0.0, x2 = 0.0;
-  const float y0 = 0.0, y1 = 1.0, y2 = 0.0;
-  const float z0 = 0.0, z1 = 0.0, z2 = 1.0;
-  const int numNormals = 72;
-  float n[numNormals] = {
-      z0, z1, z2,
-      z0, z1, z2,
-      z0, z1, z2,
-      z0, z1, z2,
-
-      -x0, -x1, -x2,
-      -x0, -x1, -x2,
-      -x0, -x1, -x2,
-      -x0, -x1, -x2,
-
-      -y0, -y1, -y2,
-      -y0, -y1, -y2,
-      -y0, -y1, -y2,
-      -y0, -y1, -y2,
-
-      x0, x1, x2,
-      x0, x1, x2,
-      x0, x1, x2,
-      x0, x1, x2,
-
-      y0, y1, y2,
-      y0, y1, y2,
-      y0, y1, y2,
-      y0, y1, y2,
-
-      -z0, -z1, -z2,
-      -z0, -z1, -z2,
-      -z0, -z1, -z2,
-      -z0, -z1, -z2,
-  };
-
-  VertexBufferObject vbo;
-  vbo.setVertices(numVertices, v);
-  vbo.setIndices(numIndices, i);
-  vbo.setNormals(numNormals, n);
-  vbo.bake();
-  vbo.draw();
+  getRectangularPrism(iLowerLeft, iTopRight).draw();
 }
 
 
@@ -307,6 +195,131 @@ Texture get3dNoiseTexture(const Vector3i& iSize)
   r.set( noise3dTexPtr, s, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
   free(noise3dTexPtr);
   return r;
+}
+
+//-----------------------------------------------------------------------------
+VertexBufferObject getRectangularPrism(const Point3d& iLowerLeft, const Point3d& iTopRight)
+{
+	Point3d minCorner = iLowerLeft;
+	Point3d maxCorner = iTopRight;
+
+	const int numVertices = 72;
+	float v[numVertices] = {
+		//z
+		maxCorner.x(), maxCorner.y(), maxCorner.z(), //0
+		minCorner.x(), maxCorner.y(), maxCorner.z(), //1
+		minCorner.x(), minCorner.y(), maxCorner.z(), //2
+		maxCorner.x(), minCorner.y(), maxCorner.z(), //3
+
+		//-x
+		minCorner.x(), minCorner.y(), minCorner.z(),  //4
+		minCorner.x(), minCorner.y(), maxCorner.z(),  //5
+		minCorner.x(), maxCorner.y(), maxCorner.z(),  //6
+		minCorner.x(), maxCorner.y(), minCorner.z(),  //7
+
+		//-y
+		minCorner.x(), minCorner.y(), minCorner.z(),  //8
+		maxCorner.x(), minCorner.y(), minCorner.z(),  //9
+		maxCorner.x(), minCorner.y(), maxCorner.z(),  //10
+		minCorner.x(), minCorner.y(), maxCorner.z(),  //11
+
+		//x
+		maxCorner.x(), maxCorner.y(), maxCorner.z(),  //12
+		maxCorner.x(), minCorner.y(), maxCorner.z(),
+		maxCorner.x(), minCorner.y(), minCorner.z(),
+		maxCorner.x(), maxCorner.y(), minCorner.z(),  //15
+
+		//y
+		maxCorner.x(), maxCorner.y(), maxCorner.z(),  //16
+		maxCorner.x(), maxCorner.y(), minCorner.z(),
+		minCorner.x(), maxCorner.y(), minCorner.z(),
+		minCorner.x(), maxCorner.y(), maxCorner.z(),  //19
+
+		//-z
+		minCorner.x(), minCorner.y(), minCorner.z(), //20
+		minCorner.x(), maxCorner.y(), minCorner.z(),
+		maxCorner.x(), maxCorner.y(), minCorner.z(),
+maxCorner.x(), minCorner.y(), minCorner.z() //23
+	};
+
+	const int numIndices = 36;
+	int i[numIndices] = {
+
+		//z
+		0,1,3,
+		1,2,3,
+
+		//-x
+		4,5,6,
+		6,7,4,
+
+		//-y
+		8,9,10,
+		10,11,8,
+
+		//x
+		12,13,14,
+		14,15,12,
+
+		//y
+		16,17,18,
+		18,19,16,
+
+		//-z
+		20,21,22,
+		22,23,20
+	};
+
+	//3 normal par vertex, 8 vertex, 3 float par normal -> 3*8*3 =
+	const float x0 = 1.0, x1 = 0.0, x2 = 0.0;
+	const float y0 = 0.0, y1 = 1.0, y2 = 0.0;
+	const float z0 = 0.0, z1 = 0.0, z2 = 1.0;
+	const int numNormals = 72;
+	float n[numNormals] = {
+		z0, z1, z2,
+		z0, z1, z2,
+		z0, z1, z2,
+		z0, z1, z2,
+
+		-x0, -x1, -x2,
+		-x0, -x1, -x2,
+		-x0, -x1, -x2,
+		-x0, -x1, -x2,
+
+		-y0, -y1, -y2,
+		-y0, -y1, -y2,
+		-y0, -y1, -y2,
+		-y0, -y1, -y2,
+
+		x0, x1, x2,
+		x0, x1, x2,
+		x0, x1, x2,
+		x0, x1, x2,
+
+		y0, y1, y2,
+		y0, y1, y2,
+		y0, y1, y2,
+		y0, y1, y2,
+
+		-z0, -z1, -z2,
+		-z0, -z1, -z2,
+		-z0, -z1, -z2,
+		-z0, -z1, -z2,
+	};
+
+	//6 face with 4 points, 4 float per color (RGBA)
+	const int numColors = 6 * 4 * 4;
+	float c[numColors];
+	for(int i = 0; i < numColors; ++i){ c[i] = 0.5; }
+
+	VertexBufferObject vbo;
+	vbo.setVertices(numVertices, v);
+	vbo.setIndices(numIndices, i);
+	vbo.setNormals(numNormals, n);
+	vbo.setColors(numColors, c);
+	vbo.bake();
+
+	return vbo;
 }
 
 //-----------------------------------------------------------------------------

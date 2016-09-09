@@ -88,7 +88,7 @@ public:
   virtual ~Texture();
   virtual Texture& operator=(const Texture&);
   
-  virtual QByteArray asBuffer( GLenum, GLenum ) const;
+  virtual QByteArray asBuffer( GLenum iFormat, GLenum iDataType) const;
     virtual QImage asQImage() const;
   virtual Texture copy();
   virtual int depth() const;

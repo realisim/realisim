@@ -209,9 +209,9 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
       } break;
       case ctFree:
       {
-        //arbitrairement, la taille du viewport correspond a une rotation de 360        
-        double radX = deltaX * 2 * PI / (double)mCam.getViewport().getWidth();
-        double radY = deltaY * 2 * PI / (double)mCam.getViewport().getHeight();
+        //arbitrairement, la taille du viewport correspond a une rotation de 180
+        double radX = deltaX * PI / (double)mCam.getViewport().getWidth();
+        double radY = deltaY * PI / (double)mCam.getViewport().getHeight();
         
         mCam.rotate( -radX, Vector3d( 0.0, 1.0, 0.0 ), mCam.getPos() );
         mCam.rotate( -radY, mCam.getLat(),

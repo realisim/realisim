@@ -151,6 +151,12 @@ Quaterniond Matrix4::getRotationAsQuaternion() const
   return r;
 }
 //------------------------------------------------------------------------------
+Vector4d Matrix4::getRow(int iRow) const
+{
+	return Vector4d( m[iRow][0], m[iRow][1], m[iRow][2], m[iRow][3] );
+}
+
+//------------------------------------------------------------------------------
 /*La translation est dans la colonne 3*/
 Vector3d Matrix4::getTranslationAsVector() const
 { return Vector3d( m[3][0], m[3][1], m[3][2] ); }

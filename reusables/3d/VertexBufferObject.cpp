@@ -130,7 +130,7 @@ void VertexBufferObject::bakeArrays()
 
     //elements (indices)
     std::vector<int>& i = mpGuts->mIndices;
-    const int iSize = sizeof(int) * i.size();
+    const int iSize = sizeof(int) * (int)i.size();
     if (iSize > 0)
     {
         glGenBuffersARB(1, &(mpGuts->mBuffers[btElement]));
@@ -197,6 +197,17 @@ void VertexBufferObject::set2dTextureCoordinates( int iNumberOfCoords, float *ip
     {
         mpGuts->m2dTextureCoordinates[i] = ipCoords[i];
     }
+}
+
+//----------------------------------------------------------------------------
+void VertexBufferObject::setColors(int iNum, float *ipColors)
+{
+	mpGuts->mColors.clear();
+	mpGuts->mColors.resize(iNum);
+	for (int i = 0; i < iNum; ++i)
+	{
+		mpGuts->mColors[i] = ipColors[i];
+	}
 }
 
 //----------------------------------------------------------------------------

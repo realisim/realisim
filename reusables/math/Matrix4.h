@@ -119,6 +119,7 @@ public:
 
 	const double* getDataPointer() const;
   Quaterniond getRotationAsQuaternion() const;
+  Vector4d getRow(int) const;
   Vector3d getTranslationAsVector() const;
   Matrix4 inverse() const;
   Matrix4& invert();
