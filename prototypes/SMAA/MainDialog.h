@@ -57,7 +57,7 @@ private:
     virtual void resizeGL(int, int) override;
 	void resolveMsaaTo(renderTarget);
 	void saveAllSmaa1xPassToPng(int);
-	void tiltMatrix(math::Matrix4*) const;
+	void tiltMatrix(math::Matrix4*, bool iYaw, bool iPitch) const;
 
     MainDialog* mpMainDialog;
 
@@ -99,7 +99,8 @@ public:
 	renderTarget getPassToDisplay() const;
 	bool has3dControlEnabled() const {return mHas3dControlEnabled;}
 	bool hasDebugPassEnabled() const {return mHasDebugPassEnabled;}
-	bool isCameraNodding() const {return mIsCameraNodding;}
+	bool isCameraPitchNodding() const {return mIsCameraPitchNodding;}
+	bool isCameraYawNodding() const {return mIsCameraYawNodding;}
 	void updateUi();	
 	void resetSaveFboPassFlag();
 	bool shouldSaveFboPass() const;
@@ -108,7 +109,8 @@ protected slots:
 	void antiAliasingModeChanged(int);
 	void clearProfilingClicked();
 	void enable3dControlsClicked();
-	void enableCameraNodding();
+	void enableCameraPitchNodding();
+	void enableCameraYawNodding();
 	void enableDebugPassClicked();
 	void saveAllFboPass();
 
@@ -128,7 +130,8 @@ protected:
 
 	//--- camera control
 	QCheckBox* mpEnable3dControls;
-	QCheckBox* mpEnableCameraNodding;
+	QCheckBox* mpEnableCameraPitchNodding;
+	QCheckBox* mpEnableCameraYawNodding;
 
 	//--- profile info
 	QLabel* mpPerFrameStats;
@@ -138,7 +141,8 @@ protected:
     int mTimerEventId;
 	antiAliasingMode mAntiAliasingMode;
 	bool mHas3dControlEnabled;
-	bool mIsCameraNodding;
+	bool mIsCameraPitchNodding;
+	bool mIsCameraYawNodding;
 	bool mHasDebugPassEnabled;
 	int mDebugPassToDisplay;
 	bool mSaveColorFboPassToPng;

@@ -340,8 +340,7 @@ void Viewer::drawScene()
 	view = view * getJitterMatrix();
 
 	//adjust view when camera is nodding
-	if(mpMainDialog->isCameraNodding())
-	{ tiltMatrix(&view); }
+	tiltMatrix(&view, mpMainDialog->isCameraYawNodding(), mpMainDialog->isCameraPitchNodding());
 
     switch(gSceneContent)
     {
@@ -735,6 +734,7 @@ void Viewer::loadTextures()
 		mUnigine01.generateMipmap();
         mUnigine01.setMagnificationFilter(GL_LINEAR);
 		mUnigine01.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
+		//mUnigine01.setFilter(GL_LINEAR);
         mUnigine01.setWrapMode(GL_CLAMP_TO_EDGE);
 		
     }
@@ -914,19 +914,30 @@ void Viewer::saveAllSmaa1xPassToPng(int iPass)
 	mColorFbo.getColorAttachment(rtFinal_1).asQImage().save( s+" - 8 - final_1.bmp", "BMP" );
 }
 
-static double sNoddingIncrement = 0.0001;
-static double sCameraNoddingAngle = 0.0;
+static double sPitchNoddingIncrement = 0.0001;
+static double sYawNoddingIncrement = sPitchNoddingIncrement;
+static double sCameraPitchNoddingAngle = 0.0;
+static double sCameraYawNoddingAngle = 0.0;
 //-----------------------------------------------------------------------------
-void Viewer::tiltMatrix(realisim::math::Matrix4* iM) const
+void Viewer::tiltMatrix(realisim::math::Matrix4* iM, bool iYaw, bool iPitch) const
 {
 	const double maxAngle = 0.05;
-	if(sCameraNoddingAngle > maxAngle )
-		sNoddingIncrement *= -1;
-	if(sCameraNoddingAngle < -maxAngle )
-		sNoddingIncrement *= -1;
-	sCameraNoddingAngle += sNoddingIncrement;
+	if(sCameraPitchNoddingAngle > maxAngle )
+		sPitchNoddingIncrement *= -1;
+	if(sCameraPitchNoddingAngle < -maxAngle )
+		sPitchNoddingIncrement *= -1;
 
-	*iM = Matrix4(sCameraNoddingAngle, Vector3d(1.0, 0.0, 0.0 )) * (*iM);
+	if(sCameraYawNoddingAngle > maxAngle )
+		sYawNoddingIncrement *= -1;
+	if(sCameraYawNoddingAngle < -maxAngle )
+		sYawNoddingIncrement *= -1;
+
+	sCameraPitchNoddingAngle = iPitch ? sCameraPitchNoddingAngle + sPitchNoddingIncrement : 0;
+	sCameraYawNoddingAngle = iYaw ? sCameraYawNoddingAngle + sYawNoddingIncrement : 0;
+	
+
+	*iM = Matrix4(sCameraPitchNoddingAngle, Vector3d(1.0, 0.0, 0.0 )) * (*iM);
+	*iM = Matrix4(sCameraYawNoddingAngle, Vector3d(0.0, 1.0, 0.0 )) * (*iM);
 }
 
 
@@ -938,7 +949,8 @@ mpViewer(0),
 mTimerEventId(0),
 mAntiAliasingMode(aamSmaa1x),
 mHas3dControlEnabled(false),
-mIsCameraNodding(false),
+mIsCameraPitchNodding(false),
+mIsCameraYawNodding(false),
 mHasDebugPassEnabled(false),
 mDebugPassToDisplay(rtRGBA),
 mSaveColorFboPassToPng(false)
@@ -1011,11 +1023,15 @@ mSaveColorFboPassToPng(false)
 					mpEnable3dControls = new QCheckBox("Enable 3d controls", pCameraControls);
 					connect(mpEnable3dControls, SIGNAL(clicked()), this, SLOT(enable3dControlsClicked()));
 
-					mpEnableCameraNodding = new QCheckBox("Enable camera nodding", pCameraControls);
-					connect(mpEnableCameraNodding, SIGNAL(clicked()), this, SLOT(enableCameraNodding()));
+					mpEnableCameraPitchNodding = new QCheckBox("Enable camera pitch nodding", pCameraControls);
+					connect(mpEnableCameraPitchNodding, SIGNAL(clicked()), this, SLOT(enableCameraPitchNodding()));
+
+					mpEnableCameraYawNodding = new QCheckBox("Enable camera yaw nodding", pCameraControls);
+					connect(mpEnableCameraYawNodding, SIGNAL(clicked()), this, SLOT(enableCameraYawNodding()));
 
 					pL->addWidget(mpEnable3dControls);
-					pL->addWidget(mpEnableCameraNodding);
+					pL->addWidget(mpEnableCameraPitchNodding);
+					pL->addWidget(mpEnableCameraYawNodding);
 				}				
 			}
 
@@ -1132,9 +1148,16 @@ void MainDialog::enable3dControlsClicked()
 }
 
 //-----------------------------------------------------------------------------
-void MainDialog::enableCameraNodding()
+void MainDialog::enableCameraPitchNodding()
 {
-	mIsCameraNodding = mpEnableCameraNodding->isChecked();
+	mIsCameraPitchNodding = mpEnableCameraPitchNodding->isChecked();
+	updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::enableCameraYawNodding()
+{
+	mIsCameraYawNodding= mpEnableCameraYawNodding->isChecked();
 	updateUi();
 }
 
@@ -1277,7 +1300,7 @@ void MainDialog::updateUi()
     mpSceneContent->setText(sceneContent);
 
 	//--- camera control
-	mpEnableCameraNodding->setEnabled( mpEnable3dControls->isChecked() );
+	mpEnableCameraPitchNodding->setEnabled( mpEnable3dControls->isChecked() );
 
 	//--- profiling
 	stringstream iss;
