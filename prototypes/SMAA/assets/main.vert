@@ -20,7 +20,7 @@ vec4 applyModelViewProjection(mat4 iModelView, mat4 iProjection, vec3 iP);
 void main(){
 
     // Output position of the vertex, in clip space : MVP * position
-    gl_Position =  applyModelViewProjection(modelViewMatrix, projectionMatrix, vertexPosition_modelspace);   
+    gl_Position =  applyModelViewProjection(modelViewMatrix, projectionMatrix, vertexPosition_modelspace);
 
     color = vertexColor;
     UV0 = vertexUV0;

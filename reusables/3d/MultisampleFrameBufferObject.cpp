@@ -16,6 +16,7 @@ mIsValid(false),
 mWidth(1),
 mHeight(1),
 mColorAttachments(),
+mColorAttachmentInternalFormat(),
 mDepthTextureId(0),
 mMaxColorAttachment(0),
 mPreviousFrameBuffers(),
@@ -65,6 +66,7 @@ void MultisampleFrameBufferObject::clear()
 	}
 
 	mpGuts->mColorAttachments.clear();
+	mpGuts->mColorAttachmentInternalFormat.clear();
 
 	glDeleteTextures(1, & mpGuts->mDepthTextureId);
 }
@@ -83,7 +85,7 @@ MultisampleFrameBufferObject MultisampleFrameBufferObject::copy()
 	fbo.setNumberOfSamples(getNumberOfSamples());
     fbo.resize(getWidth(), getHeight());
     for (int i = 0; i < getNumColorAttachment(); ++i)
-        fbo.addColorAttachment();
+        fbo.addColorAttachment( getColorAttachmentInternalFormat(i) );
 
     if (isDepthAttachmentUsed())
         fbo.addDepthAttachment();
@@ -108,6 +110,10 @@ void MultisampleFrameBufferObject::deleteGuts()
 
 //----------------------------------------------------------------------------
 void MultisampleFrameBufferObject::addColorAttachment()
+{ addColorAttachment(GL_RGBA8); }
+
+//----------------------------------------------------------------------------
+void MultisampleFrameBufferObject::addColorAttachment(GLenum iInternalFormat)
 {
     init();
 
@@ -139,9 +145,10 @@ void MultisampleFrameBufferObject::addColorAttachment()
 	GLuint tex = 0;
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, tex);		
-	glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, getNumberOfSamples(), GL_RGBA8, getWidth(), getHeight(), hasFixedSampleLocations() );
+	glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, getNumberOfSamples(), iInternalFormat, getWidth(), getHeight(), hasFixedSampleLocations() );
 	glFramebufferTexture2D(GL_FRAMEBUFFER, e, GL_TEXTURE_2D_MULTISAMPLE, tex, 0);
 	mpGuts->mColorAttachments.push_back(tex);
+	mpGuts->mColorAttachmentInternalFormat.push_back(iInternalFormat);
 
     validate();
 
@@ -233,6 +240,31 @@ Vector2i MultisampleFrameBufferObject::getSize() const
 }
 
 //----------------------------------------------------------------------------
+void MultisampleFrameBufferObject::glClear(GLenum iClearFlags)
+{
+	GLint previousFb = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFb);
+	glBindFramebuffer(GL_FRAMEBUFFER, getFrameBufferId());
+
+	if(iClearFlags & GL_DEPTH_BUFFER_BIT)
+	{ ::glClear(GL_DEPTH_BUFFER_BIT); }
+
+	if(iClearFlags & GL_STENCIL_BUFFER_BIT)
+	{ ::glClear(GL_STENCIL_BUFFER_BIT); }
+
+	if (iClearFlags & GL_COLOR_BUFFER_BIT)
+	{
+		for (int i = 0; i < getNumColorAttachment(); ++i)
+		{
+			drawTo(i);
+			::glClear(GL_COLOR_BUFFER_BIT);
+		}
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, previousFb);
+}
+
+//----------------------------------------------------------------------------
 bool MultisampleFrameBufferObject::isDepthAttachmentUsed() const
 {
     return mpGuts->mDepthTextureId != 0;
@@ -262,7 +294,7 @@ void MultisampleFrameBufferObject::refreshColorAttachment()
 
 		glEnable(GL_TEXTURE_2D);		
 		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, texId);
-		glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, getNumberOfSamples(), GL_RGBA8, getWidth(), getHeight(), hasFixedSampleLocations() );
+		glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, getNumberOfSamples(), getColorAttachmentInternalFormat(i), getWidth(), getHeight(), hasFixedSampleLocations() );
 		glFramebufferTexture2D(GL_FRAMEBUFFER, e, GL_TEXTURE_2D_MULTISAMPLE, texId, 0);
 	}		
 	glBindTexture(GL_TEXTURE_2D, previousTex);
@@ -307,6 +339,10 @@ void MultisampleFrameBufferObject::resolveTo(int iFromColorAttachment, FrameBuff
 }
 
 //----------------------------------------------------------------------------
+/*Note: this does not work on every machine... It seems like bliting from a multisampled FBO with RGBA8
+  to the back buffer RGB8 is not always supported... Depends on the driver. an error GL_INVALID_OPERATION
+  is raised. It also explains why there is no issue with method resolveTo() when the destination FBO
+  is RGBA.*/
 void MultisampleFrameBufferObject::resolveToBackBuffer(int iFromColorAttachment)
 {
 	GLint previousFb = 0;
@@ -322,10 +358,11 @@ void MultisampleFrameBufferObject::resolveToBackBuffer(int iFromColorAttachment)
 	//write to
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   // Make sure no FBO is set as the draw framebuffer
 	glDrawBuffer(GL_BACK);                       // Set the back buffer as the draw buffer
-	glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+	glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, previousFb);
 }
+
 //----------------------------------------------------------------------------
 void MultisampleFrameBufferObject::resize(int iWidth, int iHeight)
 {

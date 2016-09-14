@@ -1,5 +1,6 @@
-#version 440 compatibility
+#version 410
 
+uniform vec4 uSubsampleIndices;
 uniform sampler2D uEdgeTex;
 uniform sampler2D uAreaTex;
 uniform sampler2D uSearchTex;
@@ -24,14 +25,13 @@ vec4 SMAABlendingWeightCalculationPS(vec2 texcoord,
 //second pass
 vec4 blendWeightCalculation()
 {
-  vec4 subSampleIndices = vec4(0.0);
   vec4 c = SMAABlendingWeightCalculationPS( UV0,
         pixCoord,
         offset,
         uEdgeTex,
         uAreaTex,
         uSearchTex,
-        subSampleIndices );
+        uSubsampleIndices );
 
   //c = vec4(1.0, 0.0, 0.0, 1.0);
   return c;

@@ -340,6 +340,41 @@ QColor idToColor(unsigned int iId)
   return QColor(r, g, b, a);
 }
 
+//------------------------------------------------------------------------------
+std::string glErrorToString(GLenum iError)
+{
+	std::string r="n/a";
+	const GLenum e = glGetError();
+	switch (iError)
+	{
+	case GL_INVALID_ENUM: r="GL_INVALID_ENUM."; break;
+	case GL_INVALID_VALUE: r="GL_INVALID_VALUE."; break;
+	case GL_INVALID_OPERATION: r="GL_INVALID_OPERATION."; break;
+	case GL_INVALID_FRAMEBUFFER_OPERATION: r="GL_INVALID_FRAMEBUFFER_OPERATION."; break;
+	case GL_OUT_OF_MEMORY: r="GL_OUT_OF_MEMORY."; break;
+	case GL_STACK_UNDERFLOW: r="GL_STACK_UNDERFLOW."; break;
+	case GL_STACK_OVERFLOW: r="GL_STACK_OVERFLOW."; break;
+	case GL_CONTEXT_LOST: r="GL_CONTEXT_LOST."; break; //opengl 4.5
+	case GL_TABLE_TOO_LARGE: r="GL_TABLE_TOO_LARGE."; break; //ARB_IMAGING
+	default: break;
+	}
+	return r;
+}
+
+//------------------------------------------------------------------------------
+bool hasGlError(std::string* iMessage)
+{
+	bool found = false;
+	GLenum err = GL_NO_ERROR;
+	while((err = glGetError()) != GL_NO_ERROR)
+	{
+		*iMessage += (*iMessage).empty() ? glErrorToString(err) : " | " + glErrorToString(err);
+		found = true;
+	}
+	return found;
+}
+
+
 
 }
 }

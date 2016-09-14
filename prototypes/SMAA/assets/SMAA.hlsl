@@ -295,15 +295,14 @@
 
 //-----------------------------------------------------------------------------
 // SMAA Presets
-#version 440
-
+#version 410
 
 #define SMAA_GLSL_4
-//#define SMAA_PRESET_HIGH
-#define SMAA_THRESHOLD 0.05
-#define SMAA_MAX_SEARCH_STEPS 16
-#define SMAA_MAX_SEARCH_STEPS_DIAG 8
-#define SMAA_CORNER_ROUNDING 25
+#define SMAA_PRESET_HIGH
+//#define SMAA_THRESHOLD 0.05
+//#define SMAA_MAX_SEARCH_STEPS 16
+//#define SMAA_MAX_SEARCH_STEPS_DIAG 8
+//#define SMAA_CORNER_ROUNDING 25
 
 /**
  * Note that if you use one of these presets, the following configuration
@@ -593,6 +592,8 @@ SamplerState PointSampler { Filter = MIN_MAG_MIP_POINT; AddressU = Clamp; Addres
 #if defined(SMAA_GLSL_4)
 #define mad(a, b, c) fma(a, b, c)
 #define SMAAGather(tex, coord) textureGather(tex, coord)
+#define SMAATexture2DMS2(tex) sampler2DMS tex
+#define SMAALoad(tex, pos, sample) texelFetch(tex, pos, sample)
 #else
 #define mad(a, b, c) (a * b + c)
 #endif

@@ -19,9 +19,9 @@
 #include <utils/Timer.h>
 #include <vector>
 
-enum antiAliasingMode { aamNoAA, aamSmaa1x, aamSmaaT2x, aamMSAA2x, aamMSAA4x, aamMSAA8x, aamMSAA16x, aamCount };
-enum renderTarget{ rtSRGB=0, rtRGB, rtEdge, rtBlendWeight, rtFinal_0,
-	rtFinal_1, rtCount};
+enum antiAliasingMode { aamNoAA, aamSmaa1x, aamSmaaT2x, aamSmaaS2x, aamSmaa4x, aamMSAA2x, aamMSAA4x, aamMSAA8x, aamMSAA16x, aamCount };
+enum renderTarget{ rtSRGBA=0, rtRGBA, rtEdge, rtBlendWeight, rtFinal_0,
+	rtFinal_1, rtSeparate_0, rtSeparate_1, rtCount};
 enum msaaRenderTarget{msaaRtSRGB=0, msaaRtCount};
 
 using namespace realisim;
@@ -40,20 +40,23 @@ private:
     int addVertexSource(treeD::Shader*, QString iFileName);	
 	void displayPass(treeD::FrameBufferObject, int);
 	void doMsaa(int iX);
-	void doNoAA();
 	void doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt);
-	void doSmaa1x(renderTarget iFinalRt);
+	void doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass = 0);
+	void doSmaaSeparate();
     void drawRectangle(int, math::Vector2d);
     void drawStillImage(int, math::Vector2d, const math::Matrix4& iView, const math::Matrix4& iProj);
     void drawScene();
+	void drawSceneToColorFbo(renderTarget);
 	math::Matrix4 getJitterMatrix() const;
-	math::Vector4d getSubsampleIndices() const;
+	math::Vector4d getSubsampleIndices(int pass) const;
     virtual void keyPressEvent(QKeyEvent*);
     void loadTextures();
     void loadShaders();
     virtual void initializeGL() override;
     virtual void paintGL() override;
     virtual void resizeGL(int, int) override;
+	void resolveMsaaTo(renderTarget);
+	void saveAllSmaa1xPassToPng(int);
 	void tiltMatrix(math::Matrix4*) const;
 
     MainDialog* mpMainDialog;
@@ -63,7 +66,8 @@ private:
     treeD::Shader mSmaaShader;
     treeD::Shader mSmaa2ndPassShader;
     treeD::Shader mSmaa3rdPassShader;
-	treeD::Shader mReprojectionShader;
+	treeD::Shader mSmaaReprojectionShader;
+	treeD::Shader mSmaaSeparateShader;
     treeD::Shader mSceneShader;
     treeD::Shader mStillImageShader;
     treeD::Shader mGammaCorrection;
@@ -96,14 +100,17 @@ public:
 	bool has3dControlEnabled() const {return mHas3dControlEnabled;}
 	bool hasDebugPassEnabled() const {return mHasDebugPassEnabled;}
 	bool isCameraNodding() const {return mIsCameraNodding;}
-	void updateUi();
+	void updateUi();	
+	void resetSaveFboPassFlag();
+	bool shouldSaveFboPass() const;
 
 protected slots:
+	void antiAliasingModeChanged(int);
 	void clearProfilingClicked();
 	void enable3dControlsClicked();
 	void enableCameraNodding();
 	void enableDebugPassClicked();
-	void antiAliasingModeChanged(int);
+	void saveAllFboPass();
 
 protected:
 	void setAntiAliasingMode(antiAliasingMode iM);
@@ -134,6 +141,7 @@ protected:
 	bool mIsCameraNodding;
 	bool mHasDebugPassEnabled;
 	int mDebugPassToDisplay;
+	bool mSaveColorFboPassToPng;
 };
 
 #endif

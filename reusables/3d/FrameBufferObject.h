@@ -86,41 +86,42 @@ namespace treeD
     public:
          FrameBufferObject();
         FrameBufferObject(const FrameBufferObject&);
-        virtual ~FrameBufferObject();
-        virtual FrameBufferObject& operator=(const FrameBufferObject&);
+        ~FrameBufferObject();
+        FrameBufferObject& operator=(const FrameBufferObject&);
 
-        virtual void addDepthAttachment();
-        virtual void addStencilAttachment();
-        virtual void addColorAttachment();
-        virtual void addColorAttachment(GLenum internalFormat, GLenum format, GLenum dataType);
-        virtual void begin();
-        virtual void clear();
-        virtual FrameBufferObject copy(); //detach voir Shader::copy  
-        virtual void drawTo(int);
-        virtual Texture getColorAttachment(int) const;
-        virtual Texture getDepthAttachment() const { return mpGuts->mDepthTexture; }
-        virtual GLuint getFrameBufferId() const { return mpGuts->mFrameBufferId; }
-        virtual int getHeight() const { return mpGuts->mHeight; }
-        virtual int getNumColorAttachment() const { return (int)mpGuts->mColorAttachments.size(); }
-        virtual QImage getImageFrom(int) const;
-        virtual math::Vector2i getSize() const;
-        virtual int getWidth() const { return mpGuts->mWidth; }
-        virtual void end();
-        virtual bool isValid() const;
+        void addDepthAttachment();
+        void addStencilAttachment();
+        void addColorAttachment();
+        void addColorAttachment(GLenum internalFormat, GLenum format, GLenum dataType);
+        void begin();
+        void clear();
+        FrameBufferObject copy(); //detach voir Shader::copy  
+        void drawTo(int);
+		void end();
+        Texture getColorAttachment(int) const;
+        Texture getDepthAttachment() const { return mpGuts->mDepthTexture; }
+        GLuint getFrameBufferId() const { return mpGuts->mFrameBufferId; }
+        int getHeight() const { return mpGuts->mHeight; }
+        int getNumColorAttachment() const { return (int)mpGuts->mColorAttachments.size(); }
+        QImage getImageFrom(int) const;
+        math::Vector2i getSize() const;
+        int getWidth() const { return mpGuts->mWidth; }
+        void glClear(GLenum);
+        bool isValid() const;
         //virtual void removeColorAttachment(int);
         //virtual void removeDepthAttachment();
         //virtual void removeStencilAttachment();
-        virtual void resize(int, int);
-        virtual void resize(math::Vector2i);
+        void resize(int, int);
+        void resize(math::Vector2i);
 
     protected:
-        virtual void init();
-        virtual bool isColorAttachmentUsed() const { return !mpGuts->mColorAttachments.empty(); }
-        virtual bool isDepthAttachmentUsed() const;
-        virtual bool isStencilAttachmentUsed() const { return mpGuts->mStencilRenderBufferId != 0; }
-        virtual GLuint getStencilRenderBufferId() const { return mpGuts->mStencilRenderBufferId; }
-        virtual int getMaxColorAttachment() const { return mpGuts->mMaxColorAttachment; }
-        virtual void validate();
+        void init();
+        bool isColorAttachmentUsed() const { return !mpGuts->mColorAttachments.empty(); }
+        bool isDepthAttachmentUsed() const;
+        bool isStencilAttachmentUsed() const { return mpGuts->mStencilRenderBufferId != 0; }
+        GLuint getStencilRenderBufferId() const { return mpGuts->mStencilRenderBufferId; }
+        int getMaxColorAttachment() const { return mpGuts->mMaxColorAttachment; }
+        void validate();
 
         struct Guts
         {
@@ -138,9 +139,9 @@ namespace treeD
             unsigned int mRefCount;
         };
 
-        virtual void deleteGuts();
-        virtual void makeGuts();
-        virtual void shareGuts(Guts*);
+        void deleteGuts();
+        void makeGuts();
+        void shareGuts(Guts*);
 
         Guts* mpGuts;
     };

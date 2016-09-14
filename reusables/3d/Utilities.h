@@ -61,6 +61,10 @@ namespace treeD
   Texture get3dNoiseTexture(const Vector3i&);
   VertexBufferObject getRectangularPrism(const Point3d& , const Point3d&);
   QColor idToColor(unsigned int);
+
+  //gl error detection
+  bool hasGlError(std::string*);
+
 }//treeD
 }//realisim
 

@@ -1,7 +1,8 @@
-#version 440 compatibility
+#version 410
 
 uniform sampler2D uColorTex;
 uniform sampler2D uBlendTex;
+uniform float uBlendFactor;
 
 // Interpolated values from the vertex shaders
 in vec4 color;
@@ -9,6 +10,9 @@ in vec2 UV0;
 in vec4 offset;
 
 out vec4 frag_color;
+
+//--- forward declare for utilities.frag
+vec4 applyGamma(in vec4);
 
 //--- Forward declaration for SMAA.hlsl
 vec4 SMAANeighborhoodBlendingPS( vec2 texcoord,
@@ -42,5 +46,6 @@ void main()
 
     
     //frag_color = vec4( 0.0, 1.0, 0.0, 1.0 );
-    frag_color = c;
+    frag_color = applyGamma(c);
+    frag_color.a *= uBlendFactor;
 }

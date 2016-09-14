@@ -30,13 +30,15 @@ namespace treeD
         MultisampleFrameBufferObject& operator=(const MultisampleFrameBufferObject&);
 
         void addDepthAttachment();
-        void addColorAttachment();
+		void addColorAttachment();
+		void addColorAttachment(GLenum iInternalFormat);
         void begin();
         void clear();
         MultisampleFrameBufferObject copy(); //detach voir Shader::copy  
         void drawTo(int);
 		void end();
 		GLuint getColorAttachmentId(int) const;
+		GLenum getColorAttachmentInternalFormat(int i) const {return mpGuts->mColorAttachmentInternalFormat[i];}
         GLuint getDepthAttachmentId() const { return mpGuts->mDepthTextureId; }
         GLuint getFrameBufferId() const { return mpGuts->mFrameBufferId; }
         int getHeight() const { return mpGuts->mHeight; }
@@ -44,6 +46,7 @@ namespace treeD
 		int getNumberOfSamples() const {return mpGuts->mNumberOfSamples; }
         math::Vector2i getSize() const;
         int getWidth() const { return mpGuts->mWidth; }
+		void glClear(GLenum);
 		bool hasFixedSampleLocations() const {return mpGuts->mHasFixedSampleLocations;}      
         bool isValid() const;
         //virtual void removeColorAttachment(int);
@@ -73,6 +76,7 @@ namespace treeD
             int mWidth;
             int mHeight;
             vector<GLuint> mColorAttachments;
+			vector<GLenum> mColorAttachmentInternalFormat;
 			GLuint mDepthTextureId;
             int mMaxColorAttachment;
             vector<GLuint> mPreviousFrameBuffers;

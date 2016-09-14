@@ -284,6 +284,31 @@ Vector2i FrameBufferObject::getSize() const
 }
 
 //----------------------------------------------------------------------------
+void FrameBufferObject::glClear(GLenum iClearFlags)
+{
+	GLint previousFb = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFb);
+	glBindFramebuffer(GL_FRAMEBUFFER, getFrameBufferId());
+
+	if(iClearFlags & GL_DEPTH_BUFFER_BIT)
+	{ ::glClear(GL_DEPTH_BUFFER_BIT); }
+
+	if(iClearFlags & GL_STENCIL_BUFFER_BIT)
+	{ ::glClear(GL_STENCIL_BUFFER_BIT); }
+
+	if (iClearFlags & GL_COLOR_BUFFER_BIT)
+	{
+		for (int i = 0; i < getNumColorAttachment(); ++i)
+		{
+			drawTo(i);
+			::glClear(GL_COLOR_BUFFER_BIT);
+		}
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, previousFb);
+}
+
+//----------------------------------------------------------------------------
 bool FrameBufferObject::isDepthAttachmentUsed() const
 {
     return mpGuts->mDepthTexture.getId() != 0;

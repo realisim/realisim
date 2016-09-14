@@ -1,6 +1,6 @@
-#version 440
+#version 410
 
-uniform sampler2D uOffScreen;
+uniform sampler2D uColorTex;
 
 // Interpolated values from the vertex shaders
 in vec4 color;
@@ -9,10 +9,11 @@ in vec2 UV0;
 // Ouput data
 out vec4 frag_color;
 
+// forward declare from utilities.frag
+vec4 applyGamma(in vec4 c);
+
 void main()
 {
-    // apply gamma correction
-    float gamma = 2.1;
-    vec4 c = texture(uOffScreen, UV0);
-    frag_color = vec4(pow(c.rgb, vec3(1.0/gamma)), c.a);
+    vec4 c = texture(uColorTex, UV0);
+    frag_color = applyGamma(c);
 }
