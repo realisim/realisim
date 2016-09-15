@@ -615,21 +615,8 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
   }
   else
   {
-    int wheelDir = ipE->delta() > 0 ? 1.0 : -1.0;
-    Camera c = getCamera();
-    Vector3d lookDirection(c.getPos(), c.getLook());
-    
-    double logLook = log(lookDirection.fastNorm());
-    Point3d p = getCamera().getPos() +
-      lookDirection.normalise() * logLook * 0.8 * wheelDir;
-      
-    if( Vector3d(p, c.getLook()).norm() >= 1.0 )
-    {
-      c.set( p, c.getLook(), c.getUp() );
-      setCamera(c, false);
-//      printf("\n\nLook: %3.2f, %3.2f, %3.2f", c.getLook().x(), c.getLook().y(), c.getLook().z());
-//      printf("\nPos: %3.2f, %3.2f, %3.2f", p.x(), p.y(), p.z());
-    }
+	  double wheelDir = ipE->delta() > 0 ? 2.0 : 0.5;
+	  setCameraSpeed( max(getCameraSpeed() * wheelDir, 0.0078125) );
   }
 
   update();

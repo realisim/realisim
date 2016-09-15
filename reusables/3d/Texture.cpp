@@ -7,17 +7,18 @@ using namespace realisim;
   using namespace treeD;
 
 Texture::Guts::Guts() : mTextureId(0),
-  mSize(2, 1), //init size at 1 by 1
-  mType(tInvalid),
-  mFormat(GL_RGBA),
-  mInternalFormat(GL_RGBA8),
-  mDataType(GL_UNSIGNED_BYTE),
-  mMinificationFilter(GL_NEAREST),
-  mMagnificationFilter(GL_NEAREST),
-  mWrapSMode( GL_REPEAT ),
-  mWrapTMode( GL_REPEAT ),
-  mWrapRMode( GL_REPEAT ),
-  mRefCount(1)
+	mSize(2, 1), //init size at 1 by 1
+	mType(tInvalid),
+	mFormat(GL_RGBA),
+	mInternalFormat(GL_RGBA8),
+	mDataType(GL_UNSIGNED_BYTE),
+	mMinificationFilter(GL_NEAREST),
+	mMagnificationFilter(GL_NEAREST),
+	mWrapSMode(GL_REPEAT),
+	mWrapTMode(GL_REPEAT),
+	mWrapRMode(GL_REPEAT),
+	mHasMipMaps(false),
+	mRefCount(1)
 {}
 
 //---
@@ -154,27 +155,56 @@ void Texture::deleteGuts()
 }
 
 //----------------------------------------------------------------------------
-void Texture::generateMipmap()
+void Texture::generateMipmap(bool iUseMipMap)
 { 
-    GLint previousId = 0;
-    switch( getType() )
-  {
-    case t2d:
-      glEnable(GL_TEXTURE_2D);
-      glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);
-      glBindTexture(GL_TEXTURE_2D, getId());
-      glGenerateMipmap(GL_TEXTURE_2D);
-      glBindTexture(GL_TEXTURE_2D, previousId);
-    break;
-    case t3d:
-      glEnable(GL_TEXTURE_3D);
-      glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);
-      glBindTexture(GL_TEXTURE_3D, getId());
-      glGenerateMipmapEXT(GL_TEXTURE_3D);
-      glBindTexture(GL_TEXTURE_3D, previousId);
-    break;
-      default: break;
-  }
+	GLint previousId = 0;
+	mpGuts->mHasMipMaps = iUseMipMap;
+	switch (getType())
+	{
+	case t2d:
+		glEnable(GL_TEXTURE_2D);
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);
+		if (hasMipMaps())
+		{
+			glBindTexture(GL_TEXTURE_2D, getId());
+			glGenerateMipmap(GL_TEXTURE_2D);			
+		}
+		else
+		{
+			//destroy the texture and realocate it. Seems it is the only way
+			//to get rid of mimaps
+			QByteArray data = asBuffer(getFormat(), getDataType());
+			glDeleteTextures(1, &mpGuts->mTextureId);
+			mpGuts->mTextureId = 0;
+
+			Vector2i s(width(),height());
+			set( (void*)data.constData(), s, getInternalFormat(), getFormat(), getDataType() );
+		}
+		glBindTexture(GL_TEXTURE_2D, previousId);
+		break;
+	case t3d:
+		glEnable(GL_TEXTURE_3D);
+		glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);
+		if (hasMipMaps())
+		{
+			glBindTexture(GL_TEXTURE_3D, getId());
+			glGenerateMipmapEXT(GL_TEXTURE_3D);
+		}
+		else
+		{
+			//destroy the texture and realocate it. Seems it is the only way
+			//to get rid of mimaps
+			QByteArray data = asBuffer(getFormat(), getDataType());
+			glDeleteTextures(1, &mpGuts->mTextureId);
+			mpGuts->mTextureId = 0;
+
+			Vector3i s(width(), height(), depth());
+			set( (void*)data.constData(), s, getInternalFormat(), getFormat(), getDataType() );
+		}
+		glBindTexture(GL_TEXTURE_3D, previousId);
+		break;
+	default: break;
+	}
 }
 
 //----------------------------------------------------------------------------

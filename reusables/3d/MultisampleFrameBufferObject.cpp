@@ -292,7 +292,7 @@ void MultisampleFrameBufferObject::refreshColorAttachment()
 		const GLuint texId = mpGuts->mColorAttachments[i];
 		GLenum e = GL_COLOR_ATTACHMENT0 + i;        
 
-		glEnable(GL_TEXTURE_2D);		
+		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, texId);
 		glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, getNumberOfSamples(), getColorAttachmentInternalFormat(i), getWidth(), getHeight(), hasFixedSampleLocations() );
 		glFramebufferTexture2D(GL_FRAMEBUFFER, e, GL_TEXTURE_2D_MULTISAMPLE, texId, 0);

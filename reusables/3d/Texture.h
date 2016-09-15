@@ -85,47 +85,48 @@ public:
   
   Texture();
   Texture(const Texture&);
-  virtual ~Texture();
-  virtual Texture& operator=(const Texture&);
+  ~Texture();
+  Texture& operator=(const Texture&);
   
-  virtual QByteArray asBuffer( GLenum iFormat, GLenum iDataType) const;
-    virtual QImage asQImage() const;
-  virtual Texture copy();
-  virtual int depth() const;
-//virtual void fromBinary() const; voir spriteCatalog
-  virtual void generateMipmap();
-  virtual GLenum getDataType() const {return mpGuts->mDataType;}
-  virtual GLenum getFormat() const {return mpGuts->mFormat;}
-  virtual GLenum getInternalFormat() const { return mpGuts->mInternalFormat; }
-  virtual GLenum getMagnificationFilter() const;
-  virtual GLenum getMinificationFilter() const;      
-  virtual GLuint getId() const {return mpGuts->mTextureId;}
-  virtual type getType() const {return mpGuts->mType;}
-  virtual GLenum getWrapSMode() const;
-  virtual GLenum getWrapTMode() const;
-  virtual GLenum getWrapRMode() const;
-  virtual int height() const;
-  virtual bool isValid() const;
-  virtual void resize( const std::vector<int>& );
-  virtual void resize( int, int );
-  virtual void resize( int, int, int );
-  virtual void set( QImage, GLenum internalFormat, GLenum format, GLenum dataType);
-  virtual void set( void*, const math::Vector2i&, GLenum internalFormat, GLenum format, GLenum dataType);
-  virtual void set( void*, const math::Vector3i&, GLenum internalFormat, GLenum format, GLenum dataType );
-  virtual void set( void*, const std::vector<int>&, GLenum internalFormat, GLenum format, GLenum dataType);
-  virtual void setFilter( GLenum );
-  virtual void setFilter( GLenum, GLenum );
-  virtual void setMinificationFilter( GLenum );
-  virtual void setMagnificationFilter( GLenum );
-  virtual void setWrapMode( GLenum );
-  virtual void setWrapMode( GLenum, GLenum );
-  virtual void setWrapMode( GLenum, GLenum, GLenum );
-  virtual void setWrapSMode( GLenum );
-  virtual void setWrapTMode( GLenum );
-  virtual void setWrapRMode( GLenum );
-  virtual const std::vector<int>& size() const;
-//virtual void toBinary() const; voir spriteCatalog
-  virtual int width() const;
+  QByteArray asBuffer( GLenum iFormat, GLenum iDataType) const;
+    QImage asQImage() const;
+  Texture copy();
+  int depth() const;
+//void fromBinary() const; voir spriteCatalog
+  void generateMipmap(bool);
+  GLenum getDataType() const {return mpGuts->mDataType;}
+  GLenum getFormat() const {return mpGuts->mFormat;}
+  GLenum getInternalFormat() const { return mpGuts->mInternalFormat; }
+  GLenum getMagnificationFilter() const;
+  GLenum getMinificationFilter() const;      
+  GLuint getId() const {return mpGuts->mTextureId;}
+  type getType() const {return mpGuts->mType;}
+  GLenum getWrapSMode() const;
+  GLenum getWrapTMode() const;
+  GLenum getWrapRMode() const;
+  bool hasMipMaps() const {return mpGuts->mHasMipMaps;}
+  int height() const;
+  bool isValid() const;
+  void resize( const std::vector<int>& );
+  void resize( int, int );
+  void resize( int, int, int );
+  void set( QImage, GLenum internalFormat, GLenum format, GLenum dataType);
+  void set( void*, const math::Vector2i&, GLenum internalFormat, GLenum format, GLenum dataType);
+  void set( void*, const math::Vector3i&, GLenum internalFormat, GLenum format, GLenum dataType );
+  void set( void*, const std::vector<int>&, GLenum internalFormat, GLenum format, GLenum dataType);
+  void setFilter( GLenum );
+  void setFilter( GLenum, GLenum );
+  void setMinificationFilter( GLenum );
+  void setMagnificationFilter( GLenum );
+  void setWrapMode( GLenum );
+  void setWrapMode( GLenum, GLenum );
+  void setWrapMode( GLenum, GLenum, GLenum );
+  void setWrapSMode( GLenum );
+  void setWrapTMode( GLenum );
+  void setWrapRMode( GLenum );
+  const std::vector<int>& size() const;
+//void toBinary() const; voir spriteCatalog
+  int width() const;
   
 protected:
   struct Guts
@@ -143,16 +144,17 @@ protected:
     GLenum mWrapSMode;
     GLenum mWrapTMode;
     GLenum mWrapRMode;
+	bool mHasMipMaps;
     unsigned int mRefCount;
   };
   
-  virtual void deleteGuts();  
-  virtual void makeGuts();
-  virtual void setDataType(GLenum iT) {mpGuts->mDataType = iT;}
-  virtual void setFormat(GLenum iF) {mpGuts->mFormat = iF;}
-  virtual void setInternalFormat(GLenum iF) { mpGuts->mInternalFormat = iF; }
-  virtual void setType(type iT) {mpGuts->mType = iT;}
-  virtual void shareGuts(Guts*);
+  void deleteGuts();  
+  void makeGuts();
+  void setDataType(GLenum iT) {mpGuts->mDataType = iT;}
+  void setFormat(GLenum iF) {mpGuts->mFormat = iF;}
+  void setInternalFormat(GLenum iF) { mpGuts->mInternalFormat = iF; }
+  void setType(type iT) {mpGuts->mType = iT;}
+  void shareGuts(Guts*);
 
   Guts* mpGuts;
 };

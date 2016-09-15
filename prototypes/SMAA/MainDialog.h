@@ -7,6 +7,7 @@
 #include "3d/MultisampleFrameBufferObject.h"
 #include "3d/Shader.h"
 #include "3d/Texture.h"
+#include <3d/VertexBufferObject.h>
 #include "3d/Widget3d.h"
 
 #include <QCheckBox>
@@ -50,8 +51,9 @@ private:
 	math::Matrix4 getJitterMatrix() const;
 	math::Vector4d getSubsampleIndices(int pass) const;
     virtual void keyPressEvent(QKeyEvent*);
+	void loadShaders();
     void loadTextures();
-    void loadShaders();
+	void loadVbos();
     virtual void initializeGL() override;
     virtual void paintGL() override;
     virtual void resizeGL(int, int) override;
@@ -69,18 +71,20 @@ private:
 	treeD::Shader mSmaaReprojectionShader;
 	treeD::Shader mSmaaSeparateShader;
     treeD::Shader mSceneShader;
-    treeD::Shader mStillImageShader;
+    treeD::Shader mOneTextureShader;
     treeD::Shader mGammaCorrection;
     treeD::Texture mSmaaAreaTexture;
     treeD::Texture mSmaaSearchTexture;
     treeD::Texture mUnigine01;
     treeD::Texture mUnigine02;
-    treeD::Texture mMandelbrot;
+	treeD::Texture mTextureGrid;
+	treeD::VertexBufferObject mTexturedGridVbo;
 
 	int mFrameIndex;
 	utils::Timer mInterFrameTimer;
 	utils::Statistics mTimePerFrameStats;
 	utils::Statistics mTimeInterFrameStats;
+	utils::Statistics mTimeToAntialias;
 		
 	math::Matrix4 mPreviousWorldView;
 	math::Matrix4 mPreviousWorldProj;
@@ -99,6 +103,7 @@ public:
 	renderTarget getPassToDisplay() const;
 	bool has3dControlEnabled() const {return mHas3dControlEnabled;}
 	bool hasDebugPassEnabled() const {return mHasDebugPassEnabled;}
+	bool hasShading() const {return mHasShading;}
 	bool isCameraPitchNodding() const {return mIsCameraPitchNodding;}
 	bool isCameraYawNodding() const {return mIsCameraYawNodding;}
 	void updateUi();	
@@ -107,14 +112,17 @@ public:
 
 protected slots:
 	void antiAliasingModeChanged(int);
+	void applyShadingClicked();
 	void clearProfilingClicked();
 	void enable3dControlsClicked();
 	void enableCameraPitchNodding();
 	void enableCameraYawNodding();
 	void enableDebugPassClicked();
 	void saveAllFboPass();
+	void useMipMapsClicked();
 
 protected:
+	treeD::Texture getTextureFromSceneContent();
 	void setAntiAliasingMode(antiAliasingMode iM);
 	QString toQString(antiAliasingMode) const;
     virtual void timerEvent(QTimerEvent*) override;
@@ -127,6 +135,8 @@ protected:
 	QCheckBox *mpDebugPassEnabled;
     QLabel* mpPassDisplayed;
     QLabel* mpSceneContent;
+	QCheckBox* mpUseMipmaps;
+	QCheckBox* mpApplyShading;
 
 	//--- camera control
 	QCheckBox* mpEnable3dControls;
@@ -136,6 +146,7 @@ protected:
 	//--- profile info
 	QLabel* mpPerFrameStats;
 	QLabel* mpInterFrameStats;
+	QLabel* mpTimeToAntialias;
 
     //--- data
     int mTimerEventId;
@@ -146,6 +157,7 @@ protected:
 	bool mHasDebugPassEnabled;
 	int mDebugPassToDisplay;
 	bool mSaveColorFboPassToPng;
+	bool mHasShading;
 };
 
 #endif

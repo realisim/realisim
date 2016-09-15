@@ -310,7 +310,7 @@ maxCorner.x(), minCorner.y(), minCorner.z() //23
 	//6 face with 4 points, 4 float per color (RGBA)
 	const int numColors = 6 * 4 * 4;
 	float c[numColors];
-	for(int i = 0; i < numColors; ++i){ c[i] = 0.5; }
+	for(int i = 0; i < numColors; ++i){ c[i] = 0.6f; }
 
 	VertexBufferObject vbo;
 	vbo.setVertices(numVertices, v);
