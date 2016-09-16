@@ -223,8 +223,6 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
   
   mMousePosX = e->x();
   mMousePosY = e->y();
-
-  update();
 }
 
 //-----------------------------------------------------------------------------
@@ -436,20 +434,6 @@ Widget3d::setCamera( const Camera& iCam, bool iAnimate /*= true*/,
 }
 
 //-----------------------------------------------------------------------------
-//void Widget3d::setCameraMode( Camera::Mode iMode )
-//{
-//  mCam.setMode( iMode );
-//  update();
-//}
-
-//-----------------------------------------------------------------------------
-//void Widget3d::setCameraOrientation( Camera::Orientation iO )
-//{
-//  mCam.setOrientation( iO );
-//  update();
-//}
-
-//-----------------------------------------------------------------------------
 void Widget3d::setControlType( controlType iT )
 { mControlType = iT; }
 
@@ -618,6 +602,4 @@ void Widget3d::wheelEvent(QWheelEvent* ipE)
 	  double wheelDir = ipE->delta() > 0 ? 2.0 : 0.5;
 	  setCameraSpeed( max(getCameraSpeed() * wheelDir, 0.0078125) );
   }
-
-  update();
 }

@@ -49,11 +49,6 @@ public:
   virtual void setCamera( const Camera& iCam, bool iAnimate = true, int iDuration = 1000 );
   virtual void setCameraSpeed( double iS ) { mCameraSpeed = iS; }
   virtual void setControlType( controlType );
-//void setCameraMode( Camera::Mode iMode );
-//virtual void setCameraOrientation( Camera::Orientation iO );
-  
-//signals:
-//    void clicked();
 
 protected:
 	virtual void beginFrame();

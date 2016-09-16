@@ -79,6 +79,7 @@ private:
     treeD::Texture mUnigine02;
 	treeD::Texture mTextureGrid;
 	treeD::VertexBufferObject mTexturedGridVbo;
+    treeD::VertexBufferObject mMillionsOfPolygonVbo;
 
 	int mFrameIndex;
 	utils::Timer mInterFrameTimer;
@@ -106,6 +107,7 @@ public:
 	bool hasShading() const {return mHasShading;}
 	bool isCameraPitchNodding() const {return mIsCameraPitchNodding;}
 	bool isCameraYawNodding() const {return mIsCameraYawNodding;}
+    bool isWireFrameShown() const {return mIsWireFrameShown; }
 	void updateUi();	
 	void resetSaveFboPassFlag();
 	bool shouldSaveFboPass() const;
@@ -119,6 +121,7 @@ protected slots:
 	void enableCameraYawNodding();
 	void enableDebugPassClicked();
 	void saveAllFboPass();
+    void showWireFrameClicked();
 	void useMipMapsClicked();
 
 protected:
@@ -137,6 +140,7 @@ protected:
     QLabel* mpSceneContent;
 	QCheckBox* mpUseMipmaps;
 	QCheckBox* mpApplyShading;
+    QCheckBox* mpShowWireFrame;
 
 	//--- camera control
 	QCheckBox* mpEnable3dControls;
@@ -158,6 +162,7 @@ protected:
 	int mDebugPassToDisplay;
 	bool mSaveColorFboPassToPng;
 	bool mHasShading;
+    bool mIsWireFrameShown;
 };
 
 #endif

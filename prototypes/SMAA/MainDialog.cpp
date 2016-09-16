@@ -21,7 +21,7 @@ using namespace treeD;
 
 namespace
 {
-    enum sceneContent { scGeometricGrid = 0, scTexturedGrid, scUnigine01, scUnigine02, scContentCount };
+    enum sceneContent { scGeometricGrid = 0, scTexturedGrid, scMillionsOfPolygons, scUnigine01, scUnigine02, scContentCount };
     sceneContent gSceneContent = scGeometricGrid;
 }
 
@@ -330,6 +330,9 @@ void Viewer::drawScene()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    if( mpMainDialog->isWireFrameShown())
+    { glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); }    
+
     //--- get view and projection matrices for the scene
     // here a jitter is added depending on the antiAliasingMode
     ScreenSpaceProjection sp(getCamera().getViewport().getSize());
@@ -352,6 +355,7 @@ void Viewer::drawScene()
         mSceneShader.begin();
         mSceneShader.setUniform("uApplyShading", mpMainDialog->hasShading());
         mSceneShader.setUniform("projectionMatrix", proj);
+        mSceneShader.setUniform("uUseTexture", false);
 
         /*mSceneShader.setUniform("modelViewMatrix", view);
         mSceneShader.setUniform("normalMatrix", (view.inverse()).transpose() );
@@ -402,6 +406,23 @@ void Viewer::drawScene()
 
         mOneTextureShader.end();
     }break;
+    case scMillionsOfPolygons:
+    {
+        mSceneShader.begin();
+        mSceneShader.setUniform("uApplyShading", mpMainDialog->hasShading());
+        mSceneShader.setUniform("projectionMatrix", proj);
+        mSceneShader.setUniform("modelViewMatrix", view);
+        mSceneShader.setUniform("normalMatrix", (view.inverse()).transpose());
+        mSceneShader.setUniform("uUseTexture", true);
+        mSceneShader.setUniform("uAlbedo", 0);
+
+        glEnable(GL_TEXTURE_2D);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, mTextureGrid.getId());
+        mMillionsOfPolygonVbo.draw();
+        glBindTexture(GL_TEXTURE_2D, 0);
+        mSceneShader.end();
+    } break;
     case scUnigine01: //uEngine test image 1
     {
         Vector2d size(mUnigine01.width(), mUnigine01.height());
@@ -416,6 +437,9 @@ void Viewer::drawScene()
 
     default: break;
     }
+
+    if( mpMainDialog->isWireFrameShown())
+    { glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); }
 
     mPreviousWorldView = view;
     mPreviousWorldProj = proj;
@@ -573,7 +597,6 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
     case Qt::Key_F5: loadShaders(); break;
     default: Widget3d::keyPressEvent(ipE); break;
     }
-    update();
     mpMainDialog->updateUi();
 }
 
@@ -685,7 +708,7 @@ void Viewer::loadShaders()
         mSceneShader.setName("Scene shader");
         addVertexSource(&mSceneShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mSceneShader, cwd + "/../assets/main.vert");
-        addFragmentSource(&mSceneShader, cwd + "/../assets/untexturedMaterial.frag");
+        addFragmentSource(&mSceneShader, cwd + "/../assets/shadedMaterial.frag");
         mSceneShader.link();
     }
 
@@ -783,31 +806,118 @@ void Viewer::loadTextures()
 //-----------------------------------------------------------------------------
 void Viewer::loadVbos()
 {
+    //--------------------------
     //--- textured grid
-    const double kRectHalfSize = 75000; //75km
+    {
+        const double kRectHalfSize = 75000; //75km
 
-    float v[12] = {
-        -kRectHalfSize, 0.0f, kRectHalfSize,
-        kRectHalfSize, 0.0f, kRectHalfSize,
-        kRectHalfSize, 0.0f, -kRectHalfSize,
-        -kRectHalfSize, 0.0f, -kRectHalfSize };
+        float v[12] = {
+            -kRectHalfSize, 0.0f, kRectHalfSize,
+            kRectHalfSize, 0.0f, kRectHalfSize,
+            kRectHalfSize, 0.0f, -kRectHalfSize,
+            -kRectHalfSize, 0.0f, -kRectHalfSize };
 
-    int i[6] = {
-        0, 1, 3,
-        1, 2, 3 };
+        int i[6] = {
+            0, 1, 3,
+            1, 2, 3 };
 
-    const double kNumRepeat = 400;
-    float t[8] = {
-        0.0, 0.0,
-        kNumRepeat, 0.0,
-        kNumRepeat, kNumRepeat,
-        0.0, kNumRepeat
-    };
+        const double kNumRepeat = 400;
+        float t[8] = {
+            0.0, 0.0,
+            kNumRepeat, 0.0,
+            kNumRepeat, kNumRepeat,
+            0.0, kNumRepeat
+        };
 
-    mTexturedGridVbo.setVertices(12, v);
-    mTexturedGridVbo.setIndices(6, i);
-    mTexturedGridVbo.set2dTextureCoordinates(8, t);
-    mTexturedGridVbo.bake();
+        mTexturedGridVbo.setVertices(12, v);
+        mTexturedGridVbo.setIndices(6, i);
+        mTexturedGridVbo.set2dTextureCoordinates(8, t);
+        mTexturedGridVbo.bake();
+    }
+    
+
+    //--------------------------
+    //--- millions of polygon
+    {
+        const int kNumQuadPerSide = 1000;
+        const double kRadius = 200;
+        const int kNumVertexPerSide = kNumQuadPerSide + 1;
+        const double kIncrementPerVertex = 2.0;
+
+        //each vertex has 3 floats.
+        const int kNumVertices = kNumVertexPerSide * kNumVertexPerSide * 3;
+        float *vertices = new float[kNumVertices];
+
+        //one quad requires 6 index, because 2 triangles
+        const int kNumIndices = kNumQuadPerSide * kNumQuadPerSide * 6;
+        int *indices = new int[kNumIndices];
+
+        //one normal per vertex, 3 floats per normal
+        const int kNumNormals = kNumVertexPerSide * kNumVertexPerSide * 3;
+        float *normals = new float[kNumNormals];
+
+        const int kNumTextureCoords = kNumVertexPerSide * kNumVertexPerSide * 2;
+        float *texCoords = new float[kNumTextureCoords];
+
+        //add all vertex and translate a bit so the origin is in the middle of the patch
+        for (int j = 0; j < kNumVertexPerSide; ++j)
+        {
+            for (int i = 0; i < kNumVertexPerSide; ++i)
+            {
+                //add a vertex
+                Vector3d a0( i * kIncrementPerVertex, kRadius, j * kIncrementPerVertex );
+                a0 += Vector3d( -(kNumQuadPerSide/2.0)*kIncrementPerVertex, 0, -(kNumQuadPerSide/2.0)*kIncrementPerVertex );
+                a0.normalise();
+                a0 *= kRadius;
+                //translate back to origin
+                a0 += Vector3d(0, -kRadius, 0);
+                
+                const int vIndex = (j*kNumVertexPerSide*3) + i*3;
+                vertices[vIndex + 0] = a0.x();
+                vertices[vIndex + 1] = a0.y();
+                vertices[vIndex + 2] = a0.z();
+
+                normals[vIndex + 0] = a0.x();
+                normals[vIndex + 1] = a0.y();
+                normals[vIndex + 2] = a0.z();
+
+                const int kNumTexRepeat = 400;
+                const int tIndex = (j*kNumVertexPerSide*2) + i*2;;
+                texCoords[tIndex + 0] = i/(double)kNumVertexPerSide * kNumTexRepeat;
+                texCoords[tIndex + 1] = j/(double)kNumVertexPerSide * kNumTexRepeat;
+            }
+        }
+
+        //perform mesh indices
+        for(int j = 0; j < kNumQuadPerSide; ++j)
+            for(int i = 0; i < kNumQuadPerSide; ++i)
+            {
+                //2 triangles per quad
+                const int index0 = j*kNumQuadPerSide*2*3 + i*2*3;
+                const int index1 = index0 + 3 ;
+
+                //triangle 0
+                indices[ index0 + 0 ] = j*kNumVertexPerSide + i;
+                indices[ index0 + 1 ] = (j+1)*kNumVertexPerSide + i;
+                indices[ index0 + 2 ] = j*kNumVertexPerSide + (i+1);
+
+                //triangle 1
+                indices[ index1 + 0 ] = (j+1)*kNumVertexPerSide + i;
+                indices[ index1 + 1 ] = (j+1)*kNumVertexPerSide + (i+1);
+                indices[ index1 + 2 ] = j*kNumVertexPerSide + (i+1);
+            }
+
+        mMillionsOfPolygonVbo.setVertices(kNumVertices, vertices);
+        mMillionsOfPolygonVbo.setIndices(kNumIndices, indices);
+        mMillionsOfPolygonVbo.setNormals(kNumNormals, normals);
+        mMillionsOfPolygonVbo.set2dTextureCoordinates(kNumTextureCoords, texCoords);
+        mMillionsOfPolygonVbo.bake();
+
+        delete[] vertices;
+        delete[] indices;
+        delete[] normals;
+    }
+    
 }
 
 //-----------------------------------------------------------------------------
@@ -1037,7 +1147,8 @@ mIsCameraYawNodding(false),
 mHasDebugPassEnabled(false),
 mDebugPassToDisplay(rtRGBA),
 mSaveColorFboPassToPng(false),
-mHasShading(false)
+mHasShading(false),
+mIsWireFrameShown(false)
 {
     resize(1280, 720);
 
@@ -1100,12 +1211,16 @@ mHasShading(false)
                     mpApplyShading = new QCheckBox("apply shading", pAntiAlisingMode);
                     connect(mpApplyShading, SIGNAL(clicked()), this, SLOT(applyShadingClicked()));
 
+                    mpShowWireFrame = new QCheckBox("show wireframe", pAntiAlisingMode);
+                    connect(mpShowWireFrame, SIGNAL(clicked()), this, SLOT(showWireFrameClicked()));
+
                     pLyt->addLayout(pL_1);
                     pLyt->addWidget(mpDebugPassEnabled);
                     pLyt->addLayout(pL1);
                     pLyt->addLayout(pL2);
                     pLyt->addWidget(mpUseMipmaps);
                     pLyt->addWidget(mpApplyShading);
+                    pLyt->addWidget(mpShowWireFrame);
                 }
             }
 
@@ -1333,6 +1448,7 @@ Texture MainDialog::getTextureFromSceneContent()
     {
     case scGeometricGrid: break;
     case scTexturedGrid: t = mpViewer->mTextureGrid; break;
+    case scMillionsOfPolygons: t = mpViewer->mTextureGrid; break;
     case scUnigine01: t = mpViewer->mUnigine01; break;
     case scUnigine02: t = mpViewer->mUnigine02; break;
     default: break;
@@ -1363,6 +1479,14 @@ void MainDialog::setAntiAliasingMode(antiAliasingMode iM)
 bool MainDialog::shouldSaveFboPass() const
 {
     return mSaveColorFboPassToPng;
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::showWireFrameClicked()
+{
+    mIsWireFrameShown = mpShowWireFrame->isChecked();       
+
+    updateUi();
 }
 
 //-----------------------------------------------------------------------------
@@ -1429,6 +1553,7 @@ void MainDialog::updateUi()
     {
     case scGeometricGrid: sceneContent = "geometric grid"; break;
     case scTexturedGrid: sceneContent = "textured grid"; break;
+    case scMillionsOfPolygons: sceneContent = "millions of polygons"; break;
     case scUnigine01: sceneContent = "Unigine01"; break;
     case scUnigine02: sceneContent = "Unigine02"; break;
 
@@ -1443,7 +1568,10 @@ void MainDialog::updateUi()
 
     //shading associated to scene content
     mpApplyShading->setChecked(mHasShading);
-    mpApplyShading->setVisible(gSceneContent == scGeometricGrid);
+    mpApplyShading->setVisible(gSceneContent == scGeometricGrid || 
+        gSceneContent == scMillionsOfPolygons);
+
+    mpShowWireFrame->setChecked( isWireFrameShown() );
 
     //--- camera control
     mpEnableCameraPitchNodding->setEnabled(mpEnable3dControls->isChecked());
