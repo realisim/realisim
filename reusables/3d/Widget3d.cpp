@@ -67,7 +67,7 @@ void Widget3d::beginFrame()
 const Camera& Widget3d::getCamera() const
 {
   const Camera* r = &mCam;
-  if( isAnimatingCamera() ){ r = &mNewCam; }
+  //if( isAnimatingCamera() ){ r = &mNewCam; }
   return *r;
 }
 //-----------------------------------------------------------------------------

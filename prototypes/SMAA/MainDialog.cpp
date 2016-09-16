@@ -23,6 +23,21 @@ namespace
 {
     enum sceneContent { scGeometricGrid = 0, scTexturedGrid, scMillionsOfPolygons, scUnigine01, scUnigine02, scContentCount };
     sceneContent gSceneContent = scGeometricGrid;
+
+    //-----------------------------------------------------------------------------
+    QString toQString(smaaPresetQuality iQ)
+    {
+        QString r="N/A";
+        switch (iQ)
+        {
+        case spqLow: r = "SMAA_PRESET_LOW"; break;
+        case spqMedium: r = "SMAA_PRESET_MEDIUM"; break;
+        case spqHigh: r = "SMAA_PRESET_HIGH"; break;
+        case spqUltra: r = "SMAA_PRESET_ULTRA"; break;
+        default: break;
+        }
+        return r;
+    }
 }
 
 Viewer::Viewer(QWidget* ipParent, MainDialog* ipM) : Widget3d(ipParent),
@@ -351,7 +366,7 @@ void Viewer::drawScene()
     switch (gSceneContent)
     {
     case scGeometricGrid: //3d grid
-    {
+    {		
         mSceneShader.begin();
         mSceneShader.setUniform("uApplyShading", mpMainDialog->hasShading());
         mSceneShader.setUniform("projectionMatrix", proj);
@@ -547,6 +562,7 @@ void Viewer::initializeGL()
     glClearColor(0.0, 0.0, 0.0, 0.0);
     //glClearColor(1.0, 1.0, 1.0, 1.0);
 
+	glDepthRangedNV(-1,1);
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -591,10 +607,14 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
 {
     switch (ipE->key())
     {
-    case Qt::Key_C: gSceneContent = (sceneContent)((gSceneContent + 1) % scContentCount); break;
+    case Qt::Key_C: 
+        gSceneContent = (sceneContent)((gSceneContent + 1) % scContentCount);
+        resetCamera();
+        break;
     case Qt::Key_F: mpMainDialog->displayPreviousDebugPass(); break;
     case Qt::Key_G: mpMainDialog->displayNextDebugPass(); break;
     case Qt::Key_F5: loadShaders(); break;
+    case Qt::Key_F11: toggleFullScreen(); break;
     default: Widget3d::keyPressEvent(ipE); break;
     }
     mpMainDialog->updateUi();
@@ -610,11 +630,14 @@ void Viewer::loadShaders()
     const double w = width(), h = height();
     sprintf(&smaaRtMetrics[0], "float4(1.0 / %f, 1.0 / %f, %f, %f)", w, h, w, h);
 
+    char smaaPresetQuality[100];
+    sprintf(&smaaPresetQuality[0], "%s", toQString(mpMainDialog->getSmaaPresetQuality()).toStdString().c_str() );
     //init shaders
     {
         mSmaaShader.clear();
         mSmaaShader.setName("SMAA_firstPass");
         int smaaVertexSourceId = addVertexSource(&mSmaaShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaaShader.addDefineToVertexSource(smaaVertexSourceId, smaaPresetQuality, "");
         mSmaaShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_VS", "1");
         mSmaaShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
         mSmaaShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
@@ -622,6 +645,7 @@ void Viewer::loadShaders()
         addVertexSource(&mSmaaShader, cwd + "/../assets/SMAA_firstPass.vert");
 
         int smaaFragmentSourceId = addFragmentSource(&mSmaaShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaaShader.addDefineToFragmentSource(smaaFragmentSourceId, smaaPresetQuality, "");
         mSmaaShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
         mSmaaShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_PS", "1");
         mSmaaShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
@@ -635,12 +659,14 @@ void Viewer::loadShaders()
         addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA_secondPass.vert");
         int smaaVertexSourceId = addVertexSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaa2ndPassShader.addDefineToVertexSource(smaaVertexSourceId, smaaPresetQuality, "");
         mSmaa2ndPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_VS", "1");
         mSmaa2ndPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
         mSmaa2ndPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
 
         addFragmentSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA_secondPass.frag");
         int smaaFragmentSourceId = addFragmentSource(&mSmaa2ndPassShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaa2ndPassShader.addDefineToFragmentSource(smaaFragmentSourceId, smaaPresetQuality, "");
         mSmaa2ndPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
         mSmaa2ndPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_PS", "1");
         mSmaa2ndPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
@@ -653,6 +679,7 @@ void Viewer::loadShaders()
         addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.vert");
         int smaaVertexSourceId = addVertexSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, smaaPresetQuality, "");
         mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_VS", "1");
         mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
         mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
@@ -660,6 +687,7 @@ void Viewer::loadShaders()
         addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/utilities.frag");
         addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.frag");
         int smaaFragmentSourceId = addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaa3rdPassShader.addDefineToFragmentSource(smaaFragmentSourceId, smaaPresetQuality, "");
         mSmaa3rdPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
         mSmaa3rdPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_PS", "1");
         mSmaa3rdPassShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
@@ -672,12 +700,14 @@ void Viewer::loadShaders()
         addVertexSource(&mSmaaReprojectionShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mSmaaReprojectionShader, cwd + "/../assets/SMAA_reprojection.vert");
         int smaaVertexSourceId = addVertexSource(&mSmaaReprojectionShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaaReprojectionShader.addDefineToVertexSource(smaaVertexSourceId, smaaPresetQuality, "");
         mSmaaReprojectionShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_VS", "1");
         mSmaaReprojectionShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
         mSmaaReprojectionShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
 
         addFragmentSource(&mSmaaReprojectionShader, cwd + "/../assets/SMAA_reprojection.frag");
         int smaaFragmentSourceId = addFragmentSource(&mSmaaReprojectionShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaaReprojectionShader.addDefineToFragmentSource(smaaFragmentSourceId, smaaPresetQuality, "");
         mSmaaReprojectionShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
         mSmaaReprojectionShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_PS", "1");
         mSmaaReprojectionShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
@@ -690,12 +720,14 @@ void Viewer::loadShaders()
         addVertexSource(&mSmaaSeparateShader, cwd + "/../assets/utilities.vert");
         addVertexSource(&mSmaaSeparateShader, cwd + "/../assets/SMAA_separate.vert");
         int smaaVertexSourceId = addVertexSource(&mSmaaSeparateShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaaSeparateShader.addDefineToVertexSource(smaaVertexSourceId, smaaPresetQuality, "");
         mSmaaSeparateShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_VS", "1");
         mSmaaSeparateShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
         mSmaaSeparateShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
 
         addFragmentSource(&mSmaaSeparateShader, cwd + "/../assets/SMAA_separate.frag");
         int smaaFragmentSourceId = addFragmentSource(&mSmaaSeparateShader, cwd + "/../assets/SMAA.hlsl");
+        mSmaaSeparateShader.addDefineToFragmentSource(smaaFragmentSourceId, smaaPresetQuality, "");
         mSmaaSeparateShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_VS", "0");
         mSmaaSeparateShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_INCLUDE_PS", "1");
         mSmaaSeparateShader.addDefineToFragmentSource(smaaFragmentSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
@@ -1022,6 +1054,17 @@ void Viewer::paintGL()
 
         glDisable(GL_MULTISAMPLE);
     }break;
+	case aamMSAA32x:
+	{
+		glEnable(GL_MULTISAMPLE);
+		doMsaa(32);
+
+		antiAliasTimer.start();
+		resolveMsaaTo(rtFinal_0);
+		mTimeToAntialias.add(antiAliasTimer.getElapsed());
+
+		glDisable(GL_MULTISAMPLE);
+	}break;
     default: break;
     }
 
@@ -1040,6 +1083,26 @@ void Viewer::paintGL()
     std::string glErrors;
     if (treeD::hasGlError(&glErrors))
         printf("Gl error: %s\n", glErrors.c_str());
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::resetCamera()
+{
+    Camera c = getCamera();
+
+    const Vector3d yUp(0.0, 1.0, 0.0);
+    const Point3d origin(0.0, 0.0, 0.0);
+    switch (gSceneContent)
+    {
+    case scGeometricGrid: c.set( Point3d(0.0, 5.0, 100.0), origin, yUp ); break;
+    case scTexturedGrid: c.set( Point3d(0.0, 5.0, 100.0), origin, yUp ); break;
+    case scMillionsOfPolygons: c.set( Point3d(0.0, 100.0, 800), origin, yUp ); break;
+    case scUnigine01: c.set( Point3d(500.0, 500.0, 5000.0), Point3d(500.0, 500.0, 0), yUp ); break;
+    case scUnigine02: c.set( Point3d(500.0, 500.0, 5000.0), Point3d(500.0, 500.0, 0), yUp ); break;
+    default: break;
+    }
+
+    setCamera(c, true, 500);
 }
 
 //-----------------------------------------------------------------------------
@@ -1133,6 +1196,9 @@ void Viewer::tiltMatrix(realisim::math::Matrix4* iM, bool iYaw, bool iPitch) con
     *iM = Matrix4(sCameraYawNoddingAngle, Vector3d(0.0, 1.0, 0.0)) * (*iM);
 }
 
+//-----------------------------------------------------------------------------
+void Viewer::toggleFullScreen()
+{ mpMainDialog->toggleFullScreen(); }
 
 //-----------------------------------------------------------------------------
 //--- MainDialog
@@ -1148,7 +1214,8 @@ mHasDebugPassEnabled(false),
 mDebugPassToDisplay(rtRGBA),
 mSaveColorFboPassToPng(false),
 mHasShading(false),
-mIsWireFrameShown(false)
+mIsWireFrameShown(false),
+mSmaaPresetQuality(spqHigh)
 {
     resize(1280, 720);
 
@@ -1159,16 +1226,17 @@ mIsWireFrameShown(false)
     pLyt->setMargin(2);
     pLyt->setSpacing(5);
     {
-        QVBoxLayout *pControlLyt = new QVBoxLayout();
+        mpLeftPanel = new QFrame(pCentralWidget);
+        QVBoxLayout *pControlLyt = new QVBoxLayout(mpLeftPanel);
         {
             //--- anti aliasing mode
-            QGroupBox *pAntiAlisingMode = new QGroupBox(pCentralWidget);
+            QGroupBox *pAntiAlisingMode = new QGroupBox(mpLeftPanel);
             {
                 QVBoxLayout *pLyt = new QVBoxLayout(pAntiAlisingMode);
                 {
                     QHBoxLayout *pL_1 = new QHBoxLayout();
                     {
-                        QLabel* l = new QLabel("Smaa mode:", pAntiAlisingMode);
+                        QLabel* l = new QLabel("AA mode:", pAntiAlisingMode);
                         mpAntiAliasingModeCombo = new QComboBox(pAntiAlisingMode);
                         for (int i = 0; i < aamCount; ++i)
                         {
@@ -1180,6 +1248,22 @@ mIsWireFrameShown(false)
                         pL_1->addWidget(l);
                         pL_1->addWidget(mpAntiAliasingModeCombo);
                         pL_1->addStretch(1);
+                    }
+
+                    QHBoxLayout *pL_1_1 = new QHBoxLayout();
+                    {
+                        QLabel* l = new QLabel("Smaa preset quality:", pAntiAlisingMode);
+                        mpSmaaPresetQuality = new QComboBox(pAntiAlisingMode);
+                        for (int i = 0; i < spqCount; ++i)
+                        {
+                            mpSmaaPresetQuality->addItem( ::toQString((smaaPresetQuality)i));
+                        }
+                        connect(mpSmaaPresetQuality, SIGNAL(activated(int)),
+                            this, SLOT(smaaPresetQualityChanged(int)));
+
+                        pL_1_1->addWidget(l);
+                        pL_1_1->addWidget(mpSmaaPresetQuality);
+                        pL_1_1->addStretch(1);
                     }
 
                     mpDebugPassEnabled = new QCheckBox("Debug pass", pAntiAlisingMode);
@@ -1215,6 +1299,7 @@ mIsWireFrameShown(false)
                     connect(mpShowWireFrame, SIGNAL(clicked()), this, SLOT(showWireFrameClicked()));
 
                     pLyt->addLayout(pL_1);
+                    pLyt->addLayout(pL_1_1);
                     pLyt->addWidget(mpDebugPassEnabled);
                     pLyt->addLayout(pL1);
                     pLyt->addLayout(pL2);
@@ -1225,7 +1310,7 @@ mIsWireFrameShown(false)
             }
 
             //--- camera controls
-            QGroupBox *pCameraControls = new QGroupBox("Camera controls", pCentralWidget);
+            QGroupBox *pCameraControls = new QGroupBox("Camera controls", mpLeftPanel);
             {
                 QVBoxLayout *pL = new QVBoxLayout(pCameraControls);
                 {
@@ -1244,7 +1329,7 @@ mIsWireFrameShown(false)
                 }
             }
 
-            QGroupBox *pProfiling = new QGroupBox("Profiling", pCentralWidget);
+            QGroupBox *pProfiling = new QGroupBox("Profiling", mpLeftPanel);
             {
                 QVBoxLayout *pL = new QVBoxLayout(pProfiling);
                 {
@@ -1312,7 +1397,7 @@ mIsWireFrameShown(false)
 
         mpViewer = new Viewer(pCentralWidget, this);
 
-        pLyt->addLayout(pControlLyt, 1);
+        pLyt->addWidget(mpLeftPanel, 1);
         pLyt->addWidget(mpViewer, 4);
     }
 
@@ -1432,6 +1517,7 @@ renderTarget MainDialog::getPassToDisplay() const
         case aamMSAA4x:
         case aamMSAA8x:
         case aamMSAA16x:
+		case aamMSAA32x:
             rt = rtFinal_0;
             break;
         default: rt = rtFinal_0; break;
@@ -1476,6 +1562,14 @@ void MainDialog::setAntiAliasingMode(antiAliasingMode iM)
 }
 
 //-----------------------------------------------------------------------------
+void MainDialog::setSmaaPresetQuality(smaaPresetQuality iQ)
+{ 
+    mSmaaPresetQuality = iQ;
+    mpViewer->loadShaders();
+    updateUi();
+}
+
+//-----------------------------------------------------------------------------
 bool MainDialog::shouldSaveFboPass() const
 {
     return mSaveColorFboPassToPng;
@@ -1490,6 +1584,12 @@ void MainDialog::showWireFrameClicked()
 }
 
 //-----------------------------------------------------------------------------
+void MainDialog::smaaPresetQualityChanged(int iQ)
+{
+    setSmaaPresetQuality( (smaaPresetQuality)iQ );
+}
+
+//-----------------------------------------------------------------------------
 void MainDialog::timerEvent(QTimerEvent *ipE)
 {
     if (ipE->timerId() == mTimerEventId)
@@ -1497,6 +1597,21 @@ void MainDialog::timerEvent(QTimerEvent *ipE)
     }
 
     updateUiHighFrequency();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::toggleFullScreen()
+{
+    if (isFullScreen())
+    {
+        mpLeftPanel->show();
+        showNormal();
+    }
+    else
+    {
+        mpLeftPanel->hide();
+        showFullScreen();
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -1514,6 +1629,7 @@ QString MainDialog::toQString(antiAliasingMode iMode) const
     case aamMSAA4x: r = "MSAA 4X"; break;
     case aamMSAA8x: r = "MSAA 8X"; break;
     case aamMSAA16x: r = "MSAA 16X"; break;
+	case aamMSAA32x: r = "MSAA 32X"; break;
     default: break;
     }
     return r;
@@ -1523,10 +1639,16 @@ QString MainDialog::toQString(antiAliasingMode iMode) const
 void MainDialog::updateUi()
 {
     //--- smaa mode
-    int index = mpAntiAliasingModeCombo->currentIndex();
+    const int index = mpAntiAliasingModeCombo->currentIndex();
     if (index != getAntiAliasingMode())
     {
         mpAntiAliasingModeCombo->setCurrentIndex(getAntiAliasingMode());
+    }
+
+    const int smaaPresetQuality = mpSmaaPresetQuality->currentIndex();
+    if (smaaPresetQuality != getSmaaPresetQuality())
+    {
+        mpSmaaPresetQuality->setCurrentIndex(getSmaaPresetQuality());
     }
 
     //--- show pass name
@@ -1534,7 +1656,7 @@ void MainDialog::updateUi()
 
     switch (getPassToDisplay())
     {
-    case rtSRGBA: passName = "Raw scene"; break;
+    case rtSRGBA: passName = "No Gamma correction"; break;
     case rtRGBA: passName = "Gamma correction"; break;
     case rtEdge: passName = "Edge detection"; break;
     case rtBlendWeight: passName = "Blend weight"; break;

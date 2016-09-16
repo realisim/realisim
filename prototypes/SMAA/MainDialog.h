@@ -20,10 +20,11 @@
 #include <utils/Timer.h>
 #include <vector>
 
-enum antiAliasingMode { aamNoAA, aamSmaa1x, aamSmaaT2x, aamSmaaS2x, aamSmaa4x, aamMSAA2x, aamMSAA4x, aamMSAA8x, aamMSAA16x, aamCount };
+enum antiAliasingMode { aamNoAA, aamSmaa1x, aamSmaaT2x, aamSmaaS2x, aamSmaa4x, aamMSAA2x, aamMSAA4x, aamMSAA8x, aamMSAA16x, aamMSAA32x, aamCount };
 enum renderTarget{ rtSRGBA=0, rtRGBA, rtEdge, rtBlendWeight, rtFinal_0,
 	rtFinal_1, rtSeparate_0, rtSeparate_1, rtCount};
 enum msaaRenderTarget{msaaRtSRGB=0, msaaRtCount};
+enum smaaPresetQuality{spqLow=0, spqMedium, spqHigh, spqUltra, spqCount};
 
 using namespace realisim;
 
@@ -56,9 +57,11 @@ private:
 	void loadVbos();
     virtual void initializeGL() override;
     virtual void paintGL() override;
+    void resetCamera();
     virtual void resizeGL(int, int) override;
 	void resolveMsaaTo(renderTarget);
 	void saveAllSmaa1xPassToPng(int);
+    void toggleFullScreen();
 	void tiltMatrix(math::Matrix4*, bool iYaw, bool iPitch) const;
 
     MainDialog* mpMainDialog;
@@ -102,15 +105,19 @@ public:
 	void displayPreviousDebugPass();
 	antiAliasingMode getAntiAliasingMode() const {return mAntiAliasingMode;}
 	renderTarget getPassToDisplay() const;
+    smaaPresetQuality getSmaaPresetQuality() const {return mSmaaPresetQuality;}
 	bool has3dControlEnabled() const {return mHas3dControlEnabled;}
 	bool hasDebugPassEnabled() const {return mHasDebugPassEnabled;}
 	bool hasShading() const {return mHasShading;}
 	bool isCameraPitchNodding() const {return mIsCameraPitchNodding;}
 	bool isCameraYawNodding() const {return mIsCameraYawNodding;}
     bool isWireFrameShown() const {return mIsWireFrameShown; }
-	void updateUi();	
+	void updateUi();
 	void resetSaveFboPassFlag();
+    void setSmaaPresetQuality(smaaPresetQuality iQ);
 	bool shouldSaveFboPass() const;
+    void toggleFullScreen();
+
 
 protected slots:
 	void antiAliasingModeChanged(int);
@@ -121,6 +128,7 @@ protected slots:
 	void enableCameraYawNodding();
 	void enableDebugPassClicked();
 	void saveAllFboPass();
+    void smaaPresetQualityChanged(int);
     void showWireFrameClicked();
 	void useMipMapsClicked();
 
@@ -134,7 +142,10 @@ protected:
     //--- ui
     Viewer* mpViewer;
 
+    QFrame* mpLeftPanel;
+
 	QComboBox* mpAntiAliasingModeCombo;
+    QComboBox* mpSmaaPresetQuality;
 	QCheckBox *mpDebugPassEnabled;
     QLabel* mpPassDisplayed;
     QLabel* mpSceneContent;
@@ -163,6 +174,7 @@ protected:
 	bool mSaveColorFboPassToPng;
 	bool mHasShading;
     bool mIsWireFrameShown;
+    smaaPresetQuality mSmaaPresetQuality;
 };
 
 #endif
