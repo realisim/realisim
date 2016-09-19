@@ -37,5 +37,6 @@ void main(){
     computePhong(modelViewMatrix, normalMatrix, 
         vertexPosition_modelspace, vertexNormal_modelspace,
         oViewDirection_eyeSpace, oNormal_eyeSpace);
-    lightDir_eyeSpace = normalize((modelViewMatrix * vec4( -1, -1, 0, 0) ).xyz);
+    lightDir_eyeSpace = normalize((modelViewMatrix * vec4( -1, 1, 0, 0) ).xyz);
+    //lightDir_eyeSpace = normalize((modelViewMatrix * vec4(0.7, 0.4, 0.2, 0) ).xyz);
 }

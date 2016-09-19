@@ -50,7 +50,7 @@ void main()
     vec3 n = normalize(oNormal_eyeSpace);
     vec3 e = normalize(oViewDirection_eyeSpace);
 
-    float intensity = max(dot(n,light_dir), 0.0);
+    float intensity = max(dot(n,light_dir), 0.000001);
  
     // if the vertex is lit compute the specular color
     if (intensity > 0.0) {
