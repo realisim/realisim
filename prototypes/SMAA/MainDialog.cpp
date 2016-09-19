@@ -613,7 +613,7 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
         break;
     case Qt::Key_F: mpMainDialog->displayPreviousDebugPass(); break;
     case Qt::Key_G: mpMainDialog->displayNextDebugPass(); break;
-    case Qt::Key_F5: loadShaders(); break;
+    case Qt::Key_F5: loadShaders(); loadTextures(); break;
     case Qt::Key_F11: toggleFullScreen(); break;
     default: Widget3d::keyPressEvent(ipE); break;
     }

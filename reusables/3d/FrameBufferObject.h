@@ -20,10 +20,10 @@
 
   example:
     FrameBufferObject fbo;
-    fbo.addColorAttachement(true);
-    fbo.addDepthAttachement(false);
+    fbo.addColorAttachement();
+    fbo.addDepthAttachement();
 
-    pushFrameBuffer(fbo);
+    fbo.begin();
     glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT | GL_COLOR_BUFFER_BIT | GL_VIEWPORT_BIT);
     glViewport(0, 0, 200, 150);
     fbo.resize(200, 150);
@@ -33,7 +33,7 @@
     glColor3ub(255, 0, 0);
     drawSomething();
     glPopAttrib();
-    popFrameBuffer();
+    fbo.end()
 
     ...
 
@@ -67,11 +67,6 @@
     mMaxColorAttachment; Détient le nombre maximal de color attachment supporté
       par la carte graphique.
     mRefCount; Le compte de référence sur les guts.
-
-  Notes:
-  Widget3d possède les méthodes pushFrameBuffer(FrameBufferObject()) et
-  popFrameBuffer qui permettent d'empiler/dépiler correctement les frame
-  buffers.
   */
 
 namespace realisim
