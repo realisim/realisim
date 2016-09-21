@@ -85,18 +85,11 @@ void Viewer::displayPass(FrameBufferObject iFbo, int iPass)
     //since the fbo is the same size as the screen, we want it to be pixel perfect, so
     //we activate GL_NEAREST filtering on the texture.
     glColor3ub(255, 255, 255);
-    Texture t = iFbo.getColorAttachment(iPass);
-
-    GLenum minFilter = t.getMinificationFilter();
-    GLenum maxFilter = t.getMagnificationFilter();
-    t.setFilter(GL_NEAREST);
+    Texture t = iFbo.getColorAttachment(iPass);    
 
     Vector2i textureSize(t.width(), t.height());
     ScreenSpaceProjection sp(textureSize);
     drawStillImage(t.getId(), textureSize, sp.mViewMatrix, sp.mProjectionMatrix);
-
-    t.setMinificationFilter(minFilter);
-    t.setMagnificationFilter(maxFilter);
 
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);

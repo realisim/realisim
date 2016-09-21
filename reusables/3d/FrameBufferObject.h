@@ -102,6 +102,8 @@ namespace treeD
         math::Vector2i getSize() const;
         int getWidth() const { return mpGuts->mWidth; }
         void glClear(GLenum);
+//bool hasDepthAttachment() const;
+//bool hasStencilAttachment() const;
         bool isValid() const;
         //virtual void removeColorAttachment(int);
         //virtual void removeDepthAttachment();

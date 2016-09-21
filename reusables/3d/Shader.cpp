@@ -1,4 +1,5 @@
 
+#include <cassert>
 #include "Shader.h"
 
 using namespace realisim;
@@ -152,23 +153,25 @@ void Shader::clear()
 Shader Shader::copy()
 {
     Shader s;
-  for(int i = 0; i < getVertexSourcesSize(); ++i)
+  /*for(int i = 0; i < getVertexSourcesSize(); ++i)
     s.addVertexSource(getVertexSource(i));
   for(int i = 0; i < getFragmentSourcesSize(); ++i)
-    s.addFragmentSource(getFragmentSource(i));
+    s.addFragmentSource(getFragmentSource(i));*/
+	assert(false && "Shader::copy is broken!");
+	//exit(EXIT_FAILURE);
   return s;
 }
 
 //----------------------------------------------------------------------------
 void Shader::detachAndDeleteGlResources()
 {
-    for (int i = 0; i < getVertexSourcesSize(); ++i)
+    for (int i = 0; i < mpGuts->mVertexIds.size(); ++i)
     {
         glDetachShader(getProgramId(), getVertexId(i));
         glDeleteShader(getVertexId(i));
     }
 
-    for (int i = 0; i < getFragmentSourcesSize(); ++i)
+    for (int i = 0; i < mpGuts->mFragmentIds.size(); ++i)
     {
         glDetachShader(getProgramId(), getFragmentId(i));
         glDeleteShader(getFragmentId(i));
@@ -201,13 +204,13 @@ void Shader::validate() const
   mpGuts->mIsValid = true;
   int status;
   //check if shaders are compiled
-  for(int i = 0; i < getFragmentSourcesSize(); ++i)
+  for(int i = 0; i < (int)mpGuts->mFragmentIds.size(); ++i)
   {
     glGetShaderiv(getFragmentId(i), GL_COMPILE_STATUS, &status);
     mpGuts->mIsValid = mpGuts->mIsValid & (status == GL_TRUE);
   }
 
-  for(int i = 0; i < getVertexSourcesSize(); ++i)
+  for(int i = 0; i < (int)mpGuts->mVertexIds.size(); ++i)
   {
     glGetShaderiv(getVertexId(i), GL_COMPILE_STATUS, &status);
     mpGuts->mIsValid = mpGuts->mIsValid & (status == GL_TRUE);
