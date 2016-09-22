@@ -21,9 +21,13 @@
 #include <vector>
 
 enum antiAliasingMode { aamNoAA, aamSmaa1x, aamSmaaT2x, aamSmaaS2x, aamSmaa4x, aamMSAA2x, aamMSAA4x, aamMSAA8x, aamMSAA16x, aamMSAA32x, aamCount };
-enum renderTarget{ rtSRGBA=0, rtRGBA, rtEdge, rtBlendWeight, rtFinal_0,
-	rtFinal_1, rtSeparate_0, rtSeparate_1, rtCount};
-enum msaaRenderTarget{msaaRtSRGB=0, msaaRtCount};
+//enum renderTarget{ rtSRGBA=0, rtRGBA, rtEdge, rtBlendWeight, rtFinal_0,
+//	rtFinal_1, rtSeparate_0, rtSeparate_1, rtCount};
+
+enum renderTarget{ rtScene=0, rtSceneSRGB, rtEdge, rtBlendWeight, rtFinal_0,
+		rtFinal_1, rtSeparate_0, rtSeparate_1, rtCount};
+
+enum msaaRenderTarget{msaaRtScene=0, msaaRtCount};
 enum smaaPresetQuality{spqLow=0, spqMedium, spqHigh, spqUltra, spqCount};
 
 using namespace realisim;
@@ -75,7 +79,6 @@ private:
 	treeD::Shader mSmaaSeparateShader;
     treeD::Shader mSceneShader;
     treeD::Shader mOneTextureShader;
-    treeD::Shader mGammaCorrection;
     treeD::Texture mSmaaAreaTexture;
     treeD::Texture mSmaaSearchTexture;
     treeD::Texture mUnigine01;

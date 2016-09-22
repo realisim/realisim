@@ -5,7 +5,6 @@
 #include "openGlHeaders.h"
 #include <math/Point.h>
 #include <math/Vect.h>
-#include <map>
 #include <vector>
 
 

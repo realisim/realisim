@@ -102,8 +102,7 @@ void Viewer::doMsaa(int iX)
     mMultisampleFbo.begin();
     {
         //-- drawScene offscreen into the multisample buffer.
-        //pass 0 - no gamma correction
-        mMultisampleFbo.drawTo(msaaRtSRGB);
+        mMultisampleFbo.drawTo(msaaRtScene);
         {
             drawScene();
         }
@@ -158,24 +157,18 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
         //--- post processing
         //pass 1
         //gamma corretion 
-        mColorFbo.drawTo(rtRGBA);
+        mColorFbo.drawTo(rtSceneSRGB);
         {
             glClear(GL_COLOR_BUFFER_BIT);
-            ScreenSpaceProjection sp(cam.getViewport().getSize());
-            mGammaCorrection.begin();
-            mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
-            mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
-            mGammaCorrection.setUniform("uColorTex", 0);
+            ScreenSpaceProjection sp(cam.getViewport().getSize());        
 
             Texture t = mColorFbo.getColorAttachment(iInput);
-            drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
-
-            mGammaCorrection.end();
+			drawStillImage(t.getId(), Vector2d(t.width(), t.height()), sp.mViewMatrix, sp.mProjectionMatrix);
         }
 
         //pass 2
         //SMAA - Luma edge detection edgeTex
-        //this requires a gamma corrected input texture
+        //this requires a RGB (linear) input
         mColorFbo.drawTo(rtEdge);
         {
             glClear(GL_COLOR_BUFFER_BIT);
@@ -185,7 +178,7 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
             mSmaaShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
             mSmaaShader.setUniform("uColorTex", 0);
 
-            Texture t = mColorFbo.getColorAttachment(rtRGBA);
+            Texture t = mColorFbo.getColorAttachment(iInput);
             drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
             mSmaaShader.end();
@@ -252,8 +245,8 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, mColorFbo.getColorAttachment(rtBlendWeight).getId());
 
-            //the texture required must be in linear space (no-gamma)
-            Texture t = mColorFbo.getColorAttachment(iInput);
+            //the texture required must be sRgb
+            Texture t = mColorFbo.getColorAttachment(rtSceneSRGB);
             drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
             glActiveTexture(GL_TEXTURE1);
@@ -278,9 +271,6 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
 //-----------------------------------------------------------------------------
 void Viewer::doSmaaSeparate()
 {
-    //mMultisampleFbo.resolveTo(msaaRtSRGB, mColorFbo, rtSRGB);
-    //mColorFbo.getColorAttachment(rtSRGB).asQImage().save("f:/msaa2xResolved.png", "PNG");
-
         //output each sample to separate0 and separate0 colorAttachment
     const Vector2i size(getCamera().getViewport().getSize());
 
@@ -307,7 +297,7 @@ void Viewer::doSmaaSeparate()
 
     //bind Multisample texture to draw
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, mMultisampleFbo.getColorAttachmentId(msaaRtSRGB));
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, mMultisampleFbo.getColorAttachmentId(msaaRtScene));
     treeD::drawRectangle(Point2d(0.0), size);
 
     mSmaaSeparateShader.end();
@@ -555,6 +545,7 @@ void Viewer::initializeGL()
     glClearColor(0.0, 0.0, 0.0, 0.0);
     //glClearColor(1.0, 1.0, 1.0, 1.0);
 
+	glEnable(GL_FRAMEBUFFER_SRGB);
 	glDepthRangedNV(-1,1);
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_CULL_FACE);
@@ -563,21 +554,51 @@ void Viewer::initializeGL()
     //--- init mFbo
 
     //--- color fbo
-    mColorFbo.addColorAttachment(GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-    mColorFbo.getColorAttachment(rtSRGBA).setFilter(GL_LINEAR);
-    mColorFbo.getColorAttachment(rtSRGBA).setWrapMode(GL_CLAMP_TO_EDGE);
-    for (int i = rtRGBA; i < rtCount; ++i)
-    {
-        mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mColorFbo.getColorAttachment(i).setFilter(GL_LINEAR);
-        mColorFbo.getColorAttachment(i).setWrapMode(GL_CLAMP_TO_EDGE);
-    }
+	//rtScene
+	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mColorFbo.getColorAttachment(rtScene).setFilter(GL_LINEAR);
+	mColorFbo.getColorAttachment(rtScene).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	mColorFbo.addColorAttachment(GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mColorFbo.getColorAttachment(rtSceneSRGB).setFilter(GL_LINEAR);
+	mColorFbo.getColorAttachment(rtSceneSRGB).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtEdge
+	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mColorFbo.getColorAttachment(rtEdge).setFilter(GL_LINEAR);
+	mColorFbo.getColorAttachment(rtEdge).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtBlend
+	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mColorFbo.getColorAttachment(rtBlendWeight).setFilter(GL_LINEAR);
+	mColorFbo.getColorAttachment(rtBlendWeight).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtFinal_0
+	mColorFbo.addColorAttachment(GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mColorFbo.getColorAttachment(rtFinal_0).setFilter(GL_LINEAR);
+	mColorFbo.getColorAttachment(rtFinal_0).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtFinal_1
+	mColorFbo.addColorAttachment(GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mColorFbo.getColorAttachment(rtFinal_1).setFilter(GL_LINEAR);
+	mColorFbo.getColorAttachment(rtFinal_1).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtSeparate_0
+	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mColorFbo.getColorAttachment(rtSeparate_0).setFilter(GL_LINEAR);
+	mColorFbo.getColorAttachment(rtSeparate_0).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtSeparate_1
+	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mColorFbo.getColorAttachment(rtSeparate_1).setFilter(GL_LINEAR);
+	mColorFbo.getColorAttachment(rtSeparate_1).setWrapMode(GL_CLAMP_TO_EDGE);
+
     mColorFbo.addDepthAttachment();
 
     //multiSample fbo
     for (int i = 0; i < msaaRtCount; ++i)
     {
-        mMultisampleFbo.addColorAttachment(GL_SRGB8_ALPHA8);
+        mMultisampleFbo.addColorAttachment(GL_RGBA8);
         //mMsaaFbo.getColorAttachment(i).setFilter(GL_LINEAR);
         //mMsaaFbo.getColorAttachment(i).setWrapMode(GL_CLAMP_TO_EDGE);
     }
@@ -677,7 +698,6 @@ void Viewer::loadShaders()
         mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_INCLUDE_PS", "0");
         mSmaa3rdPassShader.addDefineToVertexSource(smaaVertexSourceId, "SMAA_RT_METRICS", smaaRtMetrics);
 
-        addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/utilities.frag");
         addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA_thirdPass.frag");
         int smaaFragmentSourceId = addFragmentSource(&mSmaa3rdPassShader, cwd + "/../assets/SMAA.hlsl");
         mSmaa3rdPassShader.addDefineToFragmentSource(smaaFragmentSourceId, smaaPresetQuality, "");
@@ -745,17 +765,6 @@ void Viewer::loadShaders()
         addFragmentSource(&mOneTextureShader, cwd + "/../assets/texturedMaterial.frag");
         mOneTextureShader.link();
     }
-
-    {
-        mGammaCorrection.clear();
-        mGammaCorrection.setName("gamma correction");
-        addVertexSource(&mGammaCorrection, cwd + "/../assets/utilities.vert");
-        addVertexSource(&mGammaCorrection, cwd + "/../assets/main.vert");
-
-        addFragmentSource(&mGammaCorrection, cwd + "/../assets/utilities.frag");
-        addFragmentSource(&mGammaCorrection, cwd + "/../assets/gammaCorrection.frag");
-        mGammaCorrection.link();
-    }
 }
 
 //-----------------------------------------------------------------------------
@@ -798,8 +807,8 @@ void Viewer::loadTextures()
     im = QImage(cwd + "/../assets/Unigine01.png", "PNG");
     if (!im.isNull())
     {
-        //mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mUnigine01.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        //mUnigine01.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
         mUnigine01.generateMipmap(true);
         mUnigine01.setMagnificationFilter(GL_LINEAR);
         mUnigine01.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
@@ -812,8 +821,8 @@ void Viewer::loadTextures()
     im = QImage(cwd + "/../assets/Unigine02.png", "PNG");
     if (!im.isNull())
     {
-        //mUnigine02.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mUnigine02.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine02.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        //mUnigine02.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
         mUnigine02.setFilter(GL_LINEAR);
         mUnigine02.setWrapMode(GL_CLAMP_TO_EDGE);
     }
@@ -822,7 +831,8 @@ void Viewer::loadTextures()
     im = QImage(cwd + "/../assets/grid.gif", "GIF");
     if (!im.isNull())
     {
-        mTextureGrid.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+		mTextureGrid.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        //mTextureGrid.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
         mTextureGrid.setFilter(GL_LINEAR);
         mTextureGrid.setWrapMode(GL_REPEAT);
     }
@@ -958,22 +968,22 @@ void Viewer::paintGL()
     switch (mpMainDialog->getAntiAliasingMode())
     {
     case aamNoAA:
-        drawSceneToColorFbo(rtRGBA);
+        drawSceneToColorFbo(rtFinal_0);
         break;
     case aamSmaa1x:
     {
-        drawSceneToColorFbo(rtSRGBA);
+        drawSceneToColorFbo(rtScene);
 
         antiAliasTimer.start();
-        doSmaa1x(rtSRGBA, rtFinal_0);
+        doSmaa1x(rtScene, rtFinal_0);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
     }break;
     case aamSmaaT2x:
     {
-        drawSceneToColorFbo(rtSRGBA);
+        drawSceneToColorFbo(rtScene);
 
         antiAliasTimer.start();
-        doSmaa1x(rtSRGBA, finalRt[finalRtIndex]);
+        doSmaa1x(rtScene, finalRt[finalRtIndex]);
         doReprojection(finalRt[previousFinalRtIndex], finalRt[finalRtIndex]);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
     } break;
@@ -1102,35 +1112,7 @@ void Viewer::resetCamera()
 void Viewer::resolveMsaaTo(renderTarget iRt)
 {
     //resolve the multisample buffer to normal renderable buffer
-    mMultisampleFbo.resolveTo(msaaRtSRGB, mColorFbo, rtSRGBA);
-
-    //perform gamma correction
-    mColorFbo.begin();
-    {
-        glDisable(GL_LIGHTING);
-        //disable all depth test for the post processing stages...
-        glDisable(GL_DEPTH_TEST);
-
-        //gamma corretion  to final
-        mColorFbo.drawTo(iRt);
-        {
-            //glClear(GL_COLOR_BUFFER_BIT);
-            ScreenSpaceProjection sp(getCamera().getViewport().getSize());
-            mGammaCorrection.begin();
-            mGammaCorrection.setUniform("modelViewMatrix", sp.mViewMatrix);
-            mGammaCorrection.setUniform("projectionMatrix", sp.mProjectionMatrix);
-            mGammaCorrection.setUniform("uColorTex", 0);
-
-            Texture t = mColorFbo.getColorAttachment(rtSRGBA);
-            drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
-
-            mGammaCorrection.end();
-        }
-    }
-    mColorFbo.end();
-
-    glEnable(GL_LIGHTING);
-    glEnable(GL_DEPTH_TEST);
+    mMultisampleFbo.resolveTo(msaaRtScene, mColorFbo, iRt);
 }
 
 //-----------------------------------------------------------------------------
@@ -1153,8 +1135,8 @@ void Viewer::saveAllSmaa1xPassToPng(int iPass)
     QString s("F:/pass_");
     s += QString::number(iPass) + " ";
 
-    mColorFbo.getColorAttachment(rtSRGBA).asQImage().save(s + " - 1 - no gamma correction.bmp", "BMP");
-    mColorFbo.getColorAttachment(rtRGBA).asQImage().save(s + " - 2 - gamma corection.bmp", "BMP");
+    mColorFbo.getColorAttachment(rtScene).asQImage().save(s + " - 1 - Scene.bmp", "BMP");
+	mColorFbo.getColorAttachment(rtSceneSRGB).asQImage().save(s + " - 1 - SceneSRGB.bmp", "BMP");
     mColorFbo.getColorAttachment(rtEdge).asQImage().save(s + " - 3 -  edge.bmp", "BMP");
     mColorFbo.getColorAttachment(rtBlendWeight).asQImage().save(s + " - 4 - blendweight.bmp", "BMP");
     mColorFbo.getColorAttachment(rtSeparate_0).asQImage().save(s + " - 5 - separate_0.bmp", "BMP");
@@ -1204,7 +1186,7 @@ mHas3dControlEnabled(false),
 mIsCameraPitchNodding(false),
 mIsCameraYawNodding(false),
 mHasDebugPassEnabled(false),
-mDebugPassToDisplay(rtRGBA),
+mDebugPassToDisplay(rtScene),
 mSaveColorFboPassToPng(false),
 mHasShading(false),
 mIsWireFrameShown(false),
@@ -1492,7 +1474,7 @@ renderTarget MainDialog::getPassToDisplay() const
     {
         switch (getAntiAliasingMode())
         {
-        case aamNoAA: rt = rtRGBA; break;
+        case aamNoAA: rt = rtFinal_0; break;
         case aamSmaa1x: rt = rtFinal_0; break;
         case aamSmaaT2x:
         {
@@ -1649,8 +1631,8 @@ void MainDialog::updateUi()
 
     switch (getPassToDisplay())
     {
-    case rtSRGBA: passName = "No Gamma correction"; break;
-    case rtRGBA: passName = "Gamma correction"; break;
+	case rtScene: passName = "Scene"; break;
+	case rtSceneSRGB: passName = "Scene sRGB"; break;
     case rtEdge: passName = "Edge detection"; break;
     case rtBlendWeight: passName = "Blend weight"; break;
     case rtFinal_0: passName = "Final_0"; break;
