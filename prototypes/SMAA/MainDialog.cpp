@@ -81,6 +81,8 @@ void Viewer::displayPass(FrameBufferObject iFbo, int iPass)
     //disable all depth test for the post processing stages...
     glDisable(GL_DEPTH_TEST);
 
+    glEnable(GL_FRAMEBUFFER_SRGB);
+
     //Draw final result has full screen quad
     //since the fbo is the same size as the screen, we want it to be pixel perfect, so
     //we activate GL_NEAREST filtering on the texture.
@@ -90,6 +92,8 @@ void Viewer::displayPass(FrameBufferObject iFbo, int iPass)
     Vector2i textureSize(t.width(), t.height());
     ScreenSpaceProjection sp(textureSize);
     drawStillImage(t.getId(), textureSize, sp.mViewMatrix, sp.mProjectionMatrix);
+
+    glDisable(GL_FRAMEBUFFER_SRGB);
 
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
@@ -157,6 +161,7 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
         //--- post processing
         //pass 1
         //gamma corretion 
+        //glDisable(GL_FRAMEBUFFER_SRGB);
         mColorFbo.drawTo(rtSceneSRGB);
         {
             glClear(GL_COLOR_BUFFER_BIT);
@@ -220,7 +225,8 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
 
         //pass 4
         //SMAA - 3rd pass perform the neighbour blending and gamma correction again.
-        //		
+        //
+        glEnable(GL_FRAMEBUFFER_SRGB);
         mColorFbo.drawTo(iOutput);
         {
             if (pass == 0)
@@ -255,6 +261,7 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
 
             mSmaa3rdPassShader.end();
         }
+        glDisable(GL_FRAMEBUFFER_SRGB);
         glDisable(GL_BLEND);
     }
     mColorFbo.end();
@@ -545,7 +552,7 @@ void Viewer::initializeGL()
     glClearColor(0.0, 0.0, 0.0, 0.0);
     //glClearColor(1.0, 1.0, 1.0, 1.0);
 
-	glEnable(GL_FRAMEBUFFER_SRGB);
+	//glEnable(GL_FRAMEBUFFER_SRGB);
 	glDepthRangedNV(-1,1);
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_CULL_FACE);
@@ -807,8 +814,8 @@ void Viewer::loadTextures()
     im = QImage(cwd + "/../assets/Unigine01.png", "PNG");
     if (!im.isNull())
     {
-        mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        //mUnigine01.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        //mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine01.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
         mUnigine01.generateMipmap(true);
         mUnigine01.setMagnificationFilter(GL_LINEAR);
         mUnigine01.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
@@ -821,8 +828,8 @@ void Viewer::loadTextures()
     im = QImage(cwd + "/../assets/Unigine02.png", "PNG");
     if (!im.isNull())
     {
-        mUnigine02.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        //mUnigine02.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        //mUnigine02.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine02.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
         mUnigine02.setFilter(GL_LINEAR);
         mUnigine02.setWrapMode(GL_CLAMP_TO_EDGE);
     }
@@ -831,8 +838,8 @@ void Viewer::loadTextures()
     im = QImage(cwd + "/../assets/grid.gif", "GIF");
     if (!im.isNull())
     {
-		mTextureGrid.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        //mTextureGrid.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+		//mTextureGrid.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mTextureGrid.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
         mTextureGrid.setFilter(GL_LINEAR);
         mTextureGrid.setWrapMode(GL_REPEAT);
     }
