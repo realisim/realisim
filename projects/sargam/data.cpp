@@ -108,6 +108,9 @@ int NoteLocator::getIndex() const
 bool NoteLocator::isValid() const
 { return mBar != -1; }
 //------------------------------------------------------------------------------
+NoteLocator NoteLocator::invalid()
+{ return NoteLocator(-1, -1); }
+//------------------------------------------------------------------------------
 bool NoteLocator::operator<( const NoteLocator& iRhs ) const
 {
   bool r = this->getBar() < iRhs.getBar();
@@ -208,7 +211,7 @@ void Composition::addBar()
 /*Ajoute une barre immédiatement après iBarIndex*/
 void Composition::addBar( int iBarIndex )
 {
-  vector<Bar>::iterator it = iBarIndex == mBars.size() ? mBars.end() : mBars.begin() + iBarIndex + 1;
+  vector<Bar>::iterator it = iBarIndex == mBars.size() ? mBars.end() : mBars.begin() + (iBarIndex + 1);
   if( it < mBars.end() )
   {
     mBars.insert(it, Bar());

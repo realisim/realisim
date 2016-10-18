@@ -60,10 +60,11 @@ public:
   bool operator>( const NoteLocator& ) const;
   bool operator>=( const NoteLocator& ) const;
   bool operator==( const NoteLocator& ) const;
-  bool operator!=( const NoteLocator& ) const;
-  
+  bool operator!=( const NoteLocator& ) const;  
+
   int getBar() const;
   int getIndex() const;
+  static NoteLocator invalid();
   bool isValid() const;
   
 protected:

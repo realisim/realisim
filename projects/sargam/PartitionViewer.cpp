@@ -555,9 +555,9 @@ void PartitionViewer::doCommandAddLine()
   
   doCommandAddBar();
   x->addLine( getCurrentBar() );
-  setCursorPosition( NoteLocator(getCurrentBar(), -1) );
   setBarAsDirty( getCurrentBar(), true );
   setAsModified(true);
+  setCursorPosition( NoteLocator(getCurrentBar(), -1) );
   updateUi();
   
   if( isVerbose() )
@@ -2180,7 +2180,7 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
   if( getMouseState() == msDraging )
   {
     const NoteLocator nl = getNoteLocatorAtPosition(ipE->pos());
-    if( nl.isValid() )
+    if( nl.isValid() && mMouseSelection.mStart.isValid() )
     {
       mMouseSelection.mEnd = nl;
       clearSelection();
@@ -2250,12 +2250,15 @@ void PartitionViewer::mousePressEvent(QMouseEvent* ipE)
   {
     clearSelection();
     
-    const NoteLocator nl = getNoteLocatorAtPosition(ipE->pos());
+    NoteLocator nl = getNoteLocatorAtPosition(ipE->pos());
     if(nl.isValid())
-    {
-      mMouseSelection.mStart = nl;
-      setCursorPosition(nl);
+    { mMouseSelection.mStart = nl; }
+    else
+    { 
+        mMouseSelection.mStart = NoteLocator::invalid();
+        nl = NoteLocator(mBarHoverIndex, -1);
     }
+    setCursorPosition(nl);
     
     //animation du highlight de la barre courante
     if(mCurrentBarTimerId != 0) { killTimer(mCurrentBarTimerId); }
