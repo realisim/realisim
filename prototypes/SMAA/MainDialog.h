@@ -24,7 +24,8 @@ enum antiAliasingMode { aamNoAA, aamSmaa1x, aamSmaaT2x, aamSmaaS2x, aamSmaa4x, a
 //enum renderTarget{ rtSRGBA=0, rtRGBA, rtEdge, rtBlendWeight, rtFinal_0,
 //	rtFinal_1, rtSeparate_0, rtSeparate_1, rtCount};
 
-enum renderTarget{ rtScene=0, rtSceneSRGB, rtEdge, rtBlendWeight, rtFinal_0,
+enum renderTargetColor{ rtSceneColor=0, rtFinalColor };
+enum renderTargetSmaa{ rtEdge=0, rtBlendWeight, rtFinal_0,
 		rtFinal_1, rtSeparate_0, rtSeparate_1, rtCount};
 
 enum msaaRenderTarget{msaaRtScene=0, msaaRtCount};
@@ -46,13 +47,13 @@ private:
     int addVertexSource(treeD::Shader*, QString iFileName);	
 	void displayPass(treeD::FrameBufferObject, int);
 	void doMsaa(int iX);
-	void doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt);
-	void doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass = 0);
+	void doReprojection(renderTargetSmaa iPreviousFinalRt, renderTargetSmaa iFinalRt, renderTargetColor iColorOutput);
+	void doSmaa1x( treeD::FrameBufferObject iInput, int iInputColorAttachment, renderTargetSmaa iOutput, int pass = 0);
 	void doSmaaSeparate();
     void drawRectangle(int, math::Vector2d);
     void drawStillImage(int, math::Vector2d, const math::Matrix4& iView, const math::Matrix4& iProj);
     void drawScene();
-	void drawSceneToColorFbo(renderTarget);
+	void drawSceneToColorFbo();
 	math::Matrix4 getJitterMatrix() const;
 	math::Vector4d getSubsampleIndices(int pass) const;
     virtual void keyPressEvent(QKeyEvent*);
@@ -60,10 +61,10 @@ private:
     void loadTextures();
 	void loadVbos();
     virtual void initializeGL() override;
+    void initSmallHouses();
     virtual void paintGL() override;
     void resetCamera();
     virtual void resizeGL(int, int) override;
-	void resolveMsaaTo(renderTarget);
 	void saveAllSmaa1xPassToPng(int);
     void toggleFullScreen();
 	void tiltMatrix(math::Matrix4*, bool iYaw, bool iPitch) const;
@@ -71,6 +72,7 @@ private:
     MainDialog* mpMainDialog;
 
     treeD::FrameBufferObject mColorFbo;
+    treeD::FrameBufferObject mSmaaFbo;
 	treeD::MultisampleFrameBufferObject mMultisampleFbo;
     treeD::Shader mSmaaShader;
     treeD::Shader mSmaa2ndPassShader;
@@ -86,6 +88,8 @@ private:
 	treeD::Texture mTextureGrid;
 	treeD::VertexBufferObject mTexturedGridVbo;
     treeD::VertexBufferObject mMillionsOfPolygonVbo;
+    std::vector<math::Vector3d> mHousesPosition;
+    std::vector<treeD::VertexBufferObject> mHouses;
 
 	int mFrameIndex;
 	utils::Timer mInterFrameTimer;
@@ -107,7 +111,7 @@ public:
 	void displayNextDebugPass();
 	void displayPreviousDebugPass();
 	antiAliasingMode getAntiAliasingMode() const {return mAntiAliasingMode;}
-	renderTarget getPassToDisplay() const;
+	renderTargetSmaa getPassToDisplay() const;
     smaaPresetQuality getSmaaPresetQuality() const {return mSmaaPresetQuality;}
 	bool has3dControlEnabled() const {return mHas3dControlEnabled;}
 	bool hasDebugPassEnabled() const {return mHasDebugPassEnabled;}

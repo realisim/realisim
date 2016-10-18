@@ -13,6 +13,7 @@
 #include <QCoreApplication>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <random>
 #include <sstream>
 
 using namespace realisim;
@@ -21,7 +22,9 @@ using namespace treeD;
 
 namespace
 {
-    enum sceneContent { scGeometricGrid = 0, scTexturedGrid, scMillionsOfPolygons, scUnigine01, scUnigine02, scContentCount };
+    enum sceneContent { scGeometricGrid = 0, scTexturedGrid, scMillionsOfPolygons, 
+        scSmallHouses,
+        scUnigine01, scUnigine02, scContentCount };
     sceneContent gSceneContent = scGeometricGrid;
 
     //-----------------------------------------------------------------------------
@@ -38,13 +41,15 @@ namespace
         }
         return r;
     }
+
+    const double kTexturedGridSize = 5; //500m
 }
 
 Viewer::Viewer(QWidget* ipParent, MainDialog* ipM) : Widget3d(ipParent),
 mpMainDialog(ipM),
 mFrameIndex(0)
 {
-    setFocusPolicy(Qt::StrongFocus);
+    setFocusPolicy(Qt::StrongFocus);    
 }
 
 Viewer::~Viewer()
@@ -77,11 +82,10 @@ int Viewer::addVertexSource(Shader* ipShader, QString iFileName)
 //-----------------------------------------------------------------------------
 void Viewer::displayPass(FrameBufferObject iFbo, int iPass)
 {
+    glEnable(GL_FRAMEBUFFER_SRGB);
     glDisable(GL_LIGHTING);
     //disable all depth test for the post processing stages...
     glDisable(GL_DEPTH_TEST);
-
-    glEnable(GL_FRAMEBUFFER_SRGB);
 
     //Draw final result has full screen quad
     //since the fbo is the same size as the screen, we want it to be pixel perfect, so
@@ -93,10 +97,9 @@ void Viewer::displayPass(FrameBufferObject iFbo, int iPass)
     ScreenSpaceProjection sp(textureSize);
     drawStillImage(t.getId(), textureSize, sp.mViewMatrix, sp.mProjectionMatrix);
 
-    glDisable(GL_FRAMEBUFFER_SRGB);
-
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
+    glDisable(GL_FRAMEBUFFER_SRGB);
 }
 
 //-----------------------------------------------------------------------------
@@ -115,14 +118,14 @@ void Viewer::doMsaa(int iX)
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt)
+void Viewer::doReprojection(renderTargetSmaa iPreviousFinalRt, renderTargetSmaa iFinalRt, renderTargetColor iColorOutput)
 {
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
 
     mColorFbo.begin();
     {
-        mColorFbo.drawTo(iFinalRt);
+        mColorFbo.drawTo(iColorOutput);
         ScreenSpaceProjection sp(getCamera().getViewport().getSize());
         mSmaaReprojectionShader.begin();
         mSmaaReprojectionShader.setUniform("modelViewMatrix", sp.mViewMatrix);
@@ -131,9 +134,9 @@ void Viewer::doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt
         mSmaaReprojectionShader.setUniform("uPreviousColorTex", 1);
 
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, mColorFbo.getColorAttachment(iPreviousFinalRt).getId());
+        glBindTexture(GL_TEXTURE_2D, mSmaaFbo.getColorAttachment(iPreviousFinalRt).getId());
 
-        Texture t = mColorFbo.getColorAttachment(iFinalRt);
+        Texture t = mSmaaFbo.getColorAttachment(iFinalRt);
         drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
         glActiveTexture(GL_TEXTURE1);
@@ -149,32 +152,18 @@ void Viewer::doReprojection(renderTarget iPreviousFinalRt, renderTarget iFinalRt
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
+void Viewer::doSmaa1x(FrameBufferObject iInput, int iInputColorAttachment, renderTargetSmaa iOutput, int pass)
 {
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
 
     const Camera& cam = getCamera();
-    mColorFbo.begin();
-    {
-
-        //--- post processing
-        //pass 1
-        //gamma corretion 
-        //glDisable(GL_FRAMEBUFFER_SRGB);
-        mColorFbo.drawTo(rtSceneSRGB);
-        {
-            glClear(GL_COLOR_BUFFER_BIT);
-            ScreenSpaceProjection sp(cam.getViewport().getSize());        
-
-            Texture t = mColorFbo.getColorAttachment(iInput);
-			drawStillImage(t.getId(), Vector2d(t.width(), t.height()), sp.mViewMatrix, sp.mProjectionMatrix);
-        }
-
+    mSmaaFbo.begin();
+    {        
         //pass 2
         //SMAA - Luma edge detection edgeTex
         //this requires a RGB (linear) input
-        mColorFbo.drawTo(rtEdge);
+        mSmaaFbo.drawTo(rtEdge);
         {
             glClear(GL_COLOR_BUFFER_BIT);
             mSmaaShader.begin();
@@ -183,7 +172,7 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
             mSmaaShader.setUniform("projectionMatrix", sp.mProjectionMatrix);
             mSmaaShader.setUniform("uColorTex", 0);
 
-            Texture t = mColorFbo.getColorAttachment(iInput);
+            Texture t = iInput.getColorAttachment(iInputColorAttachment);
             drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
             mSmaaShader.end();
@@ -191,7 +180,7 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
 
         //pass 3
         //SMAA - 2nd pass - blend weight
-        mColorFbo.drawTo(rtBlendWeight);
+        mSmaaFbo.drawTo(rtBlendWeight);
         {
             glClear(GL_COLOR_BUFFER_BIT);
             mSmaa2ndPassShader.begin();
@@ -210,7 +199,7 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, mSmaaSearchTexture.getId());
 
-            Texture t = mColorFbo.getColorAttachment(rtEdge);
+            Texture t = mSmaaFbo.getColorAttachment(rtEdge);
             drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
             glActiveTexture(GL_TEXTURE2);
@@ -226,8 +215,8 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
         //pass 4
         //SMAA - 3rd pass perform the neighbour blending and gamma correction again.
         //
-        glEnable(GL_FRAMEBUFFER_SRGB);
-        mColorFbo.drawTo(iOutput);
+        //glEnable(GL_FRAMEBUFFER_SRGB);
+        mSmaaFbo.drawTo(iOutput);
         {
             if (pass == 0)
             {
@@ -249,10 +238,10 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
             }
 
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, mColorFbo.getColorAttachment(rtBlendWeight).getId());
+            glBindTexture(GL_TEXTURE_2D, mSmaaFbo.getColorAttachment(rtBlendWeight).getId());
 
             //the texture required must be sRgb
-            Texture t = mColorFbo.getColorAttachment(rtSceneSRGB);
+            Texture t = iInput.getColorAttachment(iInputColorAttachment);
             drawRectangle(t.getId(), Vector2d(t.width(), t.height()));
 
             glActiveTexture(GL_TEXTURE1);
@@ -261,10 +250,10 @@ void Viewer::doSmaa1x(renderTarget iInput, renderTarget iOutput, int pass)
 
             mSmaa3rdPassShader.end();
         }
-        glDisable(GL_FRAMEBUFFER_SRGB);
+        //glDisable(GL_FRAMEBUFFER_SRGB);
         glDisable(GL_BLEND);
     }
-    mColorFbo.end();
+    mSmaaFbo.end();
 
     if (mpMainDialog->shouldSaveFboPass())
     {
@@ -296,7 +285,7 @@ void Viewer::doSmaaSeparate()
 
     //bind output frame buffer for separation
     GLenum drawBufs[2] = { GL_COLOR_ATTACHMENT0 + rtSeparate_0, GL_COLOR_ATTACHMENT0 + rtSeparate_1 };
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, mColorFbo.getFrameBufferId());
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, mSmaaFbo.getFrameBufferId());
     glDrawBuffers(2, &drawBufs[0]);
 
     glDisable(GL_LIGHTING);
@@ -348,7 +337,7 @@ void Viewer::drawScene()
         view = getCamera().getViewMatrix();
         proj = getCamera().getProjectionMatrix();
     }
-    view = view * getJitterMatrix();
+    proj = getJitterMatrix() * proj;
 
     //adjust view when camera is nodding
     tiltMatrix(&view, mpMainDialog->isCameraYawNodding(), mpMainDialog->isCameraPitchNodding());
@@ -401,12 +390,23 @@ void Viewer::drawScene()
     {
         mOneTextureShader.begin();
         mOneTextureShader.setUniform("projectionMatrix", proj);
-        mOneTextureShader.setUniform("modelViewMatrix", view);
         mOneTextureShader.setUniform("uTexture0", 0);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, mTextureGrid.getId());
-        mTexturedGridVbo.draw();
+
+        const double increment = 2*kTexturedGridSize;
+        const int nItem = 50;
+        for(int j = 0; j < nItem; ++j)
+            for (int i = 0; i < nItem; ++i)
+            {
+                Matrix4 t(Vector3d(i * increment, 0.0, j * increment));
+                Matrix4 view2 = view*t;
+                mOneTextureShader.setUniform("modelViewMatrix", view2);
+                mTexturedGridVbo.draw();
+            }
+        
+
         glBindTexture(GL_TEXTURE_2D, 0);
 
         mOneTextureShader.end();
@@ -426,6 +426,29 @@ void Viewer::drawScene()
         glBindTexture(GL_TEXTURE_2D, mTextureGrid.getId());
         mMillionsOfPolygonVbo.draw();
         glBindTexture(GL_TEXTURE_2D, 0);
+        mSceneShader.end();
+    } break;
+    case scSmallHouses:
+    {
+        mSceneShader.begin();
+        mSceneShader.setUniform("uApplyShading", mpMainDialog->hasShading());
+        mSceneShader.setUniform("projectionMatrix", proj);
+        mSceneShader.setUniform("uUseTexture", false);
+
+        for (size_t i = 0; i < mHousesPosition.size(); ++i)
+        {
+            Matrix4 t(mHousesPosition[i]);
+            Matrix4 view2 = view*t;
+            mSceneShader.setUniform("modelViewMatrix", view2);
+            mSceneShader.setUniform("normalMatrix", (view2.inverse()).transpose());
+            mHouses[i % mHouses.size()].draw();
+        }
+
+        VertexBufferObject floor = getRectangularPrism(Point3d(-2500, -2, -2500), Point3d(2500, 0, 2500));
+        mSceneShader.setUniform("modelViewMatrix", view);
+        mSceneShader.setUniform("normalMatrix", (view.inverse()).transpose());
+        floor.draw();
+
         mSceneShader.end();
     } break;
     case scUnigine01: //uEngine test image 1
@@ -451,13 +474,13 @@ void Viewer::drawScene()
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::drawSceneToColorFbo(renderTarget iTarget)
+void Viewer::drawSceneToColorFbo()
 {
     const Camera& cam = getCamera();
     mColorFbo.begin();
     {
         //-- drawScene offscreen
-        mColorFbo.drawTo(iTarget);
+        mColorFbo.drawTo(0);
         {
             drawScene();
         }
@@ -561,46 +584,45 @@ void Viewer::initializeGL()
     //--- init mFbo
 
     //--- color fbo
-	//rtScene
-	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-	mColorFbo.getColorAttachment(rtScene).setFilter(GL_LINEAR);
-	mColorFbo.getColorAttachment(rtScene).setWrapMode(GL_CLAMP_TO_EDGE);
-
-	mColorFbo.addColorAttachment(GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-	mColorFbo.getColorAttachment(rtSceneSRGB).setFilter(GL_LINEAR);
-	mColorFbo.getColorAttachment(rtSceneSRGB).setWrapMode(GL_CLAMP_TO_EDGE);
-
-	//rtEdge
-	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-	mColorFbo.getColorAttachment(rtEdge).setFilter(GL_LINEAR);
-	mColorFbo.getColorAttachment(rtEdge).setWrapMode(GL_CLAMP_TO_EDGE);
-
-	//rtBlend
-	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-	mColorFbo.getColorAttachment(rtBlendWeight).setFilter(GL_LINEAR);
-	mColorFbo.getColorAttachment(rtBlendWeight).setWrapMode(GL_CLAMP_TO_EDGE);
-
-	//rtFinal_0
-	mColorFbo.addColorAttachment(GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-	mColorFbo.getColorAttachment(rtFinal_0).setFilter(GL_LINEAR);
-	mColorFbo.getColorAttachment(rtFinal_0).setWrapMode(GL_CLAMP_TO_EDGE);
-
-	//rtFinal_1
-	mColorFbo.addColorAttachment(GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-	mColorFbo.getColorAttachment(rtFinal_1).setFilter(GL_LINEAR);
-	mColorFbo.getColorAttachment(rtFinal_1).setWrapMode(GL_CLAMP_TO_EDGE);
-
-	//rtSeparate_0
-	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-	mColorFbo.getColorAttachment(rtSeparate_0).setFilter(GL_LINEAR);
-	mColorFbo.getColorAttachment(rtSeparate_0).setWrapMode(GL_CLAMP_TO_EDGE);
-
-	//rtSeparate_1
-	mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
-	mColorFbo.getColorAttachment(rtSeparate_1).setFilter(GL_LINEAR);
-	mColorFbo.getColorAttachment(rtSeparate_1).setWrapMode(GL_CLAMP_TO_EDGE);
+    mColorFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+    mColorFbo.getColorAttachment(0).setFilter(GL_LINEAR);
+    mColorFbo.getColorAttachment(0).setWrapMode(GL_CLAMP_TO_EDGE);
 
     mColorFbo.addDepthAttachment();
+
+    //--- Smaa FBO
+    
+	//rtEdge
+	mSmaaFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mSmaaFbo.getColorAttachment(rtEdge).setFilter(GL_LINEAR);
+	mSmaaFbo.getColorAttachment(rtEdge).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtBlend
+	mSmaaFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mSmaaFbo.getColorAttachment(rtBlendWeight).setFilter(GL_LINEAR);
+	mSmaaFbo.getColorAttachment(rtBlendWeight).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtFinal_0
+	mSmaaFbo.addColorAttachment(GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mSmaaFbo.getColorAttachment(rtFinal_0).setFilter(GL_LINEAR);
+	mSmaaFbo.getColorAttachment(rtFinal_0).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtFinal_1
+	mSmaaFbo.addColorAttachment(GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mSmaaFbo.getColorAttachment(rtFinal_1).setFilter(GL_LINEAR);
+	mSmaaFbo.getColorAttachment(rtFinal_1).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtSeparate_0
+	mSmaaFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mSmaaFbo.getColorAttachment(rtSeparate_0).setFilter(GL_LINEAR);
+	mSmaaFbo.getColorAttachment(rtSeparate_0).setWrapMode(GL_CLAMP_TO_EDGE);
+
+	//rtSeparate_1
+	mSmaaFbo.addColorAttachment(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	mSmaaFbo.getColorAttachment(rtSeparate_1).setFilter(GL_LINEAR);
+	mSmaaFbo.getColorAttachment(rtSeparate_1).setWrapMode(GL_CLAMP_TO_EDGE);
+
+    mSmaaFbo.addDepthAttachment();
 
     //multiSample fbo
     for (int i = 0; i < msaaRtCount; ++i)
@@ -620,7 +642,38 @@ void Viewer::initializeGL()
     //init vbo
     loadVbos();
 
+    initSmallHouses();
+
     mpMainDialog->updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void Viewer::initSmallHouses()
+{
+    const int kNumHouses = 5000;
+    const int kNumTypeHouses = 5;
+    
+    VertexBufferObject vbo0 = getRectangularPrism(Point3d(0.0), Point3d(5, 5, 3));
+    VertexBufferObject vbo1 = getRectangularPrism(Point3d(0.0), Point3d(15, 12, 35));
+    VertexBufferObject vbo2 = getRectangularPrism(Point3d(0.0), Point3d(10, 30, 8));
+    VertexBufferObject vbo3 = getRectangularPrism(Point3d(0.0), Point3d(5, 8, 3));
+    VertexBufferObject vbo4 = getRectangularPrism(Point3d(0.0), Point3d(25, 40, 20));
+
+    mHouses.resize(5);
+    mHouses[0] = vbo0;
+    mHouses[1] = vbo1;
+    mHouses[2] = vbo2;
+    mHouses[3] = vbo3;
+    mHouses[4] = vbo4;
+
+    //generate the position of houses on the xy plane.
+    std::default_random_engine generator;
+    std::uniform_real_distribution<double> distribution(-2500,2500);
+
+    for (int i = 0; i < kNumHouses; ++i)
+    {
+        mHousesPosition.push_back(Vector3d ( distribution(generator), 0.0, distribution(generator)) );
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -634,7 +687,7 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
         break;
     case Qt::Key_F: mpMainDialog->displayPreviousDebugPass(); break;
     case Qt::Key_G: mpMainDialog->displayNextDebugPass(); break;
-    case Qt::Key_F5: loadShaders(); loadTextures(); break;
+    case Qt::Key_F5: loadShaders(); break;
     case Qt::Key_F11: toggleFullScreen(); break;
     default: Widget3d::keyPressEvent(ipE); break;
     }
@@ -810,12 +863,13 @@ void Viewer::loadTextures()
 
 
     QImage im;
+    //const GLenum textureInternalFormat = GL_RGBA8;
+    const GLenum textureInternalFormat = GL_SRGB8_ALPHA8;
     //demo Unigine01    
     im = QImage(cwd + "/../assets/Unigine01.png", "PNG");
     if (!im.isNull())
     {
-        //mUnigine01.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mUnigine01.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine01.set(im, textureInternalFormat, GL_RGBA, GL_UNSIGNED_BYTE);
         mUnigine01.generateMipmap(true);
         mUnigine01.setMagnificationFilter(GL_LINEAR);
         mUnigine01.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
@@ -828,18 +882,17 @@ void Viewer::loadTextures()
     im = QImage(cwd + "/../assets/Unigine02.png", "PNG");
     if (!im.isNull())
     {
-        //mUnigine02.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mUnigine02.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mUnigine02.set(im, textureInternalFormat, GL_RGBA, GL_UNSIGNED_BYTE);
         mUnigine02.setFilter(GL_LINEAR);
         mUnigine02.setWrapMode(GL_CLAMP_TO_EDGE);
     }
 
     //texture grid
-    im = QImage(cwd + "/../assets/grid.gif", "GIF");
+    //im = QImage(cwd + "/../assets/grid.gif", "GIF");
+    im = QImage(cwd + "/../assets/checkerboard.jpg", "JPG");
     if (!im.isNull())
     {
-		//mTextureGrid.set(im, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE);
-        mTextureGrid.set(im, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+        mTextureGrid.set(im, textureInternalFormat, GL_RGBA, GL_UNSIGNED_BYTE);
         mTextureGrid.setFilter(GL_LINEAR);
         mTextureGrid.setWrapMode(GL_REPEAT);
     }
@@ -851,19 +904,17 @@ void Viewer::loadVbos()
     //--------------------------
     //--- textured grid
     {
-        const double kRectHalfSize = 75000; //75km
-
         float v[12] = {
-            -kRectHalfSize, 0.0f, kRectHalfSize,
-            kRectHalfSize, 0.0f, kRectHalfSize,
-            kRectHalfSize, 0.0f, -kRectHalfSize,
-            -kRectHalfSize, 0.0f, -kRectHalfSize };
+            -kTexturedGridSize, 0.0f, kTexturedGridSize,
+            kTexturedGridSize, 0.0f, kTexturedGridSize,
+            kTexturedGridSize, 0.0f, -kTexturedGridSize,
+            -kTexturedGridSize, 0.0f, -kTexturedGridSize };
 
         int i[6] = {
             0, 1, 3,
             1, 2, 3 };
 
-        const double kNumRepeat = 400;
+        const double kNumRepeat = 1;
         float t[8] = {
             0.0, 0.0,
             kNumRepeat, 0.0,
@@ -968,30 +1019,40 @@ void Viewer::paintGL()
     utils::Timer perFrameTimer;
     utils::Timer antiAliasTimer;
 
-    renderTarget finalRt[2] = { rtFinal_0, rtFinal_1 };
+    renderTargetSmaa finalRt[2] = { rtFinal_0, rtFinal_1 };
     int finalRtIndex = mFrameIndex % 2;
     int previousFinalRtIndex = (finalRtIndex + 1) % 2;
 
     switch (mpMainDialog->getAntiAliasingMode())
     {
     case aamNoAA:
-        drawSceneToColorFbo(rtFinal_0);
+        //drawSceneToColorFbo();
+        glEnable(GL_FRAMEBUFFER_SRGB);
+        drawScene();
+        glDisable(GL_FRAMEBUFFER_SRGB);
+        return;
         break;
     case aamSmaa1x:
     {
-        drawSceneToColorFbo(rtScene);
+        drawSceneToColorFbo();
 
         antiAliasTimer.start();
-        doSmaa1x(rtScene, rtFinal_0);
+        doSmaa1x(mColorFbo, rtSceneColor, rtFinal_0);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
+
+        //move result to colorFbo
+        mColorFbo.begin();
+        mColorFbo.drawTo(rtSceneColor);
+        displayPass(mSmaaFbo, rtFinal_0);
+        mColorFbo.end();
     }break;
     case aamSmaaT2x:
     {
-        drawSceneToColorFbo(rtScene);
+        drawSceneToColorFbo();
 
         antiAliasTimer.start();
-        doSmaa1x(rtScene, finalRt[finalRtIndex]);
-        doReprojection(finalRt[previousFinalRtIndex], finalRt[finalRtIndex]);
+        doSmaa1x(mColorFbo, rtSceneColor, finalRt[finalRtIndex]);
+        doReprojection(finalRt[previousFinalRtIndex], finalRt[finalRtIndex], rtSceneColor);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
     } break;
     case aamSmaaS2x:
@@ -1001,9 +1062,15 @@ void Viewer::paintGL()
 
         antiAliasTimer.start();
         doSmaaSeparate();
-        doSmaa1x(rtSeparate_0, rtFinal_0, 0);
-        doSmaa1x(rtSeparate_1, rtFinal_0, 1);
+        doSmaa1x(mSmaaFbo, rtSeparate_0, rtFinal_0, 0);
+        doSmaa1x(mSmaaFbo, rtSeparate_1, rtFinal_0, 1);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
+
+        //move result to colorFbo
+        mColorFbo.begin();
+        mColorFbo.drawTo(rtSceneColor);
+        displayPass(mSmaaFbo, rtFinal_0);
+        mColorFbo.end();
 
         glDisable(GL_MULTISAMPLE);
     } break;
@@ -1013,9 +1080,9 @@ void Viewer::paintGL()
 
         antiAliasTimer.start();
         doSmaaSeparate();
-        doSmaa1x(rtSeparate_0, finalRt[finalRtIndex], 0);
-        doSmaa1x(rtSeparate_1, finalRt[finalRtIndex], 1);
-        doReprojection(finalRt[previousFinalRtIndex], finalRt[finalRtIndex]);
+        doSmaa1x(mSmaaFbo, rtSeparate_0, finalRt[finalRtIndex], 0);
+        doSmaa1x(mSmaaFbo, rtSeparate_1, finalRt[finalRtIndex], 1);
+        doReprojection(finalRt[previousFinalRtIndex], finalRt[finalRtIndex], rtSceneColor);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
 
         glDisable(GL_MULTISAMPLE);
@@ -1026,7 +1093,7 @@ void Viewer::paintGL()
         doMsaa(2);
 
         antiAliasTimer.start();
-        resolveMsaaTo(rtFinal_0);
+        mMultisampleFbo.resolveTo(msaaRtScene, mColorFbo, rtSceneColor);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
 
         glDisable(GL_MULTISAMPLE);
@@ -1037,7 +1104,7 @@ void Viewer::paintGL()
         doMsaa(4);
 
         antiAliasTimer.start();
-        resolveMsaaTo(rtFinal_0);
+        mMultisampleFbo.resolveTo(msaaRtScene, mColorFbo, rtSceneColor);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
 
         glDisable(GL_MULTISAMPLE);
@@ -1048,7 +1115,7 @@ void Viewer::paintGL()
         doMsaa(8);
 
         antiAliasTimer.start();
-        resolveMsaaTo(rtFinal_0);
+        mMultisampleFbo.resolveTo(msaaRtScene, mColorFbo, rtSceneColor);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
 
         glDisable(GL_MULTISAMPLE);
@@ -1059,7 +1126,7 @@ void Viewer::paintGL()
         doMsaa(16);
 
         antiAliasTimer.start();
-        resolveMsaaTo(rtFinal_0);
+        mMultisampleFbo.resolveTo(msaaRtScene, mColorFbo, rtSceneColor);
         mTimeToAntialias.add(antiAliasTimer.getElapsed());
 
         glDisable(GL_MULTISAMPLE);
@@ -1070,7 +1137,7 @@ void Viewer::paintGL()
 		doMsaa(32);
 
 		antiAliasTimer.start();
-		resolveMsaaTo(rtFinal_0);
+        mMultisampleFbo.resolveTo(msaaRtScene, mColorFbo, rtSceneColor);
 		mTimeToAntialias.add(antiAliasTimer.getElapsed());
 
 		glDisable(GL_MULTISAMPLE);
@@ -1078,7 +1145,10 @@ void Viewer::paintGL()
     default: break;
     }
 
-    displayPass(mColorFbo, mpMainDialog->getPassToDisplay());
+    if(mpMainDialog->hasDebugPassEnabled())
+    { displayPass(mSmaaFbo, mpMainDialog->getPassToDisplay()); }
+    else
+    { displayPass(mColorFbo, rtSceneColor); }
 
     ++mFrameIndex;
 
@@ -1116,24 +1186,16 @@ void Viewer::resetCamera()
 }
 
 //-----------------------------------------------------------------------------
-void Viewer::resolveMsaaTo(renderTarget iRt)
-{
-    //resolve the multisample buffer to normal renderable buffer
-    mMultisampleFbo.resolveTo(msaaRtScene, mColorFbo, iRt);
-}
-
-//-----------------------------------------------------------------------------
 void Viewer::resizeGL(int iW, int iH)
 {
     Widget3d::resizeGL(iW, iH);
 
-    if (!(mColorFbo.getWidth() == iW && mColorFbo.getHeight() == iH))
-    {
-        mColorFbo.resize(iW, iH);
-        mMultisampleFbo.resize(iW, iH);
-        loadShaders();
-        printf("FBO size: %d, %d\n", iW, iH);
-    }
+    mColorFbo.resize(iW, iH);
+    mSmaaFbo.resize(iW, iH);
+    mMultisampleFbo.resize(iW, iH);
+    loadShaders();
+    printf("FBO size: %d, %d\n", iW, iH);
+    
 }
 
 //-----------------------------------------------------------------------------
@@ -1142,14 +1204,12 @@ void Viewer::saveAllSmaa1xPassToPng(int iPass)
     QString s("F:/pass_");
     s += QString::number(iPass) + " ";
 
-    mColorFbo.getColorAttachment(rtScene).asQImage().save(s + " - 1 - Scene.bmp", "BMP");
-	mColorFbo.getColorAttachment(rtSceneSRGB).asQImage().save(s + " - 1 - SceneSRGB.bmp", "BMP");
-    mColorFbo.getColorAttachment(rtEdge).asQImage().save(s + " - 3 -  edge.bmp", "BMP");
-    mColorFbo.getColorAttachment(rtBlendWeight).asQImage().save(s + " - 4 - blendweight.bmp", "BMP");
-    mColorFbo.getColorAttachment(rtSeparate_0).asQImage().save(s + " - 5 - separate_0.bmp", "BMP");
-    mColorFbo.getColorAttachment(rtSeparate_1).asQImage().save(s + " - 6 - separate_1.bmp", "BMP");
-    mColorFbo.getColorAttachment(rtFinal_0).asQImage().save(s + " - 7 - final_0.bmp", "BMP");
-    mColorFbo.getColorAttachment(rtFinal_1).asQImage().save(s + " - 8 - final_1.bmp", "BMP");
+    mSmaaFbo.getColorAttachment(rtEdge).asQImage().save(s + " - 3 -  edge.bmp", "BMP");
+    mSmaaFbo.getColorAttachment(rtBlendWeight).asQImage().save(s + " - 4 - blendweight.bmp", "BMP");
+    mSmaaFbo.getColorAttachment(rtSeparate_0).asQImage().save(s + " - 5 - separate_0.bmp", "BMP");
+    mSmaaFbo.getColorAttachment(rtSeparate_1).asQImage().save(s + " - 6 - separate_1.bmp", "BMP");
+    mSmaaFbo.getColorAttachment(rtFinal_0).asQImage().save(s + " - 7 - final_0.bmp", "BMP");
+    mSmaaFbo.getColorAttachment(rtFinal_1).asQImage().save(s + " - 8 - final_1.bmp", "BMP");
 }
 
 static double sPitchNoddingIncrement = 0.0001;
@@ -1193,7 +1253,7 @@ mHas3dControlEnabled(false),
 mIsCameraPitchNodding(false),
 mIsCameraYawNodding(false),
 mHasDebugPassEnabled(false),
-mDebugPassToDisplay(rtScene),
+mDebugPassToDisplay(rtEdge),
 mSaveColorFboPassToPng(false),
 mHasShading(false),
 mIsWireFrameShown(false),
@@ -1403,7 +1463,7 @@ void MainDialog::antiAliasingModeChanged(int iIndex)
     setAntiAliasingMode((antiAliasingMode)iIndex);
 
     //clear all color buffer
-    mpViewer->mColorFbo.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    mpViewer->mSmaaFbo.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     mpViewer->mMultisampleFbo.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
@@ -1469,13 +1529,13 @@ void MainDialog::enableDebugPassClicked()
 }
 
 //-----------------------------------------------------------------------------
-renderTarget MainDialog::getPassToDisplay() const
+renderTargetSmaa MainDialog::getPassToDisplay() const
 {
-    renderTarget rt;
+    renderTargetSmaa rt;
 
     if (hasDebugPassEnabled())
     {
-        rt = (renderTarget)mDebugPassToDisplay;
+        rt = (renderTargetSmaa)mDebugPassToDisplay;
     }
     else
     {
@@ -1485,7 +1545,7 @@ renderTarget MainDialog::getPassToDisplay() const
         case aamSmaa1x: rt = rtFinal_0; break;
         case aamSmaaT2x:
         {
-            rt = (renderTarget)(rtFinal_0 + (mpViewer->mFrameIndex % 2));
+            rt = (renderTargetSmaa)(rtFinal_0 + (mpViewer->mFrameIndex % 2));
         }break;
         case aamSmaaS2x:
         {
@@ -1493,7 +1553,7 @@ renderTarget MainDialog::getPassToDisplay() const
         }break;
         case aamSmaa4x:
         {
-            rt = (renderTarget)(rtFinal_0 + (mpViewer->mFrameIndex % 2));
+            rt = (renderTargetSmaa)(rtFinal_0 + (mpViewer->mFrameIndex % 2));
         }break;
         case aamMSAA2x:
         case aamMSAA4x:
@@ -1638,8 +1698,6 @@ void MainDialog::updateUi()
 
     switch (getPassToDisplay())
     {
-	case rtScene: passName = "Scene"; break;
-	case rtSceneSRGB: passName = "Scene sRGB"; break;
     case rtEdge: passName = "Edge detection"; break;
     case rtBlendWeight: passName = "Blend weight"; break;
     case rtFinal_0: passName = "Final_0"; break;
@@ -1658,6 +1716,7 @@ void MainDialog::updateUi()
     case scGeometricGrid: sceneContent = "geometric grid"; break;
     case scTexturedGrid: sceneContent = "textured grid"; break;
     case scMillionsOfPolygons: sceneContent = "millions of polygons"; break;
+    case scSmallHouses: sceneContent = "small houses"; break;
     case scUnigine01: sceneContent = "Unigine01"; break;
     case scUnigine02: sceneContent = "Unigine02"; break;
 
@@ -1673,7 +1732,8 @@ void MainDialog::updateUi()
     //shading associated to scene content
     mpApplyShading->setChecked(mHasShading);
     mpApplyShading->setVisible(gSceneContent == scGeometricGrid || 
-        gSceneContent == scMillionsOfPolygons);
+        gSceneContent == scMillionsOfPolygons ||
+        gSceneContent == scSmallHouses );
 
     mpShowWireFrame->setChecked( isWireFrameShown() );
 
