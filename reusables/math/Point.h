@@ -49,7 +49,6 @@ namespace math
     virtual Point2& translate( const U&, const U& );
     virtual void minCoord (const Point2&);
     virtual void maxCoord (const Point2&);
-    virtual void print() const;
 
     // --------------- Overload: operateurs ------------------------------------
     virtual bool operator== (const Point2&) const;
@@ -59,6 +58,8 @@ namespace math
     virtual bool operator<= (const Point2&) const;
     virtual bool operator> (const Point2&) const;
     virtual bool operator>= (const Point2&) const;
+
+    std::string toString(int iPrecision = 3) const;
 
   protected:
   private:
@@ -191,9 +192,13 @@ namespace math
   
   //----------------------------------------------------------------------------
   template<class U>
-  void Point2<U>::print() const
-  { std::cout<<x()<<" "<<y()<<std::endl; }
-  
+  inline std::string Point2<U>::toString(int iPrecision /*=3*/) const
+  { 
+      std::stringstream iss;
+      iss << std::fixed << std::setprecision(iPrecision);
+      iss << "(" << x() << ", " << y() << ")";
+      return iss.str();
+  }
 
   //! surcharge operateur = Point
   template<class U>
@@ -299,7 +304,6 @@ namespace math
     inline double fastDist(const Point3&) const;
     inline void minCoord (const Point3<U>&);
     inline void maxCoord (const Point3<U>&);
-    inline void print() const;
 
     // --------------- Overload: operateurs ------------------------------------
     inline bool operator== (const Point3&) const;
@@ -323,6 +327,7 @@ namespace math
     inline bool operator> (const Point3<U>&) const;
     inline bool operator>= (const Point3<U>&) const;
 
+    std::string toString(int iPrecision = 3) const;
   protected:
   private:
 
@@ -572,12 +577,15 @@ namespace math
     setZ (std::max (z (), iP.z ()));
   }
   
+  //----------------------------------------------------------------------------
   template<class U>
-  inline void Point3<U>::print() const
-  {
-    std::cout<<x()<<" "<<y()<<" "<<z()<<std::endl;
+  inline std::string Point3<U>::toString(int iPrecision /*=3*/) const
+  { 
+      std::stringstream iss;
+      iss << std::fixed << std::setprecision(iPrecision);
+      iss << "(" << x() << ", " << y() << "," << z() << ")";
+      return iss.str();
   }
-  
 
   //! surcharge operateur = Point
   template<class U>

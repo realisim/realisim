@@ -167,7 +167,7 @@ void Texture::generateMipmap(bool iUseMipMap)
 		if (hasMipMaps())
 		{
 			glBindTexture(GL_TEXTURE_2D, getId());
-			glGenerateMipmap(GL_TEXTURE_2D);			
+			glGenerateMipmap(GL_TEXTURE_2D);
 		}
 		else
 		{

@@ -103,7 +103,7 @@ public:
   void set( const Point3d&, const Point3d&, const Vector3d& );
   void setOrthoProjection(double, double, double);
   void setOrthoProjection(double, double, double, double);
-  void setPerspectiveProjection(double, double, double, double, bool = true);
+  void setPerspectiveProjection(double iFov, double iRatio, double iNear, double iFar, bool iProportional=true);
   void setProjection( const Projection& );
   void setProjection(double, double, double, double, double, double, Projection::type, bool = true);
   void setViewportSize( int, int );

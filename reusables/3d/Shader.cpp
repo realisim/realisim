@@ -347,7 +347,7 @@ void Shader::link()
 
     //Print the info log when in debug mode
 #ifndef NDEBUG
-  printProgramInfoLog(getProgramId());
+  printProgramInfoLog(getProgramId());  
 #endif
 }
 

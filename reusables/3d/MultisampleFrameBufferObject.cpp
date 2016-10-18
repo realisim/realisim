@@ -332,7 +332,8 @@ void MultisampleFrameBufferObject::resolveTo(int iFromColorAttachment, FrameBuff
 	//write to
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, iFbo.getFrameBufferId());   // Make sure no FBO is set as the draw framebuffer
 	GLenum to = GL_COLOR_ATTACHMENT0 + iToColorAttachment;
-	glDrawBuffer(to);                       // Set the back buffer as the draw buffer
+    iFbo.drawTo(iToColorAttachment);
+	//glDrawBuffer(to);                       // Set the back buffer as the draw buffer
 	glBlitFramebuffer(0, 0, fromW, fromH, 0, 0, toW, toH, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, previousFb);
