@@ -81,6 +81,7 @@ MainDialog::MainDialog() : QMainWindow(),
   connect(mpUpdater, SIGNAL(updateInformationAvailable()),
           this, SLOT(handleUpdateAvailability()));
   mpUpdater->checkForUpdate();
+  mpUpdater->tickRemoteCounter();
 }
 //-----------------------------------------------------------------------------
 void MainDialog::applyPrinterOptions( QPrinter* iP )

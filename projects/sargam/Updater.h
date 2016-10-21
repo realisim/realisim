@@ -21,17 +21,19 @@ public:
   Updater(QObject* = 0);
   virtual ~Updater();
   
+  void checkForUpdate();
   QString getDownloadPage() const;
   int getNumberOfVersions() const;
   QString getReleaseNotes(int) const;
   QString getVersionAsQString(int) const;
-  void checkForUpdate();
+  void tickRemoteCounter();
   
 signals:
   void updateInformationAvailable();
   
 protected slots:
   void handleVersionUpdates(QNetworkReply*);
+  void handleTickRemoteCounter(QNetworkReply*);
   
 protected:
   struct VersionInfos
@@ -44,7 +46,8 @@ protected:
   QStringList fetchTagContent(QString, QString) const;
   
   //data
-  QNetworkAccessManager* mpAccess;
+  QNetworkAccessManager* mpUpdateAccess;
+  QNetworkAccessManager* mpTickCounterAccess;
   std::vector<VersionInfos> mVersions;
   QString mDownloadPage;
 };

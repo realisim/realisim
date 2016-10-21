@@ -9,9 +9,13 @@ using namespace realisim;
 
 Updater::Updater(QObject* ipParent) : QObject(ipParent)
 {
-  mpAccess = new QNetworkAccessManager(this);
-  connect( mpAccess, SIGNAL(finished(QNetworkReply*)),
+  mpUpdateAccess = new QNetworkAccessManager(this);
+  connect( mpUpdateAccess, SIGNAL(finished(QNetworkReply*)),
           this, SLOT(handleVersionUpdates(QNetworkReply*)) );
+  
+  mpTickCounterAccess =new QNetworkAccessManager(this);
+  connect( mpTickCounterAccess, SIGNAL(finished(QNetworkReply*)),
+          this, SLOT(handleTickRemoteCounter(QNetworkReply*)) );
 }
 
 Updater::~Updater()
@@ -27,7 +31,7 @@ void Updater::checkForUpdate()
   
   //r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/sargamReleaseNotes/sargamReleaseNotes.txt"));
   //r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/sargamReleaseNotes/sargamReleaseNotes-preprod.txt"));
-  mpAccess->get(r);
+  mpUpdateAccess->get(r);
 }
 //---------------------------------------------------------------------
 QStringList Updater::fetchTagContent(QString iTag, QString iString) const
@@ -94,4 +98,29 @@ void Updater::handleVersionUpdates(QNetworkReply* ipReply)
     //log some error
   }
   ipReply->deleteLater();
+}
+//---------------------------------------------------------------------
+void Updater::handleTickRemoteCounter(QNetworkReply* ipReply)
+{
+  
+  QNetworkReply::NetworkError e = ipReply->error();
+  if( e == QNetworkReply::NoError )
+  {
+    printf("remote counter ticked!\n%s", ipReply->readAll().toStdString().c_str());
+  }
+  else
+  {
+    printf("remote counter ticked: an error occured, %d\n", ipReply->error());
+  }
+  ipReply->deleteLater();
+}
+//---------------------------------------------------------------------
+void Updater::tickRemoteCounter()
+{
+//#ifndef NDEBUG
+  QNetworkRequest r;
+  r.setUrl(QUrl("http://sargam.com.s3-website-us-east-1.amazonaws.com/sargamUsageCounter.html"));
+  
+  mpTickCounterAccess->get(r);
+//#endif
 }
