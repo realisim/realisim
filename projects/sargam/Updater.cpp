@@ -119,7 +119,9 @@ void Updater::tickRemoteCounter()
 {
 //#ifndef NDEBUG
   QNetworkRequest r;
-  r.setUrl(QUrl("http://sargam.com.s3-website-us-east-1.amazonaws.com/sargamUsageCounter.html"));
+  //r.setUrl(QUrl("http://sargam.com.s3-website-us-east-1.amazonaws.com/sargamUsageCounter.html"));
+  r.setUrl(QUrl("http://counter3.01counter.com/private/freecounterstat.php?c=6e34f8b3c83a55c3c69f1b2c50790b1e"));
+
   
   mpTickCounterAccess->get(r);
 //#endif
