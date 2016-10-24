@@ -2189,11 +2189,12 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
       if(mMouseSelection.mStart < mMouseSelection.mEnd)
       {
         NoteLocator next = getNext(mMouseSelection.mStart);
-        while (next <= mMouseSelection.mEnd)
+        while (next < mMouseSelection.mEnd)
         {
           mSelectedNotes.push_back( make_pair( next.getBar(), next.getIndex() ) );
           next = getNext(next);
         }
+        mSelectedNotes.push_back( make_pair( mMouseSelection.mEnd.getBar(), mMouseSelection.mEnd.getIndex() ) );
       }
       //on selectionne vers la gauche
       else if(mMouseSelection.mStart > mMouseSelection.mEnd)
@@ -2201,11 +2202,12 @@ void PartitionViewer::mouseMoveEvent( QMouseEvent* ipE )
         mSelectedNotes.push_back( make_pair( mMouseSelection.mStart.getBar(), mMouseSelection.mStart.getIndex() ) );
         
         NoteLocator previous = getPrevious(mMouseSelection.mStart);
-        while (previous >= mMouseSelection.mEnd)
+        while (previous > mMouseSelection.mEnd )
         {
           mSelectedNotes.push_back( make_pair( previous.getBar(), previous.getIndex() ) );
           previous = getPrevious(previous);
         }
+        mSelectedNotes.push_back( make_pair( mMouseSelection.mEnd.getBar(), mMouseSelection.mEnd.getIndex() ) );
         
         //les notes doivent etre en ordre croissant pour
         //que les fonctions de navigation (voir keyPressed)
