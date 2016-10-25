@@ -29,8 +29,6 @@ void Updater::checkForUpdate()
   r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/master/projects/sargam/releaseNotes/sargamReleaseNotes.txt"));
   //r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/master/projects/sargam/releaseNotes/sargamReleaseNotes-preprod.txt"));
   
-  //r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/sargamReleaseNotes/sargamReleaseNotes.txt"));
-  //r.setUrl(QUrl("https://raw.githubusercontent.com/realisim/realisim/sargamReleaseNotes/sargamReleaseNotes-preprod.txt"));
   mpUpdateAccess->get(r);
 }
 //---------------------------------------------------------------------
@@ -106,7 +104,7 @@ void Updater::handleTickRemoteCounter(QNetworkReply* ipReply)
   QNetworkReply::NetworkError e = ipReply->error();
   if( e == QNetworkReply::NoError )
   {
-    printf("remote counter ticked!\n%s", ipReply->readAll().toStdString().c_str());
+    printf("remote counter ticked!\n");
   }
   else
   {
@@ -117,12 +115,10 @@ void Updater::handleTickRemoteCounter(QNetworkReply* ipReply)
 //---------------------------------------------------------------------
 void Updater::tickRemoteCounter()
 {
-//#ifndef NDEBUG
+#ifdef NDEBUG
   QNetworkRequest r;
-  //r.setUrl(QUrl("http://sargam.com.s3-website-us-east-1.amazonaws.com/sargamUsageCounter.html"));
   r.setUrl(QUrl("http://counter3.01counter.com/private/freecounterstat.php?c=6e34f8b3c83a55c3c69f1b2c50790b1e"));
-
   
   mpTickCounterAccess->get(r);
-//#endif
+#endif
 }
