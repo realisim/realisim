@@ -37,7 +37,7 @@ public:
   const realisim::utils::Log& getLog() const {return mLog;}
   QString getVersionAsQString() const;  
   int getVersionMajor() const {return 0;}
-  int getVersionMinor() const {return 8;}
+  int getVersionMinor() const {return 9;}
   int getVersionRevision() const {return 1;}
   bool isToolBarVisible() const {return mIsToolBarVisible;}
   bool isVerbose() const;
