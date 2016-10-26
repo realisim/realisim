@@ -3,6 +3,32 @@
 //-----------------------------------------------------------------------------
 
 <release>
+<version>0.9.1</version>
+<releaseNotes>
+
+<h1>Sargam v0.9.1</h1>
+<h2>Release notes</h2>
+<p>
+This minor version brings only a little feature: mouse selection. It is very not much.<br>
+<br>
+Althought it will seem like a very minor upgrade, this version will collect the number of time the application is openned. There are absolutely no data collected whatsoever except the fact the application was openned. No ip addresses, not even the slightest information about who/how/when/where is collected.<br>
+<br>
+The idea is for me to get a feel of the current active user base. I have the intention of developping the second part of Sargam which aims at sharing the composition you have been making. I would like to know how much of us are using Sargam, since there is no point in sharing if we are alone!<br>
+<br>
+Cheers!
+</p>
+
+<p> 
+Thank you very much for using Sargam, please share with your friends!<br>
+Please report bugs and ideas at sargam.software@gmail.com
+</p>
+
+</releaseNotes>
+</release>
+
+//-----------------------------------------------------------------------------
+
+<release>
 <version>0.9.0</version>
 <releaseNotes>
 
