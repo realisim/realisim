@@ -10,3 +10,6 @@ Voici le code html pour le conteur de visite
 Dans sargam.exe, on fait une requete à 
 http://counter3.01counter.com/private/freecounterstat.php?c=6e34f8b3c83a55c3c69f1b2c50790b1e
 pour incrementer le conteur.
+
+Pour visualiser le compteur... La meilleur façon que j'ai trouvé est de taper le lien dans le browser
+http://counter3.01counter.com/private/freecounterstat.php?c=6e34f8b3c83a55c3c69f1b2c50790b1e
