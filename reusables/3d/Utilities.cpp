@@ -344,7 +344,7 @@ QColor idToColor(unsigned int iId)
 std::string glErrorToString(GLenum iError)
 {
 	std::string r="n/a";
-	const GLenum e = glGetError();
+
 	switch (iError)
 	{
 	case GL_INVALID_ENUM: r="GL_INVALID_ENUM."; break;
@@ -354,7 +354,7 @@ std::string glErrorToString(GLenum iError)
 	case GL_OUT_OF_MEMORY: r="GL_OUT_OF_MEMORY."; break;
 	case GL_STACK_UNDERFLOW: r="GL_STACK_UNDERFLOW."; break;
 	case GL_STACK_OVERFLOW: r="GL_STACK_OVERFLOW."; break;
-	case GL_CONTEXT_LOST: r="GL_CONTEXT_LOST."; break; //opengl 4.5
+	//case GL_CONTEXT_LOST: r="GL_CONTEXT_LOST."; break; //opengl 4.5
 	case GL_TABLE_TOO_LARGE: r="GL_TABLE_TOO_LARGE."; break; //ARB_IMAGING
 	default: break;
 	}

@@ -5,7 +5,7 @@ IF( PROTOTYPES_BUILDOPTION )
    #ADD_SUBDIRECTORY( Bloom)
    #ADD_SUBDIRECTORY( camera )
    #ADD_SUBDIRECTORY( command )
-   #ADD_SUBDIRECTORY( frameBuffer)
+   ADD_SUBDIRECTORY( frameBuffer)
    #ADD_SUBDIRECTORY( genese) #
    #ADD_SUBDIRECTORY( imageFilter) #ne fonctionne plus
    #ADD_SUBDIRECTORY( jeuDePouvoir )
@@ -22,7 +22,7 @@ IF( PROTOTYPES_BUILDOPTION )
    #ADD_SUBDIRECTORY( SDI ) #ne compile plus
    #ADD_SUBDIRECTORY( shader)
    #ADD_SUBDIRECTORY( shaderEditor )
-   ADD_SUBDIRECTORY( SMAA )
+   #ADD_SUBDIRECTORY( SMAA )
    #ADD_SUBDIRECTORY( soundTest )
    #ADD_SUBDIRECTORY( spaceTime ) # pas maintenu
    #ADD_SUBDIRECTORY( statistics )

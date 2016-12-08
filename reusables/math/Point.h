@@ -9,7 +9,9 @@
 #define realisim_math_POINT_H
 
 #include "MathDef.h"
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 
 //!-----------------------------------------------------------------------------
 //! \brief Classe gerant les fonctionalites associees a un point

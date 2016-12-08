@@ -42,18 +42,18 @@ Texture& Texture::operator=(const Texture& iT)
 }
 
 //----------------------------------------------------------------------------
-QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
+QByteArray Texture::asBuffer( GLenum iInternalFormat, GLenum iFormat, GLenum iDt ) const
 {
   char* p = 0;
   int componentPerPixel = 3, numberOfComponent = 0;
-  switch( iF )
+  switch( iInternalFormat )
   {
   case GL_RED: componentPerPixel = 1; break;
   case GL_RG: componentPerPixel = 2; break;
-  case GL_RGB: componentPerPixel = 3; break;
-  case GL_RGBA: componentPerPixel = 4; break;
-  case GL_BGRA: componentPerPixel = 4; break;	  
+  case GL_RGB8: componentPerPixel = 3; break;
+  case GL_RGBA8: componentPerPixel = 4; break;
   case GL_LUMINANCE: componentPerPixel = 1; break;
+  case GL_DEPTH_COMPONENT: componentPerPixel = 4; break;
   default: assert(false && "unhandled internal format for Texture::asBuffer."); break;
   }
 
@@ -89,7 +89,7 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
       glEnable( GL_TEXTURE_2D );
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);    
     glBindTexture( GL_TEXTURE_2D, getId() );
-    glGetTexImage( GL_TEXTURE_2D, 0, iF, iDt, p );
+    glGetTexImage( GL_TEXTURE_2D, 0, iFormat, iDt, p );
     glBindTexture( GL_TEXTURE_2D, previousId );
     glDisable( GL_TEXTURE_2D );
   }
@@ -99,7 +99,7 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
       glEnable( GL_TEXTURE_3D );
       glGetIntegerv(GL_TEXTURE_BINDING_3D, &previousId);    
     glBindTexture( GL_TEXTURE_3D, getId() );
-    glGetTexImage( GL_TEXTURE_3D, 0, iF, iDt, p );
+    glGetTexImage( GL_TEXTURE_3D, 0, iFormat, iDt, p );
     glBindTexture( GL_TEXTURE_3D, previousId );
     glDisable( GL_TEXTURE_3D );
   }
@@ -116,7 +116,7 @@ QByteArray Texture::asBuffer( GLenum iF, GLenum iDt ) const
 QImage Texture::asQImage() const
 {
     //GL_BGRA pour Qt
-    QByteArray b = asBuffer( GL_BGRA, GL_UNSIGNED_BYTE );
+    QByteArray b = asBuffer( GL_RGBA8, GL_BGRA, GL_UNSIGNED_BYTE );
   QImage r( width(), height(), QImage::Format_ARGB32 );
   memcpy( r.bits(), b.constData(), b.size() );
   //opengl et Qt on l'axe y inversé
@@ -138,7 +138,7 @@ Texture Texture::copy()
   t.mpGuts->mWrapTMode = getWrapTMode();
   t.mpGuts->mWrapRMode = getWrapRMode();
   
-  t.set( (void*)asBuffer( getFormat(), getDataType() ).constData(), size(),
+  t.set( (void*)asBuffer( getInternalFormat(), getFormat(), getDataType() ).constData(), size(),
       getInternalFormat(), getFormat(), getDataType() );
 
    return t;
@@ -173,7 +173,7 @@ void Texture::generateMipmap(bool iUseMipMap)
 		{
 			//destroy the texture and realocate it. Seems it is the only way
 			//to get rid of mimaps
-			QByteArray data = asBuffer(getFormat(), getDataType());
+			QByteArray data = asBuffer(getInternalFormat(), getFormat(), getDataType());
 			glDeleteTextures(1, &mpGuts->mTextureId);
 			mpGuts->mTextureId = 0;
 
@@ -194,7 +194,7 @@ void Texture::generateMipmap(bool iUseMipMap)
 		{
 			//destroy the texture and realocate it. Seems it is the only way
 			//to get rid of mimaps
-			QByteArray data = asBuffer(getFormat(), getDataType());
+			QByteArray data = asBuffer(getInternalFormat(), getFormat(), getDataType());
 			glDeleteTextures(1, &mpGuts->mTextureId);
 			mpGuts->mTextureId = 0;
 

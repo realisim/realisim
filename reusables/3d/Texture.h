@@ -88,7 +88,7 @@ public:
   ~Texture();
   Texture& operator=(const Texture&);
   
-  QByteArray asBuffer( GLenum iFormat, GLenum iDataType) const;
+  QByteArray asBuffer( GLenum iInternalFormat, GLenum iFormat, GLenum iDataType) const;
     QImage asQImage() const;
   Texture copy();
   int depth() const;
