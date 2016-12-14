@@ -7,6 +7,7 @@
 #include "3d/VertexbufferObject.h"
 #include <cassert>
 #include <QByteArray>
+#include "math/Matrix4.h"
 #include "math/Point.h"
 #include "math/Primitives.h"
 #include "math/Vect.h"
