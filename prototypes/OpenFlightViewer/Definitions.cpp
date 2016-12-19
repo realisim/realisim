@@ -1,23 +1,35 @@
 #include "Definitions.h"
 
-unsigned int Definition::mIdCounter = 0;
-
-Definition::Definition() :
-mId(mIdCounter++)
-{ }
-
-Definition::~Definition()
+//--------------------------------------------------------
+//--- Interfaces
+//--------------------------------------------------------
+IRenderable::~IRenderable()
 {}
 
 //--------------------------------------------------------
-//--- Node
+//--- Definitions
 //--------------------------------------------------------
+unsigned int Definition::mIdCounter = 0;
 
-Node::~Node()
+Definition::Definition() :
+mId(mIdCounter++),
+mpParent(nullptr),
+mChilds(),
+mNodeType(ntDefinition)
+{ }
+
+Definition::~Definition()
 {
-    for(size_t i = 0; i < mChilds.size(); ++i)
-    { delete mChilds[i]; }
-    mChilds.clear();
+//    for(size_t i = 0; i < mChilds.size(); ++i)
+//    { delete mChilds[i]; }
+//    mChilds.clear();
+}
+
+//--------------------------------------------------------
+void Definition::addChild(Definition* ipDef)
+{
+    ipDef->mpParent = this;
+    mChilds.push_back(ipDef);
 }
 
 //--------------------------------------------------------
@@ -28,16 +40,71 @@ OpenFlightNode::~OpenFlightNode()
 {}
 
 //--------------------------------------------------------
+//--- FaceNode
+//--------------------------------------------------------
+
+void FaceNode::addChild(Definition *ipDef)
+{
+    Definition::addChild(ipDef);
+    switch (ipDef->mNodeType)
+    {
+        case Definition::ntVertexPool : mpVertexPool = (VertexPoolNode*)ipDef; break;
+        case Definition::ntMaterial : mpMaterial = (MaterialNode*)ipDef; break;
+        default: break;
+    }
+}
+
+//--------------------------------------------------------
 //--- LibraryNode
 //--------------------------------------------------------
 
+void LibraryNode::addChild(Definition *ipDef)
+{
+    Definition::addChild(ipDef);
+    switch (ipDef->mNodeType)
+    {
+        case Definition::ntVertexPool : mpVertexPool = (VertexPoolNode*)ipDef; break;
+        case Definition::ntImage : mImages.push_back( (ImageNode*)ipDef ); break;
+        default: break;
+    }
+}
+
 LibraryNode::~LibraryNode()
 {
-    if(mpVertexPool){ delete mpVertexPool; }
-    
-    for(size_t i = 0; i < mImages.size(); ++i)
-    { delete mImages[i]; }
-    mImages.clear();
+//    if(mpVertexPool){ delete mpVertexPool; }
+//    
+//    for(size_t i = 0; i < mImages.size(); ++i)
+//    { delete mImages[i]; }
+//    mImages.clear();
+}
+
+//--------------------------------------------------------
+//--- MaterialNode
+//--------------------------------------------------------
+
+void MaterialNode::addChild(Definition *ipDef)
+{
+    Definition::addChild(ipDef);
+    if(ipDef->mNodeType == ntImage)
+    {
+        mpImage = (ImageNode*)ipDef;
+    }
+}
+
+
+//--------------------------------------------------------
+//--- MeshNode
+//--------------------------------------------------------
+
+void MeshNode::addChild(Definition *ipDef)
+{
+    Definition::addChild(ipDef);
+    switch (ipDef->mNodeType)
+    {
+        case Definition::ntVertexPool : mpVertexPool = (VertexPoolNode*)ipDef; break;
+        case Definition::ntMaterial : mpMaterial = (MaterialNode*)ipDef; break;
+        default: break;
+    }
 }
 
 //--------------------------------------------------------
@@ -45,10 +112,17 @@ LibraryNode::~LibraryNode()
 //--------------------------------------------------------
 
 ModelNode::~ModelNode()
+{}
+
+void ModelNode::addChild(Definition *ipDef)
 {
-    for(size_t i = 0; i < mMeshes.size(); ++i)
-    { delete mMeshes[i]; }
-    mMeshes.clear();
+    Definition::addChild(ipDef);
+    switch (ipDef->mNodeType)
+    {
+        case Definition::ntMesh : mMeshes.push_back( (MeshNode*)ipDef ); break;
+        case Definition::ntFace : mFaces.push_back( (FaceNode*)ipDef ); break;
+        default: break;
+    }
 }
 
 //--------------------------------------------------------
@@ -62,14 +136,14 @@ GroupNode::~GroupNode()
 //--------------------------------------------------------
 //--- Utilitaires
 //--------------------------------------------------------
-LibraryNode* getLibraryFor(Node* iNode)
+LibraryNode* getLibraryFor(Definition* iNode)
 {
-    Node* r = nullptr;
+    Definition* r = nullptr;
     
-    Node* currentNode = iNode;
+    Definition* currentNode = iNode;
     while( currentNode != nullptr && r == nullptr )
     {
-        if(currentNode->mNodeType == Node::ntLibrary)
+        if(currentNode->mNodeType == Definition::ntLibrary)
         {
             r = currentNode;
         }

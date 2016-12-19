@@ -52,12 +52,14 @@ mpModel(ipModel)
     
     glNewList(mDisplayList, GL_COMPILE);
     
+    // textures...
+    
     // meshes...
     
     // faces...
     for(size_t i = 0; i < mpModel->mFaces.size(); ++i)
     {
-        const Face* f = mpModel->mFaces[i];
+        const FaceNode* f = mpModel->mFaces[i];
         
         glBegin(GL_POLYGON);
         for(int j = 0; j < f->mVertexIndices.size(); ++j)

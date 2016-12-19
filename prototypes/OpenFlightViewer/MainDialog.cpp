@@ -30,18 +30,16 @@ Viewer::Viewer(QWidget* ipParent /*=0*/) : Widget3d(ipParent)
 }
 
 Viewer::~Viewer()
-{
-    mDefinitionIdToRepresentation.clear();
-}
+{}
 
 //------------------------------------------------------------------------------
 void Viewer::draw()
 {
     //glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     
-    for(size_t i = 0; i < mToDraw.size(); ++i)
+    for(size_t i = 0; i < mpScene->mToDraw.size(); ++i)
     {
-        mToDraw[i]->draw();
+        mpScene->mToDraw[i]->draw();
     }
 }
 
@@ -83,47 +81,7 @@ void Viewer::togglePolygonMode()
 //------------------------------------------------------------------------------
 void Viewer::update()
 {
-    mToDraw.clear();
-    updateRepresentations();
-    
     Widget3d::update();
-}
-
-//------------------------------------------------------------------------------
-void Viewer::updateRepresentations()
-{
-    if(mpScene != nullptr)
-    {
-        deque<const Node*> q;
-        q.push_back(mpScene->mpRoot);
-        while(!q.empty())
-        {
-            const Node* n = q.front();
-            q.pop_front();
-            
-            for(int i = 0; i < n->mChilds.size(); ++i)
-            { q.push_back(n->mChilds[i]); }
-            
-            switch (n->mNodeType)
-            {
-                case Node::ntGroup: break;
-                case Node::ntLibrary: break;
-                case Node::ntModel:
-                {
-                    auto repIt = mDefinitionIdToRepresentation.find(n->mId);
-                    if(repIt == mDefinitionIdToRepresentation.end())
-                    {
-                        Representations::Model* m = new Representations::Model((ModelNode*)n);
-                        repIt = mDefinitionIdToRepresentation.insert( make_pair(n->mId, m) ).first;
-                    }
-                    mToDraw.push_back( repIt->second );
-                } break;
-                case Node::ntNode: break;
-                case Node::ntOpenFlight: break;
-                default: break;
-            }
-        }
-    }
 }
 
 //-----------------------------------------------------------------------------
@@ -141,8 +99,9 @@ mTimerId(0)
 
     mpViewer->setControlType( Widget3d::ctFree );
     Camera c = mpViewer->getCamera();
-    c.set( Point3d(0.0, 0.0, 1),
-          Point3d(), Vector3d(0, 1, 0) );
+    c.set( Point3d(0.0, -10.0, 0.0),
+          Point3d(), Vector3d(0, 0, 1) );
+    mpViewer->setAbsoluteUpVector(Widget3d::auvZ);
     mpViewer->setCamera( c, false );
     
     mpViewer->setScene(&mScene);
@@ -156,12 +115,13 @@ mTimerId(0)
 void MainDialog::openFltFile()
 {
     OpenFlight::OpenFlightReader ofr;
-    ofr.enableDebug(true);
+    //ofr.enableDebug(true);
     
 //    string filenamePath = "../assets/sample/nested_references/master/master.flt";
 //    string filenamePath = "../assets/sample/nested_references2/db/1/12/123/1234/1234.flt";
 //    string filenamePath = "../assets/sample/nested_references2/db/1/1.flt";
-    string filenamePath = "../assets/sample/nested_references2/db/1/12/12.flt";
+//    string filenamePath = "../assets/sample/nested_references2/db/1/12/12.flt";
+    string filenamePath = "/Users/po/Documents/travail/Simthetiq/assets/general_models/vehicles/airplanes/Military/Mig_21/Mig_21.flt";
     FltImporter fltImporter( ofr.open( filenamePath ) );
     
     if(!ofr.hasErrors())
@@ -171,7 +131,7 @@ void MainDialog::openFltFile()
         
         cout << OpenFlight::toDotFormat( fltImporter.getOpenFlightRoot() );
         
-        mScene.mpRoot->mChilds.push_back( fltImporter.getDefinitionRoot() );
+        mScene.addNode( fltImporter.getDefinitionRoot() );
     }
     else
     {
@@ -187,38 +147,5 @@ void MainDialog::timerEvent(QTimerEvent *ipE)
         mScene.update();
         
         mpViewer->update();
-    }
-}
-
-//-----------------------------------------------------------------------------
-void MainDialog::updateScene()
-{
-    deque<const Node*> q;
-    q.push_back(mScene.mpRoot);
-    while(!q.empty())
-    {
-        const Node* n = q.front();
-        q.pop_front();
-        
-        for(int i = 0; i < n->mChilds.size(); ++i)
-        { q.push_back(n->mChilds[i]); }
-        
-        switch (n->mNodeType)
-        {
-            case Node::ntGroup: //update transformation if dirty
-                break;
-            case Node::ntLibrary:
-                // load unloaded data
-                break;
-            case Node::ntModel:
-                //update transformation if dirty
-                break;
-            case Node::ntNode: break;
-            case Node::ntOpenFlight:
-                //update transformation if dirty
-                break;
-            default: break;
-        }
-        
     }
 }

@@ -12,6 +12,27 @@
 using namespace realisim;
 
 //--------------------------------------------------------
+//--- Interfaces
+//--------------------------------------------------------
+class IRenderable
+{
+public:
+    IRenderable() : mIsTransformDirty(true) {}
+    virtual ~IRenderable() = 0;
+    
+    bool mIsTransformDirty;
+    realisim::math::Matrix4 mParentTransform;
+    realisim::math::Matrix4 mWorldTransform;
+    
+//    realisim::math::BB3d mOriginalBoundingBox;
+//    realisim::math::BB3d mOrientedBoundingBox;
+//    realisim::math::BB3d mAxisAlignedBoundingBox;
+};
+
+
+//--------------------------------------------------------
+//--- Definitions
+//--------------------------------------------------------
 class Definition
 {
 public:
@@ -22,13 +43,44 @@ public:
 
     static unsigned int mIdCounter;
     unsigned int mId;
+    
+    virtual void addChild(Definition*);
+    template<typename T> T* getParent();
+    
+    enum nodeType{ntDefinition, ntFace, ntGroup, ntImage, ntLibrary, ntMesh,
+        ntMaterial,
+        ntModel,
+        ntOpenFlight,
+        ntVertexPool};
+    
+    Definition* mpParent;
+    std::vector<Definition*> mChilds; //owned
+    
+    nodeType mNodeType;
 };
 
 //--------------------------------------------------------
-class VertexPool : public Definition
+template<typename T>
+T* Definition::getParent()
+{
+    Definition* p = mpParent;
+    T* found = nullptr;
+    while(p != nullptr && found == nullptr)
+    {
+        T* cast = dynamic_cast<T*>(p);
+        if(cast){ found = cast; }
+        p = p->mpParent;
+    }
+    return found;
+}
+
+//--------------------------------------------------------
+//--- VertexPoolNode
+//--------------------------------------------------------
+class VertexPoolNode : public Definition
 {
 public:
-    VertexPool() : Definition() {}
+    VertexPoolNode() : Definition() { mNodeType = ntVertexPool; }
     //std::vector<OpenFlight::Vertex> mPool;
     std::vector<math::Vector3d> mVertices;
     std::vector<math::Vector3d> mNormals;
@@ -37,10 +89,11 @@ public:
 };
 
 //--------------------------------------------------------
-class Image : public Definition
+class ImageNode : public Definition
 {
 public:
-    Image() : mWidth(0), mHeight(0), mSizeInBytes(0), mpPayload(nullptr) {}
+    ImageNode() : Definition(), mWidth(0), mHeight(0), mSizeInBytes(0), mpPayload(nullptr)
+    { mNodeType = ntImage; }
     
     bool isLoaded() const {return mpPayload != nullptr; };
     
@@ -52,15 +105,18 @@ public:
 };
 
 //--------------------------------------------------------
-class Material : public Definition
+class MaterialNode : public Definition
 {
 public:
-    Material() : mAmbient(0.25 * 255, 0.25 * 255, 0.25 * 255),
+    MaterialNode() : mAmbient(0.25 * 255, 0.25 * 255, 0.25 * 255),
         mDiffuse(0.5 * 255, 0.5 * 255, 0.5 * 255),
         mSpecular(0.6 * 255, 0.6 * 255, 0.6 * 255),
         mEmissive(1.0 * 255, 1.0 * 255, 1.0 * 255),
         mShinniness(80),
-        mpImage(nullptr) {}
+        mpImage(nullptr)
+       { mNodeType = ntMaterial; }
+    
+    virtual void addChild(Definition*) override;
     
     QColor mAmbient;
     QColor mDiffuse;
@@ -68,94 +124,81 @@ public:
     QColor mEmissive;
     double mShinniness;
 
-    Image* mpImage;
+    ImageNode* mpImage;
 };
 
 //--------------------------------------------------------
-class Face : public Definition
+class FaceNode : public Definition
 {
 public:
-    Face() : mpVertexPool(nullptr), mpMaterial(nullptr) {}
+    FaceNode() : mpVertexPool(nullptr), mpMaterial(nullptr) { mNodeType = ntFace; }
     
-    VertexPool* mpVertexPool; //not owned
+    virtual void addChild(Definition*) override;
     
-    Material* mpMaterial; //owned
+    VertexPoolNode* mpVertexPool; //not owned
+    
+    MaterialNode* mpMaterial; //owned
     std::vector<uint32_t> mVertexIndices;
 };
 
 //--------------------------------------------------------
-class Mesh : public Definition
+class MeshNode : public Definition
 {
 public:
-    Mesh() : mpVertexPool(nullptr), mpMaterial(nullptr) {}
-    
-    VertexPool* mpVertexPool; //not owned
+    MeshNode() : mpVertexPool(nullptr), mpMaterial(nullptr) { mNodeType = ntMesh; }
 
-    Material* mpMaterial; //owned
+    virtual void addChild(Definition*) override;
+    
+    VertexPoolNode* mpVertexPool; //not owned
+
+    MaterialNode* mpMaterial; //owned
     std::vector<uint32_t> mVertexIndices;
 };
 
 //--------------------------------------------------------
-class Node : public Definition
+class OpenFlightNode : public Definition
 {
 public:
-    Node() : mpParent(nullptr),
-        mNodeType(ntNode), mIsTransformDirty(true),
-        mIsBoundingBoxDirty(true) {}
-    virtual ~Node();
-    
-    enum NodeType{ntGroup, ntLibrary, ntModel, ntNode, ntOpenFlight};
-    Node* mpParent;
-    std::vector<Node*> mChilds; //owned
-    
-    NodeType mNodeType;
-    
-    bool mIsTransformDirty;
-    realisim::math::Matrix4 mWorldTransform;
-    realisim::math::Matrix4 mParentTransform;
-    
-    bool mIsBoundingBoxDirty;
-    realisim::math::BB3d mBoundingBox;
-};
-
-//--------------------------------------------------------
-class OpenFlightNode : public Node
-{
-public:
-    OpenFlightNode() : Node() { mNodeType = ntOpenFlight; }
+    OpenFlightNode() : Definition() { mNodeType = ntOpenFlight; }
     virtual ~OpenFlightNode();
 };
 
 //--------------------------------------------------------
-class LibraryNode : public Node
+class LibraryNode : public Definition
 {
 public:
-    LibraryNode() : Node() { mNodeType = ntLibrary; }
+    LibraryNode() : Definition() { mNodeType = ntLibrary; }
     virtual ~LibraryNode();
     
-    VertexPool *mpVertexPool; //owned
+    virtual void addChild(Definition*) override;
+    
+    VertexPoolNode *mpVertexPool; //owned
 //    vector<Material>
-    std::vector<Image*> mImages; //owned
+    std::vector<ImageNode*> mImages; //owned
+    
+    //shaders...
 };
   
 
 //--------------------------------------------------------
-class ModelNode : public Node
+class ModelNode : public Definition, public IRenderable
 {
 public:
-    ModelNode() : Node() { mNodeType = ntModel; }
-    virtual ~ModelNode();
-
-    std::vector<Mesh*> mMeshes; //owned
-    std::vector<Face*> mFaces; //owned
+    ModelNode() : Definition(), IRenderable() { mNodeType = ntModel; }
+    virtual ~ModelNode() override;
+    
+    virtual void addChild(Definition*) override;
+    
+    std::vector<MeshNode*> mMeshes; //owned
+    std::vector<FaceNode*> mFaces; //owned
 };
 
 //--------------------------------------------------------
-class GroupNode : public Node
+class GroupNode : public Definition, public IRenderable
 {
 public:
-    GroupNode() : Node() { mNodeType = ntGroup; }
-    virtual ~GroupNode();
+    GroupNode() : Definition() { mNodeType = ntGroup; }
+    virtual ~GroupNode() override;
 };
 
 
@@ -163,4 +206,4 @@ public:
 //--- Utilitaires
 //--------------------------------------------------------
 
-LibraryNode* getLibraryFor(Node*);
+LibraryNode* getLibraryFor(Definition*);

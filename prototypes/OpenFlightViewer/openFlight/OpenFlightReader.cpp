@@ -74,20 +74,12 @@ void OpenFlightReader::addError(const std::string& iE) const
 //-----------------------------------------------------------------------------
 void OpenFlightReader::addPrimaryRecord(PrimaryRecord* iPr)
 {
-    if(getCurrentPrimaryNode() != nullptr)
+    if(getCurrentParentNode() != nullptr)
     {
-        getCurrentPrimaryNode()->addChild(iPr);
+        getCurrentParentNode()->addChild(iPr);
     }
-    
-    //push level always precede the addition of a Primary Record.
-    //When it is activated, that primary record becomes the current
-    //primary record.
-    //
-    if( mReadState.mIsPushLevelActivated )
-    {
-      setCurrentPrimaryNode( iPr );
-      mReadState.mIsPushLevelActivated = false;
-    }
+
+    setLastPrimaryNodeAdded(iPr);
 }
 
 //-----------------------------------------------------------------------------
@@ -139,8 +131,12 @@ HeaderRecord* OpenFlightReader::getCurrentHeaderNode()
 { return mReadState.mpCurrentHeaderNode; }
 
 //-----------------------------------------------------------------------------
-PrimaryRecord* OpenFlightReader::getCurrentPrimaryNode()
-{ return mReadState.mpCurrentPrimaryNode; }
+PrimaryRecord* OpenFlightReader::getCurrentParentNode()
+{ return mReadState.mpCurrentParentNode; }
+
+//-----------------------------------------------------------------------------
+PrimaryRecord* OpenFlightReader::getLastPrimaryNodeAdded()
+{ return mReadState.mpLastPrimaryNodeAdded; }
 
 //-----------------------------------------------------------------------------
 string OpenFlightReader::getFilePath() const
@@ -214,8 +210,10 @@ void OpenFlightReader::parseExternalReferenceRecord(const std::string& iRawRecor
     if(hasDebugEnabled())
     {printf("--- External reference begins ---\n\n");}
     
-    ExternalReferenceRecord *extRef = new ExternalReferenceRecord(getCurrentPrimaryNode());
+    ExternalReferenceRecord *extRef = new ExternalReferenceRecord(getCurrentParentNode());
     ((Record*)extRef)->parseRecord(iRawRecord, getCurrentHeaderNode()->getFormatRevision());
+    
+    addPrimaryRecord(extRef);
     
     // Here, we push the read state because we are about
     // to call OpenFlightReader::open() again. A call to open
@@ -224,9 +222,6 @@ void OpenFlightReader::parseExternalReferenceRecord(const std::string& iRawRecor
     // able to keep our internal reading state.
     //
     pushReadState();
-    
-    //ExtRef is a primary node, so we add it to the currentPrimaryNode
-    addPrimaryRecord(extRef);
     
     // External reference filenamePath should always be relative.
     // In order to locate the file on disk, we prepend the relative
@@ -271,7 +266,7 @@ void OpenFlightReader::parseExternalReferenceRecord(const std::string& iRawRecor
 //-----------------------------------------------------------------------------
 void OpenFlightReader::parseHeaderRecord(const string& iRawRecord)
 {
-    HeaderRecord *r = new HeaderRecord(getCurrentPrimaryNode());
+    HeaderRecord *r = new HeaderRecord(getCurrentParentNode());
     ((Record*)r)->parseRecord( iRawRecord, 0 );
     
     // additionnaly, we store the path to the file (filePath and filenamePath)
@@ -279,8 +274,6 @@ void OpenFlightReader::parseHeaderRecord(const string& iRawRecord)
     // back information such as the textureRecord's filename.
     // This filename is relative to the db...
     r->setFileInfo( getFilenamePath(), getFilePath(), getFilename() );
-    
-    addPrimaryRecord(r);
     
     // If there is no root node, it means the header record
     // encountered here is the first node of all document.
@@ -292,16 +285,14 @@ void OpenFlightReader::parseHeaderRecord(const string& iRawRecord)
         mpRootNode = r;
     }
     
-    // The header node always become the current primary node.
-    // Since everything is attached to it
-    //
-    setCurrentPrimaryNode(r);
     // this should be revisited... It appears it is only needed
     // to access the current format revision while parsing...
     // If it is the case, it should be replaced by the
     // format revision...
     //
     setCurrentHeaderNode(r);
+    
+    setLastPrimaryNodeAdded(r);
 }
 
 //-----------------------------------------------------------------------------
@@ -365,13 +356,13 @@ void OpenFlightReader::parseVertexPaletteEntry(const std::string& iRawRecord)
 //-----------------------------------------------------------------------------
 void OpenFlightReader::popLevel()
 {
-    if( getCurrentPrimaryNode() && getCurrentPrimaryNode()->getParent() != nullptr )
+    if( getCurrentParentNode() && getCurrentParentNode()->getParent() != nullptr )
     {
         //By construction, the parent of a primary record is a primary record.
         //see method addPrimaryRecord. Given that, we simply cast the parent
         //of the current primary record in a PrimaryRecord*.
         //
-        setCurrentPrimaryNode( (PrimaryRecord*)getCurrentPrimaryNode()->getParent() );
+        setCurrentPrimaryNode( (PrimaryRecord*)getCurrentParentNode()->getParent() );
     }
 }
 
@@ -383,8 +374,24 @@ void OpenFlightReader::popReadState()
 }
 
 //-----------------------------------------------------------------------------
+// This method will move us down 1 level into the hierachy. Every node between
+// a push/pop are sibling. Please refer to documentation
+//
 void OpenFlightReader::pushLevel()
-{ mReadState.mIsPushLevelActivated = true; }
+{
+    if(getCurrentParentNode() != nullptr)
+    {
+        // set last child of parent as current primary node.
+        // This effectively moves us down one level.
+        //
+        PrimaryRecord* p = getCurrentParentNode();
+        setCurrentPrimaryNode( p->getChild( p->getNumberOfChilds() - 1 ) );
+    }
+    else
+    {
+        setCurrentPrimaryNode( getCurrentHeaderNode() );
+    }
+}
 
 //-----------------------------------------------------------------------------
 void OpenFlightReader::pushReadState()
@@ -481,4 +488,8 @@ void OpenFlightReader::setCurrentHeaderNode(HeaderRecord* ipR)
 
 //-----------------------------------------------------------------------------
 void OpenFlightReader::setCurrentPrimaryNode(PrimaryRecord* ipR)
-{ mReadState.mpCurrentPrimaryNode = ipR; }
+{ mReadState.mpCurrentParentNode = ipR; }
+
+//-----------------------------------------------------------------------------
+void OpenFlightReader::setLastPrimaryNodeAdded(PrimaryRecord* ipR)
+{ mReadState.mpLastPrimaryNodeAdded = ipR; }

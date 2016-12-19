@@ -13,21 +13,21 @@ public:
     ~FltImporter();
     
     OpenFlight::HeaderRecord* getOpenFlightRoot() { return mpHeaderRecord; }
-    Node* getDefinitionRoot() { return mpDefinitionRoot; }
+    Definition* getDefinitionRoot() { return mpDefinitionRoot; }
     
 protected:
     void digData(OpenFlight::GroupRecord*);
     void digData(OpenFlight::HeaderRecord*);
     void digData(OpenFlight::ObjectRecord*);
-    Image* getImageFromTexturePatternIndex(int, LibraryNode* iLibrary);
+    ImageNode* getImageFromTexturePatternIndex(int, LibraryNode* iLibrary);
     OpenFlight::Record* getRecordFromDefinitionId(int);
     
     void parseFltTree(OpenFlight::HeaderRecord*);
     
     OpenFlight::HeaderRecord* mpHeaderRecord; //owned
     
-    Node* mpDefinitionRoot; //not owned
-    Node* mpCurrentNode;
+    Definition* mpDefinitionRoot; //not owned
+    Definition* mpCurrentNode;
     
     std::map<int, OpenFlight::Record*> mDefinitionIdToFltRecord;
 };

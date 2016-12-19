@@ -16,10 +16,6 @@
 #include <QTimerEvent>
 #include "3d/Widget3d.h"
 #include "Scene.h"
-#include <unordered_map>
-
-namespace Representations{
-    class Representation; }
 
 class Viewer : public realisim::treeD::Widget3d
 {
@@ -41,9 +37,6 @@ private:
     
     //--- data
     const Scene *mpScene;
-    
-    std::unordered_map<unsigned int, Representations::Representation*> mDefinitionIdToRepresentation;
-    std::vector<Representations::Representation*> mToDraw;
 };
 
 
@@ -59,7 +52,6 @@ public:
 protected:
     void openFltFile();
     void timerEvent(QTimerEvent*) override;
-    void updateScene();
     
     Viewer* mpViewer;
     

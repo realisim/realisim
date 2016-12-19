@@ -1,6 +1,7 @@
 #pragma once
 
 #include "3d/openGlHeaders.h"
+#include "3d/Texture.h"
 #include "Definitions.h"
 //using namespace realisim;
 
@@ -28,5 +29,6 @@ namespace Representations
     protected:
         ModelNode* mpModel; //faut mettre des shared_ptr... mais bon c'est un proto...
         GLuint mDisplayList;
+        std::vector<realisim::treeD::Texture> mTextures;
     };
 }

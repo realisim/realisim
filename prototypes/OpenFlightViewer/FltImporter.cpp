@@ -51,10 +51,10 @@ void FltImporter::digData(OpenFlight::GroupRecord* ipG)
             case OpenFlight::ocMatrix:
             {
                 GroupNode *pGroup = new GroupNode();
-                pGroup->mpParent = mpCurrentNode;
+                mpCurrentNode->addChild(pGroup);
+
                 pGroup->mParentTransform = toMatrix4( ((MatrixRecord*)a) );
                 
-                mpCurrentNode->mChilds.push_back(pGroup);
                 mpCurrentNode = pGroup;
             }break;
                 
@@ -87,8 +87,7 @@ void FltImporter::digData(OpenFlight::HeaderRecord* ipH)
     //add library node to store all palette information
     //add libray node
     LibraryNode *library = new LibraryNode();
-    library->mpParent = mpCurrentNode;
-    mpCurrentNode->mChilds.push_back(library);
+    mpCurrentNode->addChild(library);
     mpCurrentNode = library;
 
     // check external reference flags, to properly populate
@@ -117,7 +116,7 @@ void FltImporter::digData(OpenFlight::HeaderRecord* ipH)
             {
                 VertexPaletteRecord* vpr = ((VertexPaletteRecord*)a);
                 
-                VertexPool *vp = new VertexPool();
+                VertexPoolNode *vp = new VertexPoolNode();
                 for(int i = 0; i < vpr->getNumberOfVertices(); ++i)
                 {
                     const OpenFlight::Vertex& v = vpr->getVertex(i);
@@ -141,21 +140,21 @@ void FltImporter::digData(OpenFlight::HeaderRecord* ipH)
                 //store the relation between vertexPool and palette
                 mDefinitionIdToFltRecord.insert( make_pair(vp->mId, vpr) );
                 
-                library->mpVertexPool = vp;
+                library->addChild(vp);
             }break;
             
             case OpenFlight::ocTexturePalette:
             {
                 TexturePaletteRecord *tpr = (TexturePaletteRecord *)a;
                 
-                Image *image = new Image();
+                ImageNode *image = new ImageNode();
                 
                 // the filename of the texture record must be relative, else,
                 // it won't work...
                 image->mFilenamePath = ipH->getFilePath() + tpr->getFilenamePath();
                 
                 mDefinitionIdToFltRecord.insert( make_pair(image->mId, tpr));
-                library->mImages.push_back(image);
+                library->addChild(image);
             } break;
             default: break;
         }
@@ -182,8 +181,7 @@ void FltImporter::digData(OpenFlight::ObjectRecord* ipR)
                 FaceRecord *faceRecord = (FaceRecord*)c;
                 
                 ModelNode *model = new ModelNode();
-                model->mpParent = mpCurrentNode;
-                mpCurrentNode->mChilds.push_back(model);
+                mpCurrentNode->addChild(model);
              
                 // only vertex and morph vertex has childs
                 // could have subface (with pushSubface)
@@ -191,9 +189,11 @@ void FltImporter::digData(OpenFlight::ObjectRecord* ipR)
                 PrimaryRecord* vertexList = c->getNumberOfChilds() > 0 ? c->getChild(0) : nullptr;
                 if(vertexList && vertexList->getOpCode() == ocVertexList)
                 {
-                    Face *face = new Face();
+                    FaceNode *face = new FaceNode();
+                    model->addChild(face);
+                    
                     LibraryNode *currentLibrary = getLibraryFor(model);
-                    face->mpVertexPool = currentLibrary->mpVertexPool;
+                    face->addChild( currentLibrary->mpVertexPool );
                     
                     //--- vertices
                     // fetch the VertexPalette from openFlight and resolve
@@ -209,7 +209,8 @@ void FltImporter::digData(OpenFlight::ObjectRecord* ipR)
                     }
                     
                     //--- textures (images)
-                    Material *material = new Material();
+                    MaterialNode *material = new MaterialNode();
+                    face->addChild(material);
                     if(faceRecord->getTexturePatternIndex() >= 0)
                     {
                         material->mpImage = getImageFromTexturePatternIndex( faceRecord->getTexturePatternIndex(), currentLibrary );
@@ -221,8 +222,6 @@ void FltImporter::digData(OpenFlight::ObjectRecord* ipR)
                         
                     }
                     
-                    face->mpMaterial = material;
-                    model->mFaces.push_back(face);
                 }
             }break;
             case ocLightPoint: break;
@@ -232,11 +231,11 @@ void FltImporter::digData(OpenFlight::ObjectRecord* ipR)
 }
 
 //-----------------------------------------------------------------------------
-Image* FltImporter::getImageFromTexturePatternIndex(int iIndex, LibraryNode* iLibrary)
+ImageNode* FltImporter::getImageFromTexturePatternIndex(int iIndex, LibraryNode* iLibrary)
 {
     using namespace OpenFlight;
     
-    Image *r = nullptr;
+    ImageNode *r = nullptr;
     if( iLibrary != nullptr )
     {
         for( size_t i = 0; i < iLibrary->mImages.size() && r == nullptr; ++i)
