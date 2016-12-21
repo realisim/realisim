@@ -463,6 +463,7 @@ void Widget3d::showFps()
         mFpsTimer = QTime::currentTime();
         mFpsFrameCount = 0;
     }
+    glColor3ub(255, 255, 255);
     renderText(5, 15, QString("fps: ") + QString::number(mFps, 'f', 2) );
     ++mFpsFrameCount;
     glEnable(GL_DEPTH_TEST);
