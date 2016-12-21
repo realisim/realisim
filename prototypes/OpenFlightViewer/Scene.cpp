@@ -7,10 +7,8 @@
 using namespace realisim;
     using namespace math;
 
-Scene::Scene() : mpRoot(new Definition())
-{
-    
-}
+Scene::Scene() : mpRoot(nullptr)
+{}
 
 //----------------------------------------
 Scene::~Scene()
@@ -24,6 +22,9 @@ Scene::~Scene()
 //------------------------------------------------------------------------------
 void Scene::addNode(Definition* iNode)
 {
+    if(mpRoot == nullptr)
+    { mpRoot = new Definition; }
+    
     mpRoot->mChilds.push_back(iNode);
     
     filterRenderables(iNode);
@@ -35,6 +36,30 @@ void Scene::addNode(Definition* iNode)
     
     mNeedsRepresentationCreation.push_back(iNode);
     mNeedsTransformUpdate.push_back(iNode);
+}
+
+//------------------------------------------------------------------------------
+void Scene::clear()
+{
+    if(mpRoot)
+    {
+        delete mpRoot;
+        mpRoot = nullptr;
+    }
+    
+    auto it = mDefinitionIdToRepresentation.begin();
+    for(; it != mDefinitionIdToRepresentation.end(); ++it)
+    {
+        delete it->second;
+    }
+    mDefinitionIdToRepresentation.clear();
+    
+    mNeedsRepresentationCreation.clear();
+    mNeedsTransformUpdate.clear();
+    
+    mRenderableFilter = Filter();
+    
+    mToDraw.clear();
 }
 
 //------------------------------------------------------------------------------

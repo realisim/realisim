@@ -16,18 +16,21 @@ public:
     Definition* getDefinitionRoot() { return mpDefinitionRoot; }
     
 protected:
-    void digData(OpenFlight::GroupRecord*);
-    void digData(OpenFlight::HeaderRecord*);
-    void digData(OpenFlight::ObjectRecord*);
+void applyTransformCarryover(IRenderable*);
+    GroupNode* digData(OpenFlight::ExternalReferenceRecord*, Definition*);
+    GroupNode* digData(OpenFlight::GroupRecord*, Definition*);
+    LibraryNode* digData(OpenFlight::HeaderRecord*, Definition*);
+    ModelNode* digData(OpenFlight::ObjectRecord*, Definition*);
+    realisim::math::Matrix4 fetchTransform(OpenFlight::PrimaryRecord*, bool* = nullptr);
     ImageNode* getImageFromTexturePatternIndex(int, LibraryNode* iLibrary);
     OpenFlight::Record* getRecordFromDefinitionId(int);
+    void parseFltTree(OpenFlight::PrimaryRecord*, Definition* ipCurrentParent);
     
-    void parseFltTree(OpenFlight::HeaderRecord*);
-    
+    //--- data
     OpenFlight::HeaderRecord* mpHeaderRecord; //owned
     
     Definition* mpDefinitionRoot; //not owned
-    Definition* mpCurrentNode;
+Definition* mpCurrentNode;
     
     std::map<int, OpenFlight::Record*> mDefinitionIdToFltRecord;
 };

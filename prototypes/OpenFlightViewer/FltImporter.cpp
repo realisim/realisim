@@ -27,7 +27,7 @@ mpHeaderRecord(ipHr),
 mpDefinitionRoot(nullptr),
 mpCurrentNode(nullptr)
 {
-    parseFltTree(ipHr);
+    parseFltTree(ipHr, nullptr);
 }
 
 FltImporter::~FltImporter()
@@ -37,34 +37,43 @@ FltImporter::~FltImporter()
 }
 
 //-----------------------------------------------------------------------------
-void FltImporter::digData(OpenFlight::GroupRecord* ipG)
+// In our data tree, we do not care much about external references but they
+// can carry a transform matrix which needs to be be brought in. To do so,
+// we create a group to hold that transform.
+//
+// This is somehow crappy, we should store the matrix as a carryover and
+// apply it to the first node than can bear it (Group or Object)
+//
+// This would reduce the lenght of the tree.
+//
+GroupNode* FltImporter::digData(OpenFlight::ExternalReferenceRecord* ipE,
+                                Definition* ipParent)
 {
     using namespace OpenFlight;
     
-    //lets check acros the ancillary record
-    for(int i = 0; i < ipG->getNumberOfAncillaryRecords(); ++i)
-    {
-        AncillaryRecord* a = ipG->getAncillaryRecord(i);
-        
-        switch (a->getOpCode())
-        {
-            case OpenFlight::ocMatrix:
-            {
-                GroupNode *pGroup = new GroupNode();
-                mpCurrentNode->addChild(pGroup);
-
-                pGroup->mParentTransform = toMatrix4( ((MatrixRecord*)a) );
-                
-                mpCurrentNode = pGroup;
-            }break;
-                
-            default: break;
-        }
-    }
+    GroupNode *pGroup = new GroupNode();
+    pGroup->mParentTransform = fetchTransform(ipE);
+    ipParent->addChild(pGroup);
+    
+    return pGroup;
 }
 
 //-----------------------------------------------------------------------------
-void FltImporter::digData(OpenFlight::HeaderRecord* ipH)
+GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
+                                Definition* ipParent)
+{
+    using namespace OpenFlight;
+    
+    GroupNode *pGroup = new GroupNode();
+    pGroup->mParentTransform = fetchTransform(ipG);
+    ipParent->addChild(pGroup);
+    
+    return pGroup;
+}
+
+//-----------------------------------------------------------------------------
+LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
+                                  Definition* ipParent)
 {
     using namespace OpenFlight;
     
@@ -73,22 +82,25 @@ void FltImporter::digData(OpenFlight::HeaderRecord* ipH)
     // node of the data structure. HeaderNode can be encountered
     // multiple times in an openFlight tree, but they will have
     // an ExternalRefence parent.
-    if(mpDefinitionRoot == nullptr)
+
+    OpenFlightNode* opfNode = new OpenFlightNode();
+    if( ipParent == nullptr )
     {
-        mpDefinitionRoot = new OpenFlightNode();
-        mpCurrentNode = mpDefinitionRoot;
-        
-        //store the relation between OpenFlightNode and headerNode
-        //mDefinitionIdToFltRecord.insert( make_pair(mpDefinitionRoot->mId, ipH) );
-        
-        //add header stuff here
+        mpDefinitionRoot = opfNode;
     }
+    else
+    { ipParent->addChild(opfNode); }
+    
+        
+    //store the relation between OpenFlightNode and headerNode
+    //mDefinitionIdToFltRecord.insert( make_pair(mpDefinitionRoot->mId, ipH) );
+    
+    //add header stuff here
     
     //add library node to store all palette information
     //add libray node
     LibraryNode *library = new LibraryNode();
-    mpCurrentNode->addChild(library);
-    mpCurrentNode = library;
+    opfNode->addChild(library);
 
     // check external reference flags, to properly populate
     // the library node with approate palette since, external
@@ -159,12 +171,20 @@ void FltImporter::digData(OpenFlight::HeaderRecord* ipH)
             default: break;
         }
     }
+    
+    return library;
 }
 
 //-----------------------------------------------------------------------------
-void FltImporter::digData(OpenFlight::ObjectRecord* ipR)
+ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
+                                Definition* ipParent)
 {
     using namespace OpenFlight;
+    
+    ModelNode *model = new ModelNode();
+    ipParent->addChild(model);
+    
+    model->mParentTransform = fetchTransform(ipR);
     
     //object record can only have 2 type of childs...
     // 1- Face
@@ -179,9 +199,6 @@ void FltImporter::digData(OpenFlight::ObjectRecord* ipR)
             case ocFace:
             {
                 FaceRecord *faceRecord = (FaceRecord*)c;
-                
-                ModelNode *model = new ModelNode();
-                mpCurrentNode->addChild(model);
              
                 // only vertex and morph vertex has childs
                 // could have subface (with pushSubface)
@@ -205,6 +222,7 @@ void FltImporter::digData(OpenFlight::ObjectRecord* ipR)
                     for(int i = 0; i < vlr->getNumberOfVertices(); ++i)
                     {
                         int vertexIndex = vpr->getIndexFromByteOffset( vlr->getByteOffsetIntoVertexPalette(i) );
+                        assert( vertexIndex != -1 );
                         face->mVertexIndices.push_back( vertexIndex );
                     }
                     
@@ -228,6 +246,36 @@ void FltImporter::digData(OpenFlight::ObjectRecord* ipR)
             default: break;
         }
     }
+    
+    return model;
+}
+
+//-----------------------------------------------------------------------------
+realisim::math::Matrix4 FltImporter::fetchTransform(OpenFlight::PrimaryRecord* ipR, bool *oFound)
+{
+    using namespace OpenFlight;
+    
+    bool found = false;
+    realisim::math::Matrix4 m;
+    //lets check acros the ancillary record
+    for(int i = 0; i < ipR->getNumberOfAncillaryRecords() && !found; ++i)
+    {
+        AncillaryRecord* a = ipR->getAncillaryRecord(i);
+        
+        switch (a->getOpCode())
+        {
+            case OpenFlight::ocMatrix:
+            {
+                found = true;
+                m = toMatrix4( ((MatrixRecord*)a) );
+            }break;
+            default: break;
+        }
+    }
+    
+    if(oFound != nullptr)
+    { *oFound = found; }
+    return m;
 }
 
 //-----------------------------------------------------------------------------
@@ -265,30 +313,39 @@ OpenFlight::Record* FltImporter::getRecordFromDefinitionId(int iId)
 }
 
 //-----------------------------------------------------------------------------
-void FltImporter::parseFltTree(OpenFlight::HeaderRecord* ipRoot)
+void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, Definition* ipCurrentParent)
 {
     using namespace OpenFlight;
+
+    //depth first parsing
     
-    deque<PrimaryRecord*> q;
-    q.push_back(ipRoot);
-    
-    while(!q.empty())
+    Definition *currentDef;
+    //dig for data on current record
+    switch (ipRecord->getOpCode())
     {
-        PrimaryRecord* n = q.front();
-        q.pop_front();
-        
-        for(int i = 0; i < n->getNumberOfChilds(); ++i)
+        case OpenFlight::ocHeader:
+            currentDef = digData( (HeaderRecord*)ipRecord, ipCurrentParent );
+            break;
+        case OpenFlight::ocExternalReference:
+            currentDef = digData( (ExternalReferenceRecord*)ipRecord, ipCurrentParent );
+            break;
+        case OpenFlight::ocGroup:
+            currentDef = digData( (GroupRecord*)ipRecord, ipCurrentParent );
+            break;
+        case OpenFlight::ocObject:
+            currentDef = digData( (ObjectRecord*)ipRecord, ipCurrentParent );
+            break;
+        case OpenFlight::ocUnsupported:
         {
-            q.push_back(n->getChild(i));
-        }
-        
-        //dig for data on current record
-        switch (n->getOpCode())
-        {
-            case OpenFlight::ocHeader: digData( (HeaderRecord*)n ); break;
-            case OpenFlight::ocGroup: digData( (GroupRecord*)n ); break;
-            case OpenFlight::ocObject: digData( (ObjectRecord*)n ); break;
-            default: break;
-        }
+            //explanation...
+            GroupNode *pGroup = new GroupNode();
+            ipCurrentParent->addChild(pGroup);
+            currentDef = pGroup;
+        }break;
+        default: break;
     }
+    
+    //dig into child
+    for(int i = 0; i < ipRecord->getNumberOfChilds(); ++i)
+    { parseFltTree(ipRecord->getChild(i), currentDef); }
 }

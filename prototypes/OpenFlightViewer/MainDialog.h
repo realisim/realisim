@@ -47,10 +47,12 @@ public:
     MainDialog();
     ~MainDialog(){};
     
-    public slots:
+protected slots:
+    void newFile();
+    void openFile();
     
 protected:
-    void openFltFile();
+    void createMenus();
     void timerEvent(QTimerEvent*) override;
     
     Viewer* mpViewer;

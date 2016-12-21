@@ -254,7 +254,10 @@ Widget3d::paintGL()
 {
     beginFrame();
     //replacer les lumieres
-    GLfloat position[]  = {50.0, 30.0, 5.0, 1.0};
+    Vector4d pos(50.0, 30.0, 5.0, 1.0);
+    if( mAbsoluteUpVector == auvZ )
+    { pos.set(100, 200, 1000, 1.0); }
+    GLfloat position[]  = {pos.x(), pos.y(), pos.z(), pos.w() };
     glLightfv(GL_LIGHT0, GL_POSITION, position);
     
     draw();

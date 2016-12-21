@@ -12,7 +12,9 @@
 #include "Definitions.h"
 #include "FltImporter.h"
 #include "MainDialog.h"
-#include <qlayout.h>
+#include <QFileDialog>
+#include <QLayout>
+#include <QMenuBar>
 #include <queue>
 #include "Representations.h"
 #include <string>
@@ -26,7 +28,6 @@ using namespace std;
 Viewer::Viewer(QWidget* ipParent /*=0*/) : Widget3d(ipParent)
 {
     setFocusPolicy(Qt::StrongFocus);
-    startTimer(15);
 }
 
 Viewer::~Viewer()
@@ -36,6 +37,7 @@ Viewer::~Viewer()
 void Viewer::draw()
 {
     //glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    showFps();
     
     for(size_t i = 0; i < mpScene->mToDraw.size(); ++i)
     {
@@ -97,46 +99,83 @@ mTimerId(0)
     pLyt->addWidget(mpViewer);
     setCentralWidget(mpViewer);
 
+    //--- viewer
     mpViewer->setControlType( Widget3d::ctFree );
     Camera c = mpViewer->getCamera();
+    Camera::Projection proj = c.getProjection();
+    proj.mNear = 1.0; //1 m
+    proj.mFar = 100000; // 100 km
+    c.setProjection(proj);
     c.set( Point3d(0.0, -10.0, 0.0),
           Point3d(), Vector3d(0, 0, 1) );
     mpViewer->setAbsoluteUpVector(Widget3d::auvZ);
     mpViewer->setCamera( c, false );
-    
     mpViewer->setScene(&mScene);
     
-    mTimerId = startTimer(30);
+
+    createMenus();
     
-    openFltFile();
+    mTimerId = startTimer(15);
 }
 
 //-----------------------------------------------------------------------------
-void MainDialog::openFltFile()
+void MainDialog::createMenus()
+{
+    QMenuBar* pMenuBar = new QMenuBar(this);
+    setMenuBar( pMenuBar );
+    
+    QMenu* pFile = pMenuBar->addMenu("File");
+    pFile->addAction( QString("&New..."), this, SLOT( newFile() ),
+                     QKeySequence::New );
+    
+    pFile->addAction( QString("&Open..."), this, SLOT( openFile() ),
+                     QKeySequence::Open );
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::openFile()
 {
     OpenFlight::OpenFlightReader ofr;
     //ofr.enableDebug(true);
+    //ofr.enableExternalReferenceLoading(false);
+    
+    QStringList filenamePaths = QFileDialog::getOpenFileNames(this, tr("Open Flt File"),
+                                                        "../assets/",
+                                                        tr("Flt (*.flt)"));
     
 //    string filenamePath = "../assets/sample/nested_references/master/master.flt";
 //    string filenamePath = "../assets/sample/nested_references2/db/1/12/123/1234/1234.flt";
 //    string filenamePath = "../assets/sample/nested_references2/db/1/1.flt";
 //    string filenamePath = "../assets/sample/nested_references2/db/1/12/12.flt";
-    string filenamePath = "/Users/po/Documents/travail/Simthetiq/assets/general_models/vehicles/airplanes/Military/Mig_21/Mig_21.flt";
-    FltImporter fltImporter( ofr.open( filenamePath ) );
+//    string filenamePath = "/Users/po/Documents/travail/Simthetiq/assets/general_models/vehicles/airplanes/Military/Mig_21/Mig_21.flt";
     
-    if(!ofr.hasErrors())
+    for(int i = 0; i < filenamePaths.count(); ++i)
     {
-        if(ofr.hasWarnings())
-        { cout << "Warning while opening flt file: " << endl << ofr.getAndClearLastWarnings(); }
+        OpenFlight::HeaderRecord *header = ofr.open( filenamePaths.at(i).toStdString() );
         
-        cout << OpenFlight::toDotFormat( fltImporter.getOpenFlightRoot() );
-        
-        mScene.addNode( fltImporter.getDefinitionRoot() );
+        if(!ofr.hasErrors())
+        {
+            if(ofr.hasWarnings())
+            { cout << "Warning while opening flt file: " << endl << ofr.getAndClearLastWarnings(); }
+            
+            FltImporter fltImporter(header);
+            mScene.addNode( fltImporter.getDefinitionRoot() );
+            
+            //cout << OpenFlight::toDotFormat( fltImporter.getOpenFlightRoot() );
+        }
+        else
+        {
+            delete header;
+            cout << "Error while opening flt file: " << endl << ofr.getAndClearLastErrors();
+        }
     }
-    else
-    {
-        cout << "Error while opening flt file: " << endl << ofr.getAndClearLastErrors();
-    }
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::newFile()
+{
+    mScene.clear();
+    update();
 }
 
 //-----------------------------------------------------------------------------

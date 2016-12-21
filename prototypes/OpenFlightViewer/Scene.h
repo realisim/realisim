@@ -17,7 +17,7 @@ public:
     ~Scene();
 
     void addNode(Definition*);
-
+    void clear();
     void update();
     
 
