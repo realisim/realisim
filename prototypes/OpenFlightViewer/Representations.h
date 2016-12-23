@@ -3,7 +3,7 @@
 #include "3d/openGlHeaders.h"
 #include "3d/Texture.h"
 #include "Definitions.h"
-//using namespace realisim;
+#include <unordered_map>
 
 namespace Representations
 {
@@ -21,7 +21,8 @@ namespace Representations
     public:
         Model() = delete;
         
-        explicit Model(ModelNode*);
+        explicit Model(ModelNode*,
+                       const std::unordered_map<unsigned int, realisim::treeD::Texture>& iTextureLibrary);
         
         virtual ~Model();
         void draw() override;
@@ -29,6 +30,7 @@ namespace Representations
     protected:
         ModelNode* mpModel; //faut mettre des shared_ptr... mais bon c'est un proto...
         GLuint mDisplayList;
-        std::vector<realisim::treeD::Texture> mTextures;
+        const std::unordered_map<unsigned int, realisim::treeD::Texture>& mTextureLibrary;
+        //std::vector<realisim::treeD::Texture> mTextures; multitexturing?
     };
 }

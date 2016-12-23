@@ -20,10 +20,10 @@ Scene::~Scene()
 }
 
 //------------------------------------------------------------------------------
-void Scene::addNode(Definition* iNode)
+void Scene::addNode(IGraphicNode* iNode)
 {
     if(mpRoot == nullptr)
-    { mpRoot = new Definition; }
+    { mpRoot = new GroupNode; } //first dummy node...
     
     mpRoot->mChilds.push_back(iNode);
     
@@ -36,6 +36,70 @@ void Scene::addNode(Definition* iNode)
     
     mNeedsRepresentationCreation.push_back(iNode);
     mNeedsTransformUpdate.push_back(iNode);
+}
+
+//------------------------------------------------------------------------------
+void Scene::addToTextureLibrary(Image *iIm)
+{
+    IDefinition *def = dynamic_cast<IDefinition*>(iIm);
+    auto it = mImageIdToTexture.find(def->mId);
+    if(it == mImageIdToTexture.end())
+    {
+        realisim::treeD::Texture t;
+
+        realisim::math::Vector2i size(iIm->mWidth, iIm->mHeight);
+        GLenum internalFormat = GL_SRGB8_ALPHA8;
+        GLenum format = GL_RGBA;
+        GLenum datatype = GL_UNSIGNED_BYTE;
+        
+        switch(iIm->mNumberOfChannels)
+        {
+            case 1:
+                internalFormat = GL_R8;
+                format = GL_RED;
+                break;
+            case 2:
+                internalFormat = GL_RG8;
+                format = GL_RG;
+                break;
+            case 3:
+                //internalFormat = GL_SRGB8;
+                internalFormat = GL_RGB8;
+                format = GL_RGB;
+                break;
+            case 4:
+                //internalFormat = GL_SRGB8_ALPHA8;
+                internalFormat = GL_RGBA8;
+                format = GL_RGBA;
+                break;
+            default: break;
+        }
+
+        t.set(iIm->mpPayload, size, internalFormat, format, datatype);
+        
+        mImageIdToTexture.insert( make_pair(def->mId, t) );
+    }
+}
+
+//------------------------------------------------------------------------------
+Representations::Model* Scene::checkAndCreateRepresentation(ModelNode *iNode)
+{
+    Representations::Model  *model = nullptr;
+    
+    const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
+    auto repIt = mDefinitionIdToRepresentation.find(def->mId);
+    if(repIt == mDefinitionIdToRepresentation.end())
+    {
+        model = new Representations::Model(iNode, mImageIdToTexture);
+        mDefinitionIdToRepresentation.insert( make_pair(def->mId, model) );
+    }
+    else
+    {
+        model = dynamic_cast<Representations::Model*>(repIt->second);
+    }
+    
+    //this should be moved in the culling phase
+    return model;
 }
 
 //------------------------------------------------------------------------------
@@ -53,6 +117,7 @@ void Scene::clear()
         delete it->second;
     }
     mDefinitionIdToRepresentation.clear();
+    mImageIdToTexture.clear();
     
     mNeedsRepresentationCreation.clear();
     mNeedsTransformUpdate.clear();
@@ -63,15 +128,15 @@ void Scene::clear()
 }
 
 //------------------------------------------------------------------------------
-void Scene::createRepresentations(Definition *iNode)
+void Scene::createRepresentations(IGraphicNode *iNode)
 {
     if(iNode != nullptr)
     {
-        deque<const Definition*> q;
+        deque<IGraphicNode*> q;
         q.push_back(iNode);
         while(!q.empty())
         {
-            const Definition* n = q.front();
+            IGraphicNode* n = q.front();
             q.pop_front();
             
             for(int i = 0; i < n->mChilds.size(); ++i)
@@ -79,18 +144,11 @@ void Scene::createRepresentations(Definition *iNode)
             
             switch (n->mNodeType)
             {
-                case Definition::ntGroup: break;
-                case Definition::ntModel:
+                case IGraphicNode::ntGroup: break;
+                case IGraphicNode::ntModel:
                 {
-                    auto repIt = mDefinitionIdToRepresentation.find(n->mId);
-                    if(repIt == mDefinitionIdToRepresentation.end())
-                    {
-                        Representations::Model* m = new Representations::Model((ModelNode*)n);
-                        repIt = mDefinitionIdToRepresentation.insert( make_pair(n->mId, m) ).first;
-                    }
-                    
-                    //this should be moved in the culling phase
-                    mToDraw.push_back( repIt->second );
+                    ModelNode* modelNode = dynamic_cast<ModelNode*>(n);
+                    mToDraw.push_back( checkAndCreateRepresentation(modelNode) );
                 } break;
                 default: break;
             }
@@ -99,15 +157,15 @@ void Scene::createRepresentations(Definition *iNode)
 }
 
 //------------------------------------------------------------------------------
-void Scene::filterRenderables(Definition* iNode)
+void Scene::filterRenderables(IGraphicNode* iNode)
 {
     if(iNode != nullptr)
     {
-        deque<Definition*> q;
+        deque<IGraphicNode*> q;
         q.push_back(iNode);
         while(!q.empty())
         {
-            Definition* n = q.front();
+            IGraphicNode* n = q.front();
             q.pop_front();
             
             for(int i = 0; i < n->mChilds.size(); ++i)
@@ -116,7 +174,7 @@ void Scene::filterRenderables(Definition* iNode)
             IRenderable *r = dynamic_cast<IRenderable*>(n);
             if(r)
             {
-                IRenderable *p = n->getParent<IRenderable>();
+                IRenderable *p = n->getFirstParent<IRenderable>();
                 if(p)
                 {
                     Filter *f = mRenderableFilter.find(p);
@@ -133,15 +191,15 @@ void Scene::filterRenderables(Definition* iNode)
 }
 
 //------------------------------------------------------------------------------
-void Scene::loadLibraries(Definition* iNode)
+void Scene::loadLibraries(IGraphicNode* iNode)
 {
     if(iNode != nullptr)
     {
-        deque<const Definition*> q;
+        deque<IGraphicNode*> q;
         q.push_back(iNode);
         while(!q.empty())
         {
-            const Definition* n = q.front();
+            IGraphicNode* n = q.front();
             q.pop_front();
             
             for(int i = 0; i < n->mChilds.size(); ++i)
@@ -149,13 +207,45 @@ void Scene::loadLibraries(Definition* iNode)
             
             switch (n->mNodeType)
             {
-                case Definition::ntLibrary:
+                case IGraphicNode::ntLibrary:
                 {
-                    LibraryNode *lib = (LibraryNode *)n;
+                    LibraryNode *lib = dynamic_cast<LibraryNode*>(n);
+                    assert(lib);
                     //load all images and create representation
                     for(size_t i = 0; i < lib->mImages.size(); ++i)
                     {
-                        
+                        Image* im = lib->mImages[i];
+                        if( !im->isLoaded() )
+                        {
+                            im->load();
+                            
+                            //
+                            addToTextureLibrary(im);
+                            
+//                            const int size = 1024 * 1024 * 3;
+//                            unsigned char *dummy = new unsigned char[size];
+//                            memset(dummy, 125, size);
+//                            QImage qim(dummy, 1024, 1024, QImage::Format_RGB888);
+//                            //QString name = "/Users/po/Documents/testImage_" + QString::number(i) + ".png";
+//                            qim.save("./test_de_caca.png", "PNG");
+//                            
+//                            QImage::Format f;
+//                            if(im->mNumberOfChannels == 1)
+//                            { continue; }
+//                            
+//                            assert(im->mNumberOfChannels != 2);
+//                            if(im->mNumberOfChannels == 3)
+//                                f = QImage::Format_RGB888;
+//                            if(im->mNumberOfChannels == 4)
+//                                f = QImage::Format_RGBA8888;
+//                            QImage qim(im->mpPayload,
+//                                      im->mWidth,
+//                                      im->mHeight,
+//                                      f);
+//
+//                            QString name = "./testImage_" + QString::number(i) + ".png";
+//                            qim.save(name, "PNG");
+                        }
                     }
                 } break;
                 default: break;
@@ -165,7 +255,7 @@ void Scene::loadLibraries(Definition* iNode)
 }
 
 //----------------------------------------
-void Scene::performCulling(Definition* iNode)
+void Scene::performCulling(IGraphicNode* iNode)
 {
     
 }
@@ -181,10 +271,10 @@ void Scene::update()
     
     for(size_t i = 0; i < mNeedsRepresentationCreation.size(); ++i)
     {
+        loadLibraries(mNeedsRepresentationCreation[i]);
         createRepresentations(mNeedsRepresentationCreation[i]);
     }
     mNeedsRepresentationCreation.clear();
-    
     
 //    performCulling(mpRoot);
 }

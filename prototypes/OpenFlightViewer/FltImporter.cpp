@@ -24,8 +24,7 @@ namespace
 
 FltImporter::FltImporter(OpenFlight::HeaderRecord* ipHr) :
 mpHeaderRecord(ipHr),
-mpDefinitionRoot(nullptr),
-mpCurrentNode(nullptr)
+mpGraphicNodeRoot(nullptr)
 {
     parseFltTree(ipHr, nullptr);
 }
@@ -47,11 +46,14 @@ FltImporter::~FltImporter()
 // This would reduce the lenght of the tree.
 //
 GroupNode* FltImporter::digData(OpenFlight::ExternalReferenceRecord* ipE,
-                                Definition* ipParent)
+                                IGraphicNode* ipParent)
 {
     using namespace OpenFlight;
     
     GroupNode *pGroup = new GroupNode();
+    
+    pGroup->mName = "external reference";
+    
     pGroup->mParentTransform = fetchTransform(ipE);
     ipParent->addChild(pGroup);
     
@@ -60,12 +62,14 @@ GroupNode* FltImporter::digData(OpenFlight::ExternalReferenceRecord* ipE,
 
 //-----------------------------------------------------------------------------
 GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
-                                Definition* ipParent)
+                                IGraphicNode* ipParent)
 {
     using namespace OpenFlight;
     
     GroupNode *pGroup = new GroupNode();
+    pGroup->mName = ipG->hasLongIdRecord() ? ipG->getLongIdRecord()->getAsciiId() : ipG->getAsciiId();
     pGroup->mParentTransform = fetchTransform(ipG);
+    
     ipParent->addChild(pGroup);
     
     return pGroup;
@@ -73,7 +77,7 @@ GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
 
 //-----------------------------------------------------------------------------
 LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
-                                  Definition* ipParent)
+                                  IGraphicNode* ipParent)
 {
     using namespace OpenFlight;
     
@@ -86,14 +90,13 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
     OpenFlightNode* opfNode = new OpenFlightNode();
     if( ipParent == nullptr )
     {
-        mpDefinitionRoot = opfNode;
+        mpGraphicNodeRoot = opfNode;
     }
     else
     { ipParent->addChild(opfNode); }
-    
         
     //store the relation between OpenFlightNode and headerNode
-    //mDefinitionIdToFltRecord.insert( make_pair(mpDefinitionRoot->mId, ipH) );
+    //mDefinitionIdToFltRecord.insert( make_pair(mpGraphicNodeRoot->mId, ipH) );
     
     //add header stuff here
     
@@ -128,7 +131,7 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
             {
                 VertexPaletteRecord* vpr = ((VertexPaletteRecord*)a);
                 
-                VertexPoolNode *vp = new VertexPoolNode();
+                VertexPool *vp = new VertexPool();
                 for(int i = 0; i < vpr->getNumberOfVertices(); ++i)
                 {
                     const OpenFlight::Vertex& v = vpr->getVertex(i);
@@ -141,7 +144,7 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
                                                            v.mNormal.mZ ) );
                     
                     vp->mTextureCoordinates.push_back(math::Vector2d(v.mTextureCoordinate.mX,
-                                                          v.mNormal.mY) );
+                                                          v.mTextureCoordinate.mY) );
                     
                     vp->mColors.push_back(QColor(v.mPackedColor.mRed,
                                                  v.mPackedColor.mGreen,
@@ -152,21 +155,22 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
                 //store the relation between vertexPool and palette
                 mDefinitionIdToFltRecord.insert( make_pair(vp->mId, vpr) );
                 
-                library->addChild(vp);
+                library->mpVertexPool = vp;
             }break;
             
             case OpenFlight::ocTexturePalette:
             {
                 TexturePaletteRecord *tpr = (TexturePaletteRecord *)a;
                 
-                ImageNode *image = new ImageNode();
+                Image *image = new Image();
                 
                 // the filename of the texture record must be relative, else,
                 // it won't work...
                 image->mFilenamePath = ipH->getFilePath() + tpr->getFilenamePath();
+                image->loadMetaData();
                 
                 mDefinitionIdToFltRecord.insert( make_pair(image->mId, tpr));
-                library->addChild(image);
+                library->mImages.push_back(image);
             } break;
             default: break;
         }
@@ -177,13 +181,14 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
 
 //-----------------------------------------------------------------------------
 ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
-                                Definition* ipParent)
+                                IGraphicNode* ipParent)
 {
     using namespace OpenFlight;
     
     ModelNode *model = new ModelNode();
     ipParent->addChild(model);
     
+    model->mName = ipR->hasLongIdRecord() ? ipR->getLongIdRecord()->getAsciiId() : ipR->getAsciiId();
     model->mParentTransform = fetchTransform(ipR);
     
     //object record can only have 2 type of childs...
@@ -206,11 +211,11 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
                 PrimaryRecord* vertexList = c->getNumberOfChilds() > 0 ? c->getChild(0) : nullptr;
                 if(vertexList && vertexList->getOpCode() == ocVertexList)
                 {
-                    FaceNode *face = new FaceNode();
-                    model->addChild(face);
+                    Face *face = new Face();
+                    model->mFaces.push_back(face);
                     
                     LibraryNode *currentLibrary = getLibraryFor(model);
-                    face->addChild( currentLibrary->mpVertexPool );
+                    face->mpVertexPool = currentLibrary->mpVertexPool;
                     
                     //--- vertices
                     // fetch the VertexPalette from openFlight and resolve
@@ -227,8 +232,8 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
                     }
                     
                     //--- textures (images)
-                    MaterialNode *material = new MaterialNode();
-                    face->addChild(material);
+                    Material *material = new Material();
+                    face->mpMaterial = material;
                     if(faceRecord->getTexturePatternIndex() >= 0)
                     {
                         material->mpImage = getImageFromTexturePatternIndex( faceRecord->getTexturePatternIndex(), currentLibrary );
@@ -279,11 +284,11 @@ realisim::math::Matrix4 FltImporter::fetchTransform(OpenFlight::PrimaryRecord* i
 }
 
 //-----------------------------------------------------------------------------
-ImageNode* FltImporter::getImageFromTexturePatternIndex(int iIndex, LibraryNode* iLibrary)
+Image* FltImporter::getImageFromTexturePatternIndex(int iIndex, LibraryNode* iLibrary)
 {
     using namespace OpenFlight;
     
-    ImageNode *r = nullptr;
+    Image *r = nullptr;
     if( iLibrary != nullptr )
     {
         for( size_t i = 0; i < iLibrary->mImages.size() && r == nullptr; ++i)
@@ -313,39 +318,40 @@ OpenFlight::Record* FltImporter::getRecordFromDefinitionId(int iId)
 }
 
 //-----------------------------------------------------------------------------
-void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, Definition* ipCurrentParent)
+void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode* ipCurrentParent)
 {
     using namespace OpenFlight;
 
     //depth first parsing
     
-    Definition *currentDef;
+    IGraphicNode *currentNode;
     //dig for data on current record
     switch (ipRecord->getOpCode())
     {
         case OpenFlight::ocHeader:
-            currentDef = digData( (HeaderRecord*)ipRecord, ipCurrentParent );
+            currentNode = digData( (HeaderRecord*)ipRecord, ipCurrentParent );
             break;
         case OpenFlight::ocExternalReference:
-            currentDef = digData( (ExternalReferenceRecord*)ipRecord, ipCurrentParent );
+            currentNode = digData( (ExternalReferenceRecord*)ipRecord, ipCurrentParent );
             break;
         case OpenFlight::ocGroup:
-            currentDef = digData( (GroupRecord*)ipRecord, ipCurrentParent );
+            currentNode = digData( (GroupRecord*)ipRecord, ipCurrentParent );
             break;
         case OpenFlight::ocObject:
-            currentDef = digData( (ObjectRecord*)ipRecord, ipCurrentParent );
+            currentNode = digData( (ObjectRecord*)ipRecord, ipCurrentParent );
             break;
         case OpenFlight::ocUnsupported:
         {
             //explanation...
             GroupNode *pGroup = new GroupNode();
+            pGroup->mName = string("Unsupported openfligNode: ") + OpenFlight::toString(ipRecord->getOpCode());
             ipCurrentParent->addChild(pGroup);
-            currentDef = pGroup;
+            currentNode = pGroup;
         }break;
         default: break;
     }
     
     //dig into child
     for(int i = 0; i < ipRecord->getNumberOfChilds(); ++i)
-    { parseFltTree(ipRecord->getChild(i), currentDef); }
+    { parseFltTree(ipRecord->getChild(i), currentNode); }
 }

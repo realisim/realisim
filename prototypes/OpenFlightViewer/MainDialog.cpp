@@ -50,6 +50,7 @@ void Viewer::initializeGL()
 {
     Widget3d::initializeGL();
     
+    glEnable(GL_TEXTURE_2D);
     glCullFace(GL_BACK);
 }
 
@@ -114,7 +115,7 @@ mTimerId(0)
     
 
     createMenus();
-    
+
     mTimerId = startTimer(15);
 }
 
@@ -159,7 +160,7 @@ void MainDialog::openFile()
             { cout << "Warning while opening flt file: " << endl << ofr.getAndClearLastWarnings(); }
             
             FltImporter fltImporter(header);
-            mScene.addNode( fltImporter.getDefinitionRoot() );
+            mScene.addNode( fltImporter.getGraphicNodeRoot() );
             
             //cout << OpenFlight::toDotFormat( fltImporter.getOpenFlightRoot() );
         }

@@ -44,23 +44,73 @@ void Representation::draw()
 //----------------
 //--- Model
 //----------------
-Model::Model(ModelNode* ipModel) :
+Model::Model(ModelNode* ipModel,
+             const std::unordered_map<unsigned int, realisim::treeD::Texture>& iTextureLibrary ) :
 Representation(),
-mpModel(ipModel)
+mpModel(ipModel),
+mTextureLibrary(iTextureLibrary)
 {
     mDisplayList = glGenLists(1);
     
     glNewList(mDisplayList, GL_COMPILE);
     
     // textures...
+    int textureId = 0;
+    if(mpModel->mFaces.size() > 0)
+    {
+        const Face* f = mpModel->mFaces[0];
+        
+        if(f->mpMaterial && f->mpMaterial->mpImage)
+        {
+            auto it = mTextureLibrary.find(f->mpMaterial->mpImage->mId);
+            textureId = it->second.getId();
+        }
+    }
+    
+    
+//    const Face* f = mpModel->mFaces[0];
+//    if(f->mpMaterial && f->mpMaterial->mpImage )
+//    {
+//        Image* im = f->mpMaterial->mpImage;
+//        realisim::math::Vector2i size(im->mWidth, im->mHeight);
+//        GLenum internalFormat = GL_SRGB8_ALPHA8;
+//        GLenum format = GL_RGBA;
+//        GLenum datatype = GL_UNSIGNED_BYTE;
+//        
+//        if(im->mNumberOfChannels == 3)
+//        {
+//            internalFormat = GL_SRGB8;
+//            format = GL_RGB;;
+//        }
+//        mTexture.set(im->mpPayload, size, internalFormat, format, datatype);
+
+//test
+//{
+//    QImage::Format f;
+//    if(im->mNumberOfChannels == 3)
+//        f = QImage::Format_RGB888;
+//    if(im->mNumberOfChannels == 4)
+//        f = QImage::Format_RGBA8888;
+//    QImage qim(im->mpPayload,
+//              im->mWidth,
+//              im->mHeight,
+//              f);
+//    
+//    QImage qim2 = qim.mirrored(true, true);
+//    mTexture.set(qim2.bits(), size, internalFormat, format, datatype);
+//}
+//    }
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureId);
     
     // meshes...
     
     // faces...
     for(size_t i = 0; i < mpModel->mFaces.size(); ++i)
     {
-        const FaceNode* f = mpModel->mFaces[i];
-        
+        const Face* f = mpModel->mFaces[i];
+
         glBegin(GL_POLYGON);
         for(int j = 0; j < f->mVertexIndices.size(); ++j)
         {
@@ -73,6 +123,8 @@ mpModel(ipModel)
         }
         glEnd();
     }
+    
+    glBindTexture(GL_TEXTURE_2D, 0);
     
     glEndList();
 }
@@ -88,6 +140,7 @@ void Model::draw()
     
     glPushMatrix();
     glMultMatrixd( mpModel->mWorldTransform.getDataPointer() );
+        
     glCallList(mDisplayList);
     glPopMatrix();
     

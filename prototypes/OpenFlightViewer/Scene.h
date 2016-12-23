@@ -4,9 +4,16 @@
 #include <unordered_map>
 #include <vector>
 
-class Definition;
+class IDefinition;
+class IGraphicNode;
 class IRenderable;
-namespace Representations { class Representation; }
+class Image;
+class ModelNode;
+namespace Representations
+{
+    class Representation;
+    class Model;
+}
 
 class Scene
 {
@@ -16,7 +23,7 @@ public:
     Scene& operator=(const Scene&) = delete;
     ~Scene();
 
-    void addNode(Definition*);
+    void addNode(IGraphicNode*);
     void clear();
     void update();
     
@@ -50,19 +57,22 @@ protected:
     };
 
     
-    void createRepresentations(Definition*);
-    void loadLibraries(Definition*);
-    void filterRenderables(Definition*);
-    void performCulling(Definition*);
+void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
+    void createRepresentations(IGraphicNode*);
+    Representations::Model* checkAndCreateRepresentation(ModelNode*);
+    void loadLibraries(IGraphicNode*);
+    void filterRenderables(IGraphicNode*);
+    void performCulling(IGraphicNode*);
     void updateTransform(Filter*);
     
     //data
-    Definition* mpRoot;
+    IGraphicNode* mpRoot;
     
     std::unordered_map<unsigned int, Representations::Representation*> mDefinitionIdToRepresentation;
+    std::unordered_map<unsigned int, realisim::treeD::Texture> mImageIdToTexture;
     
-    std::vector<Definition*> mNeedsRepresentationCreation;
-    std::vector<Definition*> mNeedsTransformUpdate;
+    std::vector<IGraphicNode*> mNeedsRepresentationCreation;
+    std::vector<IGraphicNode*> mNeedsTransformUpdate;
     
     Filter mRenderableFilter;
 };

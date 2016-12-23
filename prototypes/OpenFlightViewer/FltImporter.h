@@ -13,24 +13,23 @@ public:
     ~FltImporter();
     
     OpenFlight::HeaderRecord* getOpenFlightRoot() { return mpHeaderRecord; }
-    Definition* getDefinitionRoot() { return mpDefinitionRoot; }
+    IGraphicNode* getGraphicNodeRoot() { return mpGraphicNodeRoot; }
     
 protected:
 void applyTransformCarryover(IRenderable*);
-    GroupNode* digData(OpenFlight::ExternalReferenceRecord*, Definition*);
-    GroupNode* digData(OpenFlight::GroupRecord*, Definition*);
-    LibraryNode* digData(OpenFlight::HeaderRecord*, Definition*);
-    ModelNode* digData(OpenFlight::ObjectRecord*, Definition*);
+    GroupNode* digData(OpenFlight::ExternalReferenceRecord*, IGraphicNode*);
+    GroupNode* digData(OpenFlight::GroupRecord*, IGraphicNode*);
+    LibraryNode* digData(OpenFlight::HeaderRecord*, IGraphicNode*);
+    ModelNode* digData(OpenFlight::ObjectRecord*, IGraphicNode*);
     realisim::math::Matrix4 fetchTransform(OpenFlight::PrimaryRecord*, bool* = nullptr);
-    ImageNode* getImageFromTexturePatternIndex(int, LibraryNode* iLibrary);
+    Image* getImageFromTexturePatternIndex(int, LibraryNode* iLibrary);
     OpenFlight::Record* getRecordFromDefinitionId(int);
-    void parseFltTree(OpenFlight::PrimaryRecord*, Definition* ipCurrentParent);
+    void parseFltTree(OpenFlight::PrimaryRecord*, IGraphicNode* ipCurrentParent);
     
     //--- data
     OpenFlight::HeaderRecord* mpHeaderRecord; //owned
     
-    Definition* mpDefinitionRoot; //not owned
-Definition* mpCurrentNode;
+    IGraphicNode* mpGraphicNodeRoot; //not owned
     
     std::map<int, OpenFlight::Record*> mDefinitionIdToFltRecord;
 };

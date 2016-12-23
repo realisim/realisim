@@ -1,35 +1,91 @@
 #include "Definitions.h"
 
+#include "ImageLoader.h"
+
+
 //--------------------------------------------------------
 //--- Interfaces
+//--------------------------------------------------------
+
+//--------------------------------------------------------
+//--- IGraphicNode
+//--------------------------------------------------------
+IGraphicNode::IGraphicNode() :
+mpParent(nullptr),
+mChilds(),
+mNodeType(ntUndefined),
+mName("N/A")
+{}
+
+IGraphicNode::~IGraphicNode()
+{
+    //    for(size_t i = 0; i < mChilds.size(); ++i)
+    //    { delete mChilds[i]; }
+    //    mChilds.clear();
+}
+
+//--------------------------------------------------------
+void IGraphicNode::addChild(IGraphicNode* ipNode)
+{
+    ipNode->mpParent = this;
+    mChilds.push_back(ipNode);
+}
+
+//--------------------------------------------------------
+//--- IRenderable
 //--------------------------------------------------------
 IRenderable::~IRenderable()
 {}
 
 //--------------------------------------------------------
-//--- Definitions
+//--- IDefinitions
 //--------------------------------------------------------
-unsigned int Definition::mIdCounter = 0;
+unsigned int IDefinition::mIdCounter = 0;
 
-Definition::Definition() :
-mId(mIdCounter++),
-mpParent(nullptr),
-mChilds(),
-mNodeType(ntDefinition)
+IDefinition::IDefinition() :
+mId(mIdCounter++)
 { }
 
-Definition::~Definition()
+IDefinition::~IDefinition()
+{}
+
+//--------------------------------------------------------
+//--- Image
+//--------------------------------------------------------
+Image::~Image()
 {
-//    for(size_t i = 0; i < mChilds.size(); ++i)
-//    { delete mChilds[i]; }
-//    mChilds.clear();
+    //delete payload...
+}
+
+void Image::load()
+{
+    //check file extension for the correct imageLoader..
+    //here we assume it is RGB
+    RgbImageLoader il;
+    il.setFilenamePath(mFilenamePath);
+    il.load();
+    mWidth = il.getPixelSizeX();
+    mHeight = il.getPixelSizeY();
+    mNumberOfChannels = il.getNumberOfChannels();
+    mBitsPerChannel = il.getBytesPerPixel() * 8;
+    mSizeInBytes = mWidth * mHeight * mNumberOfChannels * mBitsPerChannel / 8;
+    mpPayload = il.giveOwnershipOfImageData();
 }
 
 //--------------------------------------------------------
-void Definition::addChild(Definition* ipDef)
+
+void Image::loadMetaData()
 {
-    ipDef->mpParent = this;
-    mChilds.push_back(ipDef);
+    //check file extension for the correct imageLoader..
+    //here we assume it is RGB
+    RgbImageLoader il;
+    il.setFilenamePath(mFilenamePath);
+    il.loadHeader();
+    mWidth = il.getPixelSizeX();
+    mHeight = il.getPixelSizeY();
+    mNumberOfChannels = il.getNumberOfChannels();
+    mBitsPerChannel = il.getBytesPerPixel() * 8;
+    mSizeInBytes = mWidth * mHeight * mNumberOfChannels * mBitsPerChannel / 8;
 }
 
 //--------------------------------------------------------
@@ -40,34 +96,8 @@ OpenFlightNode::~OpenFlightNode()
 {}
 
 //--------------------------------------------------------
-//--- FaceNode
-//--------------------------------------------------------
-
-void FaceNode::addChild(Definition *ipDef)
-{
-    Definition::addChild(ipDef);
-    switch (ipDef->mNodeType)
-    {
-        case Definition::ntVertexPool : mpVertexPool = (VertexPoolNode*)ipDef; break;
-        case Definition::ntMaterial : mpMaterial = (MaterialNode*)ipDef; break;
-        default: break;
-    }
-}
-
-//--------------------------------------------------------
 //--- LibraryNode
 //--------------------------------------------------------
-
-void LibraryNode::addChild(Definition *ipDef)
-{
-    Definition::addChild(ipDef);
-    switch (ipDef->mNodeType)
-    {
-        case Definition::ntVertexPool : mpVertexPool = (VertexPoolNode*)ipDef; break;
-        case Definition::ntImage : mImages.push_back( (ImageNode*)ipDef ); break;
-        default: break;
-    }
-}
 
 LibraryNode::~LibraryNode()
 {
@@ -79,71 +109,25 @@ LibraryNode::~LibraryNode()
 }
 
 //--------------------------------------------------------
-//--- MaterialNode
-//--------------------------------------------------------
-
-void MaterialNode::addChild(Definition *ipDef)
-{
-    Definition::addChild(ipDef);
-    if(ipDef->mNodeType == ntImage)
-    {
-        mpImage = (ImageNode*)ipDef;
-    }
-}
-
-
-//--------------------------------------------------------
-//--- MeshNode
-//--------------------------------------------------------
-
-void MeshNode::addChild(Definition *ipDef)
-{
-    Definition::addChild(ipDef);
-    switch (ipDef->mNodeType)
-    {
-        case Definition::ntVertexPool : mpVertexPool = (VertexPoolNode*)ipDef; break;
-        case Definition::ntMaterial : mpMaterial = (MaterialNode*)ipDef; break;
-        default: break;
-    }
-}
-
-//--------------------------------------------------------
 //--- ModelNode
 //--------------------------------------------------------
 
 ModelNode::~ModelNode()
-{}
-
-void ModelNode::addChild(Definition *ipDef)
 {
-    Definition::addChild(ipDef);
-    switch (ipDef->mNodeType)
-    {
-        case Definition::ntMesh : mMeshes.push_back( (MeshNode*)ipDef ); break;
-        case Definition::ntFace : mFaces.push_back( (FaceNode*)ipDef ); break;
-        default: break;
-    }
-}
-
-//--------------------------------------------------------
-//--- GroupNode
-//--------------------------------------------------------
-
-GroupNode::~GroupNode()
-{
+    //delete...
 }
 
 //--------------------------------------------------------
 //--- Utilitaires
 //--------------------------------------------------------
-LibraryNode* getLibraryFor(Definition* iNode)
+LibraryNode* getLibraryFor(IGraphicNode* iNode)
 {
-    Definition* r = nullptr;
+    IGraphicNode* r = nullptr;
     
-    Definition* currentNode = iNode;
+    IGraphicNode* currentNode = iNode;
     while( currentNode != nullptr && r == nullptr )
     {
-        if(currentNode->mNodeType == Definition::ntLibrary)
+        if(currentNode->mNodeType == IGraphicNode::ntLibrary)
         {
             r = currentNode;
         }

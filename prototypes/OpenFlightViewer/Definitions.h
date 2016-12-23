@@ -14,12 +14,38 @@ using namespace realisim;
 //--------------------------------------------------------
 //--- Interfaces
 //--------------------------------------------------------
-//class IGraphicNode
-//{
-//public:
-//    IGraphicNode();
-//    virtual ~IGraphicNode() = 0;
-//}
+class IGraphicNode
+{
+public:
+    IGraphicNode();
+    virtual ~IGraphicNode() = 0;
+    
+    virtual void addChild(IGraphicNode*);
+    template<typename T> T* getFirstParent();
+    
+    enum nodeType{ ntUndefined, ntGroup, ntLibrary, ntLod, ntModel, ntOpenFlight, ntSwitch};
+    
+    IGraphicNode* mpParent;
+    std::vector<IGraphicNode*> mChilds; //owned
+    
+    nodeType mNodeType;
+    std::string mName;
+};
+
+//--------------------------------------------------------
+template<typename T>
+T* IGraphicNode::getFirstParent()
+{
+    IGraphicNode* p = mpParent;
+    T* found = nullptr;
+    while(p != nullptr && found == nullptr)
+    {
+        T* cast = dynamic_cast<T*>(p);
+        if(cast){ found = cast; }
+        p = p->mpParent;
+    }
+    return found;
+}
 
 
 //--------------------------------------------------------
@@ -42,56 +68,27 @@ public:
 
 
 //--------------------------------------------------------
-//--- Definitions
+//--- IDefinitions
 //--------------------------------------------------------
-class Definition
+class IDefinition
 {
 public:
-    Definition();
-    Definition(const Definition&) = delete;
-    Definition& operator=(const Definition&) = delete;
-    virtual ~Definition();
+    IDefinition();
+    IDefinition(const IDefinition&) = delete;
+    IDefinition& operator=(const IDefinition&) = delete;
+    virtual ~IDefinition();
 
     static unsigned int mIdCounter;
     unsigned int mId;
-    
-    virtual void addChild(Definition*);
-    template<typename T> T* getParent();
-    
-    enum nodeType{ntDefinition, ntFace, ntGroup, ntImage, ntLibrary, ntMesh,
-        ntMaterial,
-        ntModel,
-        ntOpenFlight,
-        ntVertexPool};
-    
-    Definition* mpParent;
-    std::vector<Definition*> mChilds; //owned
-    
-    nodeType mNodeType;
 };
 
 //--------------------------------------------------------
-template<typename T>
-T* Definition::getParent()
-{
-    Definition* p = mpParent;
-    T* found = nullptr;
-    while(p != nullptr && found == nullptr)
-    {
-        T* cast = dynamic_cast<T*>(p);
-        if(cast){ found = cast; }
-        p = p->mpParent;
-    }
-    return found;
-}
-
+//--- VertexPool
 //--------------------------------------------------------
-//--- VertexPoolNode
-//--------------------------------------------------------
-class VertexPoolNode : public Definition
+class VertexPool : public IDefinition
 {
 public:
-    VertexPoolNode() : Definition() { mNodeType = ntVertexPool; }
+    VertexPool() : IDefinition() {}
     //std::vector<OpenFlight::Vertex> mPool;
     std::vector<math::Vector3d> mVertices;
     std::vector<math::Vector3d> mNormals;
@@ -100,34 +97,43 @@ public:
 };
 
 //--------------------------------------------------------
-class ImageNode : public Definition
+class Image : public IDefinition
 {
 public:
-    ImageNode() : Definition(), mWidth(0), mHeight(0), mSizeInBytes(0), mpPayload(nullptr)
-    { mNodeType = ntImage; }
+    Image() : IDefinition(), mWidth(0), mHeight(0),
+    mNumberOfChannels(0),
+    mBitsPerChannel(0),
+    mSizeInBytes(0),
+    mpPayload(nullptr)
+    {}
+    Image(const Image&) = delete;
+    Image& operator=(const Image&) = delete;
+    virtual ~Image() override;
     
     bool isLoaded() const {return mpPayload != nullptr; };
+    void loadMetaData();
+    void load();
     
     std::string mFilenamePath;
     int mWidth;
     int mHeight;
+    int mNumberOfChannels;
+    int mBitsPerChannel;
     int mSizeInBytes;
     unsigned char* mpPayload;
 };
 
 //--------------------------------------------------------
-class MaterialNode : public Definition
+class Material : public IDefinition
 {
 public:
-    MaterialNode() : mAmbient(0.25 * 255, 0.25 * 255, 0.25 * 255),
+    Material() : IDefinition(), mAmbient(0.25 * 255, 0.25 * 255, 0.25 * 255),
         mDiffuse(0.5 * 255, 0.5 * 255, 0.5 * 255),
         mSpecular(0.6 * 255, 0.6 * 255, 0.6 * 255),
         mEmissive(1.0 * 255, 1.0 * 255, 1.0 * 255),
         mShinniness(80),
         mpImage(nullptr)
-       { mNodeType = ntMaterial; }
-    
-    virtual void addChild(Definition*) override;
+       {}
     
     QColor mAmbient;
     QColor mDiffuse;
@@ -135,81 +141,77 @@ public:
     QColor mEmissive;
     double mShinniness;
 
-    ImageNode* mpImage;
+    Image* mpImage;
 };
 
 //--------------------------------------------------------
-class FaceNode : public Definition
+class Face
 {
 public:
-    FaceNode() : mpVertexPool(nullptr), mpMaterial(nullptr) { mNodeType = ntFace; }
+    Face() : mpVertexPool(nullptr), mpMaterial(nullptr) {}
     
-    virtual void addChild(Definition*) override;
+    VertexPool* mpVertexPool; //not owned
     
-    VertexPoolNode* mpVertexPool; //not owned
-    
-    MaterialNode* mpMaterial; //owned
+    Material* mpMaterial; //owned
     std::vector<uint32_t> mVertexIndices;
 };
 
 //--------------------------------------------------------
-class MeshNode : public Definition
+class Mesh
 {
 public:
-    MeshNode() : mpVertexPool(nullptr), mpMaterial(nullptr) { mNodeType = ntMesh; }
-
-    virtual void addChild(Definition*) override;
+    Mesh() : mpVertexPool(nullptr), mpMaterial(nullptr) {}
     
-    VertexPoolNode* mpVertexPool; //not owned
+    VertexPool* mpVertexPool; //not owned
 
-    MaterialNode* mpMaterial; //owned
+    Material* mpMaterial; //owned
     std::vector<uint32_t> mVertexIndices;
 };
 
 //--------------------------------------------------------
-class OpenFlightNode : public Definition
+class OpenFlightNode : public IDefinition,
+public IGraphicNode
 {
 public:
-    OpenFlightNode() : Definition() { mNodeType = ntOpenFlight; }
-    virtual ~OpenFlightNode();
+    OpenFlightNode() : IDefinition(), IGraphicNode() { mNodeType = ntOpenFlight; }
+    virtual ~OpenFlightNode() override;
 };
 
 //--------------------------------------------------------
-class LibraryNode : public Definition
+class LibraryNode : public IDefinition,
+public IGraphicNode
 {
 public:
-    LibraryNode() : Definition() { mNodeType = ntLibrary; }
-    virtual ~LibraryNode();
+    LibraryNode() : IDefinition(), IGraphicNode() { mNodeType = ntLibrary; }
+    virtual ~LibraryNode() override;
     
-    virtual void addChild(Definition*) override;
-    
-    VertexPoolNode *mpVertexPool; //owned
+    VertexPool *mpVertexPool; //owned
 //    vector<Material>
-    std::vector<ImageNode*> mImages; //owned
+    std::vector<Image*> mImages; //owned
     
     //shaders...
 };
   
 
 //--------------------------------------------------------
-class ModelNode : public Definition, public IRenderable
+class ModelNode : public IDefinition,
+public IGraphicNode,
+public IRenderable
 {
 public:
-    ModelNode() : Definition(), IRenderable() { mNodeType = ntModel; }
+    ModelNode() : IDefinition(), IGraphicNode(), IRenderable() { mNodeType = ntModel; }
     virtual ~ModelNode() override;
     
-    virtual void addChild(Definition*) override;
-    
-    std::vector<MeshNode*> mMeshes; //owned
-    std::vector<FaceNode*> mFaces; //owned
+    std::vector<Mesh*> mMeshes; //owned
+    std::vector<Face*> mFaces; //owned
 };
 
 //--------------------------------------------------------
-class GroupNode : public Definition, public IRenderable
+class GroupNode : public IDefinition, public IGraphicNode, public IRenderable
 {
 public:
-    GroupNode() : Definition() { mNodeType = ntGroup; }
-    virtual ~GroupNode() override;
+    GroupNode() : IDefinition(), IGraphicNode(), IRenderable() { mNodeType = ntGroup; }
+    virtual ~GroupNode() override {};
 };
 
 
@@ -217,4 +219,4 @@ public:
 //--- Utilitaires
 //--------------------------------------------------------
 
-LibraryNode* getLibraryFor(Definition*);
+LibraryNode* getLibraryFor(IGraphicNode*);
