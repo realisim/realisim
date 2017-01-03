@@ -62,6 +62,7 @@ void Widget3d::beginFrame()
     makeCurrent();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
+    
     mCam.applyModelViewTransformation();
 }
 //-----------------------------------------------------------------------------
@@ -96,12 +97,12 @@ void Widget3d::initializeGL()
     GLfloat shininess[] = {80.0};
     GLfloat position[]  = {50.0, 50.0, 50.0, 1.0};
     GLfloat ambiant[]   = {0.2f, 0.2f, 0.2f, 1.0f};
-    GLfloat diffuse[]   = {0.5, 0.5, 0.5, 1.0};
+    GLfloat diffuse[]   = {0.7, 0.7, 0.7, 1.0};
     GLfloat specular[]  = {1.0, 1.0, 1.0, 1.0};
     
-    GLfloat mat_ambiant[] = {0.6f, 0.6f, 0.6f, 1.0f};
+    GLfloat mat_ambiant[] = {0.25f, 0.25f, 0.25f, 1.0f};
     GLfloat mat_diffuse[] = {0.6f, 0.6f, 0.6f, 1.0f};
-    GLfloat mat_specular[]  = {0.5f, 0.5f, 0.5f, 1.0f};
+    GLfloat mat_specular[]  = {1.0f, 1.0f, 1.0f, 1.0f};
     
     // Let OpenGL clear background to Grey
     //glClearColor(125/255.0f, 125/255.0f, 125/255.0f, 0.0);
@@ -253,10 +254,11 @@ void
 Widget3d::paintGL()
 {
     beginFrame();
+    
     //replacer les lumieres
-    Vector4d pos(50.0, 30.0, 5.0, 1.0);
+    Vector4d pos(50.0, 30.0, 5.0, 0.0);
     if( mAbsoluteUpVector == auvZ )
-    { pos.set(100, 200, 1000, 1.0); }
+    { pos.set(400, 280, 1000, 0.0); }
     GLfloat position[]  = {pos.x(), pos.y(), pos.z(), pos.w() };
     glLightfv(GL_LIGHT0, GL_POSITION, position);
     

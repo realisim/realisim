@@ -3,6 +3,7 @@
 #include "math/Matrix4.h"
 #include "Representations.h"
 #include "Scene.h"
+#include "utils/Timer.h"
 
 using namespace realisim;
     using namespace math;
@@ -76,6 +77,8 @@ void Scene::addToTextureLibrary(Image *iIm)
         }
 
         t.set(iIm->mpPayload, size, internalFormat, format, datatype);
+        t.generateMipmap(true);
+        t.setFilter(GL_LINEAR_MIPMAP_LINEAR);
         
         mImageIdToTexture.insert( make_pair(def->mId, t) );
     }
@@ -193,6 +196,8 @@ void Scene::filterRenderables(IGraphicNode* iNode)
 //------------------------------------------------------------------------------
 void Scene::loadLibraries(IGraphicNode* iNode)
 {
+    realisim::utils::Timer __t;
+    
     if(iNode != nullptr)
     {
         deque<IGraphicNode*> q;
@@ -252,6 +257,8 @@ void Scene::loadLibraries(IGraphicNode* iNode)
             }
         }
     }
+    
+    printf("temps pour Scene::loadLibraries %.4f(sec): ", __t.getElapsed());
 }
 
 //----------------------------------------
