@@ -1,7 +1,9 @@
 #include <cassert>
 #include "ImageLoader.h"
+#include <omp.h>
 #include "Utils/StreamUtility.h"
 #include <vector>
+#include "utils/Timer.h"
 
 using namespace std;
 
@@ -160,7 +162,7 @@ void RgbImageLoader::load()
             {
                 mIsValid = parseAsRle(ifs);
                 if(!isValid())
-                {printf("RgbImageLoader::load() - Error while parsing rle data...");}
+                {printf("RgbImageLoader::load() - Error while parsing rle data...\n");}
             }
         }
     }
@@ -244,7 +246,6 @@ bool RgbImageLoader::parseAsRle(std::ifstream &ifs)
     const int numChannels = getNumberOfChannels();
     const int sx = getPixelSizeX();
     const int sy = getPixelSizeY();
-    const int numBytes = getBytesPerPixel();
     
     //--- read offset table
     int32_t* startTable = nullptr;
@@ -262,13 +263,36 @@ bool RgbImageLoader::parseAsRle(std::ifstream &ifs)
     {
         ok &= su.readInt32(ifs, &lenghtTable[i]);
     }
+
+    // compute remaining size of the stream
+    const std::streampos currentStreamPos = ifs.tellg();
+    ifs.seekg(0, std::ios::end);
+    const size_t remainingSize = ifs.tellg() - currentStreamPos;
+    ifs.seekg(currentStreamPos);
     
-    //--- create each color channel
-    vector<unsigned char*> channels(numChannels);
-    for(int channelIndex = 0; channelIndex < numChannels && ok; ++channelIndex)
+    // read all image data at once, it is faster and enables openmp usage.
+    // it brings in a twist... the rleOffset from startTable are relative to
+    // the file, so we will need to adjust the rleOffset to be relative to
+    // the rleRawData buffer. (relativeRleOffset = rleOffset - currentStreamPos)
+    // 
+    string rleRawData;
+    ok &= su.readBytes(ifs, remainingSize, &rleRawData);
+
+    //--- create final buffer and recombine channel buffer into a
+    // single rgb/rgba buffer.
+    const int finalSize = sx * sy * numChannels;
+    mpImageData = new unsigned char[finalSize];
+
+    //--- For each color channel, decompress each scanline and repack rgb(a) into final buffer
+    // see parseAsVerbatim for explanation on packing into final buffer.
+    //vector<unsigned char*> channels(numChannels);
+    unsigned char* scanline = nullptr;
+    int channelIndex = 0;
+    #pragma omp parallel for num_threads(numChannels) private(channelIndex, scanline) shared(ok)
+    for(channelIndex = 0; channelIndex < numChannels; ++channelIndex)
     {
-        const int sizeOfChannelInBytes = sx * sy * numBytes;
-        channels[channelIndex] = new unsigned char[sizeOfChannelInBytes];
+
+        scanline = new unsigned char[sx];
         
         //decompress each scanline of channel n
         for(int row = 0; row < sy && ok; ++row)
@@ -277,36 +301,21 @@ bool RgbImageLoader::parseAsRle(std::ifstream &ifs)
             int32_t rleOffset = startTable[row + channelIndex * sy];
             int32_t rleLength = lenghtTable[row + channelIndex * sy];
             
-            string rleData;
-            ifs.seekg(rleOffset);
-            ok &= su.readBytes(ifs, rleLength, &rleData);
-            
-            //decompress rle scanline into color channel
-            decompress( rleData, &channels[channelIndex][row * sx] );
-        }
-    }
+            // grab the rledata for the current scanline
+            string rleData = rleRawData.substr(rleOffset - currentStreamPos, rleLength);
+            decompress( rleData, &scanline[0] );
 
-    if(ok)
-    {
-        // create final buffer and recombine channel buffer into a
-        // single rgb/rgba buffer.
-        const int finalSize = sx * sy * numBytes * numChannels;
-        mpImageData = new unsigned char[finalSize];
-        for(int i = 0; i < finalSize / numChannels; ++i)
-        {
-            for(int j = 0; j < numChannels; ++j)
-            {
-                mpImageData[(i * numChannels) + j] = channels[j][i];
-            }
+            for(int i = 0; i < sx; ++i)
+            { mpImageData[ (row * sx * numChannels) + (i * numChannels) + channelIndex] = scanline[i]; }
         }
+
+        delete[] scanline;
     }
     
     //cleanup
     delete[] startTable;
     delete[] lenghtTable;
-    
-    for(int i = 0; i < numChannels; ++i)
-    { delete[] channels[i]; }
+   
     
     return ok;
 }
@@ -316,41 +325,37 @@ bool RgbImageLoader::parseAsVerbatim(std::ifstream &ifs)
     bool ok = true;
     
     //each channel is stored one after the other... so lets read each of them
-    //separately and repack them in rgb or rgba format at the end.
+    //separately and repack them in rgb or rgba format on the fly.
     Realisim::Utils::StreamUtility su;
     su.setStreamFormat(Realisim::Utils::StreamUtility::eBigEndian);
-    
-    const int n = getNumberOfChannels();
-    const int b = getBytesPerPixel();
-    
-    vector<unsigned char*> channels(n);
-    for(int i = 0; i < n && ok; ++i)
-    {
-        const int sizeOfChannelInBytes = getPixelSizeX() * getPixelSizeY() * b;
-        channels[i] = new unsigned char[sizeOfChannelInBytes];
         
-        for(int j = 0; j < sizeOfChannelInBytes && ok; ++j)
-        {
-            ok &= su.readUint8(ifs, &channels[i][j]);
-        }
-    }
-    
-    // create final buffer and recombine channel buffer into a
-    // single rgb/rgba buffer.
-    const int finalSize = getPixelSizeX() * getPixelSizeY() * b * n;
-    mpImageData = new unsigned char[finalSize];
-    for(int i = 0; i < finalSize / n; ++i)
+    //read all data at once, it is faster and enables using openmp
+    string rawData;
+    ok &= su.readBytes(ifs, getPixelSizeX() * getPixelSizeY() * getNumberOfChannels(), &rawData);
+
+    if (ok)
     {
-        for(int j = 0; j < n; ++j)
+        const int n = getNumberOfChannels();
+
+        // create final buffer to recombine channel buffer into a
+        // single rgb/rgba buffer.
+        const int finalSize = getPixelSizeX() * getPixelSizeY() * n;
+        mpImageData = new unsigned char[finalSize];
+
+        int i = 0;
+        const int sizeOfChannelInBytes = getPixelSizeX() * getPixelSizeY();
+
+        //on channel per thread.
+        #pragma omp parallel for num_threads(n) private(i)
+        for(i = 0; i < n; ++i)
         {
-            mpImageData[(i * n) + j] = channels[j][i];
+            for(int j = 0; j < sizeOfChannelInBytes; ++j)
+            {
+                mpImageData[(j * n) + i] = rawData[ i*sizeOfChannelInBytes + j ];
+            }
         }
+
     }
-    
-    // cleanup
-    for(int i = 0; i < n; ++i)
-    { delete[] channels[i]; }
-    
     return ok;
 }
 

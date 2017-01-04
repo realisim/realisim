@@ -30,13 +30,14 @@ public:
 private:
     virtual void draw() override;
     virtual void initializeGL() override;
-    virtual void keyPressEvent(QKeyEvent*) override;
+    virtual void keyPressEvent(QKeyEvent*) override;    
     void setScene(const Scene* ipScene) {mpScene = ipScene;}
     void togglePolygonMode();
     void updateRepresentations();
     
     //--- data
     const Scene *mpScene;
+    GLint mPolygonMode;
 };
 
 
@@ -53,11 +54,14 @@ protected slots:
     
 protected:
     void createMenus();
+    virtual void keyPressEvent(QKeyEvent*) override;
     void timerEvent(QTimerEvent*) override;
+    void toggleFreeRunning();
     
     Viewer* mpViewer;
     
     //Data
+    bool mFreeRunning;
     Scene mScene;
     int mTimerId;
 };

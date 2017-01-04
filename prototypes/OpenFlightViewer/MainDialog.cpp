@@ -18,6 +18,7 @@
 #include <queue>
 #include "Representations.h"
 #include <string>
+#include "utils/Timer.h"
 
 using namespace realisim;
 using namespace math;
@@ -25,7 +26,8 @@ using namespace treeD;
 using namespace std;
 
 
-Viewer::Viewer(QWidget* ipParent /*=0*/) : Widget3d(ipParent)
+Viewer::Viewer(QWidget* ipParent /*=0*/) : Widget3d(ipParent),
+mPolygonMode(GL_FILL)
 {
     setFocusPolicy(Qt::StrongFocus);
 }
@@ -62,23 +64,24 @@ void Viewer::keyPressEvent(QKeyEvent* ipE)
     switch (ipE->key())
     {
         case Qt::Key_P: togglePolygonMode(); break;
-        default: break;
+        default: ipE->ignore(); break;
     }
 }
 
 //------------------------------------------------------------------------------
 void Viewer::togglePolygonMode()
 {
-    int polygonMode;
-    glGetIntegerv(GL_POLYGON_MODE, &polygonMode);
+    // Not able to query polygon_mode?!? not in the doc anymore...
+    //GLint64 polygonMode = 0;
+    //glGetInteger64v(GL_POLYGON_MODE, &polygonMode);
     
-    GLenum e = polygonMode;
-    switch (e)
+    switch (mPolygonMode)
     {
-        case GL_LINE: glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); break;
-        case GL_FILL: glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); break;
+        case GL_LINE: glPolygonMode(GL_FRONT, GL_FILL); mPolygonMode = GL_FILL; break;
+        case GL_FILL: glPolygonMode(GL_FRONT, GL_LINE); mPolygonMode = GL_LINE; break;
         default: break;
     }
+
 }
 
 //------------------------------------------------------------------------------
@@ -133,6 +136,16 @@ void MainDialog::createMenus()
                      QKeySequence::Open );
 }
 
+//------------------------------------------------------------------------------
+void MainDialog::keyPressEvent(QKeyEvent* ipE)
+{
+    switch (ipE->key())
+    {
+    case Qt::Key_F: toggleFreeRunning(); break;
+    default: break;
+    }
+}
+
 //-----------------------------------------------------------------------------
 void MainDialog::openFile()
 {
@@ -152,7 +165,9 @@ void MainDialog::openFile()
     
     for(int i = 0; i < filenamePaths.count(); ++i)
     {
+        realisim::utils::Timer __t;
         OpenFlight::HeaderRecord *header = ofr.open( filenamePaths.at(i).toStdString() );
+        printf("Temps pour lire %s: %.4f (sec)\n", filenamePaths.at(i).toStdString().c_str(), __t.getElapsed() );
         
         if(!ofr.hasErrors())
         {
@@ -177,6 +192,14 @@ void MainDialog::newFile()
 {
     mScene.clear();
     update();
+}
+
+//------------------------------------------------------------------------------
+void MainDialog::toggleFreeRunning()
+{
+    mFreeRunning = !mFreeRunning;
+    killTimer(mTimerId);
+    mTimerId = mFreeRunning ? startTimer(0) : startTimer(15);
 }
 
 //-----------------------------------------------------------------------------

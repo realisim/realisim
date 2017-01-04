@@ -63,7 +63,8 @@ mTextureLibrary(iTextureLibrary)
         if(f->mpMaterial && f->mpMaterial->mpImage)
         {
             auto it = mTextureLibrary.find(f->mpMaterial->mpImage->mId);
-            textureId = it->second.getId();
+            if(it != mTextureLibrary.end())
+            { textureId = it->second.getId(); }
         }
     }
     

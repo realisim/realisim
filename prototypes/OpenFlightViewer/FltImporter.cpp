@@ -324,7 +324,7 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
 
     //depth first parsing
     
-    IGraphicNode *currentNode;
+    IGraphicNode *currentNode = nullptr;
     //dig for data on current record
     switch (ipRecord->getOpCode())
     {

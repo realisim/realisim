@@ -227,29 +227,24 @@ void Scene::loadLibraries(IGraphicNode* iNode)
                             //
                             addToTextureLibrary(im);
                             
-//                            const int size = 1024 * 1024 * 3;
-//                            unsigned char *dummy = new unsigned char[size];
-//                            memset(dummy, 125, size);
-//                            QImage qim(dummy, 1024, 1024, QImage::Format_RGB888);
-//                            //QString name = "/Users/po/Documents/testImage_" + QString::number(i) + ".png";
-//                            qim.save("./test_de_caca.png", "PNG");
-//                            
-//                            QImage::Format f;
-//                            if(im->mNumberOfChannels == 1)
-//                            { continue; }
-//                            
-//                            assert(im->mNumberOfChannels != 2);
-//                            if(im->mNumberOfChannels == 3)
-//                                f = QImage::Format_RGB888;
-//                            if(im->mNumberOfChannels == 4)
-//                                f = QImage::Format_RGBA8888;
-//                            QImage qim(im->mpPayload,
-//                                      im->mWidth,
-//                                      im->mHeight,
-//                                      f);
-//
-//                            QString name = "./testImage_" + QString::number(i) + ".png";
-//                            qim.save(name, "PNG");
+
+                            //--- save image to disk.
+                            //QImage::Format f;
+                            //if(im->mNumberOfChannels == 1)
+                            //{ continue; }
+                            //
+                            //assert(im->mNumberOfChannels != 2);
+                            //if(im->mNumberOfChannels == 3)
+                            //    f = QImage::Format_RGB888;
+                            //if(im->mNumberOfChannels == 4)
+                            //    f = QImage::Format_RGBA8888;
+                            //QImage qim(im->mpPayload,
+                            //          im->mWidth,
+                            //          im->mHeight,
+                            //          f);
+
+                            //QString name = "./testImage_" + QString::number(i) + ".png";
+                            //qim.save(name, "PNG");
                         }
                     }
                 } break;
@@ -258,7 +253,7 @@ void Scene::loadLibraries(IGraphicNode* iNode)
         }
     }
     
-    printf("temps pour Scene::loadLibraries %.4f(sec): ", __t.getElapsed());
+    printf("temps pour Scene::loadLibraries: %.4f(sec)\n", __t.getElapsed());
 }
 
 //----------------------------------------
