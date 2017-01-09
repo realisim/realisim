@@ -1,6 +1,8 @@
 #include <cassert>
 #include "ImageLoader.h"
+#if defined(_OPENMP)
 #include <omp.h>
+#endif
 #include "Utils/StreamUtility.h"
 #include <vector>
 #include "utils/Timer.h"
@@ -213,7 +215,6 @@ bool RgbImageLoader::loadHeader(ifstream& ifs)
     
     ifs.seekg(512); //go to end of header.
     
-    
     // a few assumption and checks
     assert(getBytesPerPixel() == 1 );
     
@@ -291,7 +292,6 @@ bool RgbImageLoader::parseAsRle(std::ifstream &ifs)
     #pragma omp parallel for num_threads(numChannels) private(channelIndex, scanline) shared(ok)
     for(channelIndex = 0; channelIndex < numChannels; ++channelIndex)
     {
-
         scanline = new unsigned char[sx];
         
         //decompress each scanline of channel n
@@ -315,7 +315,6 @@ bool RgbImageLoader::parseAsRle(std::ifstream &ifs)
     //cleanup
     delete[] startTable;
     delete[] lenghtTable;
-   
     
     return ok;
 }
