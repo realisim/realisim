@@ -1,5 +1,6 @@
 /* */
 
+#include "data.h"
 #include "Updater.h"
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
@@ -61,6 +62,22 @@ int Updater::getNumberOfVersions() const
 //---------------------------------------------------------------------
 QString Updater::getReleaseNotes(int i) const
 { return mVersions[i].mReleaseNotes; }
+
+//---------------------------------------------------------------------
+Version Updater::getVersion(int i) const
+{
+    QString versionAsQString = mVersions[i].mVersion;
+    QStringList l = versionAsQString.split(QChar('.'));
+    Version r;
+    if(l.size() == 3)
+    {
+        r.mMajor = l[0].toInt();
+        r.mMinor = l[1].toInt();
+        r.mRevision = l[2].toInt();
+    }
+    return r;
+}
+
 //---------------------------------------------------------------------
 QString Updater::getVersionAsQString(int i) const
 { return mVersions[i].mVersion; }
