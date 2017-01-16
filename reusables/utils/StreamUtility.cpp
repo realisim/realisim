@@ -3,8 +3,8 @@
 
 
 using namespace std;
-using namespace Realisim;
-using namespace Utils;
+using namespace realisim;
+using namespace utils;
 
 namespace
 {
@@ -15,6 +15,16 @@ namespace
 bool StreamUtility::needsSwapping() const
 {
     return __localFormat != getStreamFormat();
+}
+
+//-------------------------------------------------------------------------
+// read iNumberOfBytesToRead into oV.
+// oV must be preallocated at the correct size.
+//
+bool StreamUtility::readBytes(std::istream& iStream, int iNumberOfBytesToRead, char *oV)
+{
+    iStream.read(oV, iNumberOfBytesToRead);
+    return iStream.good();
 }
 
 //-------------------------------------------------------------------------

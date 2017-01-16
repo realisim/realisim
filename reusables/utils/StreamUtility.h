@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <string>
 
-namespace Realisim
+namespace realisim
 {
-namespace Utils
+namespace utils
 {
     class StreamUtility
     {
@@ -20,6 +20,7 @@ namespace Utils
         enum endianness{ eBigEndian=0, eLittleEndian };
         
         endianness getStreamFormat() const {return mStreamFormat;}
+        bool readBytes(std::istream& iStream, int iNumberOfBytesToRead, char *oV);
         bool readBytes(std::istream& iStream, int iNumberOfBytesToRead, std::string *oV);
         bool readChar(std::istream& iStream, int iNumberOfCharToRead, std::string *oV);
         bool readDouble(std::istream& iStream, double *oV);

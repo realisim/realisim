@@ -11,7 +11,7 @@ IF( PROTOTYPES_BUILDOPTION )
    #ADD_SUBDIRECTORY( jeuDePouvoir )
    #ADD_SUBDIRECTORY( Matrix4 )
    #ADD_SUBDIRECTORY( network)
-   ADD_SUBDIRECTORY( OpenFlightViewer )
+   #ADD_SUBDIRECTORY( OpenFlightViewer )
    #ADD_SUBDIRECTORY( particuleSystem) #utilise openCL... un test pas très concluant
    #ADD_SUBDIRECTORY( particuleSystem2)
    #ADD_SUBDIRECTORY( platform )

@@ -8,6 +8,7 @@
 #include <map>
 #include <QMainWindow>
 #include "sound/AudioInterface.h"
+#include "sound/Wave.h"
 
 //------------------------------------------------------------------------------
 class MainDialog : public QMainWindow
@@ -20,7 +21,8 @@ public:
     enum notes{ nC, nCSharp, nD, nEFlat, nE, nF, nFSharp, nG, nGSharp, nA, nBFlat,
         nB };
     
-    protected slots:
+protected slots:
+    void loadWavClicked();
     void noteClicked( int );
     
 protected:
@@ -33,6 +35,10 @@ protected:
     int mSourcesId[3];
     int mSourceIndex;
     std::map< notes, int > mNotesToBuffer;
+    
+    realisim::sound::Wave mWave0;
+    int mWave0SourceId;
+    int mWave0BufferId;
 };
 
 #endif

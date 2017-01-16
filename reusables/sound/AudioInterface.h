@@ -1,7 +1,6 @@
 /* AudioInterface.h */
 
-#ifndef Realisim_AudioInterface_hh
-#define Realisim_AudioInterface_hh
+#pragma once
 
 #include "math/Point.h"
 #include "math/Vect.h"
@@ -29,6 +28,7 @@ namespace sound
         int addBuffer();
         int addSource();
         void attachBufferToSource( int, int );
+        void detachBufferFromSource(int iSourceId);
         std::string getAndClearLastErrors() const;
         int getBufferBitsPerSample( int ) const;
         int getBufferFrequency( int ) const;
@@ -77,6 +77,7 @@ namespace sound
         void rewindSources( std::vector<int> );
         //void queueBufferToSource( int, int );
         //void queueBuffersToSource( vector<int>, int );
+        void setBufferData( int iBufferId, const unsigned char* iData, int iDataSize, format iFormat, int iFreq );
         void setBufferData( int iBufferId, const std::string& iData, format iFormat, int iFreq );
         void setListenerGain( double );
         void setListenerPosition( math::Point3d );
@@ -104,8 +105,8 @@ namespace sound
         
     protected:
         void addError( const std::string& ) const;
-        std::string getOpenAlError() const;
-        std::string getOpenAlcError() const;
+        void checkForAlError(const std::string& iM = std::string() ) const;
+        void checkForAlcError(ALCdevice *ipD, const std::string& iM = std::string()) const;
         
         //std::string getVersion() const;
         //int getMajorVersion() const;
@@ -122,5 +123,3 @@ namespace sound
     
 }
 }
-
-#endif

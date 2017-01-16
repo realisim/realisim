@@ -3,6 +3,7 @@
 #include <QFrame>
 #include <QLayout>
 #include <QButtonGroup>
+#include <QFileDialog>
 #include <qpushbutton>
 #include "sound/utilities.h"
 
@@ -11,7 +12,8 @@ using namespace sound;
 
 MainDialog::MainDialog() : QMainWindow(),
 mSourcesId(),
-mSourceIndex(0)
+mSourceIndex(0),
+mWave0BufferId(0)
 {
     createUi();
     generateNotes();
@@ -19,6 +21,10 @@ mSourceIndex(0)
     mSourcesId[0] = mAudio.addSource();
     mSourcesId[1] = mAudio.addSource();
     mSourcesId[2] = mAudio.addSource();
+    
+    mWave0SourceId = mAudio.addSource();
+    mWave0BufferId = mAudio.addBuffer();
+    
     updateUi();
 }
 
@@ -48,7 +54,18 @@ void MainDialog::createUi()
         }
     }
     
+    QHBoxLayout *pWavLyt = new QHBoxLayout();
+    pWavLyt->setMargin(2); pWavLyt->setSpacing(5);
+    {
+        QPushButton *pLoad = new QPushButton( "load wav...", pMainFrame);
+        connect(pLoad, SIGNAL(clicked()), this, SLOT(loadWavClicked()));
+        
+        pWavLyt->addWidget(pLoad);
+        pWavLyt->addStretch(1);
+    }
+    
     pLyt->addLayout( pNotesLyt );
+    pLyt->addLayout( pWavLyt );
     pLyt->addStretch( 1 );
 }
 //-----------------------------------------------------------------------------
@@ -73,6 +90,48 @@ void MainDialog::generateNotes()
         }
     }
 }
+
+//-----------------------------------------------------------------------------
+void MainDialog::loadWavClicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Wave"),
+                                                    "/home",
+                                                    tr("Wave (*.wav)"));
+    mWave0.setFilenamePath(fileName.toStdString());
+    mWave0.load();
+    
+    if(mWave0.isValid())
+    {
+        AudioInterface::format f;
+        switch (mWave0.getNumberOfChannels())
+        {
+            case 1: //mono
+                if(mWave0.getBitsPerSample() == 8) {f = AudioInterface::fMono8;}
+                if(mWave0.getBitsPerSample() == 16) {f = AudioInterface::fMono16;}
+                break;
+            case 2: //stereo
+                if(mWave0.getBitsPerSample() == 8) {f = AudioInterface::fStereo8;}
+                if(mWave0.getBitsPerSample() == 16) {f = AudioInterface::fStereo16;}
+                break;
+            default: f = AudioInterface::fMono8; break;
+        }
+        
+        mAudio.stopSource(mWave0SourceId);
+        
+        mAudio.detachBufferFromSource(mWave0SourceId);
+        mAudio.setBufferData(mWave0BufferId, mWave0.getSoundData(), mWave0.getSoundDataSize(), f, mWave0.getSamplingFrequency());
+        mAudio.attachBufferToSource(mWave0BufferId, mWave0SourceId);
+        
+        mAudio.setSourceAsLooping(mWave0SourceId, true);
+        mAudio.playSource(mWave0SourceId);
+        
+        if(mAudio.hasError())
+        {
+            printf("audio error: %s\n", mAudio.getAndClearLastErrors().c_str() );
+        }
+    }
+}
+
 //-----------------------------------------------------------------------------
 void MainDialog::noteClicked( int iNote )
 {

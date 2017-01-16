@@ -11,8 +11,8 @@ using namespace sound;
 using namespace std;
 
 AudioInterface::AudioInterface() :
-mpDevice( 0 ),
-mpContext( 0 ),
+mpDevice( nullptr ),
+mpContext( nullptr ),
 mIsVerbose( false )
 {
     //--- creation du device
@@ -40,9 +40,7 @@ mIsVerbose( false )
     setListenerVelocity( v );
     setListenerOrientation( l, u );
     
-    
-    if( !mpDevice || !mpContext || alcGetError( mpDevice ) != ALC_NO_ERROR )
-    { addError( getOpenAlcError() ); }
+    checkForAlcError(mpDevice, "OpenAl device and context creation: ");
 }
 
 //------------------------------------------------------------------------------
@@ -52,6 +50,7 @@ AudioInterface::~AudioInterface()
     for( int i = 0; i < getNumberOfSources(); ++i )
     {
         ALuint id = getSourceId( i );
+        stopSource(id);
         attachBufferToSource( 0, id );
         alDeleteSources(1, &id);
     }
@@ -69,8 +68,7 @@ AudioInterface::~AudioInterface()
     alcDestroyContext(mpContext);
     alcCloseDevice(mpDevice);
     
-    if( alcGetError( mpDevice ) != ALC_NO_ERROR )
-    { addError( getOpenAlcError() ); }
+    mpDevice = nullptr;
 }
 
 //------------------------------------------------------------------------------
@@ -79,14 +77,10 @@ int AudioInterface::addBuffer()
     ALuint id = 0;
     alGenBuffers( 1, &id );
     
-    if( alGetError() != AL_NO_ERROR )
-    {
-        addError( getOpenAlError() );
-        id = 0;
-    }
-    
-    if( !hasError() )
+    if( id != 0 )
     { mBuffers.push_back( id ); }
+    
+    checkForAlError("AudioInterface::addBuffer ");
     return (int)id;
 }
 
@@ -102,14 +96,10 @@ int AudioInterface::addSource()
     setSourcePosition( id, Point3d(0.0) );
     setSourceVelocity( id, Vector3d(0.0) );
     
-    if( alGetError() != AL_NO_ERROR )
-    {
-        addError( getOpenAlError() );
-        id = 0;
-    }
-    
-    if( !hasError() )
+    if( id != 0 )
     { mSources.push_back( id ); }
+    
+    checkForAlError("AudioInterface::addSource ");
     return (int)id;
 }
 
@@ -121,8 +111,48 @@ void AudioInterface::addError(const std::string& s ) const
 void AudioInterface::attachBufferToSource( int iBufferId, int iSourceId )
 {
     alSourcei( iSourceId, AL_BUFFER, iBufferId );
-    if( alGetError() != AL_NO_ERROR )
-    { addError( "attachBufferToSource: " + getOpenAlError() ); }
+    
+    checkForAlError("attachBufferToSource: ");
+}
+
+//------------------------------------------------------------------------------
+void AudioInterface::detachBufferFromSource(int iSourceId)
+{
+    attachBufferToSource(0, iSourceId);
+}
+
+//------------------------------------------------------------------------------
+void AudioInterface::checkForAlError(const std::string& iM) const
+{
+    ALenum e = alGetError();
+    if(e != AL_NO_ERROR)
+    {
+        const ALchar* c = alGetString(e);
+        std::string s( (const char*)c );
+        
+        addError(iM + s);
+    }
+}
+
+//------------------------------------------------------------------------------
+void AudioInterface::checkForAlcError(ALCdevice *ipD, const std::string& iM) const
+{
+    if(ipD != nullptr)
+    {
+        ALCenum e = alcGetError(ipD);
+        if(e != ALC_NO_ERROR)
+        {
+            const ALCchar* c = alcGetString(ipD, e);
+            std::string s( (const char*)c );
+            
+            addError(iM + s);
+        }
+    }
+    else
+    {
+        addError("OpenAL device is null.");
+    }
+    
 }
 
 //------------------------------------------------------------------------------
@@ -170,6 +200,7 @@ Vector3d AudioInterface::getListenerLookDirection() const
     alGetListenerfv( AL_ORIENTATION, o );
     return Vector3d( o[0], o[1], o[2] );
 }
+
 //------------------------------------------------------------------------------
 Vector3d AudioInterface::getListenerUp() const
 {
@@ -177,28 +208,15 @@ Vector3d AudioInterface::getListenerUp() const
     alGetListenerfv( AL_ORIENTATION, o );
     return Vector3d( o[3], o[4], o[5] );
 }
+
 //------------------------------------------------------------------------------
 int AudioInterface::getNumberOfBuffers() const
 { return mBuffers.size(); }
+
 //------------------------------------------------------------------------------
 int AudioInterface::getNumberOfSources() const
 { return mSources.size(); }
-//------------------------------------------------------------------------------
-std::string AudioInterface::getOpenAlError() const
-{
-    ALenum e = alGetError();
-    const ALchar* c = alGetString(e);
-    std::string s( (const char*)c );
-    return s;
-}
-//------------------------------------------------------------------------------
-std::string AudioInterface::getOpenAlcError() const
-{
-    ALCenum e = alcGetError(mpDevice);
-    const ALCchar* c = alcGetString(mpDevice, e);
-    std::string s( (const char*)c );
-    return s;
-}
+
 //------------------------------------------------------------------------------
 double AudioInterface::getSourceConeInnerAngle(int iId) const
 {
@@ -206,6 +224,7 @@ double AudioInterface::getSourceConeInnerAngle(int iId) const
     alGetSourcef( iId, AL_CONE_INNER_ANGLE, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 double AudioInterface::getSourceConeOutterAngle(int iId) const
 {
@@ -213,6 +232,7 @@ double AudioInterface::getSourceConeOutterAngle(int iId) const
     alGetSourcef( iId, AL_CONE_OUTER_ANGLE, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 double AudioInterface::getSourceConeOutterGain(int iId) const
 {
@@ -220,6 +240,7 @@ double AudioInterface::getSourceConeOutterGain(int iId) const
     alGetSourcef( iId, AL_CONE_OUTER_GAIN, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 int AudioInterface::getSourceCurrentBuffer( int iId ) const
 {
@@ -227,6 +248,7 @@ int AudioInterface::getSourceCurrentBuffer( int iId ) const
     alGetSourcei( iId, AL_BUFFER, &r );
     return (int)r;
 }
+
 //------------------------------------------------------------------------------
 math::Vector3d AudioInterface::getSourceDirection( int iId ) const
 {
@@ -241,6 +263,7 @@ double AudioInterface::getSourceGain( int iId ) const
     alGetSourcef( iId, AL_GAIN, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 int AudioInterface::getSourceId( int iIndex )
 {
@@ -250,6 +273,7 @@ int AudioInterface::getSourceId( int iIndex )
     { r = mSources[iIndex]; }
     return r;
 }
+
 //------------------------------------------------------------------------------
 double AudioInterface::getSourceMaximumGain( int iId ) const
 {
@@ -257,6 +281,7 @@ double AudioInterface::getSourceMaximumGain( int iId ) const
     alGetSourcef( iId, AL_MAX_GAIN, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 double AudioInterface::getSourceMinimumGain( int iId ) const
 {
@@ -264,6 +289,7 @@ double AudioInterface::getSourceMinimumGain( int iId ) const
     alGetSourcef( iId, AL_MIN_GAIN, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 double AudioInterface::getSourceOffsetInBytes( int iId ) const
 {
@@ -271,6 +297,7 @@ double AudioInterface::getSourceOffsetInBytes( int iId ) const
     alGetSourcef( iId, AL_BYTE_OFFSET, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 double AudioInterface::getSourceOffsetInSamples( int iId ) const
 {
@@ -278,6 +305,7 @@ double AudioInterface::getSourceOffsetInSamples( int iId ) const
     alGetSourcef( iId, AL_SAMPLE_OFFSET, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 double AudioInterface::getSourceOffsetInSeconds( int iId ) const
 {
@@ -285,6 +313,7 @@ double AudioInterface::getSourceOffsetInSeconds( int iId ) const
     alGetSourcef( iId, AL_SEC_OFFSET, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 double AudioInterface::getSourcePitchShift( int iId ) const
 {
@@ -292,6 +321,7 @@ double AudioInterface::getSourcePitchShift( int iId ) const
     alGetSourcef( iId, AL_PITCH, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 Point3d AudioInterface::getSourcePosition( int iId ) const
 {
@@ -416,6 +446,8 @@ void AudioInterface::removeBuffer( int iId )
         oss << "Impossible to remove buffer (" << iId << "). as it is not present in the internal data.";
         addError( oss.str());
     }
+    
+    checkForAlError("AudioInterface::removeBuffer ");
 }
 //------------------------------------------------------------------------------
 void AudioInterface::removeSource( int iId )
@@ -450,34 +482,47 @@ void AudioInterface::rewindSources( vector<int> iS )
         delete[] s;
     }
 }
+
 //------------------------------------------------------------------------------
-void AudioInterface::setBufferData( int iId, const string& iB, format iF, int iFreq )
+// iDataSize is in bytes
+//
+void AudioInterface::setBufferData( int iBufferId,
+                                   const unsigned char* iData,
+                                   int iDataSize,
+                                   format iFormat,
+                                   int iFreq )
 {
     int sizeInBytes = 0;
     ALenum alFormat;
-    switch (iF)
+    switch (iFormat)
     {
         case fMono8:
             alFormat= AL_FORMAT_MONO8;
-            sizeInBytes = iB.size();
+            sizeInBytes = iDataSize;
             break;
         case fMono16:
             alFormat= AL_FORMAT_MONO16;
-            sizeInBytes = iB.size() / 2;
+            sizeInBytes = iDataSize / 2;
             break;
         case fStereo8:
             alFormat= AL_FORMAT_STEREO8;
-            sizeInBytes = iB.size();
+            sizeInBytes = iDataSize;
             break;
         case fStereo16:
             alFormat= AL_FORMAT_STEREO16;
-            sizeInBytes = iB.size() / 2;
+            sizeInBytes = iDataSize / 2;
             break;
         default: alFormat = AL_FORMAT_MONO8; break;
     }
-    alBufferData( iId, alFormat, (void*)(iB.c_str()), sizeInBytes, iFreq );
-    if( alGetError() != AL_NO_ERROR )
-    { addError( "setBufferData: " + getOpenAlError() ); }
+    alBufferData( iBufferId, alFormat, (void*)iData, sizeInBytes, iFreq );
+    
+    checkForAlError("setBufferData: ");
+}
+
+//------------------------------------------------------------------------------
+void AudioInterface::setBufferData( int iBufferId, const string& iB, format iF, int iFreq )
+{
+    setBufferData(iBufferId, (unsigned char*)(iB.c_str()), (int)iB.size(), iF, iFreq);
 }
 
 //------------------------------------------------------------------------------
@@ -554,7 +599,11 @@ void AudioInterface::setSourceVelocity( int iId, math::Vector3d iV )
 
 //------------------------------------------------------------------------------
 void AudioInterface::stopSource( int iId )
-{ alSourceStop( iId ); }
+{
+    alSourceStop( iId );
+    
+    checkForAlError("AudioInterface::stopSource ");
+}
 
 //------------------------------------------------------------------------------
 void AudioInterface::stopSources( vector<int> iS )
