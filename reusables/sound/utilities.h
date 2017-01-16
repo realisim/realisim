@@ -1,13 +1,14 @@
 /*  sound/utilities.h */
 #include "sound/AudioInterface.h"
+#include <string>
 
 namespace realisim
 {
 namespace sound 
 {
 
-	QByteArray generateSoundBuffer( int, int, double, 
-  	AudioInterface::format = AudioInterface::fMono8 );
+    std::string generateSoundBuffer( int iFreq, int iSampling, double iDuration,
+                                   AudioInterface::format = AudioInterface::fMono8 );
 
 }
 }

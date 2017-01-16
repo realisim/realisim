@@ -24,7 +24,7 @@ IF( PROTOTYPES_BUILDOPTION )
    #ADD_SUBDIRECTORY( shader)
    #ADD_SUBDIRECTORY( shaderEditor )
    #ADD_SUBDIRECTORY( SMAA )
-   #ADD_SUBDIRECTORY( soundTest )
+   ADD_SUBDIRECTORY( soundTest )
    #ADD_SUBDIRECTORY( spaceTime ) # pas maintenu
    #ADD_SUBDIRECTORY( statistics )
    #ADD_SUBDIRECTORY( texte_et_texture )
