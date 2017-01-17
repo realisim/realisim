@@ -169,19 +169,19 @@ bool Wave::parseHeader(ifstream& ifs)
     bool ok = true;
     
     string riff;
-    ok &= su.readChar(ifs, 4, &riff);
+    ok &= su.readBytes(ifs, 4, &riff);
     ok &= riff == "RIFF";
 
     int32_t restOfFileSizeInByte; //file size minus 8 bytes.
     ok &= su.readInt32(ifs, &restOfFileSizeInByte);
     
     string format;
-    ok &= su.readChar(ifs, 4, &format);
+    ok &= su.readBytes(ifs, 4, &format);
     ok &= format == "WAVE";
     
     //read the "fmt " chunk
     string fmt;
-    ok &= su.readChar(ifs, 4, &fmt);
+    ok &= su.readBytes(ifs, 4, &fmt);
     ok &= fmt == "fmt ";
     
     if(ok)
@@ -221,7 +221,7 @@ bool Wave::parsePayload(ifstream& ifs)
     {
         //read the chunk tag
         string tag;
-        ok &= su.readChar(ifs, 4, &tag);
+        ok &= su.readBytes(ifs, 4, &tag);
         
         //read the remaining size of the chunk
         uint32_t chunkSize = 0;

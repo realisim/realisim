@@ -4,8 +4,18 @@
 
 #include "math/Point.h"
 #include "math/Vect.h"
+
+#ifdef  __APPLE__
 #include "OpenAL/al.h"
 #include "OpenAL/alc.h"
+#endif //  __APPLE__
+
+#ifdef _WIN32
+#include "al.h"
+#include "alc.h"
+#endif // _WIN32
+
+
 #include <string>
 #include <vector>
 

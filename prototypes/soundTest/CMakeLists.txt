@@ -13,6 +13,19 @@ ADD_COMPONENT("../../reusables/utils" )
 
 ADD_OPENAL()
 
+#add openal as third party on windows
+IF(WIN32)
+    SET( OPENAL_DIR  ${CMAKE_CURRENT_LIST_DIR}/thirdParties/OpenAL/v1_1 )
+
+    SET( PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${OPENAL_DIR}/include )
+    SET( PROJECT_LINK_LIBRAIRIES ${PROJECT_LINK_LIBRAIRIES} ${OPENAL_DIR}/libs/Win64/OpenAL32.lib )
+
+    #install openAl32.dll
+    INSTALL(FILES ${OPENAL_DIR}/libs/Win64/OpenAL32.dll DESTINATION ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}/Debug )
+    INSTALL(FILES ${OPENAL_DIR}/libs/Win64/OpenAL32.dll DESTINATION ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}/Release )
+ENDIF(WIN32)
+
+
 #copy assets to bin/SMAA/assets
 INSTALL(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/assets/ DESTINATION ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}/assets )
 
