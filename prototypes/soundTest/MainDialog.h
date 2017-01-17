@@ -6,7 +6,9 @@
 #define MainDialog_hh
 
 #include <map>
+#include <QLabel>
 #include <QMainWindow>
+#include <QPushButton>
 #include "sound/AudioInterface.h"
 #include "sound/Wave.h"
 
@@ -24,6 +26,9 @@ public:
 protected slots:
     void loadWavClicked();
     void noteClicked( int );
+    void playClicked();
+    void waveLoopClicked(int);
+    void pitchShiftChanged(int);
     
 protected:
     void createUi();
@@ -39,6 +44,12 @@ protected:
     realisim::sound::Wave mWave0;
     int mWave0SourceId;
     int mWave0BufferId;
+
+    //--- ui
+    QWidget *mpWaveWidget;
+    QPushButton *mpPlayStop;
+    QLabel *mpWaveInfo;
+    QLabel *mpPitchValue;
 };
 
 #endif

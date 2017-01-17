@@ -502,7 +502,7 @@ void AudioInterface::setBufferData( int iBufferId,
             break;
         case fMono16:
             alFormat= AL_FORMAT_MONO16;
-            sizeInBytes = iDataSize / 2;
+            sizeInBytes = iDataSize;
             break;
         case fStereo8:
             alFormat= AL_FORMAT_STEREO8;
@@ -510,7 +510,7 @@ void AudioInterface::setBufferData( int iBufferId,
             break;
         case fStereo16:
             alFormat= AL_FORMAT_STEREO16;
-            sizeInBytes = iDataSize / 2;
+            sizeInBytes = iDataSize;
             break;
         default: alFormat = AL_FORMAT_MONO8; break;
     }

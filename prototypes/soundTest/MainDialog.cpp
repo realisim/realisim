@@ -1,19 +1,26 @@
 
 #include "MainDialog.h"
+#include <QButtonGroup>
+#include <QCheckBox>
+#include <QFileDialog>
 #include <QFrame>
 #include <QLayout>
-#include <QButtonGroup>
-#include <QFileDialog>
-#include <qpushbutton>
+#include <QGroupBox>
+#include <QSlider>
+#include <QPushButton>
 #include "sound/utilities.h"
+#include <sstream>
+#include "utils/utilities.h"
 
+using namespace std;
 using namespace realisim;
 using namespace sound;
 
 MainDialog::MainDialog() : QMainWindow(),
 mSourcesId(),
 mSourceIndex(0),
-mWave0BufferId(0)
+mWave0BufferId(0),
+mpWaveWidget(nullptr)
 {
     createUi();
     generateNotes();
@@ -24,7 +31,7 @@ mWave0BufferId(0)
     
     mWave0SourceId = mAudio.addSource();
     mWave0BufferId = mAudio.addBuffer();
-    
+
     updateUi();
 }
 
@@ -54,18 +61,82 @@ void MainDialog::createUi()
         }
     }
     
-    QHBoxLayout *pWavLyt = new QHBoxLayout();
-    pWavLyt->setMargin(2); pWavLyt->setSpacing(5);
+    QGroupBox *pWavGrp = new QGroupBox("Wave", pMainFrame);
     {
-        QPushButton *pLoad = new QPushButton( "load wav...", pMainFrame);
-        connect(pLoad, SIGNAL(clicked()), this, SLOT(loadWavClicked()));
-        
-        pWavLyt->addWidget(pLoad);
-        pWavLyt->addStretch(1);
+        QVBoxLayout *pWavLyt = new QVBoxLayout(pWavGrp);
+        pWavLyt->setMargin(2); pWavLyt->setSpacing(5);
+        {
+            QPushButton *pLoad = new QPushButton( "load wav...", pMainFrame);
+            connect(pLoad, SIGNAL(clicked()), this, SLOT(loadWavClicked()));
+
+            //--- wave widget - 
+            // info on wave and controls
+            mpWaveWidget = new QWidget(pWavGrp);
+            {
+                QVBoxLayout *pWaveVLyt = new QVBoxLayout(mpWaveWidget);
+                {
+                    QHBoxLayout *pInfos = new QHBoxLayout(mpWaveWidget);
+                    {
+                        //infos
+                        mpWaveInfo = new QLabel(mpWaveWidget);
+                        mpWaveInfo->setText("no infos...");
+
+                        //options
+                        QVBoxLayout *pOptions = new QVBoxLayout();
+                        {
+                            QCheckBox *pLoop = new QCheckBox("Loop", mpWaveWidget);
+                            connect(pLoop, SIGNAL(stateChanged(int)), this, SLOT(waveLoopClicked(int)) );
+
+                            QHBoxLayout *pPitchLyt = new QHBoxLayout();
+                            {
+                                QLabel *pL = new QLabel("Pitch:", mpWaveWidget);
+
+                                QSlider *pPitchShift = new QSlider(mpWaveWidget);
+                                pPitchShift->setOrientation(Qt::Horizontal);
+                                pPitchShift->setMinimum(0);
+                                pPitchShift->setMaximum(100);
+                                pPitchShift->setTickInterval(1);
+                                pPitchShift->setValue(20);
+                                connect(pPitchShift, SIGNAL(valueChanged(int)), this, SLOT(pitchShiftChanged(int)));                                
+
+                                mpPitchValue = new QLabel("1.0", mpWaveWidget);
+
+                                pPitchLyt->addWidget(pL);
+                                pPitchLyt->addWidget(pPitchShift);
+                                pPitchLyt->addWidget(mpPitchValue);
+                            }
+                            
+                            pOptions->addWidget(pLoop);
+                            pOptions->addLayout(pPitchLyt);
+                            pOptions->addStretch(1);
+                        }
+
+                        pInfos->addWidget(mpWaveInfo);
+                        pInfos->addLayout(pOptions);
+                    }
+
+                    QHBoxLayout *pControls = new QHBoxLayout();
+                    {
+                        mpPlayStop = new QPushButton("Play", mpWaveWidget);
+                        connect(mpPlayStop, SIGNAL(clicked()), this, SLOT(playClicked()));
+
+                        pControls->addStretch(1);
+                        pControls->addWidget(mpPlayStop);
+                    }
+
+                    pWaveVLyt->addLayout(pInfos);
+                    pWaveVLyt->addLayout(pControls);
+                }                
+            }
+
+            pWavLyt->addWidget(pLoad);
+            pWavLyt->addWidget(mpWaveWidget);
+            pWavLyt->addStretch(1);
+        }
     }
     
     pLyt->addLayout( pNotesLyt );
-    pLyt->addLayout( pWavLyt );
+    pLyt->addWidget( pWavGrp );
     pLyt->addStretch( 1 );
 }
 //-----------------------------------------------------------------------------
@@ -95,7 +166,7 @@ void MainDialog::generateNotes()
 void MainDialog::loadWavClicked()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open Wave"),
-                                                    "/home",
+                                                    realisim::utils::getAssetFolder(),
                                                     tr("Wave (*.wav)"));
     mWave0.setFilenamePath(fileName.toStdString());
     mWave0.load();
@@ -121,15 +192,40 @@ void MainDialog::loadWavClicked()
         mAudio.detachBufferFromSource(mWave0SourceId);
         mAudio.setBufferData(mWave0BufferId, mWave0.getSoundData(), mWave0.getSoundDataSize(), f, mWave0.getSamplingFrequency());
         mAudio.attachBufferToSource(mWave0BufferId, mWave0SourceId);
-        
-        mAudio.setSourceAsLooping(mWave0SourceId, true);
-        mAudio.playSource(mWave0SourceId);
-        
-        if(mAudio.hasError())
-        {
-            printf("audio error: %s\n", mAudio.getAndClearLastErrors().c_str() );
-        }
     }
+
+    if(mAudio.hasError())
+    {
+        printf("audio error: %s\n", mAudio.getAndClearLastErrors().c_str() );
+    }
+
+    updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::pitchShiftChanged(int iV)
+{
+    const double v = 5.0;
+    double pitch = iV/100.0 * v;
+
+    mAudio.setSourcePitchShift(mWave0SourceId, pitch);
+
+    mpPitchValue->setText(QString::number(pitch, 'g', 4));
+    updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::playClicked()
+{
+    AudioInterface::sourceState ss = mAudio.getSourceState(mWave0SourceId);
+
+    if(ss == AudioInterface::ssInitial || ss == AudioInterface::ssStopped)
+    { mAudio.playSource(mWave0SourceId); }
+
+    if(ss == AudioInterface::ssPlaying)
+    { mAudio.stopSource(mWave0SourceId); }
+
+    updateUi();
 }
 
 //-----------------------------------------------------------------------------
@@ -167,4 +263,37 @@ QString MainDialog::toString( notes iN ) const
 }
 //-----------------------------------------------------------------------------
 void MainDialog::updateUi()
-{}
+{
+    mpWaveWidget->setVisible( mWave0.hasSoundData() );
+
+    //gather wave infos
+    ostringstream oss;
+    string audioFormat("PCM");
+    if(mWave0.getAudioFormat() != Wave::afPcm) { audioFormat = "unsupported"; }
+    oss << "Wave filename: " << mWave0.getFilenamePath() << "\n"
+        << "Audio format: " << audioFormat << "\n"
+        << "Number of channels: " << mWave0.getNumberOfChannels() << "\n"
+        << "Sampling rate: " << mWave0.getSamplingFrequency() << "\n"
+        << "Byte rate: " << mWave0.getByteRate() << "\n"
+        << "Bits per sample: " << mWave0.getBitsPerSample() << "\n"
+        << "Sound buffer size (bytes): " << mWave0.getSoundDataSize();
+    mpWaveInfo->setText( QString::fromStdString( oss.str() ) );
+
+    AudioInterface::sourceState ss = mAudio.getSourceState(mWave0SourceId);
+    QString playStop("Play");
+    switch (ss)
+    {
+    case realisim::sound::AudioInterface::ssInitial: playStop = "Play"; break;
+    case realisim::sound::AudioInterface::ssPlaying: playStop = "Stop"; break;
+    case realisim::sound::AudioInterface::ssPaused: break;
+    case realisim::sound::AudioInterface::ssStopped: playStop = "Play"; break;
+    default: break;
+    }
+    mpPlayStop->setText( playStop );
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::waveLoopClicked(int iState)
+{
+    mAudio.setSourceAsLooping(mWave0SourceId, iState == Qt::Checked);
+}
