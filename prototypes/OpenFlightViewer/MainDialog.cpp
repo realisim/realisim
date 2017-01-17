@@ -13,6 +13,7 @@
 #include "FltImporter.h"
 #include "MainDialog.h"
 #include <QFileDialog>
+#include <QHeaderView>
 #include <QLayout>
 #include <QMenuBar>
 #include <queue>
@@ -53,6 +54,7 @@ void Viewer::initializeGL()
     Widget3d::initializeGL();
     
     glEnable(GL_TEXTURE_2D);
+    glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 }
 
@@ -77,8 +79,8 @@ void Viewer::togglePolygonMode()
     
     switch (mPolygonMode)
     {
-        case GL_LINE: glPolygonMode(GL_FRONT, GL_FILL); mPolygonMode = GL_FILL; break;
-        case GL_FILL: glPolygonMode(GL_FRONT, GL_LINE); mPolygonMode = GL_LINE; break;
+        case GL_LINE: glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); mPolygonMode = GL_FILL; break;
+        case GL_FILL: glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); mPolygonMode = GL_LINE; break;
         default: break;
     }
 
@@ -116,6 +118,23 @@ mTimerId(0)
     mpViewer->setCamera( c, false );
     mpViewer->setScene(&mScene);
     
+    //--- tools widget
+    mpToolsWidget = new QDockWidget(this);
+    mpToolsWidget->setFloating(true);
+    mpToolsWidget->setWindowTitle("Tools");
+    {
+        QWidget *pToolsWidget = new QWidget(mpToolsWidget);
+        QHBoxLayout *pHbox = new QHBoxLayout(pToolsWidget);
+        {
+            mpNavigator = new QTreeWidget(mpToolsWidget);
+            mpNavigator->header()->hide();
+            mpNavigator->setColumnCount(1);
+
+            pHbox->addWidget(mpNavigator);
+        }
+
+        mpToolsWidget->setWidget(pToolsWidget);
+    }
 
     createMenus();
 
@@ -185,13 +204,53 @@ void MainDialog::openFile()
             cout << "Error while opening flt file: " << endl << ofr.getAndClearLastErrors();
         }
     }
+
+    refreshNavigator();
 }
 
 //-----------------------------------------------------------------------------
 void MainDialog::newFile()
 {
     mScene.clear();
+    refreshNavigator();
     update();
+}
+
+//------------------------------------------------------------------------------
+void MainDialog::refreshNavigator()
+{
+    mpNavigator->clear();
+    
+    IGraphicNode *pRoot = mScene.getRoot();
+
+    refreshNavigator(pRoot, nullptr);
+}
+
+//------------------------------------------------------------------------------
+void MainDialog::refreshNavigator(IGraphicNode *ipNode, QTreeWidgetItem *ipParentItem)
+{
+    if (ipNode != nullptr)
+    {
+        QTreeWidgetItem *currentParent = ipParentItem;
+        if (currentParent == nullptr)
+        {
+            currentParent = new QTreeWidgetItem(mpNavigator);
+            currentParent->setText( 0, "Root" );
+            mpNavigator->insertTopLevelItem(0, currentParent);
+        }
+        else
+        {
+            QTreeWidgetItem *item = new QTreeWidgetItem(ipParentItem);
+            item->setText( 0, QString::fromStdString(ipNode->mName) );
+            currentParent = item;
+        }
+
+
+        for (size_t i = 0; i < ipNode->mChilds.size(); ++i)
+        {
+            refreshNavigator( ipNode->mChilds[i], currentParent );
+        }
+    }
 }
 
 //------------------------------------------------------------------------------

@@ -55,8 +55,10 @@ IDefinition::~IDefinition()
 Image::~Image()
 {
     //delete payload...
+    unload();
 }
 
+//--------------------------------------------------------
 void Image::load()
 {
     //check file extension for the correct imageLoader..
@@ -73,7 +75,6 @@ void Image::load()
 }
 
 //--------------------------------------------------------
-
 void Image::loadMetaData()
 {
     //check file extension for the correct imageLoader..
@@ -86,6 +87,16 @@ void Image::loadMetaData()
     mNumberOfChannels = il.getNumberOfChannels();
     mBitsPerChannel = il.getBytesPerPixel() * 8;
     mSizeInBytes = mWidth * mHeight * mNumberOfChannels * mBitsPerChannel / 8;
+}
+
+//--------------------------------------------------------
+void Image::unload()
+{
+    if(mpPayload)
+    {
+        delete mpPayload;
+        mpPayload = nullptr;
+    }
 }
 
 //--------------------------------------------------------

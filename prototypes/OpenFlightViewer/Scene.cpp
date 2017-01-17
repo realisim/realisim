@@ -194,6 +194,10 @@ void Scene::filterRenderables(IGraphicNode* iNode)
 }
 
 //------------------------------------------------------------------------------
+IGraphicNode* Scene::getRoot() const
+{ return mpRoot; }
+
+//------------------------------------------------------------------------------
 void Scene::loadLibraries(IGraphicNode* iNode)
 {
     realisim::utils::Timer __t;
@@ -227,7 +231,7 @@ void Scene::loadLibraries(IGraphicNode* iNode)
                             //
                             addToTextureLibrary(im);
                             
-
+                            im->unload();
                             //--- save image to disk.
                             //QImage::Format f;
                             //if(im->mNumberOfChannels == 1)

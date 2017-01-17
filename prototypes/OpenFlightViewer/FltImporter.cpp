@@ -65,7 +65,13 @@ GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
                                 IGraphicNode* ipParent)
 {
     using namespace OpenFlight;
-    
+
+    printf("GroupName: %s, GroupRecord priority: %d, layer code: %d, significance: %d\n", 
+        ipG->getAsciiId().c_str(),
+        ipG->getRelativePriority(),
+        ipG->getLayerCode(),
+        ipG->getSignificance() );
+
     GroupNode *pGroup = new GroupNode();
     pGroup->mName = ipG->hasLongIdRecord() ? ipG->getLongIdRecord()->getAsciiId() : ipG->getAsciiId();
     pGroup->mParentTransform = fetchTransform(ipG);
@@ -88,6 +94,8 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
     // an ExternalRefence parent.
 
     OpenFlightNode* opfNode = new OpenFlightNode();
+    opfNode->mName = ipH->hasLongIdRecord() ? ipH->getLongIdRecord()->getAsciiId() : ipH->getAsciiId();
+
     if( ipParent == nullptr )
     {
         mpGraphicNodeRoot = opfNode;
@@ -103,6 +111,7 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
     //add library node to store all palette information
     //add libray node
     LibraryNode *library = new LibraryNode();
+    library->mName = "Library";
     opfNode->addChild(library);
 
     // check external reference flags, to properly populate
@@ -120,59 +129,53 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
         useParentDatabaseTexturePalette = extRef->hasFlag(ExternalReferenceRecord::fTextureAndMappingOverride);
     }
     
-    //lets check across the ancillary record
-    for(int i = 0; i < ipH->getNumberOfAncillaryRecords(); ++i)
+    // collect from palettes
+    //--- Vertex palette
+    VertexPaletteRecord* vpr = ipH->getVertexPalette();
+    if (vpr != nullptr)
     {
-        AncillaryRecord* a = ipH->getAncillaryRecord(i);
-        
-        switch (a->getOpCode())
+        VertexPool *vp = new VertexPool();
+        for(int i = 0; i < vpr->getNumberOfVertices(); ++i)
         {
-            case OpenFlight::ocVertexPalette:
-            {
-                VertexPaletteRecord* vpr = ((VertexPaletteRecord*)a);
-                
-                VertexPool *vp = new VertexPool();
-                for(int i = 0; i < vpr->getNumberOfVertices(); ++i)
-                {
-                    const OpenFlight::Vertex& v = vpr->getVertex(i);
-                    vp->mVertices.push_back(math::Vector3d(v.mCoordinate.mX,
-                                                           v.mCoordinate.mY,
-                                                           v.mCoordinate.mZ ) );
+            const OpenFlight::Vertex& v = vpr->getVertex(i);
+            vp->mVertices.push_back(math::Vector3d(v.mCoordinate.mX,
+                                                    v.mCoordinate.mY,
+                                                    v.mCoordinate.mZ ) );
+                        
+            vp->mNormals.push_back(math::Vector3d(v.mNormal.mX,
+                                                    v.mNormal.mY,
+                                                    v.mNormal.mZ ) );
+                        
+            vp->mTextureCoordinates.push_back(math::Vector2d(v.mTextureCoordinate.mX,
+                                                    v.mTextureCoordinate.mY) );
+                        
+            vp->mColors.push_back(QColor(v.mPackedColor.mRed,
+                                            v.mPackedColor.mGreen,
+                                            v.mPackedColor.mBlue,
+                                            v.mPackedColor.mAlpha));
+        }
                     
-                    vp->mNormals.push_back(math::Vector3d(v.mNormal.mX,
-                                                           v.mNormal.mY,
-                                                           v.mNormal.mZ ) );
+        //store the relation between vertexPool and palette
+        mDefinitionIdToFltRecord.insert( make_pair(vp->mId, vpr) );
                     
-                    vp->mTextureCoordinates.push_back(math::Vector2d(v.mTextureCoordinate.mX,
-                                                          v.mTextureCoordinate.mY) );
-                    
-                    vp->mColors.push_back(QColor(v.mPackedColor.mRed,
-                                                 v.mPackedColor.mGreen,
-                                                 v.mPackedColor.mBlue,
-                                                 v.mPackedColor.mAlpha));
-                }
-                
-                //store the relation between vertexPool and palette
-                mDefinitionIdToFltRecord.insert( make_pair(vp->mId, vpr) );
-                
-                library->mpVertexPool = vp;
-            }break;
-            
-            case OpenFlight::ocTexturePalette:
-            {
-                TexturePaletteRecord *tpr = (TexturePaletteRecord *)a;
-                
-                Image *image = new Image();
-                
-                // the filename of the texture record must be relative, else,
-                // it won't work...
-                image->mFilenamePath = ipH->getFilePath() + tpr->getFilenamePath();
-                image->loadMetaData();
-                
-                mDefinitionIdToFltRecord.insert( make_pair(image->mId, tpr));
-                library->mImages.push_back(image);
-            } break;
-            default: break;
+        library->mpVertexPool = vp;
+    }
+
+    //--- texture palettes
+    for (int i = 0; i < ipH->getNumberOfTexturePalettes(); ++i)
+    {
+        TexturePaletteRecord* tpr = ipH->getTexturePalette(i);
+        if (tpr != nullptr)
+        {
+            Image *image = new Image();
+                        
+            // the filename of the texture record must be relative, else,
+            // it won't work...
+            image->mFilenamePath = ipH->getFilePath() + tpr->getFilenamePath();
+            image->loadMetaData();
+                        
+            mDefinitionIdToFltRecord.insert( make_pair(image->mId, tpr));
+            library->mImages.push_back(image);
         }
     }
     
@@ -184,7 +187,11 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
                                 IGraphicNode* ipParent)
 {
     using namespace OpenFlight;
-    
+
+    printf("Object Name: %s, ObjectRecord priority: %d\n", 
+        ipR->getAsciiId().c_str(),
+        ipR->getRelativePriority());
+
     ModelNode *model = new ModelNode();
     ipParent->addChild(model);
     
@@ -204,7 +211,7 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
             case ocFace:
             {
                 FaceRecord *faceRecord = (FaceRecord*)c;
-             
+
                 // only vertex and morph vertex has childs
                 // could have subface (with pushSubface)
                 // lets fetch the vertex list
@@ -344,7 +351,7 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
         {
             //explanation...
             GroupNode *pGroup = new GroupNode();
-            pGroup->mName = string("Unsupported openfligNode: ") + OpenFlight::toString(ipRecord->getOpCode());
+            pGroup->mName = string("Unsupported openfligNode: ") + OpenFlight::toString(  ((UnsupportedRecord*)ipRecord)->getOriginalOpCode() );
             ipCurrentParent->addChild(pGroup);
             currentNode = pGroup;
         }break;

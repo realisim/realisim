@@ -110,9 +110,11 @@ public:
     Image& operator=(const Image&) = delete;
     virtual ~Image() override;
     
+//void clear();
     bool isLoaded() const {return mpPayload != nullptr; };
     void loadMetaData();
     void load();
+    void unload();
     
     std::string mFilenamePath;
     int mWidth;

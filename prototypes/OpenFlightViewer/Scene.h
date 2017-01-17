@@ -26,7 +26,7 @@ public:
     void addNode(IGraphicNode*);
     void clear();
     void update();
-    
+    IGraphicNode* getRoot() const;
 
     // ca serait plaisant d'avoir un genre d'iterateur
     // sur les nodes... au lieu de faire un parcour de

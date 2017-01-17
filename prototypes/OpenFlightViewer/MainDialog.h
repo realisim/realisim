@@ -11,11 +11,16 @@
 #define MainDialog_hh
 
 #include "openFlight/OpenFlightReader.h"
+#include <QDockWidget>
 #include <QKeyEvent>
 #include <QMainWindow>
 #include <QTimerEvent>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
 #include "3d/Widget3d.h"
 #include "Scene.h"
+
+class IGraphicNode;
 
 class Viewer : public realisim::treeD::Widget3d
 {
@@ -57,8 +62,12 @@ protected:
     virtual void keyPressEvent(QKeyEvent*) override;
     void timerEvent(QTimerEvent*) override;
     void toggleFreeRunning();
+    void refreshNavigator();
+    void refreshNavigator(IGraphicNode*, QTreeWidgetItem*);
     
     Viewer* mpViewer;
+    QDockWidget* mpToolsWidget;
+    QTreeWidget* mpNavigator;
     
     //Data
     bool mFreeRunning;
