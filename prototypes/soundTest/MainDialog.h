@@ -9,6 +9,7 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QPushButton>
+#include <QTimerEvent>
 #include "sound/AudioInterface.h"
 #include "sound/Wave.h"
 
@@ -29,10 +30,13 @@ protected slots:
     void playClicked();
     void waveLoopClicked(int);
     void pitchShiftChanged(int);
+    void xPosChanged(int);
+    void yPosChanged(int);
     
 protected:
     void createUi();
     void generateNotes();
+    virtual void timerEvent(QTimerEvent*) override;
     QString toString( notes ) const;
     void updateUi();
     
@@ -40,6 +44,7 @@ protected:
     int mSourcesId[3];
     int mSourceIndex;
     std::map< notes, int > mNotesToBuffer;
+    int mFastUpdateTimerId;
     
     realisim::sound::Wave mWave0;
     int mWave0SourceId;
@@ -50,6 +55,9 @@ protected:
     QPushButton *mpPlayStop;
     QLabel *mpWaveInfo;
     QLabel *mpPitchValue;
+    QLabel *mpXPos;
+    QLabel *mpYPos;
+    QLabel *mpTimePlayed;
 };
 
 #endif

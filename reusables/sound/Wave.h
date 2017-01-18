@@ -23,6 +23,7 @@ namespace sound
         AudioFormat getAudioFormat() const;
         int getBitsPerSample() const;
         int getByteRate() const;
+        double getDurationInSeconds() const;
         const std::string& getFilenamePath() const;
         int getNumberOfChannels() const;
         int getSamplingFrequency() const;

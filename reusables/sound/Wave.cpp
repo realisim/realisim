@@ -1,3 +1,4 @@
+#include <limits>
 #include <sstream>
 #include "Utils/StreamUtility.h"
 #include "Wave.h"
@@ -72,6 +73,18 @@ int Wave::getBitsPerSample() const
 int Wave::getByteRate() const
 {
     return mByteRate;
+}
+
+//-----------------------------------------------------------------------------
+double Wave::getDurationInSeconds() const
+{
+    double r = std::numeric_limits<double>::quiet_NaN();
+    if (isValid())
+    {
+        const int lenghtInSamples = mSoundDataSize * 8 / (mNumberOfChannels * mBitsPerSample);
+        r = lenghtInSamples / (double)mSamplingFrequency;
+    }
+    return r;
 }
 
 //-----------------------------------------------------------------------------
@@ -194,8 +207,21 @@ bool Wave::parseHeader(ifstream& ifs)
         ok &= su.readUint32(ifs, &mSamplingFrequency);
         ok &= su.readUint32(ifs, &mByteRate);
         ok &= su.readUint16(ifs, &mBytesPerBlock);
-        ok &= su.readUint16(ifs, &mBitsPerSample);
-        
+        ok &= su.readUint16(ifs, &mBitsPerSample);       
+
+        // here we read 16 bytes of data, if fmt chunksize is greater than 16, 
+        // make sure we read them into the bit bucket!
+        //
+        // Technically, there can be extra info there, but it does not concern
+        // PCM data, which is the only one supported right now.
+        //
+        const int kPcmChunkSize = 16;
+        if(fmtChunkSize > kPcmChunkSize)
+        { 
+            string bitBucket;
+            ok &= su.readBytes(ifs, fmtChunkSize - kPcmChunkSize, &bitBucket);
+        }
+
         //the "data" chunk is read by parsepayload
     }
     else

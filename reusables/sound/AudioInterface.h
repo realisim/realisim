@@ -40,11 +40,12 @@ namespace sound
         void attachBufferToSource( int, int );
         void detachBufferFromSource(int iSourceId);
         std::string getAndClearLastErrors() const;
-        int getBufferBitsPerSample( int ) const;
-        int getBufferFrequency( int ) const;
-        int getBufferId( int iIndex ) const;
-        int getBufferNumberOfChannel( int ) const;
-        int getBufferSize( int ) const; //in bytes
+        int getBufferBitsPerSample( int iBufferId ) const;
+        int getBufferFrequency( int iBufferId ) const;
+        int getBufferId( int iBufferId ) const;
+        double getBufferLengthInSeconds( int iBufferId ) const;
+        int getBufferNumberOfChannels( int iBufferId ) const;
+        int getBufferSize( int iBufferId ) const; //in bytes
         double getListenerGain() const;
         math::Point3d getListenerPosition() const;
         math::Vector3d getListenerVelocity() const;

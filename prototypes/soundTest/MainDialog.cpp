@@ -87,6 +87,7 @@ void MainDialog::createUi()
                             QCheckBox *pLoop = new QCheckBox("Loop", mpWaveWidget);
                             connect(pLoop, SIGNAL(stateChanged(int)), this, SLOT(waveLoopClicked(int)) );
 
+                            //-- pitch
                             QHBoxLayout *pPitchLyt = new QHBoxLayout();
                             {
                                 QLabel *pL = new QLabel("Pitch:", mpWaveWidget);
@@ -105,9 +106,51 @@ void MainDialog::createUi()
                                 pPitchLyt->addWidget(pPitchShift);
                                 pPitchLyt->addWidget(mpPitchValue);
                             }
+
+                            //-- x pos
+                            QHBoxLayout *pXPosLyt = new QHBoxLayout();
+                            {
+                                QLabel *pL = new QLabel("x pos:", mpWaveWidget);
+
+                                QSlider *pSlider = new QSlider(mpWaveWidget);
+                                pSlider->setOrientation(Qt::Horizontal);
+                                pSlider->setMinimum(-100);
+                                pSlider->setMaximum(100);
+                                pSlider->setTickInterval(1);
+                                pSlider->setValue(0);
+                                connect(pSlider, SIGNAL(valueChanged(int)), this, SLOT(xPosChanged(int)));                                
+
+                                mpXPos = new QLabel("0.0", mpWaveWidget);
+
+                                pXPosLyt->addWidget(pL);
+                                pXPosLyt->addWidget(pSlider);
+                                pXPosLyt->addWidget(mpXPos);
+                            }
+
+                            //-- y pos
+                            QHBoxLayout *pYPosLyt = new QHBoxLayout();
+                            {
+                                QLabel *pL = new QLabel("y pos:", mpWaveWidget);
+
+                                QSlider *pSlider = new QSlider(mpWaveWidget);
+                                pSlider->setOrientation(Qt::Horizontal);
+                                pSlider->setMinimum(-100);
+                                pSlider->setMaximum(100);
+                                pSlider->setTickInterval(1);
+                                pSlider->setValue(0);
+                                connect(pSlider, SIGNAL(valueChanged(int)), this, SLOT(yPosChanged(int)));                                
+
+                                mpYPos = new QLabel("0.0", mpWaveWidget);
+
+                                pYPosLyt->addWidget(pL);
+                                pYPosLyt->addWidget(pSlider);
+                                pYPosLyt->addWidget(mpYPos);
+                            }
                             
                             pOptions->addWidget(pLoop);
                             pOptions->addLayout(pPitchLyt);
+                            pOptions->addLayout(pXPosLyt);
+                            pOptions->addLayout(pYPosLyt);
                             pOptions->addStretch(1);
                         }
 
@@ -117,10 +160,13 @@ void MainDialog::createUi()
 
                     QHBoxLayout *pControls = new QHBoxLayout();
                     {
+                        mpTimePlayed = new QLabel("- / -", mpWaveWidget);
+
                         mpPlayStop = new QPushButton("Play", mpWaveWidget);
                         connect(mpPlayStop, SIGNAL(clicked()), this, SLOT(playClicked()));
 
                         pControls->addStretch(1);
+                        pControls->addWidget(mpTimePlayed);
                         pControls->addWidget(mpPlayStop);
                     }
 
@@ -171,9 +217,12 @@ void MainDialog::loadWavClicked()
     mWave0.setFilenamePath(fileName.toStdString());
     mWave0.load();
     
-    if(mWave0.isValid())
+    mAudio.stopSource(mWave0SourceId);
+    mAudio.detachBufferFromSource(mWave0SourceId);
+
+    if(mWave0.isValid() && mWave0.getBitsPerSample() <= 16) //24 bits per sample is unsupported
     {
-        AudioInterface::format f;
+        AudioInterface::format f = AudioInterface::fMono8;
         switch (mWave0.getNumberOfChannels())
         {
             case 1: //mono
@@ -186,12 +235,14 @@ void MainDialog::loadWavClicked()
                 break;
             default: f = AudioInterface::fMono8; break;
         }
-        
-        mAudio.stopSource(mWave0SourceId);
-        
-        mAudio.detachBufferFromSource(mWave0SourceId);
+                
         mAudio.setBufferData(mWave0BufferId, mWave0.getSoundData(), mWave0.getSoundDataSize(), f, mWave0.getSamplingFrequency());
         mAudio.attachBufferToSource(mWave0BufferId, mWave0SourceId);
+    }
+    else //unsupported, flush the buffer
+    {
+        mAudio.removeBuffer(mWave0BufferId);
+        mWave0BufferId = mAudio.addBuffer();
     }
 
     if(mAudio.hasError())
@@ -220,11 +271,20 @@ void MainDialog::playClicked()
     AudioInterface::sourceState ss = mAudio.getSourceState(mWave0SourceId);
 
     if(ss == AudioInterface::ssInitial || ss == AudioInterface::ssStopped)
-    { mAudio.playSource(mWave0SourceId); }
+    { 
+        mFastUpdateTimerId = startTimer(15);
+        mAudio.playSource(mWave0SourceId);
+    }
 
     if(ss == AudioInterface::ssPlaying)
-    { mAudio.stopSource(mWave0SourceId); }
+    { 
+        killTimer(mFastUpdateTimerId);
+        mFastUpdateTimerId = 0;
 
+        mAudio.stopSource(mWave0SourceId);
+    }
+
+    
     updateUi();
 }
 
@@ -239,6 +299,19 @@ void MainDialog::noteClicked( int iNote )
     mAudio.attachBufferToSource( bufId, mSourcesId[mSourceIndex] );
     mAudio.playSource( mSourcesId[mSourceIndex] );
 }
+
+//-----------------------------------------------------------------------------
+void MainDialog::timerEvent(QTimerEvent* ipE)
+{
+    if (ipE->timerId() == mFastUpdateTimerId)
+    {
+        ostringstream oss;
+        oss << fixed << setprecision(2);
+        oss << mAudio.getSourceOffsetInSeconds(mWave0SourceId) << "(sec) / " << mAudio.getBufferLengthInSeconds(mWave0BufferId) << " (sec).";
+        mpTimePlayed->setText( QString::fromStdString(oss.str()) );
+    }
+}
+
 //-----------------------------------------------------------------------------
 QString MainDialog::toString( notes iN ) const
 {
@@ -267,18 +340,31 @@ void MainDialog::updateUi()
     mpWaveWidget->setVisible( mWave0.hasSoundData() );
 
     //gather wave infos
-    ostringstream oss;
-    string audioFormat("PCM");
-    if(mWave0.getAudioFormat() != Wave::afPcm) { audioFormat = "unsupported"; }
-    oss << "Wave filename: " << mWave0.getFilenamePath() << "\n"
-        << "Audio format: " << audioFormat << "\n"
-        << "Number of channels: " << mWave0.getNumberOfChannels() << "\n"
-        << "Sampling rate: " << mWave0.getSamplingFrequency() << "\n"
-        << "Byte rate: " << mWave0.getByteRate() << "\n"
-        << "Bits per sample: " << mWave0.getBitsPerSample() << "\n"
-        << "Sound buffer size (bytes): " << mWave0.getSoundDataSize();
-    mpWaveInfo->setText( QString::fromStdString( oss.str() ) );
+    {
+        ostringstream oss;
+        string audioFormat("PCM");
+        if(mWave0.getAudioFormat() != Wave::afPcm) { audioFormat = "unsupported"; }
+        oss << "Wave filename: " << mWave0.getFilenamePath() << "\n"
+            << "Audio format: " << audioFormat << "\n"
+            << "Number of channels: " << mWave0.getNumberOfChannels() << "\n"
+            << "Sampling rate: " << mWave0.getSamplingFrequency() << "\n"
+            << "Byte rate: " << mWave0.getByteRate() << "\n"
+            << "Bits per sample: " << mWave0.getBitsPerSample() << "\n"
+            << "Sound buffer size (bytes): " << mWave0.getSoundDataSize() << "\n"
+            << "Duration in seconds: " << mWave0.getDurationInSeconds();
+        mpWaveInfo->setText( QString::fromStdString( oss.str() ) );
+    }
+    
+    //time played
+    {
+        ostringstream oss;
+        oss << fixed << setprecision(2);
+        oss << 0 << " / " << mAudio.getBufferLengthInSeconds(mWave0BufferId) << " (sec).";
+        mpTimePlayed->setText( QString::fromStdString(oss.str()) );
+    }
+    
 
+    //play stop
     AudioInterface::sourceState ss = mAudio.getSourceState(mWave0SourceId);
     QString playStop("Play");
     switch (ss)
@@ -296,4 +382,30 @@ void MainDialog::updateUi()
 void MainDialog::waveLoopClicked(int iState)
 {
     mAudio.setSourceAsLooping(mWave0SourceId, iState == Qt::Checked);
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::xPosChanged(int iV)
+{
+    const double v = 5.0;
+    double xPos = iV/100.0 * v;
+    const double yPos = mAudio.getSourcePosition(mWave0SourceId).y();
+
+    mAudio.setSourcePosition(mWave0SourceId, math::Point3d(xPos, yPos, 0.0) );
+
+    mpXPos->setText(QString::number(xPos, 'g', 4));
+    updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::yPosChanged(int iV)
+{
+    const double v = 5.0;
+    double yPos = iV/100.0 * v;
+    const double xPos = mAudio.getSourcePosition(mWave0SourceId).x();
+
+    mAudio.setSourcePosition(mWave0SourceId, math::Point3d(xPos, yPos, 0.0) );
+
+    mpYPos->setText(QString::number(yPos, 'g', 4));
+    updateUi();
 }

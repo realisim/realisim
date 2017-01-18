@@ -1,6 +1,7 @@
 /* AudioInterface.h */
 
 #include <cassert>
+#include <limits>
 #include "math/MathUtils.h"
 #include "sound/AudioInterface.h"
 #include <sstream>
@@ -162,16 +163,73 @@ std::string AudioInterface::getAndClearLastErrors() const
     mErrors = std::string();
     return r;
 }
+
 //------------------------------------------------------------------------------
 int AudioInterface::getBufferId( int iIndex ) const
 {
     int r = 0;
     assert( iIndex >= 0 && iIndex < (int)mBuffers.size() );
-    if( ( iIndex >= 0 && iIndex < (int)mSources.size() ) )
-    { r = mSources[iIndex]; }
+    if( ( iIndex >= 0 && iIndex < (int)mBuffers.size() ) )
+    { r = mBuffers[iIndex]; }
     return r;
     
 }
+
+//------------------------------------------------------------------------------
+int AudioInterface::getBufferBitsPerSample(int iBufferId) const
+{
+    int r = 0;
+    alGetBufferi( iBufferId, AL_BITS, &r );
+    checkForAlError("AudioInterface::getBufferBitsPerSample - ");
+    return r;
+}
+
+//------------------------------------------------------------------------------
+double AudioInterface::getBufferLengthInSeconds(int iBufferId) const
+{
+    double r = numeric_limits<double>::quiet_NaN();
+    const int s = getBufferSize(iBufferId);
+    const int nbC = getBufferNumberOfChannels(iBufferId);
+    const int b = getBufferBitsPerSample(iBufferId);
+
+    if (s != 0 && nbC != 0 && b != 0)
+    {
+        const int lengthInSample = s * 8 / (nbC * b);
+        r = lengthInSample / (double)getBufferFrequency(iBufferId);
+    }
+
+    return r;
+}
+
+//------------------------------------------------------------------------------
+// in hertz
+int AudioInterface::getBufferFrequency(int iBufferId) const
+{
+    int r = 0;
+    alGetBufferi( iBufferId, AL_FREQUENCY, &r );
+    checkForAlError("AudioInterface::getBufferFrequency - ");
+    return r;
+}
+
+//------------------------------------------------------------------------------
+int AudioInterface::getBufferNumberOfChannels(int iBufferId) const
+{
+    int r = 0;
+    alGetBufferi( iBufferId, AL_CHANNELS, &r );
+    checkForAlError("AudioInterface::getBufferNumberOfChannel - ");
+    return r;
+}
+
+//------------------------------------------------------------------------------
+// in bytes
+int AudioInterface::getBufferSize( int iBufferId ) const
+{
+    int r = 0;
+    alGetBufferi( iBufferId, AL_SIZE, &r );
+    checkForAlError("AudioInterface::getBufferSize - ");
+    return r;
+}
+
 //------------------------------------------------------------------------------
 double AudioInterface::getListenerGain() const
 {
@@ -179,6 +237,7 @@ double AudioInterface::getListenerGain() const
     alGetListenerf( AL_GAIN, &r );
     return (double)r;
 }
+
 //------------------------------------------------------------------------------
 Point3d AudioInterface::getListenerPosition() const
 {
@@ -186,6 +245,7 @@ Point3d AudioInterface::getListenerPosition() const
     alGetListener3f( AL_POSITION, &x, &y, &z );
     return Point3d( x, y, z );
 }
+
 //------------------------------------------------------------------------------
 Vector3d AudioInterface::getListenerVelocity() const
 {
