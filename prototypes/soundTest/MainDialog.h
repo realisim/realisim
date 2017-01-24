@@ -25,11 +25,12 @@ public:
         nB };
     
 protected slots:
+    void gainChanged(int);
     void loadWavClicked();
     void noteClicked( int );
     void playClicked();
-    void waveLoopClicked(int);
     void pitchShiftChanged(int);
+    void waveLoopClicked(int);
     void xPosChanged(int);
     void yPosChanged(int);
     
@@ -54,6 +55,7 @@ protected:
     QWidget *mpWaveWidget;
     QPushButton *mpPlayStop;
     QLabel *mpWaveInfo;
+    QLabel *mpGainValue;
     QLabel *mpPitchValue;
     QLabel *mpXPos;
     QLabel *mpYPos;

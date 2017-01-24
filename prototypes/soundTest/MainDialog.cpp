@@ -87,6 +87,26 @@ void MainDialog::createUi()
                             QCheckBox *pLoop = new QCheckBox("Loop", mpWaveWidget);
                             connect(pLoop, SIGNAL(stateChanged(int)), this, SLOT(waveLoopClicked(int)) );
 
+                            //-- gain
+                            QHBoxLayout *pGainLyt = new QHBoxLayout();
+                            {
+                                QLabel *pL = new QLabel("Gain:", mpWaveWidget);
+
+                                QSlider *slider = new QSlider(mpWaveWidget);
+                                slider->setOrientation(Qt::Horizontal);
+                                slider->setMinimum(0);
+                                slider->setMaximum(100);
+                                slider->setTickInterval(1);
+                                slider->setValue(20);
+                                connect(slider, SIGNAL(valueChanged(int)), this, SLOT(gainChanged(int)));                                
+
+                                mpGainValue = new QLabel("1.0", mpWaveWidget);
+
+                                pGainLyt->addWidget(pL);
+                                pGainLyt->addWidget(slider);
+                                pGainLyt->addWidget(mpGainValue);
+                            }
+
                             //-- pitch
                             QHBoxLayout *pPitchLyt = new QHBoxLayout();
                             {
@@ -148,6 +168,7 @@ void MainDialog::createUi()
                             }
                             
                             pOptions->addWidget(pLoop);
+                            pOptions->addLayout(pGainLyt);
                             pOptions->addLayout(pPitchLyt);
                             pOptions->addLayout(pXPosLyt);
                             pOptions->addLayout(pYPosLyt);
@@ -185,6 +206,19 @@ void MainDialog::createUi()
     pLyt->addWidget( pWavGrp );
     pLyt->addStretch( 1 );
 }
+
+//-----------------------------------------------------------------------------
+void MainDialog::gainChanged(int iV)
+{
+    const double v = 5.0;
+    double gain = iV/100.0 * v;
+
+    mAudio.setSourceGain(mWave0SourceId, gain);
+
+    mpGainValue->setText(QString::number(gain, 'g', 4));
+    updateUi();
+}
+
 //-----------------------------------------------------------------------------
 void MainDialog::generateNotes()
 {
