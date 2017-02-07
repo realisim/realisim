@@ -88,10 +88,10 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
     using namespace OpenFlight;
     
     // The headerRecord is usually the first node of the openflight
-    // data structure. If there is no root yet, then it is the first
-    // node of the data structure. HeaderNode can be encountered
+    // data structure. If there is no root yet, it will become the root:
+    // first node of the data structure. HeaderNode can be encountered
     // multiple times in an openFlight tree, but they will have
-    // an ExternalRefence parent.
+    // an ExternalRefence as parent.
 
     OpenFlightNode* opfNode = new OpenFlightNode();
     opfNode->mName = ipH->hasLongIdRecord() ? ipH->getLongIdRecord()->getAsciiId() : ipH->getAsciiId();
@@ -109,13 +109,12 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
     //add header stuff here
     
     //add library node to store all palette information
-    //add libray node
     LibraryNode *library = new LibraryNode();
     library->mName = "Library";
     opfNode->addChild(library);
 
     // check external reference flags, to properly populate
-    // the library node with approate palette since, external
+    // the library node with appropriate palette since external
     // reference can override (or not) palettes.
     bool useParentDatabaseColorPalette = false;
     bool useParentDatabaseMaterialPalette = false;
