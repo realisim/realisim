@@ -66,11 +66,11 @@ GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
 {
     using namespace OpenFlight;
 
-    printf("GroupName: %s, GroupRecord priority: %d, layer code: %d, significance: %d\n", 
+    /*printf("GroupName: %s, GroupRecord priority: %d, layer code: %d, significance: %d\n", 
         ipG->getAsciiId().c_str(),
         ipG->getRelativePriority(),
         ipG->getLayerCode(),
-        ipG->getSignificance() );
+        ipG->getSignificance() );*/
 
     GroupNode *pGroup = new GroupNode();
     pGroup->mName = ipG->hasLongIdRecord() ? ipG->getLongIdRecord()->getAsciiId() : ipG->getAsciiId();
@@ -187,9 +187,9 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
 {
     using namespace OpenFlight;
 
-    printf("Object Name: %s, ObjectRecord priority: %d\n", 
+    /*printf("Object Name: %s, ObjectRecord priority: %d\n", 
         ipR->getAsciiId().c_str(),
-        ipR->getRelativePriority());
+        ipR->getRelativePriority());*/
 
     ModelNode *model = new ModelNode();
     ipParent->addChild(model);
