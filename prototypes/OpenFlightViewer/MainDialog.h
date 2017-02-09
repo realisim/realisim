@@ -21,6 +21,7 @@
 #include "Scene.h"
 
 class IGraphicNode;
+namespace Representations{ class Representation; }
 
 class Viewer : public realisim::treeD::Widget3d
 {
@@ -38,7 +39,7 @@ private:
     virtual void keyPressEvent(QKeyEvent*) override;    
     void setScene(const Scene* ipScene) {mpScene = ipScene;}
     void togglePolygonMode();
-    void updateRepresentations();
+    //void updateRepresentations();
     
     //--- data
     const Scene *mpScene;
@@ -54,6 +55,7 @@ public:
     ~MainDialog(){};
     
 protected slots:
+    void navigatorItemActivated(QTreeWidgetItem *, int);
     void newFile();
     void openFile();
     
@@ -64,10 +66,12 @@ protected:
     void toggleFreeRunning();
     void refreshNavigator();
     void refreshNavigator(IGraphicNode*, QTreeWidgetItem*);
+    void updateUi();
     
     Viewer* mpViewer;
     QDockWidget* mpToolsWidget;
     QTreeWidget* mpNavigator;
+    std::map<QTreeWidgetItem*, IGraphicNode*> mNavigatorItemToGraphicNode; //this should be done with model/view from qt... but doing this quickly...
     
     //Data
     bool mFreeRunning;

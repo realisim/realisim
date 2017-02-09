@@ -38,6 +38,37 @@ IRenderable::~IRenderable()
 {}
 
 //--------------------------------------------------------
+bool IRenderable::isVisible() const
+{
+    return mIsVisible;
+}
+
+//--------------------------------------------------------
+void IRenderable::setAsVisible(bool iVisible)
+{
+    setAsVisible( dynamic_cast<IGraphicNode*>(this), iVisible );
+}
+
+//--------------------------------------------------------
+// the recursive function
+void IRenderable::setAsVisible(IGraphicNode* ipNode, bool iVisible)
+{
+    if(ipNode == nullptr) {return;}
+
+    IRenderable* r = dynamic_cast<IRenderable*>(ipNode);
+    if (r)
+    {
+        r->mIsVisible = !r->mIsVisible;
+    }
+
+    //recurse on all child
+    for (size_t i = 0; i < ipNode->mChilds.size(); ++i)
+    {
+        setAsVisible(ipNode->mChilds[i], iVisible);
+    }
+}
+
+//--------------------------------------------------------
 //--- IDefinitions
 //--------------------------------------------------------
 unsigned int IDefinition::mIdCounter = 0;

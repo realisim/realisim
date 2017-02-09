@@ -36,6 +36,46 @@ FltImporter::~FltImporter()
 }
 
 //-----------------------------------------------------------------------------
+void FltImporter::applyLogicOnChilds(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode* ipNode)
+{
+    using namespace OpenFlight;
+
+    if(ipNode == nullptr) return;
+
+    switch (ipNode->mNodeType)
+    {
+    case IGraphicNode::ntGroup: 
+    {
+        GroupNode* gn = dynamic_cast<GroupNode*>(ipNode);
+        GroupRecord* gr = dynamic_cast<GroupRecord*>(ipRecord);
+        if (gn && gr)
+        {
+            // this is a deprecated way of doing layering... Ideally it would be done
+            // at the group level with LayerCode. In the following case, when a group has
+            // relativePriority at 1, childs under it are layered from left to right. The
+            // first child being the base
+            //
+            if (gr->getRelativePriority() == 1)
+            {
+                for (int i = 0; i < gn->mChilds.size(); ++i)
+                {
+                    IGraphicNode* child = gn->mChilds[i];
+                    GroupNode* castedChild = dynamic_cast<GroupNode*>(child);
+                    if (castedChild)
+                    {
+                        //layers starts at 1.
+                        castedChild->setLayerIndex(i+1);
+                    }
+                }
+            }
+        }
+
+    }break;
+    default: break;
+    }
+}
+
+//-----------------------------------------------------------------------------
 // In our data tree, we do not care much about external references but they
 // can carry a transform matrix which needs to be be brought in. To do so,
 // we create a group to hold that transform.
@@ -52,7 +92,7 @@ GroupNode* FltImporter::digData(OpenFlight::ExternalReferenceRecord* ipE,
     
     GroupNode *pGroup = new GroupNode();
     
-    pGroup->mName = "external reference";
+    pGroup->mName = ipE->getFilenamePath() + " (external reference)";
     
     pGroup->mParentTransform = fetchTransform(ipE);
     ipParent->addChild(pGroup);
@@ -73,10 +113,10 @@ GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
         ipG->getSignificance() );*/
 
     GroupNode *pGroup = new GroupNode();
+    ipParent->addChild(pGroup);
     pGroup->mName = ipG->hasLongIdRecord() ? ipG->getLongIdRecord()->getAsciiId() : ipG->getAsciiId();
     pGroup->mParentTransform = fetchTransform(ipG);
-    
-    ipParent->addChild(pGroup);
+    pGroup->setLayerIndex( ipG->getLayerCode() );
     
     return pGroup;
 }
@@ -361,4 +401,10 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
     //dig into child
     for(int i = 0; i < ipRecord->getNumberOfChilds(); ++i)
     { parseFltTree(ipRecord->getChild(i), currentNode); }
+
+    // apply parent logic onto childs...
+    // Layering is set at the group node for it's childrens and there are many way
+    // to do it, so when we are done with the childrens, we will check if there
+    // are actions to be taken
+    applyLogicOnChilds(ipRecord, currentNode);
 }
