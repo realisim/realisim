@@ -54,13 +54,20 @@ T* IGraphicNode::getFirstParent()
 class IRenderable
 {
 public:
-    IRenderable() : mIsTransformDirty(true) {}
+    IRenderable() : mIsVisible(true), mIsTransformDirty(true) {}
     virtual ~IRenderable() = 0;
     
+    bool isVisible() const;
+    void setAsVisible(bool);
+
     bool mIsTransformDirty;
     realisim::math::Matrix4 mParentTransform;
-    realisim::math::Matrix4 mWorldTransform;
-    
+    realisim::math::Matrix4 mWorldTransform;    
+
+    protected:
+        void setAsVisible(IGraphicNode*, bool);
+
+        bool mIsVisible;
 //    realisim::math::BB3d mOriginalBoundingBox;
 //    realisim::math::BB3d mOrientedBoundingBox;
 //    realisim::math::BB3d mAxisAlignedBoundingBox;
@@ -212,8 +219,17 @@ public:
 class GroupNode : public IDefinition, public IGraphicNode, public IRenderable
 {
 public:
-    GroupNode() : IDefinition(), IGraphicNode(), IRenderable() { mNodeType = ntGroup; }
+    GroupNode() : IDefinition(), IGraphicNode(), IRenderable(),
+        mLayerIndex(0)
+        { mNodeType = ntGroup; }
     virtual ~GroupNode() override {};
+
+    bool isLayered() const { return getLayerIndex() != 0; }
+    int getLayerIndex() const {return mLayerIndex;}
+    void setLayerIndex(int i) {mLayerIndex = i;}
+
+private:
+    int mLayerIndex;
 };
 
 

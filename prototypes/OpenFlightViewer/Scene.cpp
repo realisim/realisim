@@ -127,7 +127,8 @@ void Scene::clear()
     
     mRenderableFilter = Filter();
     
-    mToDraw.clear();
+    mDefaultLayer.clear();
+    mLayers.clear();
 }
 
 //------------------------------------------------------------------------------
@@ -151,7 +152,7 @@ void Scene::createRepresentations(IGraphicNode *iNode)
                 case IGraphicNode::ntModel:
                 {
                     ModelNode* modelNode = dynamic_cast<ModelNode*>(n);
-                    mToDraw.push_back( checkAndCreateRepresentation(modelNode) );
+                    Representations::Model* m = checkAndCreateRepresentation(modelNode);
                 } break;
                 default: break;
             }
@@ -260,6 +261,52 @@ void Scene::loadLibraries(IGraphicNode* iNode)
     printf("temps pour Scene::loadLibraries: %.4f(sec)\n", __t.getElapsed());
 }
 
+
+//----------------------------------------
+void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Representation*> *ipCurrentLayer)
+{
+    //depth First...
+    if(iNode == nullptr) {return;}
+
+    //perform culling
+
+    //fill layers
+    GroupNode* gn = dynamic_cast<GroupNode*>(iNode);
+    ModelNode* mn = dynamic_cast<ModelNode*>(iNode);
+    if (gn)
+    {
+        if (gn->isLayered())
+        {
+            //add layer if it does not exist and make it current
+            auto itLayer = mLayers.insert( 
+                make_pair(gn->getLayerIndex(), vector<Representations::Representation*>() ) );
+
+            // itLayer is the pair<iterator, bool> returned by insert.
+            // itLayer.first is the iterator to the pair<int, vector>, so
+            // itLayer.first->second is the vector of representation, namely the list
+            // representing the layer.
+            //
+            ipCurrentLayer = &(itLayer.first->second);
+        }
+    }
+
+    if (mn)
+    {
+        auto itModel = mDefinitionIdToRepresentation.find(mn->mId);
+        if(itModel != mDefinitionIdToRepresentation.end()) 
+        {
+            if(mn->isVisible())
+            { ipCurrentLayer->push_back( itModel->second ); }
+        }
+    }
+
+    // recurse on all childs
+    for (size_t i = 0; i < iNode->mChilds.size(); ++i)
+    {
+        prepareFrame(  iNode->mChilds[i], ipCurrentLayer );
+    }
+}
+
 //----------------------------------------
 void Scene::performCulling(IGraphicNode* iNode)
 {
@@ -282,7 +329,10 @@ void Scene::update()
     }
     mNeedsRepresentationCreation.clear();
     
-//    performCulling(mpRoot);
+    //clear all draw list...
+    mDefaultLayer.clear();
+    mLayers.clear();
+    prepareFrame(mpRoot, &mDefaultLayer);
 }
 
 //----------------------------------------

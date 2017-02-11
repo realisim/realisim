@@ -17,6 +17,7 @@ public:
     
 protected:
 void applyTransformCarryover(IRenderable*);
+    void applyLogicOnChilds(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode* ipNode);
     GroupNode* digData(OpenFlight::ExternalReferenceRecord*, IGraphicNode*);
     GroupNode* digData(OpenFlight::GroupRecord*, IGraphicNode*);
     LibraryNode* digData(OpenFlight::HeaderRecord*, IGraphicNode*);

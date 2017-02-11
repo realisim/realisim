@@ -42,9 +42,58 @@ void Viewer::draw()
     //glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     showFps();
     
-    for(size_t i = 0; i < mpScene->mToDraw.size(); ++i)
+    for(size_t i = 0; i < mpScene->mDefaultLayer.size(); ++i)
     {
-        mpScene->mToDraw[i]->draw();
+        mpScene->mDefaultLayer[i]->draw();
+    }
+
+    
+    auto itLayer = mpScene->mLayers.begin();
+    
+    if (itLayer != mpScene->mLayers.end())
+    {
+        {
+            glEnable(GL_STENCIL_TEST);
+            glClear(GL_STENCIL_BUFFER_BIT);
+
+            glEnable(GL_DEPTH_TEST);
+            glStencilFunc(GL_ALWAYS,1,1);
+            glStencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
+
+            //draw layer 1 - base layer
+            //assert(itLayer->first == 1);
+            const vector<Representations::Representation*> &layer = itLayer->second;
+            for (size_t i = 0; i < layer.size(); ++i)
+            {
+                layer[i]->draw();
+            }
+        }
+
+
+        // draw other layers
+        {
+            glEnable(GL_STENCIL_TEST);
+            glDisable(GL_DEPTH_TEST);
+            glStencilFunc(GL_EQUAL,1,1);
+            glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
+
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+            ++itLayer;        
+            for(; itLayer != mpScene->mLayers.end(); ++itLayer)
+            {
+                const vector<Representations::Representation*> &layer = itLayer->second;
+                for (size_t i = 0; i < layer.size(); ++i)
+                {
+                    layer[i]->draw();
+                }
+            }
+        }
+
+        glDisable(GL_STENCIL_TEST);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
     }
 }
 
@@ -130,6 +179,9 @@ mTimerId(0)
             mpNavigator->header()->hide();
             mpNavigator->setColumnCount(1);
 
+            connect(mpNavigator, SIGNAL(itemActivated(QTreeWidgetItem *, int)), 
+                this, SLOT(navigatorItemActivated(QTreeWidgetItem *, int)));
+
             pHbox->addWidget(mpNavigator);
         }
 
@@ -209,6 +261,22 @@ void MainDialog::openFile()
 }
 
 //-----------------------------------------------------------------------------
+void MainDialog::navigatorItemActivated(QTreeWidgetItem *ipItem, int iColumn)
+{
+    //find corresponding graphic node
+    auto itGraphicNode = mNavigatorItemToGraphicNode.find(ipItem);
+    if (itGraphicNode != mNavigatorItemToGraphicNode.end())
+    {
+        IRenderable* r = dynamic_cast<IRenderable*>(itGraphicNode->second);
+        if (r)
+        {
+            r->setAsVisible( !r->isVisible() );
+        }
+    }
+    updateUi();
+}
+
+//-----------------------------------------------------------------------------
 void MainDialog::newFile()
 {
     mScene.clear();
@@ -220,6 +288,7 @@ void MainDialog::newFile()
 void MainDialog::refreshNavigator()
 {
     mpNavigator->clear();
+    mNavigatorItemToGraphicNode.clear();
     
     IGraphicNode *pRoot = mScene.getRoot();
 
@@ -243,8 +312,10 @@ void MainDialog::refreshNavigator(IGraphicNode *ipNode, QTreeWidgetItem *ipParen
             QTreeWidgetItem *item = new QTreeWidgetItem(ipParentItem);
             item->setText( 0, QString::fromStdString(ipNode->mName) );
             currentParent = item;
-        }
 
+            //insert in map to track relationship from tree item to IGraphicNode
+            mNavigatorItemToGraphicNode.insert( make_pair(item, ipNode) );
+        }
 
         for (size_t i = 0; i < ipNode->mChilds.size(); ++i)
         {
@@ -270,4 +341,9 @@ void MainDialog::timerEvent(QTimerEvent *ipE)
         
         mpViewer->update();
     }
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::updateUi()
+{
 }

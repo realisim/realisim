@@ -39,7 +39,8 @@ public:
     //    blablabla
     // }
 
-    std::vector<Representations::Representation*> mToDraw;
+    std::vector<Representations::Representation*> mDefaultLayer;
+    std::map<int, std::vector<Representations::Representation*> > mLayers;
     
 protected:
     class Filter
@@ -63,6 +64,7 @@ void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     void loadLibraries(IGraphicNode*);
     void filterRenderables(IGraphicNode*);
     void performCulling(IGraphicNode*);
+    void prepareFrame(IGraphicNode*, std::vector<Representations::Representation*> *ipCurrentLayer );
     void updateTransform(Filter*);
     
     //data
