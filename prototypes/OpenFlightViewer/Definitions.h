@@ -54,7 +54,7 @@ T* IGraphicNode::getFirstParent()
 class IRenderable
 {
 public:
-    IRenderable() : mIsVisible(true), mIsTransformDirty(true) {}
+    IRenderable() : mIsTransformDirty(true), mIsVisible(true) {}
     virtual ~IRenderable() = 0;
     
     bool isVisible() const;
