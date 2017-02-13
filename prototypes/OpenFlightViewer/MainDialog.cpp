@@ -7,11 +7,10 @@
  *
  */
 
-#include "openFlight/DotExporter.h"
 #include "3d/Camera.h"
 #include "Definitions.h"
-#include "FltImporter.h"
 #include "MainDialog.h"
+#include "MessageQueue.h"
 #include <QFileDialog>
 #include <QHeaderView>
 #include <QLayout>
@@ -42,6 +41,9 @@ void Viewer::draw()
 {
     //glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     showFps();
+    
+    // devrait tout remplacer ce qui suit par
+    // mpScene->draw...
     
     for(size_t i = 0; i < mpScene->mDefaultLayer.size(); ++i)
     {
@@ -190,7 +192,13 @@ mTimerId(0)
     }
 
     createMenus();
-
+    
+    //register done queue to fileStreaming
+    using placeholders::_1;
+    mFileLoadingDoneQueue.setProcessingFunction(
+        std::bind( &MainDialog::processFileLoadingDoneMessage, this, _1));
+    mFileStreamer.registerDoneQueue(this, &mFileLoadingDoneQueue);
+    
     mTimerId = startTimer(15);
 }
 
@@ -221,43 +229,32 @@ void MainDialog::keyPressEvent(QKeyEvent* ipE)
 //-----------------------------------------------------------------------------
 void MainDialog::openFile()
 {
-    OpenFlight::OpenFlightReader ofr;
-    //ofr.enableDebug(true);
-    //ofr.enableExternalReferenceLoading(false);
-    
-    QStringList filenamePaths = QFileDialog::getOpenFileNames(this, tr("Open Flt File"),
-                                                        "../assets/",
-                                                        tr("Flt (*.flt)"));
-    
-//    string filenamePath = "../assets/sample/nested_references/master/master.flt";
-//    string filenamePath = "../assets/sample/nested_references2/db/1/12/123/1234/1234.flt";
-//    string filenamePath = "../assets/sample/nested_references2/db/1/1.flt";
-//    string filenamePath = "../assets/sample/nested_references2/db/1/12/12.flt";
-//    string filenamePath = "/Users/po/Documents/travail/Simthetiq/assets/general_models/vehicles/airplanes/Military/Mig_21/Mig_21.flt";
-    
+    QStringList filenamePaths = QFileDialog::getOpenFileNames(
+        this, tr("Open Flt File"),
+        "../assets/",
+        tr("Flt (*.flt)"));
+
     for(int i = 0; i < filenamePaths.count(); ++i)
     {
-        realisim::utils::Timer __t;
-        OpenFlight::HeaderRecord *header = ofr.open( filenamePaths.at(i).toStdString() );
-        printf("Temps pour lire %s: %.4f (sec)\n", filenamePaths.at(i).toStdString().c_str(), __t.getElapsed() );
-        
-        if(!ofr.hasErrors())
-        {
-            if(ofr.hasWarnings())
-            { cout << "Warning while opening flt file: " << endl << ofr.getAndClearLastWarnings(); }
-            
-            FltImporter fltImporter(header);
-            mScene.addNode( fltImporter.getGraphicNodeRoot() );
-            
-            //cout << OpenFlight::toDotFormat( fltImporter.getOpenFlightRoot() );
-        }
-        else
-        {
-            delete header;
-            cout << "Error while opening flt file: " << endl << ofr.getAndClearLastErrors();
-        }
+        FileStreamer::Request *r = new FileStreamer::Request(this);
+        r->mRequestType = FileStreamer::rtLoadFlt;
+        r->mFilenamePath = filenamePaths.at(i).toStdString();
+        mFileStreamer.postRequest(r);
     }
+}
 
+//-----------------------------------------------------------------------------
+void MainDialog::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
+{
+    FileStreamer::DoneRequest *d = (FileStreamer::DoneRequest *)ipMessage;
+    printf("MainDialog - file %s was loaded\n", d->mFilenamePath.c_str());
+    
+    switch(d->mRequestType)
+    {
+        case FileStreamer::rtLoadFlt: mScene.addNode((IGraphicNode *)d->mpData ); break;
+        default: break;
+    }
+    
     refreshNavigator();
 }
 
@@ -341,6 +338,8 @@ void MainDialog::timerEvent(QTimerEvent *ipE)
 {
     if(ipE->timerId() == mTimerId)
     {
+        mFileLoadingDoneQueue.processNextMessage();
+        
         mScene.update();
         
         mpViewer->update();

@@ -16,6 +16,15 @@ SET(PROJECT_LINK_LIBRAIRIES) #additional link librairies
 INCLUDE( "macro_component.cmake" )
 INCLUDE( "CMakeModules/tinyObjLoader.cmake" )
 
+#------------------------------
+# Compiler flags
+#------------------------------
+if(APPLE)
+    # this is necessary for some c++11 features such as atomic.
+    # MSVC does not require any special flags for c++11
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=gnu++0x")
+endif(APPLE)
+
 #Set a global group for all cxx files ( usualy moc'ed files )
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)

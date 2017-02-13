@@ -10,7 +10,8 @@
 #ifndef MainDialog_hh
 #define MainDialog_hh
 
-#include "openFlight/OpenFlightReader.h"
+#include "FileStreamer.h"
+#include "MessageQueue.h"
 #include <QDockWidget>
 #include <QKeyEvent>
 #include <QMainWindow>
@@ -62,12 +63,14 @@ protected slots:
 protected:
     void createMenus();
     virtual void keyPressEvent(QKeyEvent*) override;
+    void processFileLoadingDoneMessage(MessageQueue::Message*);
     void timerEvent(QTimerEvent*) override;
     void toggleFreeRunning();
     void refreshNavigator();
     void refreshNavigator(IGraphicNode*, QTreeWidgetItem*);
     void updateUi();
     
+    // ui
     Viewer* mpViewer;
     QDockWidget* mpToolsWidget;
     QTreeWidget* mpNavigator;
@@ -77,6 +80,10 @@ protected:
     bool mFreeRunning;
     Scene mScene;
     int mTimerId;
+  
+    //threading
+    FileStreamer mFileStreamer;
+    MessageQueue mFileLoadingDoneQueue;
 };
 
 #endif

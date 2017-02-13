@@ -259,7 +259,7 @@ Widget3d::paintGL()
     Vector4d pos(50.0, 30.0, 5.0, 0.0);
     if( mAbsoluteUpVector == auvZ )
     { pos.set(400, 280, 1000, 0.0); }
-    GLfloat position[]  = {pos.x(), pos.y(), pos.z(), pos.w() };
+    GLfloat position[]  = {(float)pos.x(), (float)pos.y(), (float)pos.z(), (float)pos.w() };
     glLightfv(GL_LIGHT0, GL_POSITION, position);
     
     draw();

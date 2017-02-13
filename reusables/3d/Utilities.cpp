@@ -105,10 +105,10 @@ void drawRectangle( const Rectangle& iR )
     VertexBufferObject vbo;
 
     float v[12] = {
-        iR.bottomLeft().x(), iR.bottomLeft().y(), 0.0f,
-        iR.bottomRight().x(), iR.bottomRight().y(), 0.0f,
-        iR.topRight().x(), iR.topRight().y(), 0.0f,
-        iR.topLeft().x(), iR.topLeft().y(), 0.0f };
+        (float)iR.bottomLeft().x(), (float)iR.bottomLeft().y(), 0.0f,
+        (float)iR.bottomRight().x(), (float)iR.bottomRight().y(), 0.0f,
+        (float)iR.topRight().x(), (float)iR.topRight().y(), 0.0f,
+        (float)iR.topLeft().x(), (float)iR.topLeft().y(), 0.0f };
 
     int i[6] = {
         0, 1, 3,
@@ -206,40 +206,40 @@ VertexBufferObject getRectangularPrism(const Point3d& iLowerLeft, const Point3d&
 	const int numVertices = 72;
 	float v[numVertices] = {
 		//z
-		maxCorner.x(), maxCorner.y(), maxCorner.z(), //0
-		minCorner.x(), maxCorner.y(), maxCorner.z(), //1
-		minCorner.x(), minCorner.y(), maxCorner.z(), //2
-		maxCorner.x(), minCorner.y(), maxCorner.z(), //3
+		(float)maxCorner.x(), (float)maxCorner.y(), (float)maxCorner.z(), //0
+		(float)minCorner.x(), (float)maxCorner.y(), (float)maxCorner.z(), //1
+		(float)minCorner.x(), (float)minCorner.y(), (float)maxCorner.z(), //2
+		(float)maxCorner.x(), (float)minCorner.y(), (float)maxCorner.z(), //3
 
 		//-x
-		minCorner.x(), minCorner.y(), minCorner.z(),  //4
-		minCorner.x(), minCorner.y(), maxCorner.z(),  //5
-		minCorner.x(), maxCorner.y(), maxCorner.z(),  //6
-		minCorner.x(), maxCorner.y(), minCorner.z(),  //7
+		(float)minCorner.x(), (float)minCorner.y(), (float)minCorner.z(),  //4
+		(float)minCorner.x(), (float)minCorner.y(), (float)maxCorner.z(),  //5
+		(float)minCorner.x(), (float)maxCorner.y(), (float)maxCorner.z(),  //6
+		(float)minCorner.x(), (float)maxCorner.y(), (float)minCorner.z(),  //7
 
 		//-y
-		minCorner.x(), minCorner.y(), minCorner.z(),  //8
-		maxCorner.x(), minCorner.y(), minCorner.z(),  //9
-		maxCorner.x(), minCorner.y(), maxCorner.z(),  //10
-		minCorner.x(), minCorner.y(), maxCorner.z(),  //11
+		(float)minCorner.x(), (float)minCorner.y(), (float)minCorner.z(),  //8
+		(float)maxCorner.x(), (float)minCorner.y(), (float)minCorner.z(),  //9
+		(float)maxCorner.x(), (float)minCorner.y(), (float)maxCorner.z(),  //10
+		(float)minCorner.x(), (float)minCorner.y(), (float)maxCorner.z(),  //11
 
-		//x
-		maxCorner.x(), maxCorner.y(), maxCorner.z(),  //12
-		maxCorner.x(), minCorner.y(), maxCorner.z(),
-		maxCorner.x(), minCorner.y(), minCorner.z(),
-		maxCorner.x(), maxCorner.y(), minCorner.z(),  //15
+		(float)//x
+		(float)maxCorner.x(), (float)maxCorner.y(), (float)maxCorner.z(),  //12
+		(float)maxCorner.x(), (float)minCorner.y(), (float)maxCorner.z(),
+		(float)maxCorner.x(), (float)minCorner.y(), (float)minCorner.z(),
+		(float)maxCorner.x(), (float)maxCorner.y(), (float)minCorner.z(),  //15
 
-		//y
-		maxCorner.x(), maxCorner.y(), maxCorner.z(),  //16
-		maxCorner.x(), maxCorner.y(), minCorner.z(),
-		minCorner.x(), maxCorner.y(), minCorner.z(),
-		minCorner.x(), maxCorner.y(), maxCorner.z(),  //19
+		(float)//y
+		(float)maxCorner.x(), (float)maxCorner.y(), (float)maxCorner.z(),  //16
+		(float)maxCorner.x(), (float)maxCorner.y(), (float)minCorner.z(),
+		(float)minCorner.x(), (float)maxCorner.y(), (float)minCorner.z(),
+		(float)minCorner.x(), (float)maxCorner.y(), (float)maxCorner.z(),  //19
 
-		//-z
-		minCorner.x(), minCorner.y(), minCorner.z(), //20
-		minCorner.x(), maxCorner.y(), minCorner.z(),
-		maxCorner.x(), maxCorner.y(), minCorner.z(),
-maxCorner.x(), minCorner.y(), minCorner.z() //23
+		(float)//-z
+		(float)minCorner.x(), (float)minCorner.y(), (float)minCorner.z(), //20
+		(float)minCorner.x(), (float)maxCorner.y(), (float)minCorner.z(),
+		(float)maxCorner.x(), (float)maxCorner.y(), (float)minCorner.z(),
+        (float)maxCorner.x(), (float)minCorner.y(), (float)minCorner.z() //23
 	};
 
 	const int numIndices = 36;

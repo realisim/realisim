@@ -100,8 +100,6 @@ Representations::Model* Scene::checkAndCreateRepresentation(ModelNode *iNode)
     {
         model = dynamic_cast<Representations::Model*>(repIt->second);
     }
-    
-    //this should be moved in the culling phase
     return model;
 }
 
