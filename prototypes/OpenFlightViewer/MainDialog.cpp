@@ -20,6 +20,7 @@
 #include "Representations.h"
 #include <string>
 #include "utils/Timer.h"
+#include "3d/openGlHeaders.h"
 
 using namespace realisim;
 using namespace math;
@@ -328,6 +329,9 @@ void MainDialog::refreshNavigator(IGraphicNode *ipNode, QTreeWidgetItem *ipParen
 void MainDialog::toggleFreeRunning()
 {
     mFreeRunning = !mFreeRunning;
+
+    wglSwapIntervalEXT(mFreeRunning ? 0 : 1);
+
     killTimer(mTimerId);
     mTimerId = mFreeRunning ? startTimer(0) : startTimer(15);
 }
