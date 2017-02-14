@@ -18,7 +18,7 @@
  origin for all SGI images is the lower left hand corner. The first scanline 
  (row 0) is always the bottom row of the image.
 ------------------------------------------------------------------------------*/
-class RgbImageLoader
+class RgbImageLoader //renommer a RgbImage
 {
 public:
     RgbImageLoader();

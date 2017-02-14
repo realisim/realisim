@@ -2,8 +2,10 @@
 
 #include "MessageQueue.h"
 #include <map>
+#include <set>
 
 class IGraphicNode;
+class RgbImageLoader;
 
 class FileStreamer
 {
@@ -46,9 +48,11 @@ public:
 
 private:
     IGraphicNode* loadFlt(const std::string& iFilenamePath);
+    RgbImageLoader* loadRgbImage(const std::string& iFilenamePath);
     void processMessage(MessageQueue::Message*);
     std::string toString(requestType);
 
     MessageQueue mRequestQueue;
     std::map<void*, MessageQueue*> mSenderToDoneQueue;
+    std::set<std::string> mPendingFileRequests;
 };

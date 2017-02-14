@@ -11,6 +11,7 @@
 #define MainDialog_hh
 
 #include "FileStreamer.h"
+#include "Hub.h"
 #include "MessageQueue.h"
 #include <QDockWidget>
 #include <QKeyEvent>
@@ -78,7 +79,8 @@ protected:
     
     //Data
     bool mFreeRunning;
-    Scene mScene;
+    Hub mHub;
+    Scene *mpScene;
     int mTimerId;
   
     //threading

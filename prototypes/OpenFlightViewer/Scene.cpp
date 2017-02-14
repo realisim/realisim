@@ -1,5 +1,7 @@
 #include "Definitions.h"
 #include <deque>
+#include "ImageLoader.h"
+#include "FileStreamer.h"
 #include "math/Matrix4.h"
 #include "Representations.h"
 #include "Scene.h"
@@ -8,8 +10,18 @@
 using namespace realisim;
     using namespace math;
 
-Scene::Scene() : mpRoot(nullptr)
-{}
+Scene::Scene(Hub* ipHub) :
+mpHub(ipHub),
+mpRoot(nullptr)
+{
+
+    //register fileStreamingDoneQueue to the fileStreamer
+    FileStreamer& fs = mpHub->getFileStreamer();
+    using placeholders::_1;
+    mFileLoadingDoneQueue.setProcessingFunction(
+        std::bind( &Scene::processFileLoadingDoneMessage, this, _1));
+    fs.registerDoneQueue(this, &mFileLoadingDoneQueue);
+}
 
 //----------------------------------------
 Scene::~Scene()
@@ -35,7 +47,7 @@ void Scene::addNode(IGraphicNode* iNode)
 //    
 //    faire un methode getParent<T> qui retourne le premier parent de type T.
     
-    mNeedsRepresentationCreation.push_back(iNode);
+//mNeedsRepresentationCreation.push_back(iNode);
     mNeedsTransformUpdate.push_back(iNode);
 }
 
@@ -84,24 +96,22 @@ void Scene::addToTextureLibrary(Image *iIm)
     }
 }
 
-//------------------------------------------------------------------------------
-Representations::Model* Scene::checkAndCreateRepresentation(ModelNode *iNode)
-{
-    Representations::Model  *model = nullptr;
-    
-    const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
-    auto repIt = mDefinitionIdToRepresentation.find(def->mId);
-    if(repIt == mDefinitionIdToRepresentation.end())
-    {
-        model = new Representations::Model(iNode, mImageIdToTexture);
-        mDefinitionIdToRepresentation.insert( make_pair(def->mId, model) );
-    }
-    else
-    {
-        model = dynamic_cast<Representations::Model*>(repIt->second);
-    }
-    return model;
-}
+////------------------------------------------------------------------------------
+//void Scene::checkAndCreateRepresentation(ModelNode *iNode)
+//{
+//    const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
+//    auto repIt = mDefinitionIdToRepresentation.find(def->mId);
+//    if(repIt == mDefinitionIdToRepresentation.end())
+//    {
+//        check if model can be created... meaning that images
+//        have been uploaded to gpu...
+//        if not, send a request to the fileStreamer to load the image.
+//        
+//        Representations::Model  *model = nullptr;
+//        model = new Representations::Model(iNode, mImageIdToTexture);
+//        mDefinitionIdToRepresentation.insert( make_pair(def->mId, model) );
+//    }
+//}
 
 //------------------------------------------------------------------------------
 void Scene::clear()
@@ -130,32 +140,71 @@ void Scene::clear()
 }
 
 //------------------------------------------------------------------------------
-void Scene::createRepresentations(IGraphicNode *iNode)
+void Scene::createRepresentations(ModelNode *iNode)
 {
-    if(iNode != nullptr)
+    const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
+    auto repIt = mDefinitionIdToRepresentation.find(def->mId);
+    if(repIt == mDefinitionIdToRepresentation.end())
     {
-        deque<IGraphicNode*> q;
-        q.push_back(iNode);
-        while(!q.empty())
+//        check if model can be created... meaning that images
+//            have been uploaded to gpu...
+//            if not, send a request to the fileStreamer to load the image.
+        bool canCreateRepresentation = true;
+        for(int i = 0; i < iNode->mFaces.size() && canCreateRepresentation; ++i)
         {
-            IGraphicNode* n = q.front();
-            q.pop_front();
-            
-            for(int i = 0; i < n->mChilds.size(); ++i)
-            { q.push_back(n->mChilds[i]); }
-            
-            switch (n->mNodeType)
+            Face *f = iNode->mFaces[i];
+            if(f->mpMaterial && f->mpMaterial->mpImage)
             {
-                case IGraphicNode::ntGroup: break;
-                case IGraphicNode::ntModel:
+                Image *im = f->mpMaterial->mpImage;
+                auto it = mImageIdToTexture.find(im->mId);
+                if(it == mImageIdToTexture.end())
                 {
-                    ModelNode* modelNode = dynamic_cast<ModelNode*>(n);
-                    Representations::Model* m = checkAndCreateRepresentation(modelNode);
-                } break;
-                default: break;
+                    canCreateRepresentation = false;
+                    // image is not on gpu, lets ask filestreamer to
+                    // load it
+                    //
+                    FileStreamer& fs = mpHub->getFileStreamer();
+                    FileStreamer::Request *r = new FileStreamer::Request(this);
+                    r->mRequestType = FileStreamer::rtLoadRgbImage;
+                    r->mFilenamePath = im->mFilenamePath;
+                    fs.postRequest(r);
+                }
             }
         }
+        
+        if(canCreateRepresentation)
+        {
+            Representations::Model *model = nullptr;
+            model = new Representations::Model(iNode, mImageIdToTexture);
+            mDefinitionIdToRepresentation.insert( make_pair(def->mId, model) );
+        }
     }
+    
+    
+//    if(iNode != nullptr)
+//    {
+//        deque<IGraphicNode*> q;
+//        q.push_back(iNode);
+//        while(!q.empty())
+//        {
+//            IGraphicNode* n = q.front();
+//            q.pop_front();
+//            
+//            for(int i = 0; i < n->mChilds.size(); ++i)
+//            { q.push_back(n->mChilds[i]); }
+//            
+//            switch (n->mNodeType)
+//            {
+//                case IGraphicNode::ntGroup: break;
+//                case IGraphicNode::ntModel:
+//                {
+//                    ModelNode* modelNode = dynamic_cast<ModelNode*>(n);
+//                    checkAndCreateRepresentation(modelNode);
+//                } break;
+//                default: break;
+//            }
+//        }
+//    }
 }
 
 //------------------------------------------------------------------------------
@@ -193,6 +242,55 @@ void Scene::filterRenderables(IGraphicNode* iNode)
 }
 
 //------------------------------------------------------------------------------
+Image* Scene::findImage(const std::string &iFilenamePath)
+{
+    return findImage(iFilenamePath, getRoot());
+}
+
+//------------------------------------------------------------------------------
+Image* Scene::findImage(const std::string &iFilenamePath, IGraphicNode* ipNode)
+{
+    realisim::utils::Timer __t;
+    Image* imageFound = nullptr;
+    
+    if(ipNode != nullptr)
+    {
+        deque<IGraphicNode*> q;
+        q.push_back(ipNode);
+        while(!q.empty() && imageFound == nullptr)
+        {
+            IGraphicNode* n = q.front();
+            q.pop_front();
+            
+            for(int i = 0; i < n->mChilds.size(); ++i)
+            { q.push_back(n->mChilds[i]); }
+            
+            switch (n->mNodeType)
+            {
+                case IGraphicNode::ntLibrary:
+                {
+                    LibraryNode *lib = dynamic_cast<LibraryNode*>(n);
+                    assert(lib);
+                    //load all images and create representation
+                    for(size_t i = 0; i < lib->mImages.size(); ++i)
+                    {
+                        Image* im = lib->mImages[i];
+                        if(im->mFilenamePath == iFilenamePath)
+                        {
+                            imageFound = im;
+                        }
+                    }
+                } break;
+                default: break;
+            }
+        }
+    }
+    
+    printf("temps pour Scene::findImage: %.4f(sec)\n", __t.getElapsed());
+    return imageFound;
+}
+
+//------------------------------------------------------------------------------
 IGraphicNode* Scene::getRoot() const
 { return mpRoot; }
 
@@ -225,12 +323,20 @@ void Scene::loadLibraries(IGraphicNode* iNode)
                         Image* im = lib->mImages[i];
                         if( !im->isLoaded() )
                         {
-                            im->load();
+                            //sdfsdfasdf
+//                            FileStreamer& fs = mpHub->getFileStreamer();
+//                            FileStreamer::Request *r = new FileStreamer::Request(this);
+//                            r->mRequestType = FileStreamer::rtLoadRgbImage;
+//                            r->mFilenamePath = im->mFilenamePath;
+//                            fs.postRequest(r);
                             
-                            //
-                            addToTextureLibrary(im);
+//                            im->load();
+//                            
+//                            //
+//                            addToTextureLibrary(im);
+//                            
+//                            im->unload();
                             
-                            im->unload();
                             //--- save image to disk.
                             //QImage::Format f;
                             //if(im->mNumberOfChannels == 1)
@@ -258,7 +364,6 @@ void Scene::loadLibraries(IGraphicNode* iNode)
     
     printf("temps pour Scene::loadLibraries: %.4f(sec)\n", __t.getElapsed());
 }
-
 
 //----------------------------------------
 void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Representation*> *ipCurrentLayer)
@@ -296,6 +401,13 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
             if(mn->isVisible())
             { ipCurrentLayer->push_back( itModel->second ); }
         }
+        else
+        {
+            // this model does not have a representation, lets
+            // put it in the list of the ones that need a rep creation...
+            //
+            mNeedsRepresentationCreation.push_back(mn);
+        }
     }
 
     // recurse on all childs
@@ -312,8 +424,34 @@ void Scene::performCulling(IGraphicNode* iNode)
 }
 
 //----------------------------------------
+void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
+{
+    FileStreamer::DoneRequest *dr = (FileStreamer::DoneRequest *)ipMessage;
+    printf("Scene::processFileLoadingDoneMessage %s\n",
+           dr->mFilenamePath.c_str() );
+    
+    RgbImageLoader *loadedIm = (RgbImageLoader*)dr->mpData;
+    
+    // fin the image that correspond to the filename because
+    // ids have already been assigned...
+    Image *im = findImage(dr->mFilenamePath);
+    
+    if(loadedIm)
+    {
+        im->mpPayload = loadedIm->giveOwnershipOfImageData();
+        addToTextureLibrary(im);
+        im->unload();
+    }
+    
+    delete loadedIm;
+}
+
+//----------------------------------------
 void Scene::update()
 {
+    //process fileStreamingDoneQueue
+    mFileLoadingDoneQueue.processMessages();
+    
     for(size_t i = 0; i < mNeedsTransformUpdate.size(); ++i)
     {
         updateTransform(&mRenderableFilter);
@@ -322,7 +460,7 @@ void Scene::update()
     
     for(size_t i = 0; i < mNeedsRepresentationCreation.size(); ++i)
     {
-        loadLibraries(mNeedsRepresentationCreation[i]);
+//        loadLibraries(mNeedsRepresentationCreation[i]);
         createRepresentations(mNeedsRepresentationCreation[i]);
     }
     mNeedsRepresentationCreation.clear();
