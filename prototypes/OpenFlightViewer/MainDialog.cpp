@@ -176,6 +176,7 @@ mTimerId(0)
     mpToolsWidget->setWindowTitle("Tools");
     {
         QWidget *pToolsWidget = new QWidget(mpToolsWidget);
+        pToolsWidget->resize(400, 900);
         QHBoxLayout *pHbox = new QHBoxLayout(pToolsWidget);
         {
             mpNavigator = new QTreeWidget(mpToolsWidget);
