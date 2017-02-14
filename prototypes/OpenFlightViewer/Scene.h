@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "Hub.h"
+#include "MessageQueue.h"
 #include <unordered_map>
 #include <vector>
 
@@ -18,15 +20,17 @@ namespace Representations
 class Scene
 {
 public:
-    Scene();
+    explicit Scene(Hub* ipHub);
     Scene(const Scene&) = delete;
     Scene& operator=(const Scene&) = delete;
     ~Scene();
 
     void addNode(IGraphicNode*);
     void clear();
-    void update();
+    Image* findImage(const std::string& iFilenamePath);
     IGraphicNode* getRoot() const;
+    void update();
+
 
     // ca serait plaisant d'avoir un genre d'iterateur
     // sur les nodes... au lieu de faire un parcour de
@@ -59,21 +63,25 @@ protected:
 
     
 void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
-    void createRepresentations(IGraphicNode*);
-    Representations::Model* checkAndCreateRepresentation(ModelNode*);
+    void createRepresentations(ModelNode*);
+//    void checkAndCreateRepresentation(ModelNode*);
     void loadLibraries(IGraphicNode*);
+    Image* findImage(const std::string& iFilenamePath, IGraphicNode* ipNode);
     void filterRenderables(IGraphicNode*);
     void performCulling(IGraphicNode*);
     void prepareFrame(IGraphicNode*, std::vector<Representations::Representation*> *ipCurrentLayer );
+    void processFileLoadingDoneMessage(MessageQueue::Message*);
     void updateTransform(Filter*);
     
     //data
-    IGraphicNode* mpRoot;
+    Hub *mpHub;
+    IGraphicNode *mpRoot;
+    MessageQueue mFileLoadingDoneQueue;
     
     std::unordered_map<unsigned int, Representations::Representation*> mDefinitionIdToRepresentation;
     std::unordered_map<unsigned int, realisim::treeD::Texture> mImageIdToTexture;
     
-    std::vector<IGraphicNode*> mNeedsRepresentationCreation;
+    std::vector<ModelNode*> mNeedsRepresentationCreation;
     std::vector<IGraphicNode*> mNeedsTransformUpdate;
     
     Filter mRenderableFilter;

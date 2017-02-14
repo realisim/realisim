@@ -5,6 +5,7 @@
 #include <iostream>
 #include "openFlight/DotExporter.h"
 #include "openFlight/OpenFlightReader.h"
+#include "ImageLoader.h"
 #include "utils/Timer.h"
 
 using namespace std;
@@ -52,9 +53,22 @@ IGraphicNode* FileStreamer::loadFlt(const std::string &iFilenamePath)
 }
 
 //------------------------------------------------------------------------------
+RgbImageLoader* FileStreamer::loadRgbImage(const std::string& iFilenamePath)
+{
+    RgbImageLoader *im = new RgbImageLoader();
+    im->setFilenamePath(iFilenamePath);
+    im->load();
+    return im;
+}
+
+//------------------------------------------------------------------------------
 void FileStreamer::postRequest(FileStreamer::Request *iRequest)
 {
-    mRequestQueue.post(iRequest);
+    // do not insert the same file twice...
+    auto it = mPendingFileRequests.insert(iRequest->mFilenamePath);
+    
+    if(it.second == true)
+    { mRequestQueue.post(iRequest); }
 }
 
 //------------------------------------------------------------------------------
@@ -76,7 +90,7 @@ void FileStreamer::processMessage(MessageQueue::Message* ipRequest)
     switch (r->mRequestType)
     {
         case rtLoadFlt: dataPtr = loadFlt(r->mFilenamePath); break;
-        //case rtLoadRgbImage: dataPtr = loadRgbImage(r->mFilenamePath); break;
+        case rtLoadRgbImage: dataPtr = loadRgbImage(r->mFilenamePath); break;
         default: break;
     }
     
@@ -90,6 +104,13 @@ void FileStreamer::processMessage(MessageQueue::Message* ipRequest)
         d->mFilenamePath = r->mFilenamePath;
         d->mpData = dataPtr;
         it->second->post( d );
+    }
+    
+    //remove request from unique file request
+    auto itToErase = mPendingFileRequests.find(r->mFilenamePath);
+    if(itToErase != mPendingFileRequests.end())
+    {
+        mPendingFileRequests.erase(itToErase);
     }
 }
 

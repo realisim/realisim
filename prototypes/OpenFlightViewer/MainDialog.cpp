@@ -145,11 +145,26 @@ void Viewer::update()
 
 //-----------------------------------------------------------------------------
 MainDialog::MainDialog() : QMainWindow(),
+mHub(),
+mpScene(nullptr),
 mpViewer(0),
 mTimerId(0)
 {
     resize(800, 600);
     
+    //init data
+    
+    // initialise hub
+    mHub.setFileStreamer(&mFileStreamer);
+    mpScene = new Scene(&mHub);
+    
+    //register done queue to fileStreaming
+    using placeholders::_1;
+    mFileLoadingDoneQueue.setProcessingFunction(
+        std::bind( &MainDialog::processFileLoadingDoneMessage, this, _1));
+    mFileStreamer.registerDoneQueue(this, &mFileLoadingDoneQueue);
+    
+    //--- init ui
     QHBoxLayout* pLyt = new QHBoxLayout(this);
     pLyt->setMargin(5);
     mpViewer = new Viewer(this);
@@ -167,7 +182,7 @@ mTimerId(0)
           Point3d(), Vector3d(0, 0, 1) );
     mpViewer->setAbsoluteUpVector(Widget3d::auvZ);
     mpViewer->setCamera( c, false );
-    mpViewer->setScene(&mScene);
+    mpViewer->setScene(mpScene);
     
     //--- tools widget
     mpToolsWidget = new QDockWidget(this);
@@ -191,12 +206,6 @@ mTimerId(0)
     }
 
     createMenus();
-    
-    //register done queue to fileStreaming
-    using placeholders::_1;
-    mFileLoadingDoneQueue.setProcessingFunction(
-        std::bind( &MainDialog::processFileLoadingDoneMessage, this, _1));
-    mFileStreamer.registerDoneQueue(this, &mFileLoadingDoneQueue);
     
     mTimerId = startTimer(15);
 }
@@ -250,7 +259,7 @@ void MainDialog::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
     
     switch(d->mRequestType)
     {
-        case FileStreamer::rtLoadFlt: mScene.addNode((IGraphicNode *)d->mpData ); break;
+        case FileStreamer::rtLoadFlt: mpScene->addNode((IGraphicNode *)d->mpData ); break;
         default: break;
     }
     
@@ -276,7 +285,7 @@ void MainDialog::navigatorItemActivated(QTreeWidgetItem *ipItem, int iColumn)
 //-----------------------------------------------------------------------------
 void MainDialog::newFile()
 {
-    mScene.clear();
+    mpScene->clear();
     refreshNavigator();
     update();
 }
@@ -287,7 +296,7 @@ void MainDialog::refreshNavigator()
     mpNavigator->clear();
     mNavigatorItemToGraphicNode.clear();
     
-    IGraphicNode *pRoot = mScene.getRoot();
+    IGraphicNode *pRoot = mpScene->getRoot();
 
     refreshNavigator(pRoot, nullptr);
 }
@@ -336,7 +345,7 @@ void MainDialog::timerEvent(QTimerEvent *ipE)
     {
         mFileLoadingDoneQueue.processNextMessage();
         
-        mScene.update();
+        mpScene->update();
         
         mpViewer->update();
     }
