@@ -336,8 +336,9 @@ void MainDialog::toggleFreeRunning()
 {
     mFreeRunning = !mFreeRunning;
 
+#ifdef WIN32
     wglSwapIntervalEXT(mFreeRunning ? 0 : 1);
-
+#endif
     killTimer(mTimerId);
     mTimerId = mFreeRunning ? startTimer(0) : startTimer(15);
 }
