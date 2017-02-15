@@ -294,77 +294,6 @@ Image* Scene::findImage(const std::string &iFilenamePath, IGraphicNode* ipNode)
 IGraphicNode* Scene::getRoot() const
 { return mpRoot; }
 
-//------------------------------------------------------------------------------
-void Scene::loadLibraries(IGraphicNode* iNode)
-{
-    realisim::utils::Timer __t;
-    
-    if(iNode != nullptr)
-    {
-        deque<IGraphicNode*> q;
-        q.push_back(iNode);
-        while(!q.empty())
-        {
-            IGraphicNode* n = q.front();
-            q.pop_front();
-            
-            for(int i = 0; i < n->mChilds.size(); ++i)
-            { q.push_back(n->mChilds[i]); }
-            
-            switch (n->mNodeType)
-            {
-                case IGraphicNode::ntLibrary:
-                {
-                    LibraryNode *lib = dynamic_cast<LibraryNode*>(n);
-                    assert(lib);
-                    //load all images and create representation
-                    for(size_t i = 0; i < lib->mImages.size(); ++i)
-                    {
-                        Image* im = lib->mImages[i];
-                        if( !im->isLoaded() )
-                        {
-                            //sdfsdfasdf
-//                            FileStreamer& fs = mpHub->getFileStreamer();
-//                            FileStreamer::Request *r = new FileStreamer::Request(this);
-//                            r->mRequestType = FileStreamer::rtLoadRgbImage;
-//                            r->mFilenamePath = im->mFilenamePath;
-//                            fs.postRequest(r);
-                            
-//                            im->load();
-//                            
-//                            //
-//                            addToTextureLibrary(im);
-//                            
-//                            im->unload();
-                            
-                            //--- save image to disk.
-                            //QImage::Format f;
-                            //if(im->mNumberOfChannels == 1)
-                            //{ continue; }
-                            //
-                            //assert(im->mNumberOfChannels != 2);
-                            //if(im->mNumberOfChannels == 3)
-                            //    f = QImage::Format_RGB888;
-                            //if(im->mNumberOfChannels == 4)
-                            //    f = QImage::Format_RGBA8888;
-                            //QImage qim(im->mpPayload,
-                            //          im->mWidth,
-                            //          im->mHeight,
-                            //          f);
-
-                            //QString name = "./testImage_" + QString::number(i) + ".png";
-                            //qim.save(name, "PNG");
-                        }
-                    }
-                } break;
-                default: break;
-            }
-        }
-    }
-    
-    printf("temps pour Scene::loadLibraries: %.4f(sec)\n", __t.getElapsed());
-}
-
 //----------------------------------------
 void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Representation*> *ipCurrentLayer)
 {
@@ -435,10 +364,26 @@ void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
     // fin the image that correspond to the filename because
     // ids have already been assigned...
     Image *im = findImage(dr->mFilenamePath);
-    
-    if(loadedIm)
+    assert(im);
+    if(loadedIm->isValid())
     {
         im->mpPayload = loadedIm->giveOwnershipOfImageData();
+        addToTextureLibrary(im);
+        im->unload();
+    }
+    else
+    {
+        // loaded image is not valid... maybe not present or else...
+        // lets replace it by a dummy image...
+        im->mWidth = 64;
+        im->mHeight = 64;
+        im->mNumberOfChannels = 3;
+        im->mBitsPerChannel = 8;
+        im->mSizeInBytes = im->mWidth * im->mHeight * im->mNumberOfChannels * im->mBitsPerChannel / 8;
+        unsigned char *payload = new unsigned char[im->mSizeInBytes];
+        memset(payload, 255, im->mSizeInBytes);
+        im->mpPayload = payload;
+
         addToTextureLibrary(im);
         im->unload();
     }
@@ -460,7 +405,6 @@ void Scene::update()
     
     for(size_t i = 0; i < mNeedsRepresentationCreation.size(); ++i)
     {
-//        loadLibraries(mNeedsRepresentationCreation[i]);
         createRepresentations(mNeedsRepresentationCreation[i]);
     }
     mNeedsRepresentationCreation.clear();

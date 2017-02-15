@@ -65,7 +65,6 @@ protected:
 void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     void createRepresentations(ModelNode*);
 //    void checkAndCreateRepresentation(ModelNode*);
-    void loadLibraries(IGraphicNode*);
     Image* findImage(const std::string& iFilenamePath, IGraphicNode* ipNode);
     void filterRenderables(IGraphicNode*);
     void performCulling(IGraphicNode*);
