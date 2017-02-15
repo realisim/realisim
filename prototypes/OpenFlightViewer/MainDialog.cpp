@@ -255,7 +255,7 @@ void MainDialog::openFile()
 //-----------------------------------------------------------------------------
 void MainDialog::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
 {
-    FileStreamer::DoneRequest *d = (FileStreamer::DoneRequest *)ipMessage;
+    FileStreamer::Request *d = (FileStreamer::Request *)ipMessage;
     printf("MainDialog - file %s was loaded\n", d->mFilenamePath.c_str());
     
     switch(d->mRequestType)

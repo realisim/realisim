@@ -16,6 +16,8 @@ public:
     ~FileStreamer() = default;
 
     enum requestType{ rtUndefined, rtLoadFlt, rtLoadRgbImage };
+    
+    // probably should be renamed to FileStreamer::Message...
     class Request : public MessageQueue::Message
     {
     public:
@@ -27,19 +29,7 @@ public:
         
         requestType mRequestType;
         std::string mFilenamePath;
-    };
-
-    class DoneRequest : public MessageQueue::Message
-    {
-    public:
-        DoneRequest() = delete;
-        DoneRequest(void *ipSender);
-        DoneRequest(const DoneRequest&) = delete;
-        DoneRequest& operator=(const DoneRequest&) = delete;
-        ~DoneRequest() = default;
-        
-        requestType mRequestType;
-        std::string mFilenamePath;
+        unsigned int mAffectedDefinitionId;
         void* mpData;
     };
 

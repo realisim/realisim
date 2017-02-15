@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "Definitions.h"
 #include "Hub.h"
 #include "MessageQueue.h"
 #include <unordered_map>
@@ -27,7 +28,6 @@ public:
 
     void addNode(IGraphicNode*);
     void clear();
-    Image* findImage(const std::string& iFilenamePath);
     IGraphicNode* getRoot() const;
     void update();
 
@@ -62,11 +62,12 @@ protected:
     };
 
     
+    void addToDefinitionMap(IGraphicNode*);
 void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     void createRepresentations(ModelNode*);
 //    void checkAndCreateRepresentation(ModelNode*);
     void loadLibraries(IGraphicNode*);
-    Image* findImage(const std::string& iFilenamePath, IGraphicNode* ipNode);
+    IDefinition* findDefinition(unsigned int);
     void filterRenderables(IGraphicNode*);
     void performCulling(IGraphicNode*);
     void prepareFrame(IGraphicNode*, std::vector<Representations::Representation*> *ipCurrentLayer );
@@ -78,6 +79,7 @@ void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     IGraphicNode *mpRoot;
     MessageQueue mFileLoadingDoneQueue;
     
+    std::unordered_map<unsigned int, IDefinition*> mIdToDefinition;
     std::unordered_map<unsigned int, Representations::Representation*> mDefinitionIdToRepresentation;
     std::unordered_map<unsigned int, realisim::treeD::Texture> mImageIdToTexture;
     

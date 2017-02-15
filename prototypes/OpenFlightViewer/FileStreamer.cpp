@@ -93,15 +93,15 @@ void FileStreamer::processMessage(MessageQueue::Message* ipRequest)
         case rtLoadRgbImage: dataPtr = loadRgbImage(r->mFilenamePath); break;
         default: break;
     }
-    
-    
+        
     //write into the requester done queue, if it was registered
     auto it = mSenderToDoneQueue.find( r->mpSender );
     if( it != mSenderToDoneQueue.end() )
     {
-        DoneRequest *d = new DoneRequest(this);
+        Request *d = new Request(this);
         d->mRequestType = r->mRequestType;
         d->mFilenamePath = r->mFilenamePath;
+        d->mAffectedDefinitionId = r->mAffectedDefinitionId;
         d->mpData = dataPtr;
         it->second->post( d );
     }
@@ -132,18 +132,8 @@ string FileStreamer::toString(requestType iRt)
 FileStreamer::Request::Request(void* ipSender) :
 MessageQueue::Message(ipSender),
 mRequestType(rtUndefined),
-mFilenamePath("")
-{
-    
-}
-
-//------------------------------------------------------------------------------
-//--- FileStreamer::DoneRequest
-//------------------------------------------------------------------------------
-FileStreamer::DoneRequest::DoneRequest(void* ipSender) :
-MessageQueue::Message(ipSender),
-mRequestType(rtUndefined),
 mFilenamePath(""),
+mAffectedDefinitionId(0),
 mpData(nullptr)
 {
     

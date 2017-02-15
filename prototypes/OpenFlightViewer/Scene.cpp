@@ -26,10 +26,10 @@ mpRoot(nullptr)
 //----------------------------------------
 Scene::~Scene()
 {
+    clear();
+    
     if(mpRoot)
     { delete mpRoot; }
-    
-    mDefinitionIdToRepresentation.clear();
 }
 
 //------------------------------------------------------------------------------
@@ -40,6 +40,9 @@ void Scene::addNode(IGraphicNode* iNode)
     
     mpRoot->mChilds.push_back(iNode);
     
+    //populate the id to definition map
+    addToDefinitionMap(iNode);
+    
     filterRenderables(iNode);
     
 //    appliquer les filtres sur interfaces ici afin de creer les sous
@@ -49,6 +52,40 @@ void Scene::addNode(IGraphicNode* iNode)
     
 //mNeedsRepresentationCreation.push_back(iNode);
     mNeedsTransformUpdate.push_back(iNode);
+}
+
+//------------------------------------------------------------------------------
+void Scene::addToDefinitionMap(IGraphicNode *iNode)
+{
+    if(iNode == nullptr) return;
+    
+    switch (iNode->mNodeType)
+    {
+        // tte library contains all the images...
+        case IGraphicNode::ntLibrary:
+        {
+            LibraryNode* ln = dynamic_cast<LibraryNode*>(iNode);
+            assert(ln);
+            for(size_t i = 0; i < ln->mImages.size(); ++i)
+            {
+                Image *im = ln->mImages[i];
+                auto it = mIdToDefinition.insert( make_pair(im->mId, im) );
+                // just validate that there is no duplicate...
+                // if there is a duplicate we should understand why..
+                // It could be possible if we reuse nodes, but in that case
+                // nodes should have a refcount, so only the last deleted instance
+                // frees up memory...
+                assert(it.second);
+            }
+            
+        }break;
+        default: break;
+    }
+    
+    for(size_t i = 0; i < iNode->mChilds.size(); ++i)
+    {
+        addToDefinitionMap(iNode->mChilds[i]);
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -127,6 +164,8 @@ void Scene::clear()
     {
         delete it->second;
     }
+    
+    mIdToDefinition.clear();
     mDefinitionIdToRepresentation.clear();
     mImageIdToTexture.clear();
     
@@ -167,6 +206,7 @@ void Scene::createRepresentations(ModelNode *iNode)
                     FileStreamer::Request *r = new FileStreamer::Request(this);
                     r->mRequestType = FileStreamer::rtLoadRgbImage;
                     r->mFilenamePath = im->mFilenamePath;
+                    r->mAffectedDefinitionId = im->mId;
                     fs.postRequest(r);
                 }
             }
@@ -242,52 +282,10 @@ void Scene::filterRenderables(IGraphicNode* iNode)
 }
 
 //------------------------------------------------------------------------------
-Image* Scene::findImage(const std::string &iFilenamePath)
+IDefinition* Scene::findDefinition(unsigned int iId)
 {
-    return findImage(iFilenamePath, getRoot());
-}
-
-//------------------------------------------------------------------------------
-Image* Scene::findImage(const std::string &iFilenamePath, IGraphicNode* ipNode)
-{
-    realisim::utils::Timer __t;
-    Image* imageFound = nullptr;
-    
-    if(ipNode != nullptr)
-    {
-        deque<IGraphicNode*> q;
-        q.push_back(ipNode);
-        while(!q.empty() && imageFound == nullptr)
-        {
-            IGraphicNode* n = q.front();
-            q.pop_front();
-            
-            for(int i = 0; i < n->mChilds.size(); ++i)
-            { q.push_back(n->mChilds[i]); }
-            
-            switch (n->mNodeType)
-            {
-                case IGraphicNode::ntLibrary:
-                {
-                    LibraryNode *lib = dynamic_cast<LibraryNode*>(n);
-                    assert(lib);
-                    //load all images and create representation
-                    for(size_t i = 0; i < lib->mImages.size(); ++i)
-                    {
-                        Image* im = lib->mImages[i];
-                        if(im->mFilenamePath == iFilenamePath)
-                        {
-                            imageFound = im;
-                        }
-                    }
-                } break;
-                default: break;
-            }
-        }
-    }
-    
-    printf("temps pour Scene::findImage: %.4f(sec)\n", __t.getElapsed());
-    return imageFound;
+    auto it = mIdToDefinition.find(iId);
+    return it != mIdToDefinition.end() ? it->second : nullptr;
 }
 
 //------------------------------------------------------------------------------
@@ -426,21 +424,26 @@ void Scene::performCulling(IGraphicNode* iNode)
 //----------------------------------------
 void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
 {
-    FileStreamer::DoneRequest *dr = (FileStreamer::DoneRequest *)ipMessage;
+    FileStreamer::Request *r = (FileStreamer::Request *)ipMessage;
     printf("Scene::processFileLoadingDoneMessage %s\n",
-           dr->mFilenamePath.c_str() );
+           r->mFilenamePath.c_str() );
     
-    RgbImageLoader *loadedIm = (RgbImageLoader*)dr->mpData;
+    RgbImageLoader *loadedIm = (RgbImageLoader*)r->mpData;
     
     // fin the image that correspond to the filename because
     // ids have already been assigned...
-    Image *im = findImage(dr->mFilenamePath);
+    IDefinition* def = findDefinition(r->mAffectedDefinitionId);
+    Image *im = dynamic_cast<Image*>(def);
     
-    if(loadedIm)
+    if(loadedIm && im)
     {
         im->mpPayload = loadedIm->giveOwnershipOfImageData();
         addToTextureLibrary(im);
         im->unload();
+    }
+    else
+    {
+        assert(false && "image was not loaded or definition was not found...");
     }
     
     delete loadedIm;
