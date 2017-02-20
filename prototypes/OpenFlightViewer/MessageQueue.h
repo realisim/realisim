@@ -1,5 +1,6 @@
 #pragma once
 
+#include <condition_variable>
 #include <deque>
 #include <functional>
 #include <mutex>
@@ -47,6 +48,8 @@ protected:
     std::thread mThread;
     std::deque<Message*> mQueue;
     mutable std::recursive_mutex mMutex;
+    std::mutex mWaitConditionMutex;
+    std::condition_variable mQueueNotEmptyCondition;
     state mState;
     std::function<void(Message*)> mProcessingFunction;
 };

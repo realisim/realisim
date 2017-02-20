@@ -94,7 +94,7 @@ void Image::load()
 {
     //check file extension for the correct imageLoader..
     //here we assume it is RGB
-    RgbImageLoader il;
+    RgbImage il;
     il.setFilenamePath(mFilenamePath);
     il.load();
     mWidth = il.getPixelSizeX();
@@ -110,7 +110,7 @@ void Image::loadMetaData()
 {
     //check file extension for the correct imageLoader..
     //here we assume it is RGB
-    RgbImageLoader il;
+    RgbImage il;
     il.setFilenamePath(mFilenamePath);
     il.loadHeader();
     mWidth = il.getPixelSizeX();
@@ -125,7 +125,7 @@ void Image::unload()
 {
     if(mpPayload)
     {
-        delete mpPayload;
+        delete[] mpPayload;
         mpPayload = nullptr;
     }
 }

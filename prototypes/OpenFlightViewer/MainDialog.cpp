@@ -209,6 +209,17 @@ mTimerId(0)
 
     createMenus();
     
+//{
+//        MessageQueue mq;
+//        mq.startInThread();
+//        std::this_thread::sleep_for( std::chrono::seconds(4) );
+//        mq.post( new MessageQueue::Message(this) );
+//        mq.post( new MessageQueue::Message(this) );
+//        mq.post( new MessageQueue::Message(this) );
+//        mq.post( new MessageQueue::Message(this) );
+//        std::this_thread::sleep_for( std::chrono::seconds(2) );
+//}
+
     mTimerId = startTimer(15);
 }
 
@@ -256,8 +267,8 @@ void MainDialog::openFile()
 //-----------------------------------------------------------------------------
 void MainDialog::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
 {
-    FileStreamer::DoneRequest *d = (FileStreamer::DoneRequest *)ipMessage;
-    printf("MainDialog - file %s was loaded\n", d->mFilenamePath.c_str());
+    FileStreamer::Request *d = (FileStreamer::Request *)ipMessage;
+    printf("MainDialog - file %s was loaded\r", d->mFilenamePath.c_str());
     
     switch(d->mRequestType)
     {

@@ -26,6 +26,13 @@ MessageQueue::~MessageQueue()
 void MessageQueue::clear()
 {
     mMutex.lock();
+
+    //delete all message in queue
+    for (size_t i = 0; i < mQueue.size(); ++i)
+    {
+        delete mQueue[i];
+    }
+
     mQueue.clear();
     mMutex.unlock();
 }
@@ -60,22 +67,32 @@ void MessageQueue::threadLoop()
     // have a wait condition when the queue is empty so we don't waste cpu.
     // wait will stop when a message is posted...
     
-    while( getNumberOfMessageInQueue() > 0 || getState() == sRunning )
+    while( getState() == sRunning )
     {
+        // The queue is empty...
+        // wait until someonce post a message
+        //
+        // We also check that state is running to enable method stopThread() to
+        // wake up the thread to join it even if the queue is empty. 
+        //
+        // Simply put: wake up if queue is not empty or if state is stopping.
+        //
+        std::unique_lock<std::mutex> lk(mWaitConditionMutex);
+        mQueueNotEmptyCondition.wait(lk, [this](){return !mQueue.empty() || getState() == sStopping;}) ; 
+
         processNextMessage();
     }
-    
-    setState(sIdle);
 }
 
 //------------------------------------------------------------------------------
 void MessageQueue::post( Message* iM )
 {
     // the queue will not accept messages when a request to stop
-    // has been issued. Else it would never terminate...
+    // has been issued. Else it would never terminate when stopThread() is called...
     //
     if(getState() != sStopping)
     {
+        mQueueNotEmptyCondition.notify_one();
         mMutex.lock();
         mQueue.push_back(iM);
         mMutex.unlock();
@@ -101,9 +118,9 @@ void MessageQueue::processNextMessage()
         Message *m = mQueue.front();
         mQueue.pop_front();
         mMutex.unlock();
-        
+
         mProcessingFunction(m);
-        
+
         delete m;
     }
 }
@@ -140,20 +157,25 @@ void MessageQueue::startInThread()
     if(getState() != sIdle) return;
     
     mMutex.lock();
-    mThread = std::thread(&MessageQueue::threadLoop, this);
-    
     setState(sRunning);
+    mThread = std::thread(&MessageQueue::threadLoop, this);
     mMutex.unlock();
 }
 
 //------------------------------------------------------------------------------
+// This will stop the thread but will treat all message still in the queue
+// before stopping the thread
+//
 void MessageQueue::stopThread()
 {
     if(mThread.joinable())
     {
         assert(getState() == sRunning && "If we are not in running state, it means we have a state issue...");
         setState(sStopping);
+
+        mQueueNotEmptyCondition.notify_one();
         mThread.join(); //wait till end of execution
+        setState(sIdle);
     }
 }
 

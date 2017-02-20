@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "Definitions.h"
 #include "Hub.h"
 #include "MessageQueue.h"
 #include <unordered_map>
@@ -27,7 +28,6 @@ public:
 
     void addNode(IGraphicNode*);
     void clear();
-    Image* findImage(const std::string& iFilenamePath);
     IGraphicNode* getRoot() const;
     void update();
 
@@ -47,41 +47,39 @@ public:
     std::map<int, std::vector<Representations::Representation*> > mLayers;
     
 protected:
-    class Filter
+
+    struct Path
     {
-    public:
-        Filter();
-        ~Filter();
-        
-        void addChild(IRenderable*);
-        Filter* find(IRenderable*);
-        
-        IRenderable *mpData;
-        Filter *mpParent;
-        std::vector<Filter*> mChilds;
+        Path() = delete;
+        explicit Path(IGraphicNode*);
+        Path(const Path&) = delete;
+        Path& operator=(const Path&) = delete;
+        ~Path() = default;
+
+        std::vector<IGraphicNode*> mParents;
     };
 
-    
+    void addToDefinitionMap(IGraphicNode*);
 void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     void createRepresentations(ModelNode*);
-//    void checkAndCreateRepresentation(ModelNode*);
-    Image* findImage(const std::string& iFilenamePath, IGraphicNode* ipNode);
-    void filterRenderables(IGraphicNode*);
+//    void checkAndCreateRepresentation(ModelNode*)
+    IDefinition* findDefinition(unsigned int);
+    //void filterRenderables(IGraphicNode*);
     void performCulling(IGraphicNode*);
     void prepareFrame(IGraphicNode*, std::vector<Representations::Representation*> *ipCurrentLayer );
     void processFileLoadingDoneMessage(MessageQueue::Message*);
-    void updateTransform(Filter*);
+    void updateTransform(IGraphicNode*);
+    void updateTransform(IGraphicNode*, math::Matrix4 iParentTransform);
     
     //data
     Hub *mpHub;
     IGraphicNode *mpRoot;
     MessageQueue mFileLoadingDoneQueue;
     
+    std::unordered_map<unsigned int, IDefinition*> mIdToDefinition;
     std::unordered_map<unsigned int, Representations::Representation*> mDefinitionIdToRepresentation;
     std::unordered_map<unsigned int, realisim::treeD::Texture> mImageIdToTexture;
     
     std::vector<ModelNode*> mNeedsRepresentationCreation;
     std::vector<IGraphicNode*> mNeedsTransformUpdate;
-    
-    Filter mRenderableFilter;
 };
