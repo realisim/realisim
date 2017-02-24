@@ -3,6 +3,7 @@
 
 class MainDialog;
 class FileStreamer;
+class GpuStreamer;
 
 class Hub
 {
@@ -18,9 +19,12 @@ public:
     friend class MainDialog;
 
     FileStreamer& getFileStreamer();
+    GpuStreamer& getGpuStreamer();
 
 private:
     void setFileStreamer(FileStreamer*);
+    void setGpuStreamer(GpuStreamer*);
     
-    FileStreamer* mpFileStreamer; 
+    FileStreamer *mpFileStreamer;
+    GpuStreamer *mpGpuStreamer;
 };

@@ -1,6 +1,7 @@
 
 #include <cassert>
 #include "FileStreamer.h"
+#include "GpuStreamer.h"
 #include "Hub.h"
 
 
@@ -21,8 +22,20 @@ FileStreamer& Hub::getFileStreamer()
 }
 
 //-----------------------------------------------------------------------------
+GpuStreamer& Hub::getGpuStreamer()
+{
+    assert(mpGpuStreamer != nullptr);
+    return *mpGpuStreamer;
+}
+//-----------------------------------------------------------------------------
 void Hub::setFileStreamer(FileStreamer* ipStreamer)
 {
     mpFileStreamer = ipStreamer;
+}
+
+//-----------------------------------------------------------------------------
+void Hub::setGpuStreamer(GpuStreamer* ipStreamer)
+{
+    mpGpuStreamer = ipStreamer;
 }
 

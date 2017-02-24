@@ -11,6 +11,7 @@
 #define MainDialog_hh
 
 #include "FileStreamer.h"
+#include "GpuStreamer.h"
 #include "Hub.h"
 #include "MessageQueue.h"
 #include <QDockWidget>
@@ -65,6 +66,7 @@ protected:
     void createMenus();
     virtual void keyPressEvent(QKeyEvent*) override;
     void processFileLoadingDoneMessage(MessageQueue::Message*);
+    void processGpuUploadDoneMessage(MessageQueue::Message*);
     void timerEvent(QTimerEvent*) override;
     void toggleFreeRunning();
     void refreshNavigator();
@@ -73,6 +75,7 @@ protected:
     
     // ui
     Viewer* mpViewer;
+    QGLContext* mpGpuStreamerGLContext;
     QDockWidget* mpToolsWidget;
     QTreeWidget* mpNavigator;
     std::map<QTreeWidgetItem*, IGraphicNode*> mNavigatorItemToGraphicNode; //this should be done with model/view from qt... but doing this quickly...
@@ -85,7 +88,9 @@ protected:
   
     //threading
     FileStreamer mFileStreamer;
+    GpuStreamer mGpuStreamer;
     MessageQueue mFileLoadingDoneQueue;
+    MessageQueue mGpuUploadDoneQueue;
 };
 
 #endif

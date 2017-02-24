@@ -84,7 +84,7 @@ void FileStreamer::processMessage(MessageQueue::Message* ipRequest)
 {
     Request *r = (Request*)(ipRequest);
     
-    printf("FileStreamer processing message to load %s with filenamepath %s.\r",
+    printf("FileStreamer processing message to load %s with filenamepath %s.\n",
            toString(r->mRequestType).c_str(),
            r->mFilenamePath.c_str() );
     

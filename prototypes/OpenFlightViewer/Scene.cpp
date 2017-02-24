@@ -359,8 +359,8 @@ void Scene::performCulling(IGraphicNode* iNode)
 void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
 {
     FileStreamer::Request *r = (FileStreamer::Request *)ipMessage;
-    printf("Scene::processFileLoadingDoneMessage %s\r",
-           r->mFilenamePath.c_str() );
+    /*printf("Scene::processFileLoadingDoneMessage %s\n",
+           r->mFilenamePath.c_str() );*/
     
     RgbImage *loadedIm = (RgbImage*)r->mpData;
     
