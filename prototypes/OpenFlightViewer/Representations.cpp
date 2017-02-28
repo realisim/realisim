@@ -54,20 +54,6 @@ mTextureLibrary(iTextureLibrary)
     
     glNewList(mDisplayList, GL_COMPILE);
     
-    // textures...
-    int textureId = 0;
-    if(mpModel->mFaces.size() > 0)
-    {
-        const Face* f = mpModel->mFaces[0];
-        
-        if(f->mpMaterial && f->mpMaterial->mpImage)
-        {
-            auto it = mTextureLibrary.find(f->mpMaterial->mpImage->mId);
-            if(it != mTextureLibrary.end())
-            { textureId = it->second.getId(); }
-        }
-    }
-    
     
 //    const Face* f = mpModel->mFaces[0];
 //    if(f->mpMaterial && f->mpMaterial->mpImage )
@@ -102,15 +88,29 @@ mTextureLibrary(iTextureLibrary)
 //}
 //    }
     
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textureId);
+    
     
     // meshes...
     
     // faces...
+    int textureId = 0;
     for(size_t i = 0; i < mpModel->mFaces.size(); ++i)
     {
         const Face* f = mpModel->mFaces[i];
+
+        // textures can change on each faces, we should sort the faces per texture so we 
+        //minimize the texture change...
+        //
+        if(f->mpMaterial && f->mpMaterial->mpImage)
+        {
+            auto it = mTextureLibrary.find(f->mpMaterial->mpImage->mId);
+            if(it != mTextureLibrary.end() && textureId != it->second.getId())
+            { 
+                textureId = it->second.getId();
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, textureId);
+            }
+        }
 
         glBegin(GL_POLYGON);
         for(int j = 0; j < f->mVertexIndices.size(); ++j)

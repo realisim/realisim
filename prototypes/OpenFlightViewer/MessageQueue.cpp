@@ -92,10 +92,10 @@ void MessageQueue::post( Message* iM )
     //
     if(getState() != sStopping)
     {
-        mQueueNotEmptyCondition.notify_one();
         mMutex.lock();
         mQueue.push_back(iM);
         mMutex.unlock();
+        mQueueNotEmptyCondition.notify_one();
     }
 }
 

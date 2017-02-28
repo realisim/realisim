@@ -2,6 +2,7 @@
 #include "Definitions.h"
 #include <deque>
 #include "FltImporter.h"
+#include <QFileInfo>
 #include "math/Matrix4.h"
 
 using namespace std;
@@ -206,15 +207,24 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
         TexturePaletteRecord* tpr = ipH->getTexturePalette(i);
         if (tpr != nullptr)
         {
-            Image *image = new Image();
-                        
             // the filename of the texture record must be relative, else,
             // it won't work...
-            image->mFilenamePath = ipH->getFilePath() + tpr->getFilenamePath();
-            image->loadMetaData();
-                        
-            mDefinitionIdToFltRecord.insert( make_pair(image->mId, tpr));
-            library->mImages.push_back(image);
+            // also, lets make it cannonical...
+            QFileInfo fi( QString::fromStdString(ipH->getFilePath() + tpr->getFilenamePath()) );
+            QString cannonical = fi.canonicalFilePath();
+            if (!cannonical.isEmpty())
+            {
+                Image *image = new Image();
+                image->mFilenamePath = cannonical.toStdString();
+                image->loadMetaData();
+
+                mDefinitionIdToFltRecord.insert( make_pair(image->mId, tpr));
+                library->mImages.push_back(image);
+            }
+            else
+            {
+                printf("Image with unreachable path found: %s add warning...\n", fi.filePath().toStdString().c_str());
+            }
         }
     }
     

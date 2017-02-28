@@ -149,7 +149,6 @@ MainDialog::MainDialog() : QMainWindow(),
 mHub(),
 mpScene(nullptr),
 mpViewer(nullptr),
-mpGpuStreamerGLContext(nullptr),
 mTimerId(0)
 {
     resize(800, 600);
@@ -166,12 +165,6 @@ mTimerId(0)
     mFileLoadingDoneQueue.setProcessingFunction(
         std::bind( &MainDialog::processFileLoadingDoneMessage, this, _1));
     mFileStreamer.registerDoneQueue(this, &mFileLoadingDoneQueue);
-
-    // register done queue to GpuStreamer
-    using placeholders::_1;
-    mFileLoadingDoneQueue.setProcessingFunction(
-        std::bind( &MainDialog::processGpuUploadDoneMessage, this, _1));
-    mGpuStreamer.registerDoneQueue(this, &mGpuUploadDoneQueue);
     
     //--- init ui
     QHBoxLayout* pLyt = new QHBoxLayout(this);
@@ -213,23 +206,7 @@ mTimerId(0)
         }
 
         mpToolsWidget->setWidget(pToolsWidget);
-    }
-
-
-    // create a secondary GL context for the gpu streamer
-    mpGpuStreamerGLContext = new QGLContext( mpViewer->format() );
-    if (mpViewer->context()->isValid())
-    {
-        if (mpGpuStreamerGLContext->create(mpViewer->context()))
-        {
-            mGpuStreamer.setGLContext(mpGpuStreamerGLContext);
-        }
-        else
-        { exit(0); }
-    }
-
-    
-    
+    }    
 
     createMenus();
     
@@ -301,19 +278,6 @@ void MainDialog::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
     }
     
     refreshNavigator();
-}
-
-//-----------------------------------------------------------------------------
-void MainDialog::processGpuUploadDoneMessage(MessageQueue::Message* ipMessage)
-{
-    GpuStreamer::Message *d = (GpuStreamer::Message *)ipMessage;
-    printf("MainDialog - gpu has uploaded...\r" );
-
-    //switch(d->mRequestType)
-    //{
-    //case FileStreamer::rtLoadFlt: mpScene->addNode((IGraphicNode *)d->mpData ); break;
-    //default: break;
-    //}
 }
 
 
