@@ -68,6 +68,7 @@ void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     void performCulling(IGraphicNode*);
     void prepareFrame(IGraphicNode*, std::vector<Representations::Representation*> *ipCurrentLayer );
     void processFileLoadingDoneMessage(MessageQueue::Message*);
+    void updateBoundingBoxes(IGraphicNode*);
     void updateTransform(IGraphicNode*);
     void updateTransform(IGraphicNode*, math::Matrix4 iParentTransform);
     

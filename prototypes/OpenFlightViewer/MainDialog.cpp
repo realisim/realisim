@@ -97,7 +97,7 @@ void Viewer::draw()
         glDisable(GL_STENCIL_TEST);
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
-    }
+    }    
 }
 
 //------------------------------------------------------------------------------
@@ -105,9 +105,39 @@ void Viewer::initializeGL()
 {
     Widget3d::initializeGL();
     
+    glClearColor(0.04f, 0.04f, 0.04f, 0.0f);
+
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+
+    glEnable(GL_FRAMEBUFFER_SRGB);
+    glDisable(GL_COLOR_MATERIAL);
+
+    //useful for lights
+    const float aCoeff = 0.2f;
+    const float dCoeff = 0.7f;
+    GLfloat shininess[] = {80.0};
+    GLfloat ambiant[]   = {aCoeff, aCoeff, aCoeff, 1.0f};
+    GLfloat diffuse[]   = {dCoeff, dCoeff, dCoeff, 1.0};
+    GLfloat specular[]  = {0.0, 0.0, 0.0, 1.0};
+
+    const float matACoeff = 0.25f;
+    const float matDCoeff = 0.7f;
+    GLfloat mat_ambiant[] = {matACoeff, matACoeff, matACoeff, 1.0f};
+    GLfloat mat_diffuse[] = {matDCoeff, matDCoeff, matDCoeff, 1.0f};
+    GLfloat mat_specular[]  = {0.0f, 0.0f, 0.0f, 1.0f};
+
+    //define material props
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_ambiant);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_diffuse);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shininess);
+
+    //init lights
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambiant);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
 }
 
 //------------------------------------------------------------------------------
@@ -180,7 +210,7 @@ mTimerId(0)
     proj.mNear = 1.0; //1 m
     proj.mFar = 100000; // 100 km
     c.setProjection(proj);
-    c.set( Point3d(0.0, -10.0, 0.0),
+    c.set( Point3d(0.0, -1000.0, 1000.0),
           Point3d(), Vector3d(0, 0, 1) );
     mpViewer->setAbsoluteUpVector(Widget3d::auvZ);
     mpViewer->setCamera( c, false );
@@ -199,6 +229,8 @@ mTimerId(0)
             mpNavigator->header()->hide();
             mpNavigator->setColumnCount(1);
 
+            connect(mpNavigator, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), 
+                this, SLOT(navigatorCurrentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)) );
             connect(mpNavigator, SIGNAL(itemActivated(QTreeWidgetItem *, int)), 
                 this, SLOT(navigatorItemActivated(QTreeWidgetItem *, int)));
 
@@ -225,6 +257,16 @@ mTimerId(0)
 }
 
 //-----------------------------------------------------------------------------
+void MainDialog::centerCameraOn(realisim::math::Point3d iC)
+{
+    Camera c = mpViewer->getCamera();
+    Point3d e = iC + Vector3d(0.0, -100, 100);
+    c.set( e, iC, Vector3d(0.0, 0.0, 1.0) );
+
+    mpViewer->setCamera(c);
+}
+
+//-----------------------------------------------------------------------------
 void MainDialog::createMenus()
 {
     QMenuBar* pMenuBar = new QMenuBar(this);
@@ -244,6 +286,7 @@ void MainDialog::keyPressEvent(QKeyEvent* ipE)
     switch (ipE->key())
     {
     case Qt::Key_F: toggleFreeRunning(); break;
+    case Qt::Key_C: resetCamera(); break;
     default: break;
     }
 }
@@ -253,7 +296,8 @@ void MainDialog::openFile()
 {
     QStringList filenamePaths = QFileDialog::getOpenFileNames(
         this, tr("Open Flt File"),
-        "../assets/",
+        //"../assets/",
+        "F:/aXion_world/ModelsSrc/airports/omdb",
         tr("Flt (*.flt)"));
 
     for(int i = 0; i < filenamePaths.count(); ++i)
@@ -291,8 +335,31 @@ void MainDialog::navigatorItemActivated(QTreeWidgetItem *ipItem, int iColumn)
         IRenderable* r = dynamic_cast<IRenderable*>(itGraphicNode->second);
         if (r)
         {
-            r->setAsVisible( !r->isVisible() );
+            centerCameraOn( r->getPositionnedAABB().getCenter() );
         }
+    }
+    updateUi();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::navigatorCurrentItemChanged(QTreeWidgetItem *ipCurrent, QTreeWidgetItem *ipPrevious)
+{
+    //find corresponding graphic node
+    auto itCurrentGraphicNode = mNavigatorItemToGraphicNode.find(ipCurrent);
+    auto itPreviousGraphicNode = mNavigatorItemToGraphicNode.find(ipPrevious);
+
+    if (itCurrentGraphicNode != mNavigatorItemToGraphicNode.end())
+    {
+        IRenderable* r = dynamic_cast<IRenderable*>(itCurrentGraphicNode->second);
+        if (r)
+        { r->setBoundingBoxVisible( true ); }
+    }
+
+    if (itPreviousGraphicNode != mNavigatorItemToGraphicNode.end())
+    {
+        IRenderable* r = dynamic_cast<IRenderable*>(itPreviousGraphicNode->second);
+        if (r)
+        { r->setBoundingBoxVisible( false ); }
     }
     updateUi();
 }
@@ -331,7 +398,15 @@ void MainDialog::refreshNavigator(IGraphicNode *ipNode, QTreeWidgetItem *ipParen
         else
         {
             QTreeWidgetItem *item = new QTreeWidgetItem(ipParentItem);
-            item->setText( 0, QString::fromStdString(ipNode->mName) );
+
+            QString itemText = QString::fromStdString(ipNode->mName);
+
+            // show instantiated nodes...
+            IDefinition *def = dynamic_cast<IDefinition*>(ipNode);
+            if(def && def->isInstantiated())
+            { itemText += " (instance)"; }
+
+            item->setText( 0, itemText );
             currentParent = item;
 
             //insert in map to track relationship from tree item to IGraphicNode
@@ -343,6 +418,15 @@ void MainDialog::refreshNavigator(IGraphicNode *ipNode, QTreeWidgetItem *ipParen
             refreshNavigator( ipNode->mChilds[i], currentParent );
         }
     }
+}
+
+//------------------------------------------------------------------------------
+void MainDialog::resetCamera()
+{
+    Camera c = mpViewer->getCamera();
+    c.set( Point3d(0.0, -1000.0, 1000.0),
+        Point3d(), Vector3d(0, 0, 1) );
+    mpViewer->setCamera( c, false );
 }
 
 //------------------------------------------------------------------------------

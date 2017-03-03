@@ -73,7 +73,7 @@ void Scene::addToDefinitionMap(IGraphicNode *iNode)
             for(size_t i = 0; i < ln->mImages.size(); ++i)
             {
                 Image *im = ln->mImages[i];
-                auto it = mIdToDefinition.insert( make_pair(im->mId, im) );
+                auto it = mIdToDefinition.insert( make_pair(im->getId(), im) );
                 // just validate that there is no duplicate...
                 // if there is a duplicate we should understand why..
                 // It could be possible if we reuse nodes, but in that case
@@ -96,7 +96,7 @@ void Scene::addToDefinitionMap(IGraphicNode *iNode)
 void Scene::addToTextureLibrary(Image *iIm)
 {
     IDefinition *def = dynamic_cast<IDefinition*>(iIm);
-    auto it = mImageIdToTexture.find(def->mId);
+    auto it = mImageIdToTexture.find(def->getId());
     if(it == mImageIdToTexture.end())
     {
         realisim::treeD::Texture t;
@@ -131,9 +131,10 @@ void Scene::addToTextureLibrary(Image *iIm)
 
         t.set(iIm->mpPayload, size, internalFormat, format, datatype);
         t.generateMipmap(true);
-        t.setFilter(GL_LINEAR_MIPMAP_LINEAR);
+        t.setMagnificationFilter(GL_LINEAR);
+        t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
         
-        mImageIdToTexture.insert( make_pair(def->mId, t) );
+        mImageIdToTexture.insert( make_pair(def->getId(), t) );
     }
 }
 
@@ -141,7 +142,7 @@ void Scene::addToTextureLibrary(Image *iIm)
 //void Scene::checkAndCreateRepresentation(ModelNode *iNode)
 //{
 //    const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
-//    auto repIt = mDefinitionIdToRepresentation.find(def->mId);
+//    auto repIt = mDefinitionIdToRepresentation.find(def->getId());
 //    if(repIt == mDefinitionIdToRepresentation.end())
 //    {
 //        check if model can be created... meaning that images
@@ -150,7 +151,7 @@ void Scene::addToTextureLibrary(Image *iIm)
 //        
 //        Representations::Model  *model = nullptr;
 //        model = new Representations::Model(iNode, mImageIdToTexture);
-//        mDefinitionIdToRepresentation.insert( make_pair(def->mId, model) );
+//        mDefinitionIdToRepresentation.insert( make_pair(def->getId(), model) );
 //    }
 //}
 
@@ -184,104 +185,64 @@ void Scene::clear()
 void Scene::createRepresentations(ModelNode *iNode)
 {
     const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
-    auto repIt = mDefinitionIdToRepresentation.find(def->mId);
+
+    auto repIt = mDefinitionIdToRepresentation.find(def->getId());
     if(repIt == mDefinitionIdToRepresentation.end())
     {
-//        check if model can be created... meaning that images
-//            have been uploaded to gpu...
-//            if not, send a request to the fileStreamer to load the image.
-        bool canCreateRepresentation = true;
-        for(int i = 0; i < iNode->mFaces.size() && canCreateRepresentation; ++i)
+        // instance creation
+        if( iNode->isInstantiated() )
         {
-            Face *f = iNode->mFaces[i];
-            if(f->mpMaterial && f->mpMaterial->mpImage)
+            auto instantiatedFromRepIt = mDefinitionIdToRepresentation.find(def->getInstantiatedFromId());
+
+            // check just in case the instance would try to be created before the original
+            // model is created...
+            //
+            if (instantiatedFromRepIt != mDefinitionIdToRepresentation.end())
             {
-                Image *im = f->mpMaterial->mpImage;
-                auto it = mImageIdToTexture.find(im->mId);
-                if(it == mImageIdToTexture.end())
-                {
-                    canCreateRepresentation = false;
-                    // image is not on gpu, lets ask filestreamer to
-                    // load it
-                    //
-                    FileStreamer& fs = mpHub->getFileStreamer();
-                    FileStreamer::Request *r = new FileStreamer::Request(this);
-                    r->mRequestType = FileStreamer::rtLoadRgbImage;
-                    r->mFilenamePath = im->mFilenamePath;
-                    r->mAffectedDefinitionId = im->mId;
-                    fs.postRequest(r);
-                }
+                Representations::Model *instantiatedFrom = (Representations::Model*)(instantiatedFromRepIt->second);
+                Representations::Model *model = new Representations::Model;
+                model->createInstance(iNode, instantiatedFrom);
+                mDefinitionIdToRepresentation.insert( make_pair(def->getId(), model) );            
             }
         }
-        
-        if(canCreateRepresentation)
+        else
         {
-            Representations::Model *model = nullptr;
-            model = new Representations::Model(iNode, mImageIdToTexture);
-            mDefinitionIdToRepresentation.insert( make_pair(def->mId, model) );
+            //        check if model can be created... meaning that images
+            //            have been uploaded to gpu...
+            //            if not, send a request to the fileStreamer to load the image.
+            bool canCreateRepresentation = true;
+            for(int i = 0; i < iNode->mFaces.size() && canCreateRepresentation; ++i)
+            {
+                Face *f = iNode->mFaces[i];
+                if(f->mpMaterial && f->mpMaterial->mpImage)
+                {
+                    Image *im = f->mpMaterial->mpImage;
+                    auto it = mImageIdToTexture.find(im->getId());
+                    if(it == mImageIdToTexture.end())
+                    {
+                        canCreateRepresentation = false;
+                        // image is not on gpu, lets ask filestreamer to
+                        // load it
+                        //
+                        FileStreamer& fs = mpHub->getFileStreamer();
+                        FileStreamer::Request *r = new FileStreamer::Request(this);
+                        r->mRequestType = FileStreamer::rtLoadRgbImage;
+                        r->mFilenamePath = im->mFilenamePath;
+                        r->mAffectedDefinitionId = im->getId();
+                        fs.postRequest(r);
+                    }
+                }
+            }
+
+            if(canCreateRepresentation)
+            {
+                Representations::Model *model = new Representations::Model;
+                model->create(iNode, mImageIdToTexture);
+                mDefinitionIdToRepresentation.insert( make_pair(def->getId(), model) );
+            }
         }
     }
-    
-    
-//    if(iNode != nullptr)
-//    {
-//        deque<IGraphicNode*> q;
-//        q.push_back(iNode);
-//        while(!q.empty())
-//        {
-//            IGraphicNode* n = q.front();
-//            q.pop_front();
-//            
-//            for(int i = 0; i < n->mChilds.size(); ++i)
-//            { q.push_back(n->mChilds[i]); }
-//            
-//            switch (n->mNodeType)
-//            {
-//                case IGraphicNode::ntGroup: break;
-//                case IGraphicNode::ntModel:
-//                {
-//                    ModelNode* modelNode = dynamic_cast<ModelNode*>(n);
-//                    checkAndCreateRepresentation(modelNode);
-//                } break;
-//                default: break;
-//            }
-//        }
-//    }
 }
-
-//------------------------------------------------------------------------------
-//void Scene::filterRenderables(IGraphicNode* iNode)
-//{
-//    if(iNode != nullptr)
-//    {
-//        deque<IGraphicNode*> q;
-//        q.push_back(iNode);
-//        while(!q.empty())
-//        {
-//            IGraphicNode* n = q.front();
-//            q.pop_front();
-//            
-//            for(int i = 0; i < n->mChilds.size(); ++i)
-//            { q.push_back(n->mChilds[i]); }
-//     
-//            IRenderable *r = dynamic_cast<IRenderable*>(n);
-//            if(r)
-//            {
-//                IRenderable *p = n->getFirstParent<IRenderable>();
-//                if(p)
-//                {
-//                    Filter *f = mRenderableFilter.find(p);
-//                    f->addChild(r);
-//                }
-//                else
-//                {
-//                    mRenderableFilter.addChild( r );
-//                }
-//                    
-//            }
-//        }
-//    }
-//}
 
 //------------------------------------------------------------------------------
 IDefinition* Scene::findDefinition(unsigned int iId)
@@ -325,7 +286,7 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
     case IGraphicNode::IGraphicNode::ntModel:
     {
         ModelNode* mn = dynamic_cast<ModelNode*>(iNode);
-        auto itModel = mDefinitionIdToRepresentation.find(mn->mId);
+        auto itModel = mDefinitionIdToRepresentation.find(mn->getId());
         if(itModel != mDefinitionIdToRepresentation.end()) 
         {
             if(mn->isVisible())
@@ -405,6 +366,7 @@ void Scene::update()
     for(size_t i = 0; i < mNeedsTransformUpdate.size(); ++i)
     {
         updateTransform( mNeedsTransformUpdate[i] );
+        updateBoundingBoxes( mNeedsTransformUpdate[i] );
     }
     mNeedsTransformUpdate.clear();
     
@@ -424,6 +386,20 @@ void Scene::update()
 }
 
 //----------------------------------------
+void Scene::updateBoundingBoxes(IGraphicNode* ipNode)
+{
+    //depth first...
+    for (size_t i = 0; i < ipNode->mChilds.size(); ++i)
+    {
+        updateBoundingBoxes( ipNode->mChilds[i] );
+    }
+
+    IRenderable *r = dynamic_cast<IRenderable*>(ipNode);
+    if (r)
+    { r->updateBoundingBoxes(); }
+}
+
+//----------------------------------------
 void Scene::updateTransform(IGraphicNode* ipNode)
 {
     //find first iRenderable parent, to get parentTransform
@@ -435,20 +411,6 @@ void Scene::updateTransform(IGraphicNode* ipNode)
     }
 
     updateTransform(ipNode, parentTransform);
-    //IRenderable *r = dynamic_cast<IRenderable*>(ipNode);
-    //IRenderable* renderable = iFilterNode->mpData;
-    //IRenderable* parent = iFilterNode->mpParent ? iFilterNode->mpParent->mpData : nullptr;
-    //if(renderable && renderable->mIsTransformDirty)
-    //{
-    //    Matrix4 parentWorldTransform = parent != nullptr ?
-    //        parent->mWorldTransform : Matrix4();
-    //    renderable->mWorldTransform = parentWorldTransform * renderable->mParentTransform;
-    //    
-    //    renderable->mIsTransformDirty = false;
-    //    
-    //    for(size_t i = 0; i < iFilterNode->mChilds.size(); ++i)
-    //    { updateTransform(iFilterNode->mChilds[i]); }
-    //}
 }
 
 //----------------------------------------

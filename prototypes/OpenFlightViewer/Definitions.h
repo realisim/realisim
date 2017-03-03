@@ -20,16 +20,25 @@ public:
     IGraphicNode();
     virtual ~IGraphicNode() = 0;
     
+    enum nodeType{ ntExternalRef, ntGroup, ntLevelOfDetail, ntLibrary, ntLod, 
+        ntModel, ntOpenFlight, ntSwitch, ntUndefined};
+
     virtual void addChild(IGraphicNode*);
+    int decrementUseCount();
+    void incrementUseCount();
     template<typename T> T* getFirstParent();
-    
-    enum nodeType{ ntUndefined, ntGroup, ntLibrary, ntLod, ntModel, ntOpenFlight, ntSwitch};
-    
+    int getUseCount() const;
+
     IGraphicNode* mpParent;
     std::vector<IGraphicNode*> mChilds; //owned
     
     nodeType mNodeType;
     std::string mName;
+
+protected:
+    void incrementUseCount(IGraphicNode*, int);
+
+    int mUseCount;
 };
 
 //--------------------------------------------------------
@@ -54,29 +63,41 @@ T* IGraphicNode::getFirstParent()
 class IRenderable
 {
 public:
-    IRenderable() : mIsTransformDirty(true), mIsVisible(true) {}
+    IRenderable();
     virtual ~IRenderable() = 0;
     
+    const realisim::math::BB3d& getAABB() const {return mAxisAlignedBoundingBox;}
+    const realisim::math::BB3d& getPositionnedAABB() const {return mPositionnedAxisAlignedBoundingBox;}
+
+    bool isBoundingBoxVisible() const {return mIsBoundingBoxVisible;}
     bool isVisible() const;
+    void setAABB(const realisim::math::BB3d& iAABB) {mAxisAlignedBoundingBox = iAABB;}
     void setAsVisible(bool);
+    void setBoundingBoxVisible(bool iS) {mIsBoundingBoxVisible = iS;}
+    void updateBoundingBoxes();
 
     bool mIsTransformDirty;
     realisim::math::Matrix4 mParentTransform;
     realisim::math::Matrix4 mWorldTransform;    
+    
 
     protected:
         void setAsVisible(IGraphicNode*, bool);
 
-        bool mIsVisible;
-//    realisim::math::BB3d mOriginalBoundingBox;
+        bool mIsVisible;    
+        bool mIsBoundingBoxVisible;
 //    realisim::math::BB3d mOrientedBoundingBox;
-//    realisim::math::BB3d mAxisAlignedBoundingBox;
+        realisim::math::BB3d mAxisAlignedBoundingBox;
+        realisim::math::BB3d mPositionnedAxisAlignedBoundingBox;
 };
 
 
 //--------------------------------------------------------
 //--- IDefinitions
 //--------------------------------------------------------
+// Note on instance:
+//
+//
 class IDefinition
 {
 public:
@@ -85,8 +106,15 @@ public:
     IDefinition& operator=(const IDefinition&) = delete;
     virtual ~IDefinition();
 
+    unsigned int getId() const;
+    unsigned int getInstantiatedFromId() const;
+    void setAsInstanceOf(unsigned int);
+    bool isInstantiated() const;
+
+protected:
     static unsigned int mIdCounter;
     unsigned int mId;
+    unsigned int mInstantiatedFromId;
 };
 
 //--------------------------------------------------------
@@ -208,11 +236,17 @@ public IGraphicNode,
 public IRenderable
 {
 public:
-    ModelNode() : IDefinition(), IGraphicNode(), IRenderable() { mNodeType = ntModel; }
+    ModelNode();
     virtual ~ModelNode() override;
     
+    void addFace(Face*);
+    void setAsInstanceOf(ModelNode*);
+
     std::vector<Mesh*> mMeshes; //owned
     std::vector<Face*> mFaces; //owned
+
+protected:
+    ModelNode *mpInstancedFrom;    
 };
 
 //--------------------------------------------------------
@@ -230,6 +264,19 @@ public:
 
 private:
     int mLayerIndex;
+};
+
+
+//--------------------------------------------------------
+class LevelOfDetailNode : public IDefinition, public IGraphicNode
+{
+public:
+    LevelOfDetailNode() : IDefinition(), IGraphicNode()
+    { mNodeType = ntLevelOfDetail; }
+    virtual ~LevelOfDetailNode() override {};
+
+private:
+    
 };
 
 

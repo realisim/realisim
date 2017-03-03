@@ -59,10 +59,12 @@ public:
     
 protected slots:
     void navigatorItemActivated(QTreeWidgetItem *, int);
+    void navigatorCurrentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *);
     void newFile();
     void openFile();
     
 protected:
+    void centerCameraOn(realisim::math::Point3d);
     void createMenus();
     virtual void keyPressEvent(QKeyEvent*) override;
     void processFileLoadingDoneMessage(MessageQueue::Message*);
@@ -70,6 +72,7 @@ protected:
     void toggleFreeRunning();
     void refreshNavigator();
     void refreshNavigator(IGraphicNode*, QTreeWidgetItem*);
+    void resetCamera();
     void updateUi();
     
     // ui

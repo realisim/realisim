@@ -34,10 +34,13 @@ FltImporter::~FltImporter()
 {
     if(mpHeaderRecord)
     {delete mpHeaderRecord;}
+
+    mDefinitionIdToFltRecord.clear();
+    mObjectRecordToGraphicNode.clear();
 }
 
 //-----------------------------------------------------------------------------
-void FltImporter::applyLogicOnChilds(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode* ipNode)
+void FltImporter::applyLayersLogicOnChilds(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode* ipNode)
 {
     using namespace OpenFlight;
 
@@ -77,6 +80,43 @@ void FltImporter::applyLogicOnChilds(OpenFlight::PrimaryRecord* ipRecord, IGraph
 }
 
 //-----------------------------------------------------------------------------
+// computes AABB for all nodes that have no faces... since nodes with face 
+// already have their AABB computed when created, see digData(object)
+//
+// This is to compute AABB for groups
+//
+void FltImporter::computeBoundingBoxes(IGraphicNode* ipNode)
+{
+    GroupNode *gn = dynamic_cast<GroupNode *>(ipNode);
+    IRenderable *r = dynamic_cast<IRenderable *>(ipNode);
+    if(gn && r)
+    {
+        realisim::math::BB3d aabb;
+        computeBoundingBoxes( ipNode, ipNode, aabb );
+        r->setAABB(aabb);
+    }
+}
+
+void FltImporter::computeBoundingBoxes(IGraphicNode* ipTopNode, IGraphicNode* ipCurrentNode, realisim::math::BB3d& iAABB)
+{    
+    //childs first
+    for(size_t i = 0; i < ipCurrentNode->mChilds.size(); ++i )
+    {
+        computeBoundingBoxes(ipTopNode, ipCurrentNode->mChilds[i], iAABB);
+    }
+
+    IRenderable *r = dynamic_cast<IRenderable *>(ipCurrentNode);
+    // we do not want to add the bounding box of the top node, since it is the one
+    // we are trying to compute...
+    //
+    if(ipTopNode != ipCurrentNode && r && r->getAABB().isValid() )
+    {
+        iAABB.add( r->getAABB().getMin() );
+        iAABB.add( r->getAABB().getMax() );
+    }
+}
+
+//-----------------------------------------------------------------------------
 // In our data tree, we do not care much about external references but they
 // can carry a transform matrix which needs to be be brought in. To do so,
 // we create a group to hold that transform.
@@ -91,13 +131,17 @@ GroupNode* FltImporter::digData(OpenFlight::ExternalReferenceRecord* ipE,
 {
     using namespace OpenFlight;
     
+    // note: faudrait il faire une classe spéciale pour les node external reference??
+    // genre ExternalReferenceNode...
+
     GroupNode *pGroup = new GroupNode();
-    
-    pGroup->mName = ipE->getFilenamePath() + " (external reference)";
-    
+    pGroup->mName = ipE->getFilenamePath();
     pGroup->mParentTransform = fetchTransform(ipE);
     ipParent->addChild(pGroup);
-    
+
+    // mark as instance if needed
+    markAsInstance(ipE, pGroup); 
+
     return pGroup;
 }
 
@@ -119,6 +163,9 @@ GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
     pGroup->mParentTransform = fetchTransform(ipG);
     pGroup->setLayerIndex( ipG->getLayerCode() );
     
+    // mark as instance if needed
+    markAsInstance(ipG, pGroup);    
+
     return pGroup;
 }
 
@@ -143,9 +190,11 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
     }
     else
     { ipParent->addChild(opfNode); }
-        
+    
+    markAsInstance(ipH, opfNode);
+
     //store the relation between OpenFlightNode and headerNode
-    //mDefinitionIdToFltRecord.insert( make_pair(mpGraphicNodeRoot->mId, ipH) );
+    //mDefinitionIdToFltRecord.insert( make_pair(mpGraphicNodeRoot->getId(), ipH) );
     
     //add header stuff here
     
@@ -154,79 +203,87 @@ LibraryNode* FltImporter::digData(OpenFlight::HeaderRecord* ipH,
     library->mName = "Library";
     opfNode->addChild(library);
 
-    // check external reference flags, to properly populate
-    // the library node with appropriate palette since external
-    // reference can override (or not) palettes.
-    bool useParentDatabaseColorPalette = false;
-    bool useParentDatabaseMaterialPalette = false;
-    bool useParentDatabaseTexturePalette = false;
-    if(ipH->isExternalReference())
+    if (!opfNode->isInstantiated())
     {
-        //get external reference parent to check override flags
-        ExternalReferenceRecord *extRef = (ExternalReferenceRecord *)ipH->getParent();
-        useParentDatabaseColorPalette = extRef->hasFlag(ExternalReferenceRecord::fColorPaletteOverride);
-        useParentDatabaseMaterialPalette = extRef->hasFlag(ExternalReferenceRecord::fMaterialPaletteOverride);
-        useParentDatabaseTexturePalette = extRef->hasFlag(ExternalReferenceRecord::fTextureAndMappingOverride);
-    }
-    
-    // collect from palettes
-    //--- Vertex palette
-    VertexPaletteRecord* vpr = ipH->getVertexPalette();
-    if (vpr != nullptr)
-    {
-        VertexPool *vp = new VertexPool();
-        for(int i = 0; i < vpr->getNumberOfVertices(); ++i)
+        // check external reference flags, to properly populate
+        // the library node with appropriate palette since external
+        // reference can override (or not) palettes.
+        bool useParentDatabaseColorPalette = false;
+        bool useParentDatabaseMaterialPalette = false;
+        bool useParentDatabaseTexturePalette = false;
+        if(ipH->isExternalReference())
         {
-            const OpenFlight::Vertex& v = vpr->getVertex(i);
-            vp->mVertices.push_back(math::Vector3d(v.mCoordinate.mX,
-                                                    v.mCoordinate.mY,
-                                                    v.mCoordinate.mZ ) );
-                        
-            vp->mNormals.push_back(math::Vector3d(v.mNormal.mX,
-                                                    v.mNormal.mY,
-                                                    v.mNormal.mZ ) );
-                        
-            vp->mTextureCoordinates.push_back(math::Vector2d(v.mTextureCoordinate.mX,
-                                                    v.mTextureCoordinate.mY) );
-                        
-            vp->mColors.push_back(QColor(v.mPackedColor.mRed,
-                                            v.mPackedColor.mGreen,
-                                            v.mPackedColor.mBlue,
-                                            v.mPackedColor.mAlpha));
+            //get external reference parent to check override flags
+            ExternalReferenceRecord *extRef = (ExternalReferenceRecord *)ipH->getParent();
+            useParentDatabaseColorPalette = extRef->hasFlag(ExternalReferenceRecord::fColorPaletteOverride);
+            useParentDatabaseMaterialPalette = extRef->hasFlag(ExternalReferenceRecord::fMaterialPaletteOverride);
+            useParentDatabaseTexturePalette = extRef->hasFlag(ExternalReferenceRecord::fTextureAndMappingOverride);
         }
-                    
-        //store the relation between vertexPool and palette
-        mDefinitionIdToFltRecord.insert( make_pair(vp->mId, vpr) );
-                    
-        library->mpVertexPool = vp;
-    }
 
-    //--- texture palettes
-    for (int i = 0; i < ipH->getNumberOfTexturePalettes(); ++i)
-    {
-        TexturePaletteRecord* tpr = ipH->getTexturePalette(i);
-        if (tpr != nullptr)
+        // collect from palettes
+        //--- Vertex palette
+        VertexPaletteRecord* vpr = ipH->getVertexPalette();
+        if (vpr != nullptr)
         {
-            // the filename of the texture record must be relative, else,
-            // it won't work...
-            // also, lets make it cannonical...
-            QFileInfo fi( QString::fromStdString(ipH->getFilePath() + tpr->getFilenamePath()) );
-            QString cannonical = fi.canonicalFilePath();
-            if (!cannonical.isEmpty())
+            VertexPool *vp = new VertexPool();
+            for(int i = 0; i < vpr->getNumberOfVertices(); ++i)
             {
-                Image *image = new Image();
-                image->mFilenamePath = cannonical.toStdString();
-                image->loadMetaData();
+                const OpenFlight::Vertex& v = vpr->getVertex(i);
+                vp->mVertices.push_back(math::Vector3d(v.mCoordinate.mX,
+                    v.mCoordinate.mY,
+                    v.mCoordinate.mZ ) );
 
-                mDefinitionIdToFltRecord.insert( make_pair(image->mId, tpr));
-                library->mImages.push_back(image);
+                vp->mNormals.push_back(math::Vector3d(v.mNormal.mX,
+                    v.mNormal.mY,
+                    v.mNormal.mZ ) );
+
+                vp->mTextureCoordinates.push_back(math::Vector2d(v.mTextureCoordinate.mX,
+                    v.mTextureCoordinate.mY) );
+
+                vp->mColors.push_back(QColor(v.mPackedColor.mRed,
+                    v.mPackedColor.mGreen,
+                    v.mPackedColor.mBlue,
+                    v.mPackedColor.mAlpha));
             }
-            else
+
+            //store the relation between vertexPool and palette
+            mDefinitionIdToFltRecord.insert( make_pair(vp->getId(), vpr) );
+
+            library->mpVertexPool = vp;
+        }
+
+        //--- texture palettes
+        for (int i = 0; i < ipH->getNumberOfTexturePalettes(); ++i)
+        {
+            TexturePaletteRecord* tpr = ipH->getTexturePalette(i);
+            if (tpr != nullptr)
             {
-                printf("Image with unreachable path found: %s add warning...\n", fi.filePath().toStdString().c_str());
+                // the filename of the texture record must be relative, else,
+                // it won't work...
+                // also, lets make it cannonical...
+                //
+                // Note: We can assum that images inside the texture palette are never duplicated...
+                //
+                QFileInfo fi( QString::fromStdString(ipH->getFilePath() + tpr->getFilenamePath()) );
+                QString cannonical = fi.canonicalFilePath();
+                if (!cannonical.isEmpty())
+                {
+                    // check if a texture with the same path has already been added to the 
+
+                    Image *image = new Image();
+                    image->mFilenamePath = cannonical.toStdString();
+                    image->loadMetaData();
+
+                    library->mImages.push_back(image);
+                    mDefinitionIdToFltRecord.insert( make_pair(image->getId(), tpr));
+                }
+                else
+                {
+                    printf("Image with unreachable path found: %s add warning...\n", fi.filePath().toStdString().c_str());
+                }
             }
         }
-    }
+    }    
     
     return library;
 }
@@ -247,16 +304,29 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
     model->mName = ipR->hasLongIdRecord() ? ipR->getLongIdRecord()->getAsciiId() : ipR->getAsciiId();
     model->mParentTransform = fetchTransform(ipR);
     
-    //object record can only have 2 type of childs...
-    // 1- Face
-    // 2- light points.
-    
-    for(int i = 0; i < ipR->getNumberOfChilds(); ++i)
+    markAsInstance(ipR, model);
+
+    //this is an instance...
+    if(model->isInstantiated())
     {
-        PrimaryRecord* c = ipR->getChild(i);
-        
-        switch (c->getOpCode())
+        assert(ipR->getUseCount() > 1);
+
+        auto it = mObjectRecordToGraphicNode.find(ipR);
+        ModelNode *originalModel = dynamic_cast<ModelNode *>( it->second );
+        model->setAsInstanceOf( originalModel );
+    }
+    else
+    {
+        //object record can only have 2 type of childs...
+        // 1- Face
+        // 2- light points.
+
+        for(int i = 0; i < ipR->getNumberOfChilds(); ++i)
         {
+            PrimaryRecord* c = ipR->getChild(i);
+
+            switch (c->getOpCode())
+            {
             case ocFace:
             {
                 FaceRecord *faceRecord = (FaceRecord*)c;
@@ -267,18 +337,17 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
                 PrimaryRecord* vertexList = c->getNumberOfChilds() > 0 ? c->getChild(0) : nullptr;
                 if(vertexList && vertexList->getOpCode() == ocVertexList)
                 {
-                    Face *face = new Face();
-                    model->mFaces.push_back(face);
-                    
+                    Face *face = new Face();                    
+
                     LibraryNode *currentLibrary = getLibraryFor(model);
                     face->mpVertexPool = currentLibrary->mpVertexPool;
-                    
+
                     //--- vertices
                     // fetch the VertexPalette from openFlight and resolve
                     // the byte offset into actual index into the vertex array.
                     VertexPaletteRecord *vpr =
-                    (VertexPaletteRecord*)getRecordFromDefinitionId(face->mpVertexPool->mId);
-                    
+                        (VertexPaletteRecord*)getRecordFromDefinitionId(face->mpVertexPool->getId());
+
                     VertexListRecord *vlr = (VertexListRecord *)vertexList;
                     for(int i = 0; i < vlr->getNumberOfVertices(); ++i)
                     {
@@ -286,7 +355,8 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
                         assert( vertexIndex != -1 );
                         face->mVertexIndices.push_back( vertexIndex );
                     }
-                    
+                    model->addFace(face);
+
                     //--- textures (images)
                     Material *material = new Material();
                     face->mpMaterial = material;
@@ -294,21 +364,37 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
                     {
                         material->mpImage = getImageFromTexturePatternIndex( faceRecord->getTexturePatternIndex(), currentLibrary );
                     }
-                    
+
                     //--- material
                     if(faceRecord->getMaterialIndex() >= 0)
                     {
-                        
+
                     }
-                    
+
                 }
             }break;
             case ocLightPoint: break;
             default: break;
+            }
         }
-    }
+    }    
     
+
     return model;
+}
+
+//-----------------------------------------------------------------------------
+LevelOfDetailNode* FltImporter::digData(OpenFlight::LevelOfDetailRecord* ipR, IGraphicNode* ipParent)
+{
+    LevelOfDetailNode *pLOD = new LevelOfDetailNode();
+    ipParent->addChild(pLOD);
+    pLOD->mName = ipR->hasLongIdRecord() ? ipR->getLongIdRecord()->getAsciiId() : ipR->getAsciiId();
+    pLOD->mName += " (LOD)";
+
+    // mark as instance if needed
+    markAsInstance(ipR, pLOD);    
+
+    return pLOD;
 }
 
 //-----------------------------------------------------------------------------
@@ -349,7 +435,7 @@ Image* FltImporter::getImageFromTexturePatternIndex(int iIndex, LibraryNode* iLi
     {
         for( size_t i = 0; i < iLibrary->mImages.size() && r == nullptr; ++i)
         {
-            auto it = mDefinitionIdToFltRecord.find(iLibrary->mImages[i]->mId);
+            auto it = mDefinitionIdToFltRecord.find(iLibrary->mImages[i]->getId());
             if(it != mDefinitionIdToFltRecord.end() &&
                ((TexturePaletteRecord*)it->second)->getTexturePatternIndex() == iIndex )
             {
@@ -374,12 +460,29 @@ OpenFlight::Record* FltImporter::getRecordFromDefinitionId(int iId)
 }
 
 //-----------------------------------------------------------------------------
+void FltImporter::markAsInstance(OpenFlight::PrimaryRecord* ipR, IGraphicNode* ipNode)
+{
+    if (ipR->getUseCount() > 0)
+    {
+        auto it = mObjectRecordToGraphicNode.find(ipR);
+        if (it != mObjectRecordToGraphicNode.end())
+        {
+            IDefinition *nodeDef = dynamic_cast<IDefinition*>(ipNode);
+            IDefinition *instancedFrom = dynamic_cast<IDefinition*>(it->second);
+            if(nodeDef && instancedFrom)
+            { nodeDef->setAsInstanceOf( instancedFrom->getId() ); }
+        }
+    }
+}
+
+//-----------------------------------------------------------------------------
 void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode* ipCurrentParent)
 {
     using namespace OpenFlight;
 
     //depth first parsing
     
+    bool digIntoChild = true;
     IGraphicNode *currentNode = nullptr;
     //dig for data on current record
     switch (ipRecord->getOpCode())
@@ -389,12 +492,20 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
             break;
         case OpenFlight::ocExternalReference:
             currentNode = digData( (ExternalReferenceRecord*)ipRecord, ipCurrentParent );
+
+            // dig into child only if current node has ref count 1, else
+            // it means it is already a complete subtree
+            //
+            digIntoChild = currentNode->getUseCount() == 1; 
             break;
         case OpenFlight::ocGroup:
             currentNode = digData( (GroupRecord*)ipRecord, ipCurrentParent );
             break;
         case OpenFlight::ocObject:
             currentNode = digData( (ObjectRecord*)ipRecord, ipCurrentParent );
+            break;
+        case OpenFlight::ocLevelOfDetail:
+            currentNode = digData( (LevelOfDetailRecord*)ipRecord, ipCurrentParent );
             break;
         case OpenFlight::ocUnsupported:
         {
@@ -404,16 +515,44 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
             ipCurrentParent->addChild(pGroup);
             currentNode = pGroup;
         }break;
-        default: break;
+        default: 
+        {
+            // this catches records that have been parsed and are supported by openFlightReader
+            // but are not handled by flt importer...
+            // since a missing node can cause a crash, we will assert when a node that is
+            // not explicitly ignored is catched...
+            
+            const bool explicitlyIgnored = 
+                ipRecord->getOpCode() == OpenFlight::ocFace ||
+                ipRecord->getOpCode() == OpenFlight::ocVertexList;
+            assert(explicitlyIgnored);
+
+        } break;
     }
     
-    //dig into child
-    for(int i = 0; i < ipRecord->getNumberOfChilds(); ++i)
-    { parseFltTree(ipRecord->getChild(i), currentNode); }
+    // add all nodes to the map
+    if (currentNode != nullptr)
+    {
+        mObjectRecordToGraphicNode.insert( make_pair(ipRecord, currentNode) );
+    }
+    
+    if (digIntoChild)
+    {
+        for(int i = 0; i < ipRecord->getNumberOfChilds(); ++i)
+        { parseFltTree(ipRecord->getChild(i), currentNode); }
+    }
+    
+    // we just ended processing all childs, at this point, we might need to apply
+    // some logic are calculations that required the childs to be present.
+    //
+    // For example, layering and boundingbox calculations requires all childs...
+    //
 
     // apply parent logic onto childs...
     // Layering is set at the group node for it's childrens and there are many way
     // to do it, so when we are done with the childrens, we will check if there
     // are actions to be taken
-    applyLogicOnChilds(ipRecord, currentNode);
+    applyLayersLogicOnChilds(ipRecord, currentNode);
+
+    computeBoundingBoxes(currentNode);
 }

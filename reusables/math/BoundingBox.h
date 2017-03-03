@@ -42,25 +42,32 @@ protected:
 //------------------------------------------------------------------------------
 //--  BoundingBox3
 //------------------------------------------------------------------------------
+// axis aligned bounding box...
 template<class T>
 class BoundingBox3
 {
   public:
     BoundingBox3();
-    BoundingBox3(const BoundingBox3<T>&){assert(0);}
+    BoundingBox3(const BoundingBox3<T>&) = default;
+    BoundingBox3& operator=(const BoundingBox3<T>&) = default;
     virtual ~BoundingBox3();
   
   virtual void add (const Point3<T>& iV);
   virtual void clear();
+  Point3<T> getCenter() const { return (mMin + (mMax - mMin)/2.0); }
   const Point3<T>& getMin() const {return mMin;}
   const Point3<T>& getMax() const {return mMax;}
+  bool isValid() const {return mIsValid;}
+  
 protected:
+    bool mIsValid;
   Point3<T> mMin;
   Point3<T> mMax;
 };
 
 template<class T>
 BoundingBox3<T>::BoundingBox3() :
+    mIsValid(false),
   mMin(std::numeric_limits<T>::max()),
   mMax(-std::numeric_limits<T>::max())
 {}
@@ -73,6 +80,7 @@ BoundingBox3<T>::~BoundingBox3()
 template<class T>
 void BoundingBox3<T>::add (const Point3<T>& iP)
 {
+    mIsValid = true;
   mMin.minCoord (iP);
   mMax.maxCoord (iP);
 }

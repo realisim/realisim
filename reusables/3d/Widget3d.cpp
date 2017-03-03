@@ -258,7 +258,7 @@ Widget3d::paintGL()
     //replacer les lumieres
     Vector4d pos(50.0, 30.0, 5.0, 0.0);
     if( mAbsoluteUpVector == auvZ )
-    { pos.set(400, 280, 1000, 0.0); }
+    { pos.set(1000, 100, 200, 0.0); }
     GLfloat position[]  = {(float)pos.x(), (float)pos.y(), (float)pos.z(), (float)pos.w() };
     glLightfv(GL_LIGHT0, GL_POSITION, position);
     
@@ -501,9 +501,18 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
         math::interpolate( m1, m2, t );
         Vector3d interpolatedLook = toVector(mOldCam.getLook()) * (1 - t) +
         toVector(mNewCam.getLook()) * t;
+
+        // Y
+        Vector3d interpolatedUp = Vector3d( iterationMatrix(1, 0), iterationMatrix(1, 1), iterationMatrix(1, 2) );
+        if( mAbsoluteUpVector == auvZ )
+        { 
+            //grab first column
+            interpolatedUp = Vector3d( iterationMatrix(0, 1), iterationMatrix(1, 1), iterationMatrix(2, 1) );
+        }
+
         mCam.set( toPoint(iterationMatrix.getTranslationAsVector()),
                  toPoint(interpolatedLook),
-                 Vector3d( iterationMatrix(1, 0), iterationMatrix(1, 1), iterationMatrix(1, 2) ) );
+                 interpolatedUp );
         
         //--- animation de la projection
         Camera::Projection iProj = mNewCam.getProjection();
