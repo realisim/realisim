@@ -278,6 +278,18 @@ void ModelNode::setAsInstanceOf(ModelNode* ipInstancedFrom)
 }
 
 //--------------------------------------------------------
+//--- LevelOfDetailNode
+//--------------------------------------------------------
+LevelOfDetailNode::LevelOfDetailNode() : 
+    IDefinition(),
+    IGraphicNode(),
+    mSitchInDistance(0.0),
+    mSitchOutDistance(0.0),
+    mOriginalLodCenter(0.0),
+    mPositionnedLodCenter(0.0)
+{ mNodeType = ntLevelOfDetail; }
+
+//--------------------------------------------------------
 //--- Utilitaires
 //--------------------------------------------------------
 LibraryNode* getLibraryFor(IGraphicNode* iNode)

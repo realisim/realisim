@@ -61,7 +61,10 @@ protected:
 
     void addToDefinitionMap(IGraphicNode*);
 void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
+    int countChilds(const IGraphicNode*) const;
+    void countChilds(const IGraphicNode*, int& iCurrentCount) const;
     void createRepresentations(ModelNode*);
+    Hub& getHub() {return *mpHub;}
 //    void checkAndCreateRepresentation(ModelNode*)
     IDefinition* findDefinition(unsigned int);
     //void filterRenderables(IGraphicNode*);
@@ -69,6 +72,7 @@ void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     void prepareFrame(IGraphicNode*, std::vector<Representations::Representation*> *ipCurrentLayer );
     void processFileLoadingDoneMessage(MessageQueue::Message*);
     void updateBoundingBoxes(IGraphicNode*);
+    void updateLod(IGraphicNode*);
     void updateTransform(IGraphicNode*);
     void updateTransform(IGraphicNode*, math::Matrix4 iParentTransform);
     

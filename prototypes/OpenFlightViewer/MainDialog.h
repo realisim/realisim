@@ -10,12 +10,14 @@
 #ifndef MainDialog_hh
 #define MainDialog_hh
 
+#include "Broker.h"
 #include "FileStreamer.h"
 #include "GpuStreamer.h"
 #include "Hub.h"
 #include "MessageQueue.h"
 #include <QDockWidget>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QMainWindow>
 #include <QTimerEvent>
 #include <QTreeWidget>
@@ -65,8 +67,10 @@ protected slots:
     
 protected:
     void centerCameraOn(realisim::math::Point3d);
+    void createInfoPanel(QWidget*);
     void createMenus();
     virtual void keyPressEvent(QKeyEvent*) override;
+    void fillInfoLabel();
     void processFileLoadingDoneMessage(MessageQueue::Message*);
     void timerEvent(QTimerEvent*) override;
     void toggleFreeRunning();
@@ -74,11 +78,15 @@ protected:
     void refreshNavigator(IGraphicNode*, QTreeWidgetItem*);
     void resetCamera();
     void updateUi();
+    void updateUiAtHighFrequency();
     
     // ui
     Viewer* mpViewer;
     QDockWidget* mpToolsWidget;
     QTreeWidget* mpNavigator;
+    QWidget* mpInfoPanel;
+    QLabel* mpInfoLabel;
+    QLabel* mpStatsPerFrameLabel;
     std::map<QTreeWidgetItem*, IGraphicNode*> mNavigatorItemToGraphicNode; //this should be done with model/view from qt... but doing this quickly...
     
     //Data
@@ -87,6 +95,7 @@ protected:
     Scene *mpScene;
     int mTimerId;
   
+    Broker mBroker;
     //threading
     FileStreamer mFileStreamer;
     GpuStreamer mGpuStreamer;

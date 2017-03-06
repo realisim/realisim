@@ -135,10 +135,15 @@ void Model::draw()
     {
         glDisable(GL_CULL_FACE);
         glColor3ub(255, 255, 255);
+
+        GLint previousPolygonMode;
+        glGetIntegerv(GL_POLYGON_MODE, &previousPolygonMode);
+
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         drawRectangularPrism( mpModelNode->getPositionnedAABB().getMin(),
             mpModelNode->getPositionnedAABB().getMax() );
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glPolygonMode(GL_FRONT_AND_BACK, previousPolygonMode);
+
         glEnable(GL_CULL_FACE);
     }
     

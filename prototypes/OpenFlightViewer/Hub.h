@@ -1,9 +1,10 @@
 
 #pragma once
 
-class MainDialog;
+class Broker;
 class FileStreamer;
 class GpuStreamer;
+class MainDialog;
 
 class Hub
 {
@@ -18,13 +19,16 @@ public:
     //
     friend class MainDialog;
 
+    Broker& getBroker();
     FileStreamer& getFileStreamer();
     GpuStreamer& getGpuStreamer();
 
 private:
+    void setBroker(Broker*);
     void setFileStreamer(FileStreamer*);
     void setGpuStreamer(GpuStreamer*);
     
+    Broker *mpBroker;
     FileStreamer *mpFileStreamer;
     GpuStreamer *mpGpuStreamer;
 };

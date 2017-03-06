@@ -15,6 +15,13 @@ Hub::~Hub()
 {}
 
 //-----------------------------------------------------------------------------
+Broker& Hub::getBroker()
+{
+    assert(mpBroker != nullptr);
+    return *mpBroker;
+}
+
+//-----------------------------------------------------------------------------
 FileStreamer& Hub::getFileStreamer()
 {
     assert(mpFileStreamer != nullptr);
@@ -27,6 +34,13 @@ GpuStreamer& Hub::getGpuStreamer()
     assert(mpGpuStreamer != nullptr);
     return *mpGpuStreamer;
 }
+
+//-----------------------------------------------------------------------------
+void Hub::setBroker(Broker* ipBroker)
+{
+    mpBroker = ipBroker;
+}
+
 //-----------------------------------------------------------------------------
 void Hub::setFileStreamer(FileStreamer* ipStreamer)
 {

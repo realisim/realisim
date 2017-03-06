@@ -268,15 +268,32 @@ private:
 
 
 //--------------------------------------------------------
-class LevelOfDetailNode : public IDefinition, public IGraphicNode
+// Bon... on hérite de IRenderable parce qu'il faut la transform world pour
+// faire le calcul du positionnedLodCenter... Techniquement, lod ne devrait pas
+// etre un renderable... Decrait séparer Irenderable en deux? une partie pour
+// pour le positionnement IPositionnable et IRenderable???
+//
+class LevelOfDetailNode : public IDefinition, public IGraphicNode, public IRenderable
 {
 public:
-    LevelOfDetailNode() : IDefinition(), IGraphicNode()
-    { mNodeType = ntLevelOfDetail; }
+    LevelOfDetailNode();
     virtual ~LevelOfDetailNode() override {};
 
+    double getSwitchInDistance() const {return mSitchInDistance;}
+    double getSwitchOutDistance() const {return mSitchOutDistance;}
+    const realisim::math::Point3d& getOriginalLodCenter() const {return mOriginalLodCenter;}
+    const realisim::math::Point3d& getPositionnedLodCenter() const {return mPositionnedLodCenter;}
+
+    void setSwitchInDistance(double iD) {mSitchInDistance = iD;}
+    void setSwitchOutDistance(double iD) {mSitchOutDistance = iD;}
+    void setOriginalLodCenter(const realisim::math::Point3d& iC) {mOriginalLodCenter = iC;}
+    void setPositionnedLodCenter(const realisim::math::Point3d& iC) {mPositionnedLodCenter = iC;}
+
 private:
-    
+    double mSitchInDistance;
+    double mSitchOutDistance;
+    realisim::math::Point3d mOriginalLodCenter;
+    realisim::math::Point3d mPositionnedLodCenter;
 };
 
 

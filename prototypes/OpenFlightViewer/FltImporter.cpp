@@ -390,9 +390,13 @@ LevelOfDetailNode* FltImporter::digData(OpenFlight::LevelOfDetailRecord* ipR, IG
     ipParent->addChild(pLOD);
     pLOD->mName = ipR->hasLongIdRecord() ? ipR->getLongIdRecord()->getAsciiId() : ipR->getAsciiId();
     pLOD->mName += " (LOD)";
+    pLOD->setSwitchInDistance( ipR->getSwitchInDistance() );
+    pLOD->setSwitchOutDistance( ipR->getSwitchOutDistance() );
+    pLOD->setOriginalLodCenter( Point3d( ipR->getLodX(), ipR->getLodY(), ipR->getLodZ() ) );
 
     // mark as instance if needed
     markAsInstance(ipR, pLOD);    
+
 
     return pLOD;
 }

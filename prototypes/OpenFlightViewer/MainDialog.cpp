@@ -186,6 +186,7 @@ mTimerId(0)
     //init data
     
     // initialise hub
+    mHub.setBroker( &mBroker );
     mHub.setFileStreamer(&mFileStreamer);
     mHub.setGpuStreamer(&mGpuStreamer);
     mpScene = new Scene(&mHub);
@@ -206,10 +207,11 @@ mTimerId(0)
     //--- viewer
     mpViewer->setControlType( Widget3d::ctFree );
     Camera c = mpViewer->getCamera();
-    Camera::Projection proj = c.getProjection();
-    proj.mNear = 1.0; //1 m
-    proj.mFar = 100000; // 100 km
-    c.setProjection(proj);
+    //Camera::Projection proj = c.getProjection();
+    //proj.mNear = 3.0; // meters
+    //proj.mFar = 300000; // meters
+    //c.setProjection(proj);
+    c.setPerspectiveProjection(70, 16/9.0, 3, 300000, true);
     c.set( Point3d(0.0, -1000.0, 1000.0),
           Point3d(), Vector3d(0, 0, 1) );
     mpViewer->setAbsoluteUpVector(Widget3d::auvZ);
@@ -221,10 +223,11 @@ mTimerId(0)
     mpToolsWidget->setFloating(true);
     mpToolsWidget->setWindowTitle("Tools");
     {
-        QWidget *pToolsWidget = new QWidget(mpToolsWidget);
-        pToolsWidget->resize(400, 900);
+        QWidget *pToolsWidget = new QWidget(mpToolsWidget);        
         QHBoxLayout *pHbox = new QHBoxLayout(pToolsWidget);
+        pHbox->setMargin(5); pHbox->setSpacing(5);
         {
+            //--- navigator
             mpNavigator = new QTreeWidget(mpToolsWidget);
             mpNavigator->header()->hide();
             mpNavigator->setColumnCount(1);
@@ -234,11 +237,17 @@ mTimerId(0)
             connect(mpNavigator, SIGNAL(itemActivated(QTreeWidgetItem *, int)), 
                 this, SLOT(navigatorItemActivated(QTreeWidgetItem *, int)));
 
+            //--- info pane on the right
+            mpInfoPanel = new QWidget(mpToolsWidget);
+            createInfoPanel(mpInfoPanel);
+
             pHbox->addWidget(mpNavigator);
+            pHbox->addWidget(mpInfoPanel);
         }
 
         mpToolsWidget->setWidget(pToolsWidget);
-    }    
+    }
+    mpToolsWidget->resize(1080, 768);
 
     createMenus();
     
@@ -279,6 +288,58 @@ void MainDialog::createMenus()
     pFile->addAction( QString("&Open..."), this, SLOT( openFile() ),
                      QKeySequence::Open );
 }
+
+//------------------------------------------------------------------------------
+void MainDialog::createInfoPanel(QWidget* ipInfoPanel)
+{
+    QVBoxLayout *pVLyt = new QVBoxLayout(ipInfoPanel);
+    {
+        mpInfoLabel = new QLabel("", ipInfoPanel);
+        mpStatsPerFrameLabel = new QLabel("", ipInfoPanel);
+
+        pVLyt->addWidget(mpInfoLabel);
+        pVLyt->addStretch(1);
+        pVLyt->addWidget(mpStatsPerFrameLabel);
+    }
+}
+
+//------------------------------------------------------------------------------
+void MainDialog::fillInfoLabel()
+{
+    mpInfoLabel->clear();
+    string text;
+
+    auto itCurrentGraphicNode = mNavigatorItemToGraphicNode.find( mpNavigator->currentItem() );
+    if (itCurrentGraphicNode != mNavigatorItemToGraphicNode.end())
+    {
+        IGraphicNode* gn = itCurrentGraphicNode->second;
+        switch (gn->mNodeType)
+        {
+        case IGraphicNode::ntLibrary:
+        {
+            LibraryNode* ln = dynamic_cast<LibraryNode*>(gn);
+            for (size_t i = 0; i < ln->mImages.size(); ++i)
+            {
+                text += ln->mImages[i]->mFilenamePath + "\n";
+            }
+        }break;
+        case IGraphicNode::ntLevelOfDetail:
+        {
+            LevelOfDetailNode* lod = dynamic_cast<LevelOfDetailNode*>(gn);
+            ostringstream oss;
+            oss << "Switch in distance: " << lod->getSwitchInDistance() << "\n";
+            oss << "Switch out distance: " << lod->getSwitchOutDistance() << "\n";
+            oss << "Original lod center: " << lod->getOriginalLodCenter().toString() << "\n";
+            oss << "Positionned lod center: " << lod->getPositionnedLodCenter().toString() << "\n";
+            text = oss.str();
+        }break;
+        default: break;
+        }
+    }
+
+    mpInfoLabel->setText( QString::fromStdString(text) );
+}
+
 
 //------------------------------------------------------------------------------
 void MainDialog::keyPressEvent(QKeyEvent* ipE)
@@ -448,13 +509,44 @@ void MainDialog::timerEvent(QTimerEvent *ipE)
     {
         mFileLoadingDoneQueue.processNextMessage();
         
+
+        // This should definitively not be here, but it is a prototype...
+        // The camera should be handled somewhere in the engine, but as it is
+        // not the case (it resides in the viewer?!?) we will update the broker
+        // with the camera position
+        //
+        Broker& b = mHub.getBroker();
+        b.setCamera( mpViewer->getCamera() );
+
         mpScene->update();
         
         mpViewer->update();
+
+        updateUiAtHighFrequency();
     }
 }
 
 //-----------------------------------------------------------------------------
 void MainDialog::updateUi()
 {
+    // populate info label
+    fillInfoLabel();
+}
+
+//-----------------------------------------------------------------------------
+void MainDialog::updateUiAtHighFrequency()
+{
+    Broker& b = mHub.getBroker();
+    StatsPerFrame& spf = b.getStatsPerFrame();
+
+    ostringstream oss;
+    oss << "Number of vertices: " << spf.mNumberOfVertices << "\n";
+    oss << "Number of polygons: " << spf.mNumberOfPolygons << "\n";
+    oss << "Number of graphic node displayed: " << spf.mNumberOfIGraphicNodeDisplayed << "\n";
+    oss << "Total Number of graphic node: " << spf.mTotalNumberOfIGraphicNode << "\n";
+
+    oss << fixed << setprecision(4);
+    oss << "Time to prepare frame (sec): " << spf.mTimeToPrepareFrame << "\n";
+
+    mpStatsPerFrameLabel->setText( QString::fromStdString(oss.str()) );
 }

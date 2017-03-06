@@ -1,3 +1,4 @@
+#include "Broker.h"
 #include "Definitions.h"
 #include <deque>
 #include "ImageLoader.h"
@@ -16,7 +17,7 @@ mpRoot(nullptr)
 {
 
     //register fileStreamingDoneQueue to the fileStreamer
-    FileStreamer& fs = mpHub->getFileStreamer();
+    FileStreamer& fs = getHub().getFileStreamer();
     using placeholders::_1;
     mFileLoadingDoneQueue.setProcessingFunction(
         std::bind( &Scene::processFileLoadingDoneMessage, this, _1));
@@ -45,16 +46,10 @@ void Scene::addNode(IGraphicNode* iNode)
     addToDefinitionMap(iNode);
     printf("time to addToDefinitionMap %f\n", _t.getElapsed() );
     
-    //_t.start();
-    //filterRenderables(iNode);
-    //printf("time to filterRenderables %f\n", _t.getElapsed() );
-    
-//    appliquer les filtres sur interfaces ici afin de creer les sous
-//    arbres...
-//    
-//    faire un methode getParent<T> qui retourne le premier parent de type T.
-    
-//mNeedsRepresentationCreation.push_back(iNode);
+    Broker& b = getHub().getBroker();
+    StatsPerFrame& spf = b.getStatsPerFrame();
+    spf.mTotalNumberOfIGraphicNode += countChilds(iNode);
+
     mNeedsTransformUpdate.push_back(iNode);
 }
 
@@ -179,6 +174,33 @@ void Scene::clear()
     
     mDefaultLayer.clear();
     mLayers.clear();
+
+    //clear stats
+    Broker& b = getHub().getBroker();
+    StatsPerFrame& spf = b.getStatsPerFrame();
+    spf.clear();
+
+}
+
+//------------------------------------------------------------------------------
+int Scene::countChilds(const IGraphicNode* ipCurrentNode) const
+{
+    int r = 0;
+    countChilds(ipCurrentNode, r);
+    return r;
+
+}
+
+//------------------------------------------------------------------------------
+void Scene::countChilds(const IGraphicNode* ipCurrentNode, int& iCurrentCount) const
+{
+    if(ipCurrentNode == nullptr) {return;}
+
+    iCurrentCount += ipCurrentNode->mChilds.size();
+    for(size_t i = 0; i < ipCurrentNode->mChilds.size(); ++i)
+    {
+        countChilds(ipCurrentNode->mChilds[i], iCurrentCount);
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -224,7 +246,7 @@ void Scene::createRepresentations(ModelNode *iNode)
                         // image is not on gpu, lets ask filestreamer to
                         // load it
                         //
-                        FileStreamer& fs = mpHub->getFileStreamer();
+                        FileStreamer& fs = getHub().getFileStreamer();
                         FileStreamer::Request *r = new FileStreamer::Request(this);
                         r->mRequestType = FileStreamer::rtLoadRgbImage;
                         r->mFilenamePath = im->mFilenamePath;
@@ -261,9 +283,14 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
     //depth First...
     if(iNode == nullptr) {return;}
 
+    Broker& b = getHub().getBroker();
+    StatsPerFrame& spf = b.getStatsPerFrame();
+    spf.mNumberOfIGraphicNodeDisplayed++;
+
     //perform culling, lod, switches and most of the scenegraph logic...
 
-    //fill layers    
+    //fill layers
+    bool recurseInChilds = true;
     switch (iNode->mNodeType)
     {
     case IGraphicNode::ntGroup:
@@ -299,14 +326,33 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
             //
             mNeedsRepresentationCreation.push_back(mn);
         }
+
+        spf.mNumberOfPolygons += mn->mFaces.size();
+    }break;
+    case IGraphicNode::ntLevelOfDetail:
+    {
+        //evaluate lod and if failure, do not recurse...
+        Broker& b = getHub().getBroker();
+        Point3d cameraPos = b.getCamera().getPos();
+        
+        LevelOfDetailNode* lod = dynamic_cast<LevelOfDetailNode*>(iNode);
+        double lodDistance = (lod->getPositionnedLodCenter() - cameraPos).fastNorm();
+
+        recurseInChilds = false;
+        if( lodDistance >= lod->getSwitchOutDistance() && lodDistance <= lod->getSwitchInDistance() )
+        { recurseInChilds = true; }
+        
     }break;
     default: break;
     }
 
     // recurse on all childs
-    for (size_t i = 0; i < iNode->mChilds.size(); ++i)
+    if (recurseInChilds)
     {
-        prepareFrame(  iNode->mChilds[i], ipCurrentLayer );
+        for (size_t i = 0; i < iNode->mChilds.size(); ++i)
+        {
+            prepareFrame(  iNode->mChilds[i], ipCurrentLayer );
+        }
     }
 }
 
@@ -360,6 +406,11 @@ void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
 //----------------------------------------
 void Scene::update()
 {
+    //clear per frame stats...
+    Broker& b = getHub().getBroker();
+    StatsPerFrame& spf = b.getStatsPerFrame();
+    spf.clearPerFrameStats();
+
     //process fileStreamingDoneQueue
     mFileLoadingDoneQueue.processMessages();
     
@@ -367,6 +418,7 @@ void Scene::update()
     {
         updateTransform( mNeedsTransformUpdate[i] );
         updateBoundingBoxes( mNeedsTransformUpdate[i] );
+        updateLod(mNeedsTransformUpdate[i]);
     }
     mNeedsTransformUpdate.clear();
     
@@ -380,9 +432,10 @@ void Scene::update()
     mDefaultLayer.clear();
     mLayers.clear();
 
-    //utils::Timer _t;
+    // update stats...
+    utils::Timer _t;
     prepareFrame(mpRoot, &mDefaultLayer);
-    //printf("time to prepare: %f (sec)\n", _t.getElapsed() );
+    spf.mTimeToPrepareFrame = _t.getElapsed();
 }
 
 //----------------------------------------
@@ -397,6 +450,23 @@ void Scene::updateBoundingBoxes(IGraphicNode* ipNode)
     IRenderable *r = dynamic_cast<IRenderable*>(ipNode);
     if (r)
     { r->updateBoundingBoxes(); }
+}
+
+//----------------------------------------
+void Scene::updateLod(IGraphicNode* ipNode)
+{
+    //depth first...
+    for (size_t i = 0; i < ipNode->mChilds.size(); ++i)
+    {
+        updateLod( ipNode->mChilds[i] );
+    }
+
+    LevelOfDetailNode *lod = dynamic_cast<LevelOfDetailNode*>(ipNode);
+    if (lod)
+    {
+        Point3d o = lod->getOriginalLodCenter();        
+        lod->setPositionnedLodCenter( lod->mWorldTransform * o );
+    }
 }
 
 //----------------------------------------
