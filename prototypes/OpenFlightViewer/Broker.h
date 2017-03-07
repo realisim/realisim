@@ -10,7 +10,8 @@ struct StatsPerFrame
 
     int mNumberOfVertices;
     int mNumberOfPolygons;
-    int mNumberOfIGraphicNodeDisplayed;    
+    int mNumberOfModelDisplayed;
+    int mNumberOfIGraphicNodeVisited;    
     int mTotalNumberOfIGraphicNode;
 
     double mTimeToPrepareFrame;

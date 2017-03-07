@@ -72,19 +72,43 @@ void IGraphicNode::updateBoundingBoxes()
 {
     using namespace realisim::math;
 
-    // update the positionned AABB
-    Point3d m = mAxisAlignedBoundingBox.getMin();
-    Point3d M = mAxisAlignedBoundingBox.getMax();
+    if ( mChilds.size() > 0)
+    {
+        //childs first
+        realisim::math::BB3d aabb;
+        IGraphicNode* child = nullptr;
+        for(size_t i = 0; i < mChilds.size(); ++i )
+        {
+            child = mChilds[i];
+    
+            const BB3d& positionnedAABB = child->getPositionnedAABB();
+            if (positionnedAABB.isValid())
+            {
+                aabb.add( positionnedAABB.getMin() );
+                aabb.add( positionnedAABB.getMax() );
+            }
+        }
+        mPositionnedAxisAlignedBoundingBox = aabb;
+    }
+    else
+    {
+        // update the positionned AABB
+        if (mAxisAlignedBoundingBox.isValid())
+        {
+            Point3d m = mAxisAlignedBoundingBox.getMin();
+            Point3d M = mAxisAlignedBoundingBox.getMax();
 
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * m );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), m.y(), m.z()) );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), M.y(), m.z()) );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), M.y(), m.z()) );
+            mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * m );
+            mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), m.y(), m.z()) );
+            mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), M.y(), m.z()) );
+            mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), M.y(), m.z()) );
 
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), m.y(), M.z()) );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), m.y(), M.z()) );    
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * M );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), M.y(), M.z()) );
+            mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), m.y(), M.z()) );
+            mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), m.y(), M.z()) );    
+            mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * M );
+            mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), M.y(), M.z()) );
+        }
+    }
 }
 
 //--------------------------------------------------------

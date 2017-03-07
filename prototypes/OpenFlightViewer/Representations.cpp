@@ -5,10 +5,12 @@
 #include "math/Point.h"
 #include <QColor>
 #include "Representations.h"
+#include <vector>
 
 using namespace realisim;
 using namespace treeD;
 using namespace Representations;
+using namespace std;
 
 namespace  {
     void drawRectangleOgl2_1(const Point2d& iO, const Vector2d& iS)
@@ -91,47 +93,62 @@ void Model::create(ModelNode* ipModel,
     //--- assign model
     mpModelNode = ipModel;
 
-    //--- opengl stuff...
-    mDisplayList = glGenLists(1);    
-    glNewList(mDisplayList, GL_COMPILE);
+
+    //sort face per texture...
+    map<int, vector<const Face*> > mTextureToFaces;
     
-    // meshes...
-    
-    // faces...
-    int textureId = 0;
     for(size_t i = 0; i < mpModelNode->mFaces.size(); ++i)
     {
+        int textureId = 0;
         const Face* f = mpModelNode->mFaces[i];
 
-        // textures can change on each faces, we should sort the faces per texture so we 
-        //minimize the texture change...
-        //
         if(f->mpMaterial && f->mpMaterial->mpImage)
         {
             auto it = iTextureLibrary.find(f->mpMaterial->mpImage->getId());
-            if(it != iTextureLibrary.end() && textureId != it->second.getId())
+            if(it != iTextureLibrary.end())
             { 
                 textureId = it->second.getId();
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, textureId);
             }
         }
 
-        glBegin(GL_POLYGON);
-        for(int j = 0; j < f->mVertexIndices.size(); ++j)
-        {
-            int index = f->mVertexIndices[j];
-            QColor col = f->mpVertexPool->mColors[index];
-            glColor4ub( col.red(), col.green(), col.blue(), col.alpha() );
-            glTexCoord2dv( f->mpVertexPool->mTextureCoordinates[index].getPtr() );
-            glNormal3dv( f->mpVertexPool->mNormals[index].getPtr() );
-            glVertex3dv( f->mpVertexPool->mVertices[index].getPtr() );
-        }
-        glEnd();
+        auto insertIt = mTextureToFaces.insert( make_pair(textureId, vector<const Face*>() ) );
+        vector<const Face*>& v = insertIt.first->second;
+        v.push_back(f);
     }
+
+
+    //--- Create display list.
+    //--- opengl stuff...
+    mDisplayList = glGenLists(1);    
+    glNewList(mDisplayList, GL_COMPILE);   
     
+    auto it = mTextureToFaces.begin();
+    for (; it != mTextureToFaces.end(); ++it)
+    {
+        int texId = it->first;
+        vector<const Face*>& v = it->second;
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texId);
+
+        for (auto itFace : v)
+        {
+            const Face* f = itFace;
+            glBegin(GL_POLYGON);
+            for(int j = 0; j < f->mVertexIndices.size(); ++j)
+            {
+                int index = f->mVertexIndices[j];
+                QColor col = f->mpVertexPool->mColors[index];
+                glColor4ub( col.red(), col.green(), col.blue(), col.alpha() );
+                glTexCoord2dv( f->mpVertexPool->mTextureCoordinates[index].getPtr() );
+                glNormal3dv( f->mpVertexPool->mNormals[index].getPtr() );
+                glVertex3dv( f->mpVertexPool->mVertices[index].getPtr() );
+            }
+            glEnd();
+        }
+        
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
-    
     glEndList();
 }
 

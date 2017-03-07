@@ -210,7 +210,7 @@ void Scene::countChilds(const IGraphicNode* ipCurrentNode, int& iCurrentCount) c
 {
     if(ipCurrentNode == nullptr) {return;}
 
-    iCurrentCount += ipCurrentNode->mChilds.size();
+    iCurrentCount += (int)ipCurrentNode->mChilds.size();
     for(size_t i = 0; i < ipCurrentNode->mChilds.size(); ++i)
     {
         countChilds(ipCurrentNode->mChilds[i], iCurrentCount);
@@ -313,7 +313,7 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
 
     Broker& b = getHub().getBroker();
     StatsPerFrame& spf = b.getStatsPerFrame();
-    spf.mNumberOfIGraphicNodeDisplayed++;
+    spf.mNumberOfIGraphicNodeVisited++;
 
     //perform culling, lod, switches and most of the scenegraph logic...
 
@@ -345,7 +345,10 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
         if(itModel != mDefinitionIdToRepresentation.end()) 
         {
             if(mn->isVisible())
-            { ipCurrentLayer->push_back( itModel->second ); }
+            { 
+                spf.mNumberOfModelDisplayed++;
+                ipCurrentLayer->push_back( itModel->second );
+            }
         }
         else
         {
@@ -383,7 +386,10 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
         {
             auto itBBox = mDefinitionIdToBoundingBox.find(def->getId());
             if(itBBox != mDefinitionIdToBoundingBox.end()) 
-            { ipCurrentLayer->push_back( itBBox->second ); }
+            { 
+                spf.mNumberOfModelDisplayed++;
+                ipCurrentLayer->push_back( itBBox->second );
+            }
             else
             { mNeedsBBoxRepresentationCreation.push_back(iNode); }
         }

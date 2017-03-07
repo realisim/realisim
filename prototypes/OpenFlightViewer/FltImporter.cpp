@@ -2,8 +2,9 @@
 #include "Definitions.h"
 #include <deque>
 #include "FltImporter.h"
-#include <QFileInfo>
 #include "math/Matrix4.h"
+#include <QFileInfo>
+#include <regex>
 
 using namespace std;
 using namespace realisim;
@@ -28,7 +29,6 @@ mpHeaderRecord(ipHr),
 mpGraphicNodeRoot(nullptr)
 {
     parseFltTree(ipHr, nullptr);
-    finalize();
 }
 
 FltImporter::~FltImporter()
@@ -81,38 +81,6 @@ void FltImporter::applyLayersLogicOnChilds(OpenFlight::PrimaryRecord* ipRecord, 
 }
 
 //-----------------------------------------------------------------------------
-// computes AABB for all nodes that have no faces... since nodes with face 
-// already have their AABB computed when created, see digData(object)
-//
-// This is to compute AABB for all IGraphicNode
-//
-void FltImporter::computeBoundingBoxes(IGraphicNode* ipNode)
-{
-    if (ipNode && ipNode->mChilds.size() > 0)
-    {
-        //realisim::math::BB3d aabb;
-        //computeBoundingBoxes( ipNode, ipNode, aabb );
-        //ipNode->setAABB(aabb);
-
-        //childs first
-        realisim::math::BB3d aabb;
-        IGraphicNode* child = nullptr;
-        for(size_t i = 0; i < ipNode->mChilds.size(); ++i )
-        {
-            child = ipNode->mChilds[i];
-            computeBoundingBoxes(child);
-
-            if (child->getAABB().isValid())
-            {
-                aabb.add( child->getAABB().getMin() );
-                aabb.add( child->getAABB().getMax() );
-            }
-        }
-        ipNode->setAABB(aabb);
-    }
-}
-
-//-----------------------------------------------------------------------------
 // In our data tree, we do not care much about external references but they
 // can carry a transform matrix which needs to be be brought in. To do so,
 // we create a group to hold that transform.
@@ -143,7 +111,8 @@ GroupNode* FltImporter::digData(OpenFlight::ExternalReferenceRecord* ipE,
 
 //-----------------------------------------------------------------------------
 GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
-                                IGraphicNode* ipParent)
+                                IGraphicNode* ipParent,
+                                bool *ipDigIntoChilds )
 {
     using namespace OpenFlight;
 
@@ -161,6 +130,16 @@ GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
     
     // mark as instance if needed
     markAsInstance(ipG, pGroup);    
+
+    // --- autoroutes
+    // autoroutes are tagged by name with the following structure AR:xxxx where xxxx is the ICAO
+    std::regex rg("AR:") ; //match a single drive letter followed by a colon and whatever else...
+    std::smatch m;
+    //skip autoroutes for now...
+    if (regex_search(pGroup->mName, m, rg))
+    {
+        *ipDigIntoChilds = false;
+    }
 
     return pGroup;
 }
@@ -290,17 +269,33 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
 {
     using namespace OpenFlight;
 
-    /*printf("Object Name: %s, ObjectRecord priority: %d\n", 
-        ipR->getAsciiId().c_str(),
-        ipR->getRelativePriority());*/
+    // here we will create a new model. In order to limit the number of models
+    // we will bundle all models under a group in the same model. This means that
+    // all faces, vertices of all ObjectRecord will be bundle in the same modelNode.
 
-    ModelNode *model = new ModelNode();
-    ipParent->addChild(model);
+    // fetch parent to find out if it  already has a model node. If not, create a new
+    // one, else use the existing one.
+    //
+    ModelNode *model = nullptr;
+    for (size_t i = 0; i < ipParent->mChilds.size() && model == nullptr; ++i)
+    {
+        IGraphicNode *child = ipParent->mChilds[i];
+        if(child->mNodeType == IGraphicNode::ntModel)
+        { model = dynamic_cast<ModelNode*>(child); }
+    }
     
-    model->mName = ipR->hasLongIdRecord() ? ipR->getLongIdRecord()->getAsciiId() : ipR->getAsciiId();
-    model->mParentTransform = fetchTransform(ipR);
-    
-    markAsInstance(ipR, model);
+    // if we found no model under the parent, lets create one!
+    //
+    if(model == nullptr)
+    {
+        model = new ModelNode();
+        ipParent->addChild(model);
+
+        model->mName = ipR->hasLongIdRecord() ? ipR->getLongIdRecord()->getAsciiId() : ipR->getAsciiId();
+        model->mParentTransform = fetchTransform(ipR);
+
+        markAsInstance(ipR, model);
+    }    
 
     //this is an instance...
     if(model->isInstantiated())
@@ -426,13 +421,6 @@ realisim::math::Matrix4 FltImporter::fetchTransform(OpenFlight::PrimaryRecord* i
 }
 
 //-----------------------------------------------------------------------------
-void FltImporter::finalize()
-{
-    computeBoundingBoxes(mpGraphicNodeRoot); //move to finalize!
-}
-
-
-//-----------------------------------------------------------------------------
 Image* FltImporter::getImageFromTexturePatternIndex(int iIndex, LibraryNode* iLibrary)
 {
     using namespace OpenFlight;
@@ -506,7 +494,7 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
             digIntoChild = currentNode->getUseCount() == 1; 
             break;
         case OpenFlight::ocGroup:
-            currentNode = digData( (GroupRecord*)ipRecord, ipCurrentParent );
+            currentNode = digData( (GroupRecord*)ipRecord, ipCurrentParent, &digIntoChild );
             break;
         case OpenFlight::ocObject:
             currentNode = digData( (ObjectRecord*)ipRecord, ipCurrentParent );
@@ -516,11 +504,34 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
             break;
         case OpenFlight::ocUnsupported:
         {
-            //explanation...
-            GroupNode *pGroup = new GroupNode();
-            pGroup->mName = string("Unsupported openfligNode: ") + OpenFlight::toString(  ((UnsupportedRecord*)ipRecord)->getOriginalOpCode() );
-            ipCurrentParent->addChild(pGroup);
-            currentNode = pGroup;
+            // these explicitely ignored are temporary... Since they are not yet supported
+            // the appear here and creating a node for each of them is a bit overkill.
+            // Nonetheless, those which are not explicitly ignored needs to have a node create
+            // to preserve the tree structure.
+            //
+            OpenFlight::opCode originalOpCode = ((UnsupportedRecord*)ipRecord)->getOriginalOpCode();
+            const bool explicitlyIgnored = (
+                originalOpCode == OpenFlight::ocIndexedLightPoint ||
+                originalOpCode == OpenFlight::ocReserved103 ||
+                originalOpCode == OpenFlight::ocReserved104 ||
+                originalOpCode == OpenFlight::ocReserved110 ||
+                originalOpCode == OpenFlight::ocReserved117 ||
+                originalOpCode == OpenFlight::ocReserved118 ||
+                originalOpCode == OpenFlight::ocReserved120 ||
+                originalOpCode == OpenFlight::ocReserved121 ||
+                originalOpCode == OpenFlight::ocReserved124 ||
+                originalOpCode == OpenFlight::ocReserved125 ||
+                originalOpCode == OpenFlight::ocReserved134 ||
+                originalOpCode == OpenFlight::ocReserved144 ||
+                originalOpCode == OpenFlight::ocReserved146 );
+
+                if (!explicitlyIgnored)
+                {
+                    GroupNode *pGroup = new GroupNode();
+                    pGroup->mName = string("Unsupported openfligNode: ") + OpenFlight::toString( originalOpCode );
+                    ipCurrentParent->addChild(pGroup);
+                    currentNode = pGroup;
+                }
         }break;
         default: 
         {
@@ -533,6 +544,15 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
                 ipRecord->getOpCode() == OpenFlight::ocFace ||
                 ipRecord->getOpCode() == OpenFlight::ocVertexList;
             assert(explicitlyIgnored);
+
+            //// we still create a group so that the tree wont be broken...
+            //if (!explicitlyIgnored)
+            //{
+            //    GroupNode *pGroup = new GroupNode();
+            //    pGroup->mName = string("Supported openfligNode not implemented in FltImporter: ") + OpenFlight::toString( ipRecord->getOpCode() );
+            //    ipCurrentParent->addChild(pGroup);
+            //    currentNode = pGroup;
+            //}
 
         } break;
     }

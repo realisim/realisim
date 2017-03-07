@@ -542,7 +542,8 @@ void MainDialog::updateUiAtHighFrequency()
     ostringstream oss;
     oss << "Number of vertices: " << spf.mNumberOfVertices << "\n";
     oss << "Number of polygons: " << spf.mNumberOfPolygons << "\n";
-    oss << "Number of graphic node displayed: " << spf.mNumberOfIGraphicNodeDisplayed << "\n";
+    oss << "Number of model displayed: " << spf.mNumberOfModelDisplayed<< "\n";
+    oss << "Number of graphic node visited: " << spf.mNumberOfIGraphicNodeVisited << "\n";
     oss << "Total Number of graphic node: " << spf.mTotalNumberOfIGraphicNode << "\n";
 
     oss << fixed << setprecision(4);

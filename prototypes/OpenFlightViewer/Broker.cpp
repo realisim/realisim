@@ -13,7 +13,8 @@ void StatsPerFrame::clear()
 {
     mNumberOfVertices = 0;
     mNumberOfPolygons = 0;
-    mNumberOfIGraphicNodeDisplayed = 0;
+    mNumberOfModelDisplayed = 0;
+    mNumberOfIGraphicNodeVisited = 0;
     mTotalNumberOfIGraphicNode = 0;
     mTimeToPrepareFrame = 0;
 }
@@ -22,7 +23,8 @@ void StatsPerFrame::clearPerFrameStats()
 {
     mNumberOfVertices = 0;
     mNumberOfPolygons = 0;
-    mNumberOfIGraphicNodeDisplayed = 0;    
+    mNumberOfModelDisplayed = 0;
+    mNumberOfIGraphicNodeVisited = 0;    
 }
 
 //-----------------------------------------------------------------------------
