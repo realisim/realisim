@@ -15,7 +15,9 @@ mpParent(nullptr),
 mChilds(),
 mNodeType(ntUndefined),
 mName("N/A"),
-mUseCount(1)
+mUseCount(1),
+mIsTransformDirty(true), 
+mIsBoundingBoxVisible(false)
 {}
 
 IGraphicNode::~IGraphicNode()
@@ -66,12 +68,30 @@ int IGraphicNode::getUseCount() const
 }
 
 //--------------------------------------------------------
+void IGraphicNode::updateBoundingBoxes()
+{
+    using namespace realisim::math;
+
+    // update the positionned AABB
+    Point3d m = mAxisAlignedBoundingBox.getMin();
+    Point3d M = mAxisAlignedBoundingBox.getMax();
+
+    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * m );
+    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), m.y(), m.z()) );
+    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), M.y(), m.z()) );
+    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), M.y(), m.z()) );
+
+    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), m.y(), M.z()) );
+    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), m.y(), M.z()) );    
+    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * M );
+    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), M.y(), M.z()) );
+}
+
+//--------------------------------------------------------
 //--- IRenderable
 //--------------------------------------------------------
 IRenderable::IRenderable() : 
-    mIsTransformDirty(true), 
-    mIsVisible(true),
-    mIsBoundingBoxVisible(false)
+    mIsVisible(true)
 {}
 
 //--------------------------------------------------------
@@ -107,26 +127,6 @@ void IRenderable::setAsVisible(IGraphicNode* ipNode, bool iVisible)
     {
         setAsVisible(ipNode->mChilds[i], iVisible);
     }
-}
-
-//--------------------------------------------------------
-void IRenderable::updateBoundingBoxes()
-{
-    using namespace realisim::math;
-
-    // update the positionned AABB
-    Point3d m = mAxisAlignedBoundingBox.getMin();
-    Point3d M = mAxisAlignedBoundingBox.getMax();
-
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * m );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), m.y(), m.z()) );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), M.y(), m.z()) );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), M.y(), m.z()) );
-    
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), m.y(), M.z()) );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(M.x(), m.y(), M.z()) );    
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * M );
-    mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), M.y(), M.z()) );
 }
 
 //--------------------------------------------------------

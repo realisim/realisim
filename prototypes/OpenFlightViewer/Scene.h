@@ -14,8 +14,9 @@ class Image;
 class ModelNode;
 namespace Representations
 {
-    class Representation;
+    class BoundingBox;
     class Model;
+    class Representation;
 }
 
 class Scene
@@ -63,7 +64,8 @@ protected:
 void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     int countChilds(const IGraphicNode*) const;
     void countChilds(const IGraphicNode*, int& iCurrentCount) const;
-    void createRepresentations(ModelNode*);
+    void createBoundingBoxRepresentation(IGraphicNode*);
+    void createModelRepresentation(ModelNode*);
     Hub& getHub() {return *mpHub;}
 //    void checkAndCreateRepresentation(ModelNode*)
     IDefinition* findDefinition(unsigned int);
@@ -82,9 +84,11 @@ void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     MessageQueue mFileLoadingDoneQueue;
     
     std::unordered_map<unsigned int, IDefinition*> mIdToDefinition;
+    std::unordered_map<unsigned int, Representations::BoundingBox*> mDefinitionIdToBoundingBox;
     std::unordered_map<unsigned int, Representations::Representation*> mDefinitionIdToRepresentation;
     std::unordered_map<unsigned int, realisim::treeD::Texture> mImageIdToTexture;
     
     std::vector<ModelNode*> mNeedsRepresentationCreation;
+    std::vector<IGraphicNode*> mNeedsBBoxRepresentationCreation;
     std::vector<IGraphicNode*> mNeedsTransformUpdate;
 };

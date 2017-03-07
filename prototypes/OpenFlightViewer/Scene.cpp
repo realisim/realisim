@@ -159,17 +159,31 @@ void Scene::clear()
         mpRoot = nullptr;
     }
     
-    auto it = mDefinitionIdToRepresentation.begin();
-    for(; it != mDefinitionIdToRepresentation.end(); ++it)
+    // delete all boundingboxes
     {
-        delete it->second;
+        auto it = mDefinitionIdToBoundingBox.begin();
+        for(; it != mDefinitionIdToBoundingBox.end(); ++it)
+        {
+            delete it->second;
+        }
+    }
+
+    // delete all representation
+    {
+        auto it = mDefinitionIdToRepresentation.begin();
+        for(; it != mDefinitionIdToRepresentation.end(); ++it)
+        {
+            delete it->second;
+        }
     }
     
     mIdToDefinition.clear();
+    mDefinitionIdToBoundingBox.clear();
     mDefinitionIdToRepresentation.clear();
     mImageIdToTexture.clear();
     
     mNeedsRepresentationCreation.clear();
+    mNeedsBBoxRepresentationCreation.clear();
     mNeedsTransformUpdate.clear();
     
     mDefaultLayer.clear();
@@ -204,7 +218,21 @@ void Scene::countChilds(const IGraphicNode* ipCurrentNode, int& iCurrentCount) c
 }
 
 //------------------------------------------------------------------------------
-void Scene::createRepresentations(ModelNode *iNode)
+void Scene::createBoundingBoxRepresentation(IGraphicNode* ipNode)
+{
+    const IDefinition *def = dynamic_cast<const IDefinition*>(ipNode);
+
+    auto repIt = mDefinitionIdToBoundingBox.find(def->getId());
+    if(repIt == mDefinitionIdToBoundingBox.end())
+    {
+        Representations::BoundingBox *bbox = new Representations::BoundingBox;
+        bbox->create(ipNode);
+        mDefinitionIdToBoundingBox.insert( make_pair(def->getId(), bbox) );   
+    }
+}
+
+//------------------------------------------------------------------------------
+void Scene::createModelRepresentation(ModelNode *iNode)
 {
     const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
 
@@ -346,6 +374,23 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
     default: break;
     }
 
+
+    // add bounding box to draw list
+    if (iNode->isBoundingBoxVisible())
+    {
+        IDefinition *def = dynamic_cast<IDefinition*>(iNode);
+        if (def)
+        {
+            auto itBBox = mDefinitionIdToBoundingBox.find(def->getId());
+            if(itBBox != mDefinitionIdToBoundingBox.end()) 
+            { ipCurrentLayer->push_back( itBBox->second ); }
+            else
+            { mNeedsBBoxRepresentationCreation.push_back(iNode); }
+        }
+        
+    }
+
+
     // recurse on all childs
     if (recurseInChilds)
     {
@@ -423,11 +468,13 @@ void Scene::update()
     mNeedsTransformUpdate.clear();
     
     for(size_t i = 0; i < mNeedsRepresentationCreation.size(); ++i)
-    {
-        createRepresentations(mNeedsRepresentationCreation[i]);
-    }
+    { createModelRepresentation(mNeedsRepresentationCreation[i]); }
     mNeedsRepresentationCreation.clear();
     
+    for(size_t i = 0; i < mNeedsBBoxRepresentationCreation.size(); ++i)
+    { createBoundingBoxRepresentation(mNeedsBBoxRepresentationCreation[i]); }
+    mNeedsBBoxRepresentationCreation.clear();
+
     //clear all draw list...
     mDefaultLayer.clear();
     mLayers.clear();
@@ -447,9 +494,7 @@ void Scene::updateBoundingBoxes(IGraphicNode* ipNode)
         updateBoundingBoxes( ipNode->mChilds[i] );
     }
 
-    IRenderable *r = dynamic_cast<IRenderable*>(ipNode);
-    if (r)
-    { r->updateBoundingBoxes(); }
+    ipNode->updateBoundingBoxes();
 }
 
 //----------------------------------------
@@ -473,7 +518,8 @@ void Scene::updateLod(IGraphicNode* ipNode)
 void Scene::updateTransform(IGraphicNode* ipNode)
 {
     //find first iRenderable parent, to get parentTransform
-    IRenderable *parent = ipNode->getFirstParent<IRenderable>();
+    //IRenderable *parent = ipNode->getFirstParent<IRenderable>();
+    IGraphicNode *parent = ipNode->mpParent;
     Matrix4 parentTransform;
     if (parent != nullptr)
     {
@@ -486,12 +532,11 @@ void Scene::updateTransform(IGraphicNode* ipNode)
 //----------------------------------------
 void Scene::updateTransform(IGraphicNode* ipNode, Matrix4 iParentWorldTransform)
 {
-    IRenderable *r = dynamic_cast<IRenderable*>(ipNode);
-    if (r && r->mIsTransformDirty)
+    if (ipNode->mIsTransformDirty)
     {
-        r->mWorldTransform = iParentWorldTransform * r->mParentTransform;
-        iParentWorldTransform = r->mWorldTransform;
-        r->mIsTransformDirty = false;
+        ipNode->mWorldTransform = iParentWorldTransform * ipNode->mParentTransform;
+        iParentWorldTransform = ipNode->mWorldTransform;
+        ipNode->mIsTransformDirty = false;
     }
 
     for(size_t i = 0; i < ipNode->mChilds.size(); ++i)

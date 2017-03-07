@@ -28,6 +28,7 @@ mpHeaderRecord(ipHr),
 mpGraphicNodeRoot(nullptr)
 {
     parseFltTree(ipHr, nullptr);
+    finalize();
 }
 
 FltImporter::~FltImporter()
@@ -83,36 +84,31 @@ void FltImporter::applyLayersLogicOnChilds(OpenFlight::PrimaryRecord* ipRecord, 
 // computes AABB for all nodes that have no faces... since nodes with face 
 // already have their AABB computed when created, see digData(object)
 //
-// This is to compute AABB for groups
+// This is to compute AABB for all IGraphicNode
 //
 void FltImporter::computeBoundingBoxes(IGraphicNode* ipNode)
 {
-    GroupNode *gn = dynamic_cast<GroupNode *>(ipNode);
-    IRenderable *r = dynamic_cast<IRenderable *>(ipNode);
-    if(gn && r)
+    if (ipNode && ipNode->mChilds.size() > 0)
     {
+        //realisim::math::BB3d aabb;
+        //computeBoundingBoxes( ipNode, ipNode, aabb );
+        //ipNode->setAABB(aabb);
+
+        //childs first
         realisim::math::BB3d aabb;
-        computeBoundingBoxes( ipNode, ipNode, aabb );
-        r->setAABB(aabb);
-    }
-}
+        IGraphicNode* child = nullptr;
+        for(size_t i = 0; i < ipNode->mChilds.size(); ++i )
+        {
+            child = ipNode->mChilds[i];
+            computeBoundingBoxes(child);
 
-void FltImporter::computeBoundingBoxes(IGraphicNode* ipTopNode, IGraphicNode* ipCurrentNode, realisim::math::BB3d& iAABB)
-{    
-    //childs first
-    for(size_t i = 0; i < ipCurrentNode->mChilds.size(); ++i )
-    {
-        computeBoundingBoxes(ipTopNode, ipCurrentNode->mChilds[i], iAABB);
-    }
-
-    IRenderable *r = dynamic_cast<IRenderable *>(ipCurrentNode);
-    // we do not want to add the bounding box of the top node, since it is the one
-    // we are trying to compute...
-    //
-    if(ipTopNode != ipCurrentNode && r && r->getAABB().isValid() )
-    {
-        iAABB.add( r->getAABB().getMin() );
-        iAABB.add( r->getAABB().getMax() );
+            if (child->getAABB().isValid())
+            {
+                aabb.add( child->getAABB().getMin() );
+                aabb.add( child->getAABB().getMax() );
+            }
+        }
+        ipNode->setAABB(aabb);
     }
 }
 
@@ -430,6 +426,13 @@ realisim::math::Matrix4 FltImporter::fetchTransform(OpenFlight::PrimaryRecord* i
 }
 
 //-----------------------------------------------------------------------------
+void FltImporter::finalize()
+{
+    computeBoundingBoxes(mpGraphicNodeRoot); //move to finalize!
+}
+
+
+//-----------------------------------------------------------------------------
 Image* FltImporter::getImageFromTexturePatternIndex(int iIndex, LibraryNode* iLibrary)
 {
     using namespace OpenFlight;
@@ -557,6 +560,4 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
     // to do it, so when we are done with the childrens, we will check if there
     // are actions to be taken
     applyLayersLogicOnChilds(ipRecord, currentNode);
-
-    computeBoundingBoxes(currentNode);
 }

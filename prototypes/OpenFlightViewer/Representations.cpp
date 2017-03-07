@@ -41,9 +41,40 @@ Representation::~Representation()
 void Representation::draw()
 {}
 
-//----------------
+//-------------------------------------------------------------------------------------
+//--- BoundingBox
+//-------------------------------------------------------------------------------------
+void BoundingBox::create(IGraphicNode* ipNode)
+{
+    mpGraphicNode = ipNode;
+}
+
+//-------------------------------------------------------------------------------------
+void BoundingBox::draw()
+{
+    //show bounding box
+    if (mpGraphicNode && mpGraphicNode->isBoundingBoxVisible())
+    {
+        glDisable(GL_CULL_FACE);
+        glColor3ub(255, 255, 255);
+
+        /*GLint previousPolygonMode = GL_LINE;
+        glGetIntegerv(GL_POLYGON_MODE, &previousPolygonMode);*/
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        drawRectangularPrism( mpGraphicNode->getPositionnedAABB().getMin(),
+            mpGraphicNode->getPositionnedAABB().getMax() );
+
+        //glPolygonMode(GL_FRONT_AND_BACK, previousPolygonMode);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+        glEnable(GL_CULL_FACE);
+    }
+}
+
+//-------------------------------------------------------------------------------------
 //--- Model
-//----------------
+//-------------------------------------------------------------------------------------
 Model::Model( ) :
     Representation(),
     mpModelNode(nullptr),
@@ -128,24 +159,6 @@ void Model::draw()
         
     glCallList(mDisplayList);
     glPopMatrix();
-    
-
-    //show bounding box
-    if (mpModelNode->isBoundingBoxVisible())
-    {
-        glDisable(GL_CULL_FACE);
-        glColor3ub(255, 255, 255);
-
-        GLint previousPolygonMode;
-        glGetIntegerv(GL_POLYGON_MODE, &previousPolygonMode);
-
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        drawRectangularPrism( mpModelNode->getPositionnedAABB().getMin(),
-            mpModelNode->getPositionnedAABB().getMax() );
-        glPolygonMode(GL_FRONT_AND_BACK, previousPolygonMode);
-
-        glEnable(GL_CULL_FACE);
-    }
     
     //printf("drawing model: %d\n", mpModelNode->getId());
 }

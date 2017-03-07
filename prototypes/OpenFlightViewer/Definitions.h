@@ -26,8 +26,14 @@ public:
     virtual void addChild(IGraphicNode*);
     int decrementUseCount();
     void incrementUseCount();
+    const realisim::math::BB3d& getAABB() const {return mAxisAlignedBoundingBox;}
+    const realisim::math::BB3d& getPositionnedAABB() const {return mPositionnedAxisAlignedBoundingBox;}
     template<typename T> T* getFirstParent();
     int getUseCount() const;
+    bool isBoundingBoxVisible() const {return mIsBoundingBoxVisible;}
+    void setAABB(const realisim::math::BB3d& iAABB) {mAxisAlignedBoundingBox = iAABB;}
+    void setBoundingBoxVisible(bool iS) {mIsBoundingBoxVisible = iS;}
+    void updateBoundingBoxes();    
 
     IGraphicNode* mpParent;
     std::vector<IGraphicNode*> mChilds; //owned
@@ -35,10 +41,18 @@ public:
     nodeType mNodeType;
     std::string mName;
 
+    bool mIsTransformDirty;
+    realisim::math::Matrix4 mParentTransform;
+    realisim::math::Matrix4 mWorldTransform;    
+
 protected:
     void incrementUseCount(IGraphicNode*, int);
 
     int mUseCount;
+    bool mIsBoundingBoxVisible;
+    //    realisim::math::BB3d mOrientedBoundingBox;
+    realisim::math::BB3d mAxisAlignedBoundingBox;
+    realisim::math::BB3d mPositionnedAxisAlignedBoundingBox;
 };
 
 //--------------------------------------------------------
@@ -66,29 +80,13 @@ public:
     IRenderable();
     virtual ~IRenderable() = 0;
     
-    const realisim::math::BB3d& getAABB() const {return mAxisAlignedBoundingBox;}
-    const realisim::math::BB3d& getPositionnedAABB() const {return mPositionnedAxisAlignedBoundingBox;}
-
-    bool isBoundingBoxVisible() const {return mIsBoundingBoxVisible;}
     bool isVisible() const;
-    void setAABB(const realisim::math::BB3d& iAABB) {mAxisAlignedBoundingBox = iAABB;}
-    void setAsVisible(bool);
-    void setBoundingBoxVisible(bool iS) {mIsBoundingBoxVisible = iS;}
-    void updateBoundingBoxes();
-
-    bool mIsTransformDirty;
-    realisim::math::Matrix4 mParentTransform;
-    realisim::math::Matrix4 mWorldTransform;    
-    
+    void setAsVisible(bool);    
 
     protected:
         void setAsVisible(IGraphicNode*, bool);
 
         bool mIsVisible;    
-        bool mIsBoundingBoxVisible;
-//    realisim::math::BB3d mOrientedBoundingBox;
-        realisim::math::BB3d mAxisAlignedBoundingBox;
-        realisim::math::BB3d mPositionnedAxisAlignedBoundingBox;
 };
 
 

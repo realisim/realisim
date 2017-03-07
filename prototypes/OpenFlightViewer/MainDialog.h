@@ -66,7 +66,7 @@ protected slots:
     void openFile();
     
 protected:
-    void centerCameraOn(realisim::math::Point3d);
+    void centerCameraOn(realisim::math::Point3d, double iRadius);
     void createInfoPanel(QWidget*);
     void createMenus();
     virtual void keyPressEvent(QKeyEvent*) override;

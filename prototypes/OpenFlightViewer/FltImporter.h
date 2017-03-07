@@ -20,13 +20,13 @@ protected:
 void applyTransformCarryover(IRenderable*);
     void applyLayersLogicOnChilds(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode* ipNode);
     void computeBoundingBoxes(IGraphicNode* ipNode);
-    void computeBoundingBoxes(IGraphicNode*, IGraphicNode*, realisim::math::BB3d&);
     GroupNode* digData(OpenFlight::ExternalReferenceRecord*, IGraphicNode*);
     GroupNode* digData(OpenFlight::GroupRecord*, IGraphicNode*);
     LibraryNode* digData(OpenFlight::HeaderRecord*, IGraphicNode*);
     ModelNode* digData(OpenFlight::ObjectRecord*, IGraphicNode*);
     LevelOfDetailNode* digData(OpenFlight::LevelOfDetailRecord*, IGraphicNode*);
     realisim::math::Matrix4 fetchTransform(OpenFlight::PrimaryRecord*, bool* = nullptr);
+    void finalize();
     Image* getImageFromTexturePatternIndex(int, LibraryNode* iLibrary);
     OpenFlight::Record* getRecordFromDefinitionId(int);
     void parseFltTree(OpenFlight::PrimaryRecord*, IGraphicNode* ipCurrentParent);

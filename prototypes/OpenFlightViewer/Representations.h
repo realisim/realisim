@@ -7,15 +7,33 @@
 
 namespace Representations
 {
+    //-------------------------------------------------------------------------
     class Representation
     {
     public:
         Representation();
+        Representation(const Representation&) = delete;
+        Representation& operator=(const Representation&) = delete;
         virtual ~Representation();
         
         virtual void draw();
     };
     
+    //-------------------------------------------------------------------------
+    class BoundingBox : public Representation
+    {
+    public:
+        BoundingBox() = default;
+        virtual ~BoundingBox() = default;
+
+        void create(IGraphicNode*);
+        virtual void draw() override;
+
+    protected:
+        IGraphicNode* mpGraphicNode;
+    };
+
+    //-------------------------------------------------------------------------
     class Model : public Representation
     {
     public:

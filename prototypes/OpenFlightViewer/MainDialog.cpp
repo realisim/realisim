@@ -266,11 +266,13 @@ mTimerId(0)
 }
 
 //-----------------------------------------------------------------------------
-void MainDialog::centerCameraOn(realisim::math::Point3d iC)
+void MainDialog::centerCameraOn(realisim::math::Point3d iC, double iRadius)
 {
     Camera c = mpViewer->getCamera();
-    Point3d e = iC + Vector3d(0.0, -100, 100);
-    c.set( e, iC, Vector3d(0.0, 0.0, 1.0) );
+    const Vector3d lookVector = (c.getLook() - c.getPos()).normalise();
+    const Vector3d d = iC - c.getPos();
+    
+    c.set( iC - lookVector * iRadius, iC, c.getUp() );
 
     mpViewer->setCamera(c);
 }
@@ -393,11 +395,11 @@ void MainDialog::navigatorItemActivated(QTreeWidgetItem *ipItem, int iColumn)
     auto itGraphicNode = mNavigatorItemToGraphicNode.find(ipItem);
     if (itGraphicNode != mNavigatorItemToGraphicNode.end())
     {
-        IRenderable* r = dynamic_cast<IRenderable*>(itGraphicNode->second);
-        if (r)
-        {
-            centerCameraOn( r->getPositionnedAABB().getCenter() );
-        }
+        IGraphicNode* gn = itGraphicNode->second;
+        const BB3d& positionnedAABB = gn->getPositionnedAABB();
+
+        centerCameraOn( positionnedAABB.getCenter(), 
+            (positionnedAABB.getMax() - positionnedAABB.getMin()).norm() );
     }
     updateUi();
 }
@@ -411,16 +413,14 @@ void MainDialog::navigatorCurrentItemChanged(QTreeWidgetItem *ipCurrent, QTreeWi
 
     if (itCurrentGraphicNode != mNavigatorItemToGraphicNode.end())
     {
-        IRenderable* r = dynamic_cast<IRenderable*>(itCurrentGraphicNode->second);
-        if (r)
-        { r->setBoundingBoxVisible( true ); }
+        IGraphicNode* gn = itCurrentGraphicNode->second;
+        gn->setBoundingBoxVisible( true );
     }
 
     if (itPreviousGraphicNode != mNavigatorItemToGraphicNode.end())
     {
-        IRenderable* r = dynamic_cast<IRenderable*>(itPreviousGraphicNode->second);
-        if (r)
-        { r->setBoundingBoxVisible( false ); }
+        IGraphicNode* gn = itPreviousGraphicNode->second;
+        gn->setBoundingBoxVisible( false );
     }
     updateUi();
 }
