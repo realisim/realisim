@@ -8,8 +8,9 @@ using namespace std;
 
 //------------------------------------------------------------------------------
 GpuStreamer::GpuStreamer() :
-mpGLContext(nullptr),
-mMakeCurrentNeeded(true)
+mMakeCurrentNeeded(true),
+mGLContext(0),
+mDC(0)
 {
 }
 
@@ -26,7 +27,7 @@ void GpuStreamer::postMessage(GpuStreamer::Message *iMessage)
 //------------------------------------------------------------------------------
 void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
 {
-    if(mMakeCurrentNeeded) { mpGLContext->makeCurrent(); }
+    wglMakeCurrent(mDC, mGLContext);
 
     Message *r = (Message*)(ipMessage);
 
@@ -46,6 +47,8 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
     //    {
     //        mPendingFileRequests.erase(itToErase);
     //    }
+
+    wglMakeCurrent(NULL, NULL);
 }
 
 //------------------------------------------------------------------------------
@@ -55,10 +58,11 @@ void GpuStreamer::registerDoneQueue(void *ipRequester, MessageQueue *ipDoneQueue
 }
 
 //------------------------------------------------------------------------------
-void GpuStreamer::setGLContext(QGLContext* ipGLContext)
+void GpuStreamer::setGLContext(HDC iDc, HGLRC iContext)
 {
     mMakeCurrentNeeded = true;
-    mpGLContext = ipGLContext;
+    mGLContext = iContext;
+    mDC = iDc;
 
     using placeholders::_1;
     function<void(MessageQueue::Message*)> f =

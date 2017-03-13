@@ -3,6 +3,7 @@
 #include "MessageQueue.h"
 #include <map>
 #include <set>
+#include <Windows.h>
 
 class QGLContext;
 
@@ -33,7 +34,7 @@ public:
 
     void postMessage(Message*);
     void registerDoneQueue(void *ipRequester, MessageQueue* ipDoneQueue);
-    void setGLContext(QGLContext*);
+    void setGLContext(HDC, HGLRC);
 
 private:
     void processMessage(MessageQueue::Message*);
@@ -43,5 +44,6 @@ private:
     MessageQueue mRequestQueue;
     std::map<void*, MessageQueue*> mSenderToDoneQueue;
     //std::set<std::string> mPendingFileRequests;
-    QGLContext *mpGLContext;
+    HGLRC mGLContext;
+    HDC mDC;
 };

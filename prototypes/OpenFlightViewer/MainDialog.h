@@ -19,15 +19,32 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMainWindow>
+#include <QOpenGLContext>
 #include <QTimerEvent>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <QWindow>
 #include "3d/Widget3d.h"
 #include "Scene.h"
 
 class IGraphicNode;
 namespace Representations{ class Representation; }
 
+class SharedGlWindow : public QWindow
+{
+public:
+    explicit SharedGlWindow(QWindow* ipParent=0);
+
+    HGLRC openGlNativeHandle() const;
+    HDC openGlNativeDC() const;
+
+protected:
+    //void exposeEvent(QExposeEvent *event) override;
+
+    QOpenGLContext *mpContext;
+};
+
+//-------------------------------------------------------------
 class Viewer : public realisim::treeD::Widget3d
 {
 public:
@@ -82,6 +99,7 @@ protected:
     
     // ui
     Viewer* mpViewer;
+    SharedGlWindow* mpSharedGlWindow;
     QDockWidget* mpToolsWidget;
     QTreeWidget* mpNavigator;
     QWidget* mpInfoPanel;

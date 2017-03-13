@@ -15,6 +15,7 @@
 #include <QHeaderView>
 #include <QLayout>
 #include <QMenuBar>
+#include <QtPlatformHeaders/QWGLNativeContext>
 #include <queue>
 #include "Representations.h"
 #include <string>
@@ -26,7 +27,58 @@ using namespace math;
 using namespace treeD;
 using namespace std;
 
+//------------------------------------------------------------------------------
+//--- SharedGlWindow
+//------------------------------------------------------------------------------
+SharedGlWindow::SharedGlWindow(QWindow *ipParent) :
+    QWindow(ipParent),
+    mpContext(nullptr)
+{
+    setSurfaceType(QWindow::OpenGLSurface);
 
+    //create openGLContext
+    mpContext = new QOpenGLContext(this);
+    mpContext->setFormat(requestedFormat());
+    mpContext->create();
+}
+
+//------------------------------------------------------------------------------
+HGLRC SharedGlWindow::openGlNativeHandle() const
+{
+    HGLRC r = nullptr;
+    if(mpContext->isValid())
+    {
+        QVariant v = mpContext->nativeHandle();
+        if (v.canConvert<QWGLNativeContext>())
+        {
+            r = v.value<QWGLNativeContext>().context();
+        }
+        
+    }
+    return r;
+}
+
+//------------------------------------------------------------------------------
+HDC SharedGlWindow::openGlNativeDC() const
+{
+    HDC r = nullptr;
+    if(mpContext->isValid())
+    {
+        QVariant v = mpContext->nativeHandle();
+        if (v.canConvert<QWGLNativeContext>())
+        {
+            HWND w = v.value<QWGLNativeContext>().window();
+            r = GetDC(w);
+        }
+
+    }
+    return r;
+}
+
+
+//------------------------------------------------------------------------------
+//--- Viewer
+//------------------------------------------------------------------------------
 Viewer::Viewer(QWidget* ipParent /*=0*/) : Widget3d(ipParent),
 mPolygonMode(GL_FILL)
 {
@@ -200,6 +252,13 @@ mTimerId(0)
     mpViewer = new Viewer(this);
     pLyt->addWidget(mpViewer);
     setCentralWidget(mpViewer);
+
+    //--- create glWindow for shared context used by gpuStreamer
+    mpSharedGlWindow = new SharedGlWindow(0);
+    mpSharedGlWindow->hide();
+    HGLRC glContext = mpSharedGlWindow->openGlNativeHandle();
+    HDC glDC = mpSharedGlWindow->openGlNativeDC();
+    mGpuStreamer.setGLContext( glDC, glContext );
 
     //--- viewer
     mpViewer->setControlType( Widget3d::ctFree );
