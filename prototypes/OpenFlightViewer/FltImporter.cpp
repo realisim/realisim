@@ -10,6 +10,8 @@ using namespace std;
 using namespace realisim;
     using namespace math;
 
+#define OPTIMIZE_TREE 1
+
 namespace
 {
     Matrix4 toMatrix4( OpenFlight::MatrixRecord* ipM )
@@ -29,6 +31,7 @@ mpHeaderRecord(ipHr),
 mpGraphicNodeRoot(nullptr)
 {
     parseFltTree(ipHr, nullptr);
+    finalize();
 }
 
 FltImporter::~FltImporter()
@@ -137,6 +140,17 @@ GroupNode* FltImporter::digData(OpenFlight::GroupRecord* ipG,
     std::smatch m;
     //skip autoroutes for now...
     if (regex_search(pGroup->mName, m, rg))
+    {
+        *ipDigIntoChilds = false;
+    }
+
+    //skip night objects..
+    regex night("night", regex_constants::icase);
+    regex something_n(".*_n", regex_constants::icase);
+    regex n("^n$", regex_constants::icase);
+    if (regex_search(pGroup->mName, m, night) ||
+        regex_search(pGroup->mName, m, something_n) ||
+        regex_search(pGroup->mName, m, n))
     {
         *ipDigIntoChilds = false;
     }
@@ -268,6 +282,8 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
                                 IGraphicNode* ipParent)
 {
     using namespace OpenFlight;
+    
+    ModelNode *model = nullptr;
 
     // here we will create a new model. In order to limit the number of models
     // we will bundle all models under a group in the same model. This means that
@@ -276,20 +292,23 @@ ModelNode* FltImporter::digData(OpenFlight::ObjectRecord* ipR,
     // fetch parent to find out if it  already has a model node. If not, create a new
     // one, else use the existing one.
     //
-    ModelNode *model = nullptr;
-    for (size_t i = 0; i < ipParent->mChilds.size() && model == nullptr; ++i)
+    IGraphicNode* parent = ipParent;
+#ifdef OPTIMIZE_TREE
+    // find a model node in that parent!
+    for (size_t i = 0; i < parent->mChilds.size() && model == nullptr; ++i)
     {
-        IGraphicNode *child = ipParent->mChilds[i];
+        IGraphicNode *child = parent->mChilds[i];
         if(child->mNodeType == IGraphicNode::ntModel)
         { model = dynamic_cast<ModelNode*>(child); }
     }
+#endif // OPTIMIZE_TREE
     
     // if we found no model under the parent, lets create one!
     //
     if(model == nullptr)
     {
         model = new ModelNode();
-        ipParent->addChild(model);
+        parent->addChild(model);
 
         model->mName = ipR->hasLongIdRecord() ? ipR->getLongIdRecord()->getAsciiId() : ipR->getAsciiId();
         model->mParentTransform = fetchTransform(ipR);
@@ -421,6 +440,17 @@ realisim::math::Matrix4 FltImporter::fetchTransform(OpenFlight::PrimaryRecord* i
 }
 
 //-----------------------------------------------------------------------------
+void FltImporter::finalize()
+{
+#ifdef OPTIMIZE_TREE
+    // remove empty nodes...
+    markEmptyNodeForDeletion(mpGraphicNodeRoot);
+    removeMarkedForDeletionNode(mpGraphicNodeRoot);
+
+#endif // OPTIMIZE_TREE
+}
+
+//-----------------------------------------------------------------------------
 Image* FltImporter::getImageFromTexturePatternIndex(int iIndex, LibraryNode* iLibrary)
 {
     using namespace OpenFlight;
@@ -467,6 +497,23 @@ void FltImporter::markAsInstance(OpenFlight::PrimaryRecord* ipR, IGraphicNode* i
             if(nodeDef && instancedFrom)
             { nodeDef->setAsInstanceOf( instancedFrom->getId() ); }
         }
+    }
+}
+
+//-----------------------------------------------------------------------------
+void FltImporter::markEmptyNodeForDeletion(IGraphicNode* ipNode)
+{
+    //depth first
+    for (size_t i = 0; i < ipNode->mChilds.size(); ++i)
+    {
+        markEmptyNodeForDeletion( ipNode->mChilds[i] );
+    }
+
+    switch (ipNode->mNodeType)
+    {
+    case IGraphicNode::ntGroup:
+        ipNode->markedForDeletion( ipNode->mChilds.size() == 0 );
+        break;
     }
 }
 
@@ -580,4 +627,31 @@ void FltImporter::parseFltTree(OpenFlight::PrimaryRecord* ipRecord, IGraphicNode
     // to do it, so when we are done with the childrens, we will check if there
     // are actions to be taken
     applyLayersLogicOnChilds(ipRecord, currentNode);
+}
+
+//-----------------------------------------------------------------------------
+void FltImporter::removeMarkedForDeletionNode(IGraphicNode* ipNode)
+{
+    // remove and delete all nodes that where marked...
+    for (int i = 0; i < ipNode->mChilds.size(); ++i)
+    {
+        removeMarkedForDeletionNode( ipNode->mChilds[i] );
+    }
+
+    for (auto it = ipNode->mChilds.begin(); it != ipNode->mChilds.end(); )
+    {
+        IGraphicNode* n = *it;
+        if (n->isMarkedForDeletion())
+        {
+            if (n->decrementUseCount() == 1)
+            {
+                delete n;
+                it = ipNode->mChilds.erase(it);
+            }
+            else
+            {++it;}
+        }
+        else
+        { ++it; }
+    }
 }

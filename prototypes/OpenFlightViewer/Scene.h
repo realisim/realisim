@@ -49,17 +49,6 @@ public:
     
 protected:
 
-    struct Path
-    {
-        Path() = delete;
-        explicit Path(IGraphicNode*);
-        Path(const Path&) = delete;
-        Path& operator=(const Path&) = delete;
-        ~Path() = default;
-
-        std::vector<IGraphicNode*> mParents;
-    };
-
     void addToDefinitionMap(IGraphicNode*);
 void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     int countChilds(const IGraphicNode*) const;

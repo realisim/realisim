@@ -25,10 +25,13 @@ void applyTransformCarryover(IRenderable*);
     ModelNode* digData(OpenFlight::ObjectRecord*, IGraphicNode*);
     LevelOfDetailNode* digData(OpenFlight::LevelOfDetailRecord*, IGraphicNode*);
     realisim::math::Matrix4 fetchTransform(OpenFlight::PrimaryRecord*, bool* = nullptr);
+    void finalize();
     Image* getImageFromTexturePatternIndex(int, LibraryNode* iLibrary);
     OpenFlight::Record* getRecordFromDefinitionId(int);
-    void parseFltTree(OpenFlight::PrimaryRecord*, IGraphicNode* ipCurrentParent);
     void markAsInstance(OpenFlight::PrimaryRecord*, IGraphicNode*);
+    void markEmptyNodeForDeletion(IGraphicNode*);
+    void parseFltTree(OpenFlight::PrimaryRecord*, IGraphicNode* ipCurrentParent);
+    void removeMarkedForDeletionNode(IGraphicNode*);
     
     
     //--- data

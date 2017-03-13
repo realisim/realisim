@@ -23,6 +23,17 @@ public:
     enum nodeType{ ntExternalRef, ntGroup, ntLevelOfDetail, ntLibrary, ntLod, 
         ntModel, ntOpenFlight, ntSwitch, ntUndefined};
 
+    struct Path
+    {
+        Path() = delete;
+        explicit Path(IGraphicNode*);
+        Path(const Path&) = delete;
+        Path& operator=(const Path&) = delete;
+        ~Path() = default;
+
+        std::vector<IGraphicNode*> mParents;
+    };
+
     virtual void addChild(IGraphicNode*);
     int decrementUseCount();
     void incrementUseCount();
@@ -31,9 +42,11 @@ public:
     template<typename T> T* getFirstParent();
     int getUseCount() const;
     bool isBoundingBoxVisible() const {return mIsBoundingBoxVisible;}
+    bool isMarkedForDeletion() const {return mMarkedForDeletion;}
+    void markedForDeletion(bool iV) {mMarkedForDeletion = iV;}
     void setAABB(const realisim::math::BB3d& iAABB) {mAxisAlignedBoundingBox = iAABB;}
     void setBoundingBoxVisible(bool iS) {mIsBoundingBoxVisible = iS;}
-    void updateBoundingBoxes();    
+    void updateBoundingBoxes();
 
     IGraphicNode* mpParent;
     std::vector<IGraphicNode*> mChilds; //owned
@@ -49,6 +62,7 @@ protected:
     void incrementUseCount(IGraphicNode*, int);
 
     int mUseCount;
+    bool mMarkedForDeletion;
     bool mIsBoundingBoxVisible;
     //    realisim::math::BB3d mOrientedBoundingBox;
     realisim::math::BB3d mAxisAlignedBoundingBox;

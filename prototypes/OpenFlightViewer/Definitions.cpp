@@ -16,6 +16,7 @@ mChilds(),
 mNodeType(ntUndefined),
 mName("N/A"),
 mUseCount(1),
+mMarkedForDeletion(false),
 mIsTransformDirty(true), 
 mIsBoundingBoxVisible(false)
 {}
@@ -108,6 +109,19 @@ void IGraphicNode::updateBoundingBoxes()
             mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * M );
             mPositionnedAxisAlignedBoundingBox.add( mWorldTransform * Point3d(m.x(), M.y(), M.z()) );
         }
+    }
+}
+
+//--------------------------------------------------------
+//--- IGraphicNode::Path
+//--------------------------------------------------------
+IGraphicNode::Path::Path(IGraphicNode* ipNode)
+{
+    IGraphicNode* n = ipNode;
+    while (n != nullptr)
+    {
+        mParents.push_back(n);
+        n = n->mpParent;
     }
 }
 

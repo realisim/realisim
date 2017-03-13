@@ -319,7 +319,7 @@ void MainDialog::fillInfoLabel()
         oss << "World transform:\n" << gn->mWorldTransform.toString().toStdString() << "\n\n";
 
         switch (gn->mNodeType)
-        {
+        {        
         case IGraphicNode::ntLibrary:
         {
             LibraryNode* ln = dynamic_cast<LibraryNode*>(gn);

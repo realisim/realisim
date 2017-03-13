@@ -548,16 +548,3 @@ void Scene::updateTransform(IGraphicNode* ipNode, Matrix4 iParentWorldTransform)
     for(size_t i = 0; i < ipNode->mChilds.size(); ++i)
     { updateTransform(ipNode->mChilds[i], iParentWorldTransform); }
 }
-
-//---------------
-//--- Scene::Path
-//---------------
-Scene::Path::Path(IGraphicNode* ipNode)
-{
-    IGraphicNode* n = ipNode;
-    while (n != nullptr)
-    {
-        mParents.push_back(n);
-        n = n->mpParent;
-    }
-}
