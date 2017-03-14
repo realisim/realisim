@@ -1,8 +1,12 @@
 #pragma once
 
+#include "3d/Texture.h"
+#include "Definitions.h"
 #include "MessageQueue.h"
 #include <map>
 #include <set>
+#include "utils/Timer.h"
+#include <unordered_map>
 #include <Windows.h>
 
 class QGLContext;
@@ -13,9 +17,9 @@ public:
     GpuStreamer();
     GpuStreamer(const GpuStreamer&) = delete;
     GpuStreamer& operator=(const GpuStreamer&) = delete;
-    ~GpuStreamer() = default;
+    ~GpuStreamer();
 
-    enum messageType{ mtUndefined, mtTexture };
+    enum messageType{ mtUndefined, mtTexture, mtCreateModel };
     
     class Message : public MessageQueue::Message
     {
@@ -27,9 +31,11 @@ public:
         ~Message() = default;
         
         messageType mMessageType;
-//        std::string mFilenamePath;
-//        unsigned int mAffectedDefinitionId;
-//        void* mpData;
+        unsigned int mAffectedDefinitionId;
+        realisim::treeD::Texture mTexture;
+        void *mpData ;
+        ModelNode *mpModelNode;
+        std::unordered_map<unsigned int, realisim::treeD::Texture> *mpImageIdToTexture;
     };
 
     void postMessage(Message*);
@@ -37,13 +43,15 @@ public:
     void setGLContext(HDC, HGLRC);
 
 private:
+    realisim::treeD::Texture createTexture(Image*);
     void processMessage(MessageQueue::Message*);
     std::string toString(messageType);
 
     bool mMakeCurrentNeeded;
     MessageQueue mRequestQueue;
     std::map<void*, MessageQueue*> mSenderToDoneQueue;
-    //std::set<std::string> mPendingFileRequests;
+    std::set<unsigned int> mPendingRequests;
     HGLRC mGLContext;
     HDC mDC;
+    realisim::utils::Timer mTimer;
 };

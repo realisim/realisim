@@ -16,7 +16,16 @@ namespace Representations
         Representation& operator=(const Representation&) = delete;
         virtual ~Representation();
         
+        void deleteFenceSync();
         virtual void draw();
+        GLsync fenceSync() const;
+        bool hasFenceSync() const;
+        bool isFenceSignaled() const;
+        void setFenceSync(GLsync);
+
+
+    protected:
+        GLsync mFenceSync;
     };
     
     //-------------------------------------------------------------------------

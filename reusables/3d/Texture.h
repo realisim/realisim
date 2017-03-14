@@ -91,10 +91,12 @@ public:
   QByteArray asBuffer( GLenum iInternalFormat, GLenum iFormat, GLenum iDataType) const;
     QImage asQImage() const;
   Texture copy();
+  void deleteFenceSync();
   int depth() const;
 //void fromBinary() const; voir spriteCatalog
   void generateMipmap(bool);
   GLenum getDataType() const {return mpGuts->mDataType;}
+  GLsync getFenceSync() const {return mpGuts->mFenceSync;}
   GLenum getFormat() const {return mpGuts->mFormat;}
   GLenum getInternalFormat() const { return mpGuts->mInternalFormat; }
   GLenum getMagnificationFilter() const;
@@ -104,8 +106,10 @@ public:
   GLenum getWrapSMode() const;
   GLenum getWrapTMode() const;
   GLenum getWrapRMode() const;
+  bool hasFenceSync() const {return mpGuts->mFenceSync != 0;}
   bool hasMipMaps() const {return mpGuts->mHasMipMaps;}
   int height() const;
+  bool isFenceSignaled() const;
   bool isValid() const;
   void resize( const std::vector<int>& );
   void resize( int, int );
@@ -114,6 +118,7 @@ public:
   void set( void*, const math::Vector2i&, GLenum internalFormat, GLenum format, GLenum dataType);
   void set( void*, const math::Vector3i&, GLenum internalFormat, GLenum format, GLenum dataType );
   void set( void*, const std::vector<int>&, GLenum internalFormat, GLenum format, GLenum dataType);
+  void setFenceSync(GLsync);
   void setFilter( GLenum );
   void setFilter( GLenum, GLenum );
   void setMinificationFilter( GLenum );
@@ -144,6 +149,7 @@ protected:
     GLenum mWrapSMode;
     GLenum mWrapTMode;
     GLenum mWrapRMode;
+    GLsync mFenceSync;
 	bool mHasMipMaps;
     unsigned int mRefCount;
   };

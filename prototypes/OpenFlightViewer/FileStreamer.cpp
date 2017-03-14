@@ -71,6 +71,10 @@ void FileStreamer::postRequest(FileStreamer::Request *iRequest)
     
     if(it.second == true)
     { mRequestQueue.post(iRequest); }
+    else
+    {
+        delete iRequest;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -84,9 +88,9 @@ void FileStreamer::processMessage(MessageQueue::Message* ipRequest)
 {
     Request *r = (Request*)(ipRequest);
     
-    printf("FileStreamer processing message to load %s with filenamepath %s.\n",
+    /*printf("FileStreamer processing message to load %s with filenamepath %s.\n",
            toString(r->mRequestType).c_str(),
-           r->mFilenamePath.c_str() );
+           r->mFilenamePath.c_str() );*/
     
     void* dataPtr = nullptr;
     switch (r->mRequestType)

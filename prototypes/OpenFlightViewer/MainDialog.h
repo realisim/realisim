@@ -33,15 +33,16 @@ namespace Representations{ class Representation; }
 class SharedGlWindow : public QWindow
 {
 public:
-    explicit SharedGlWindow(QWindow* ipParent=0);
+    explicit SharedGlWindow(QWindow* ipParent, QOpenGLContext* ipSharedContext, GpuStreamer *ipGpuStreamer);
 
+protected:
+    void exposeEvent(QExposeEvent *event) override;
     HGLRC openGlNativeHandle() const;
     HDC openGlNativeDC() const;
 
-protected:
-    //void exposeEvent(QExposeEvent *event) override;
-
     QOpenGLContext *mpContext;
+    QOpenGLContext *mpSharedGlContext;
+    GpuStreamer *mpGpuStreamer;
 };
 
 //-------------------------------------------------------------

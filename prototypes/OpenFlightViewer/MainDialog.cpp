@@ -30,16 +30,44 @@ using namespace std;
 //------------------------------------------------------------------------------
 //--- SharedGlWindow
 //------------------------------------------------------------------------------
-SharedGlWindow::SharedGlWindow(QWindow *ipParent) :
+SharedGlWindow::SharedGlWindow(QWindow *ipParent, QOpenGLContext* ipSharedContext, 
+    GpuStreamer *ipGpuStreamer) :
     QWindow(ipParent),
-    mpContext(nullptr)
+    mpContext(nullptr),
+    mpSharedGlContext(ipSharedContext),
+    mpGpuStreamer(ipGpuStreamer)
 {
     setSurfaceType(QWindow::OpenGLSurface);
+}
 
-    //create openGLContext
-    mpContext = new QOpenGLContext(this);
-    mpContext->setFormat(requestedFormat());
-    mpContext->create();
+void SharedGlWindow::exposeEvent(QExposeEvent *event)
+{
+    Q_UNUSED(event);
+
+    if (isExposed() && !mpContext)
+    {
+        //create openGLContext
+        mpContext = new QOpenGLContext(this);
+        mpContext->setFormat(requestedFormat());
+        mpContext->setShareContext(mpSharedGlContext);
+        mpContext->create();
+
+        mpContext->makeCurrent(this);
+        //HGLRC currentContext = wglGetCurrentContext();
+        glClearColor(0.0, 0.0, 0.0, 1.0);
+        glDisable(GL_LIGHTING);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        mpContext->swapBuffers(this);
+        mpContext->doneCurrent();
+
+        if (mpGpuStreamer)
+        {
+            HGLRC glContext = openGlNativeHandle();
+            HDC glDC = openGlNativeDC();
+            mpGpuStreamer->setGLContext( glDC, glContext );
+        }
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -62,16 +90,18 @@ HGLRC SharedGlWindow::openGlNativeHandle() const
 HDC SharedGlWindow::openGlNativeDC() const
 {
     HDC r = nullptr;
-    if(mpContext->isValid())
-    {
-        QVariant v = mpContext->nativeHandle();
-        if (v.canConvert<QWGLNativeContext>())
-        {
-            HWND w = v.value<QWGLNativeContext>().window();
-            r = GetDC(w);
-        }
+    HWND hwnd = (HWND)this->winId();
+    r = GetDC(hwnd);
+    //if(mpContext->isValid())
+    //{
+    //    QVariant v = mpContext->nativeHandle();
+    //    if (v.canConvert<QWGLNativeContext>())
+    //    {
+    //        HWND w = v.value<QWGLNativeContext>().window();
+    //        r = GetDC(w);
+    //    }
 
-    }
+    //}
     return r;
 }
 
@@ -254,11 +284,9 @@ mTimerId(0)
     setCentralWidget(mpViewer);
 
     //--- create glWindow for shared context used by gpuStreamer
-    mpSharedGlWindow = new SharedGlWindow(0);
-    mpSharedGlWindow->hide();
-    HGLRC glContext = mpSharedGlWindow->openGlNativeHandle();
-    HDC glDC = mpSharedGlWindow->openGlNativeDC();
-    mGpuStreamer.setGLContext( glDC, glContext );
+    mpSharedGlWindow = new SharedGlWindow(0, mpViewer->context()->contextHandle(), &mGpuStreamer );
+    mpSharedGlWindow->show();
+    
 
     //--- viewer
     mpViewer->setControlType( Widget3d::ctFree );

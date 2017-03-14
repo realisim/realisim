@@ -17,6 +17,7 @@ Texture::Guts::Guts() : mTextureId(0),
 	mWrapSMode(GL_REPEAT),
 	mWrapTMode(GL_REPEAT),
 	mWrapRMode(GL_REPEAT),
+    mFenceSync(0),
 	mHasMipMaps(false),
 	mRefCount(1)
 {}
@@ -143,6 +144,17 @@ Texture Texture::copy()
 
    return t;
 }
+
+//----------------------------------------------------------------------------
+void Texture::deleteFenceSync()
+{
+    if (hasFenceSync())
+    {
+        glDeleteSync(getFenceSync());
+        mpGuts->mFenceSync = 0;
+    }
+}
+
 //----------------------------------------------------------------------------
 void Texture::deleteGuts()
 {
@@ -244,6 +256,19 @@ GLenum Texture::getWrapRMode() const
 { return mpGuts->mWrapRMode; }
 
 //----------------------------------------------------------------------------
+bool Texture::isFenceSignaled() const
+{
+    bool r = true;
+    if (hasFenceSync())
+    {
+        GLint result = GL_UNSIGNALED;
+        glGetSynciv(getFenceSync(), GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
+        r = result == GL_SIGNALED;
+    }
+    return r;
+}
+
+//----------------------------------------------------------------------------
 bool Texture::isValid() const
 { return (bool)glIsTexture(getId()); }
 
@@ -303,6 +328,17 @@ void Texture::resize(int iW, int iH, int iD )
     vector<int> s;
   s.push_back( iW ); s.push_back( iH ); s.push_back( iD ); resize( s );
 }
+
+//----------------------------------------------------------------------------
+void Texture::setFenceSync(GLsync iFs)
+{
+    if (hasFenceSync())
+    {
+        deleteFenceSync();
+    }
+    mpGuts->mFenceSync = iFs;
+}
+
 
 //----------------------------------------------------------------------------
 void Texture::set(QImage i, GLenum iInternalFormat,

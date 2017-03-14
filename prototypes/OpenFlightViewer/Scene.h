@@ -62,6 +62,7 @@ void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     void performCulling(IGraphicNode*);
     void prepareFrame(IGraphicNode*, std::vector<Representations::Representation*> *ipCurrentLayer );
     void processFileLoadingDoneMessage(MessageQueue::Message*);
+    void processGpuStreammingDoneMessage(MessageQueue::Message*);
     void updateBoundingBoxes(IGraphicNode*);
     void updateLod(IGraphicNode*);
     void updateTransform(IGraphicNode*);
@@ -71,6 +72,7 @@ void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     Hub *mpHub;
     IGraphicNode *mpRoot;
     MessageQueue mFileLoadingDoneQueue;
+    MessageQueue mGpuStreamingDoneQueue;
     
     std::unordered_map<unsigned int, IDefinition*> mIdToDefinition;
     std::unordered_map<unsigned int, Representations::BoundingBox*> mDefinitionIdToBoundingBox;

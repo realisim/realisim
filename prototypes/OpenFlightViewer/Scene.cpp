@@ -3,6 +3,7 @@
 #include <deque>
 #include "ImageLoader.h"
 #include "FileStreamer.h"
+#include "GpuStreamer.h"
 #include "math/Matrix4.h"
 #include "Representations.h"
 #include "Scene.h"
@@ -15,13 +16,19 @@ Scene::Scene(Hub* ipHub) :
 mpHub(ipHub),
 mpRoot(nullptr)
 {
-
     //register fileStreamingDoneQueue to the fileStreamer
     FileStreamer& fs = getHub().getFileStreamer();
     using placeholders::_1;
     mFileLoadingDoneQueue.setProcessingFunction(
         std::bind( &Scene::processFileLoadingDoneMessage, this, _1));
     fs.registerDoneQueue(this, &mFileLoadingDoneQueue);
+
+    //register gpuStreamingDoneQueue to the gpuStream
+    GpuStreamer& gs = getHub().getGpuStreamer();
+    using placeholders::_1;
+    mGpuStreamingDoneQueue.setProcessingFunction(
+        std::bind( &Scene::processGpuStreammingDoneMessage, this, _1));
+    gs.registerDoneQueue(this, &mGpuStreamingDoneQueue);
 }
 
 //----------------------------------------
@@ -88,50 +95,50 @@ void Scene::addToDefinitionMap(IGraphicNode *iNode)
 }
 
 //------------------------------------------------------------------------------
-void Scene::addToTextureLibrary(Image *iIm)
-{
-    IDefinition *def = dynamic_cast<IDefinition*>(iIm);
-    auto it = mImageIdToTexture.find(def->getId());
-    if(it == mImageIdToTexture.end())
-    {
-        realisim::treeD::Texture t;
-
-        realisim::math::Vector2i size(iIm->mWidth, iIm->mHeight);
-        GLenum internalFormat = GL_SRGB8_ALPHA8;
-        GLenum format = GL_RGBA;
-        GLenum datatype = GL_UNSIGNED_BYTE;
-        
-        switch(iIm->mNumberOfChannels)
-        {
-            case 1:
-                internalFormat = GL_R8;
-                format = GL_RED;
-                break;
-            case 2:
-                internalFormat = GL_RG8;
-                format = GL_RG;
-                break;
-            case 3:
-                //internalFormat = GL_SRGB8;
-                internalFormat = GL_RGB8;
-                format = GL_RGB;
-                break;
-            case 4:
-                //internalFormat = GL_SRGB8_ALPHA8;
-                internalFormat = GL_RGBA8;
-                format = GL_RGBA;
-                break;
-            default: break;
-        }
-
-        t.set(iIm->mpPayload, size, internalFormat, format, datatype);
-        t.generateMipmap(true);
-        t.setMagnificationFilter(GL_LINEAR);
-        t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
-        
-        mImageIdToTexture.insert( make_pair(def->getId(), t) );
-    }
-}
+//void Scene::addToTextureLibrary(Image *iIm)
+//{
+//    IDefinition *def = dynamic_cast<IDefinition*>(iIm);
+//    auto it = mImageIdToTexture.find(def->getId());
+//    if(it == mImageIdToTexture.end())
+//    {
+//        realisim::treeD::Texture t;
+//
+//        realisim::math::Vector2i size(iIm->mWidth, iIm->mHeight);
+//        GLenum internalFormat = GL_SRGB8_ALPHA8;
+//        GLenum format = GL_RGBA;
+//        GLenum datatype = GL_UNSIGNED_BYTE;
+//        
+//        switch(iIm->mNumberOfChannels)
+//        {
+//            case 1:
+//                internalFormat = GL_R8;
+//                format = GL_RED;
+//                break;
+//            case 2:
+//                internalFormat = GL_RG8;
+//                format = GL_RG;
+//                break;
+//            case 3:
+//                //internalFormat = GL_SRGB8;
+//                internalFormat = GL_RGB8;
+//                format = GL_RGB;
+//                break;
+//            case 4:
+//                //internalFormat = GL_SRGB8_ALPHA8;
+//                internalFormat = GL_RGBA8;
+//                format = GL_RGBA;
+//                break;
+//            default: break;
+//        }
+//
+//        t.set(iIm->mpPayload, size, internalFormat, format, datatype);
+//        t.generateMipmap(true);
+//        t.setMagnificationFilter(GL_LINEAR);
+//        t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
+//        
+//        mImageIdToTexture.insert( make_pair(def->getId(), t) );
+//    }
+//}
 
 ////------------------------------------------------------------------------------
 //void Scene::checkAndCreateRepresentation(ModelNode *iNode)
@@ -258,7 +265,8 @@ void Scene::createModelRepresentation(ModelNode *iNode)
         else
         {
             //        check if model can be created... meaning that images
-            //            have been uploaded to gpu...
+            //            have been uploaded to gpu and properly created!
+            //          
             //            if not, send a request to the fileStreamer to load the image.
             bool canCreateRepresentation = true;
             for(int i = 0; i < iNode->mFaces.size() && canCreateRepresentation; ++i)
@@ -281,14 +289,36 @@ void Scene::createModelRepresentation(ModelNode *iNode)
                         r->mAffectedDefinitionId = im->getId();
                         fs.postRequest(r);
                     }
+                    else
+                    {
+                        //check that the fence has been signaled... else wait some more
+                        realisim::treeD::Texture t = it->second;
+                        canCreateRepresentation = t.isFenceSignaled();
+                        if (canCreateRepresentation)
+                        {                            
+                            t.deleteFenceSync();
+                        }
+                        else
+                        { printf("----------------the fence was not signaled!!!\n"); }
+                    }
                 }
             }
 
             if(canCreateRepresentation)
             {
-                Representations::Model *model = new Representations::Model;
+
+                // send a request to the gpuStreamer to create the model
+                GpuStreamer &gs = getHub().getGpuStreamer();
+                GpuStreamer::Message *m = new GpuStreamer::Message(this);
+                m->mMessageType = GpuStreamer::mtCreateModel;
+                m->mAffectedDefinitionId = def->getId();
+                m->mpModelNode = iNode;
+                m->mpImageIdToTexture = &mImageIdToTexture;
+                gs.postMessage(m);
+
+                /*Representations::Model *model = new Representations::Model;
                 model->create(iNode, mImageIdToTexture);
-                mDefinitionIdToRepresentation.insert( make_pair(def->getId(), model) );
+                mDefinitionIdToRepresentation.insert( make_pair(def->getId(), model) );*/
             }
         }
     }
@@ -344,10 +374,20 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
         auto itModel = mDefinitionIdToRepresentation.find(mn->getId());
         if(itModel != mDefinitionIdToRepresentation.end()) 
         {
-            if(mn->isVisible())
-            { 
-                spf.mNumberOfModelDisplayed++;
-                ipCurrentLayer->push_back( itModel->second );
+            Representations::Representation *rep = itModel->second;
+
+            if(rep->isFenceSignaled())
+            {
+                if(mn->isVisible())
+                { 
+                    spf.mNumberOfModelDisplayed++;
+                    ipCurrentLayer->push_back( rep );
+                }
+                rep->deleteFenceSync();
+            }
+            else
+            {
+                printf("-----------Representations::Model fence was not yet signaled...\n");
             }
         }
         else
@@ -430,8 +470,8 @@ void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
     if(loadedIm->isValid() && im != nullptr)
     {
         im->mpPayload = loadedIm->giveOwnershipOfImageData();
-        addToTextureLibrary(im);
-        im->unload();
+        //addToTextureLibrary(im);
+        //im->unload();
     }
     else
     {
@@ -446,12 +486,60 @@ void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
         memset(payload, 255, im->mSizeInBytes);
         im->mpPayload = payload;
 
-        addToTextureLibrary(im);
-        im->unload();
+        //addToTextureLibrary(im);
+        //im->unload();
         //assert(false && "image was not loaded or definition was not found...");
     }
     
+    //time to upload image to gpu... lets ask GpuStreamer
+    GpuStreamer& gs = mpHub->getGpuStreamer();
+    GpuStreamer::Message *m = new GpuStreamer::Message(this);
+    m->mMessageType = GpuStreamer::mtTexture;
+    m->mAffectedDefinitionId = im->getId();
+    m->mpData = im;  // this is where we need COPY_ON_WRITE!!!!
+    gs.postMessage(m);
+
     delete loadedIm;
+}
+
+//----------------------------------------
+void Scene::processGpuStreammingDoneMessage(MessageQueue::Message* ipMessage)
+{
+    // add the texture to the texture library.
+    GpuStreamer::Message *message = (GpuStreamer::Message *)ipMessage;
+    printf("Scene::processGpuStreammingDoneMessage \n" );
+
+    unsigned int defId = message->mAffectedDefinitionId;
+
+    switch (message->mMessageType)
+    {
+
+    case GpuStreamer::mtTexture:
+    {        
+        Image *loadedIm = (Image*)message->mpData;
+
+        auto it = mImageIdToTexture.find(defId);
+        if(it == mImageIdToTexture.end())
+        {
+            mImageIdToTexture.insert( make_pair(defId, message->mTexture) );
+        }
+
+        loadedIm->unload();
+    }break;
+
+    case GpuStreamer::mtCreateModel:
+    {
+        Representations::Model *model = (Representations::Model *)message->mpData;
+        mDefinitionIdToRepresentation.insert(make_pair(defId, model));
+
+        //check for insertion... if it fails... delete it? or move that
+        //check to somewhere better...
+
+    }break;
+
+    default: break;
+    }
+    
 }
 
 //----------------------------------------
@@ -464,6 +552,7 @@ void Scene::update()
 
     //process fileStreamingDoneQueue
     mFileLoadingDoneQueue.processMessages();
+    mGpuStreamingDoneQueue.processMessages();
     
     for(size_t i = 0; i < mNeedsTransformUpdate.size(); ++i)
     {
