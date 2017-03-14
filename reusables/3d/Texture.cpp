@@ -258,14 +258,21 @@ GLenum Texture::getWrapRMode() const
 //----------------------------------------------------------------------------
 bool Texture::isFenceSignaled() const
 {
-    bool r = true;
-    if (hasFenceSync())
-    {
-        GLint result = GL_UNSIGNALED;
-        glGetSynciv(getFenceSync(), GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
-        r = result == GL_SIGNALED;
-    }
-    return r;
+    //bool r = true;
+    //if (hasFenceSync())
+    //{
+    //    GLint result = GL_UNSIGNALED;
+    //    glGetSynciv(getFenceSync(), GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
+    //    r = result == GL_SIGNALED;
+    //}
+    //return r;
+
+    if(hasFenceSync())
+    { glClientWaitSync(getFenceSync(), GL_SYNC_FLUSH_COMMANDS_BIT, long long(30000000000) ); }
+
+    /*if(hasFenceSync())
+    { glWaitSync(getFenceSync(), 0, GL_TIMEOUT_IGNORED); }*/
+    return true;
 }
 
 //----------------------------------------------------------------------------

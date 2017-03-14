@@ -58,9 +58,6 @@ realisim::treeD::Texture GpuStreamer::createTexture(Image* ipIm)
     t.setMagnificationFilter(GL_LINEAR);
     t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
 
-    GLsync textureFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    t.setFenceSync(textureFence);
-
     return t;
 }
 
@@ -85,13 +82,15 @@ void GpuStreamer::postMessage(GpuStreamer::Message *iMessage)
     default: break;
     }
 
+    mPendingRequestsMutex.lock();
     auto it = mPendingRequests.insert(definitionId);
+    mPendingRequestsMutex.unlock();
     
     if(it.second == true)
     { mRequestQueue.post(iMessage); }
     else
     {
-        printf("GpuStreamer::postMessage - message with defId: %d, was already present\n", definitionId);
+        //printf("GpuStreamer::postMessage - message with defId: %d, was already present\n", definitionId);
         delete iMessage;
     }
 }
@@ -108,12 +107,13 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
     {
         Message *message = (Message*)(ipMessage);
 
-        printf("GpuStreamer::processMessage - processing message...\n");
+        //printf("GpuStreamer::processMessage - processing message...\n");
 
         Message *doneMessage = new Message(this);
         doneMessage->mMessageType = message->mMessageType;
 
         //--- deal with the message
+        GLsync fenceSync = 0;
         messageType mt = message->mMessageType;
         unsigned int defId = message->mAffectedDefinitionId;        
         switch (mt)
@@ -124,6 +124,9 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
             realisim::treeD::Texture tex;
 
             tex = createTexture(ipIm);
+            //tex.setFenceSync(glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0));
+            fenceSync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
             doneMessage->mAffectedDefinitionId = defId;
             doneMessage->mpData = ipIm;
             doneMessage->mTexture = tex;
@@ -135,7 +138,8 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
 
             Representations::Model *model = new Representations::Model;
             model->create(modelNode, *imageIdToTexture);
-            model->setFenceSync(  glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0) );
+            //model->setFenceSync(  glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0) );
+            fenceSync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
             doneMessage->mAffectedDefinitionId = defId;
             doneMessage->mpData = model;
@@ -143,6 +147,22 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
         }break;
         default : break;
         }
+
+        //wait on the sync
+        if (fenceSync)
+        {
+            /*GLint result = GL_UNSIGNALED;
+            glGetSynciv(fenceSync, GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
+            while (result != GL_SIGNALED) 
+            {
+                glGetSynciv(fenceSync, GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
+            }*/
+            glClientWaitSync(fenceSync, GL_SYNC_FLUSH_COMMANDS_BIT, long long(30000000000) );
+
+            glDeleteSync(fenceSync);
+        }
+        //glFlush();
+        //glFinish();
 
         //write into the requester done queue, if it was registered
         auto it = mSenderToDoneQueue.find( message->mpSender );
@@ -155,12 +175,19 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
             delete doneMessage;
         }
 
-        //    //remove request from unique file request
-        //    auto itToErase = mPendingFileRequests.find(r->mFilenamePath);
-        //    if(itToErase != mPendingFileRequests.end())
-        //    {
-        //        mPendingFileRequests.erase(itToErase);
-        //    }
+        ////remove request from unique file request
+
+        //
+        // MOVE THIS WHOLE PENDING REQUEST TO THE SENDER!!!!
+        //
+        //mPendingRequestsMutex.lock();
+        //auto itToErase = mPendingRequests.find(defId);
+        //if(itToErase != mPendingRequests.end())
+        //{
+        //    mPendingRequests.erase(itToErase);
+        //}
+        //mPendingRequestsMutex.unlock();
+
     } 
     else
     {

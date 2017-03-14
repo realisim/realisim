@@ -12,6 +12,12 @@
 using namespace realisim;
     using namespace math;
 
+const int gMaxGpuStreamerPostPerFrame = 1;
+int gNumberOfGpuStreamerPostOnThisFrame = 0;
+
+const int gMaxFileStreamerPostPerFrame = 1;
+int gNumberOfFileStreamerPostOnThisFrame = 0;
+
 Scene::Scene(Hub* ipHub) :
 mpHub(ipHub),
 mpRoot(nullptr)
@@ -279,15 +285,20 @@ void Scene::createModelRepresentation(ModelNode *iNode)
                     if(it == mImageIdToTexture.end())
                     {
                         canCreateRepresentation = false;
-                        // image is not on gpu, lets ask filestreamer to
-                        // load it
-                        //
-                        FileStreamer& fs = getHub().getFileStreamer();
-                        FileStreamer::Request *r = new FileStreamer::Request(this);
-                        r->mRequestType = FileStreamer::rtLoadRgbImage;
-                        r->mFilenamePath = im->mFilenamePath;
-                        r->mAffectedDefinitionId = im->getId();
-                        fs.postRequest(r);
+
+                        if (gNumberOfFileStreamerPostOnThisFrame < gMaxFileStreamerPostPerFrame)
+                        {
+                            // image is not on gpu, lets ask filestreamer to
+                            // load it
+                            //
+                            FileStreamer& fs = getHub().getFileStreamer();
+                            FileStreamer::Request *r = new FileStreamer::Request(this);
+                            r->mRequestType = FileStreamer::rtLoadRgbImage;
+                            r->mFilenamePath = im->mFilenamePath;
+                            r->mAffectedDefinitionId = im->getId();
+                            fs.postRequest(r);
+                            gNumberOfFileStreamerPostOnThisFrame++;
+                        }
                     }
                     else
                     {
@@ -307,14 +318,19 @@ void Scene::createModelRepresentation(ModelNode *iNode)
             if(canCreateRepresentation)
             {
 
-                // send a request to the gpuStreamer to create the model
-                GpuStreamer &gs = getHub().getGpuStreamer();
-                GpuStreamer::Message *m = new GpuStreamer::Message(this);
-                m->mMessageType = GpuStreamer::mtCreateModel;
-                m->mAffectedDefinitionId = def->getId();
-                m->mpModelNode = iNode;
-                m->mpImageIdToTexture = &mImageIdToTexture;
-                gs.postMessage(m);
+                if (gNumberOfGpuStreamerPostOnThisFrame < gMaxGpuStreamerPostPerFrame)
+                {
+                    // send a request to the gpuStreamer to create the model
+                    GpuStreamer &gs = getHub().getGpuStreamer();
+                    GpuStreamer::Message *m = new GpuStreamer::Message(this);
+                    m->mMessageType = GpuStreamer::mtCreateModel;
+                    m->mAffectedDefinitionId = def->getId();
+                    m->mpModelNode = iNode;
+                    m->mpImageIdToTexture = &mImageIdToTexture;
+                    gs.postMessage(m);
+
+                    gNumberOfGpuStreamerPostOnThisFrame++;
+                }
 
                 /*Representations::Model *model = new Representations::Model;
                 model->create(iNode, mImageIdToTexture);
@@ -507,7 +523,7 @@ void Scene::processGpuStreammingDoneMessage(MessageQueue::Message* ipMessage)
 {
     // add the texture to the texture library.
     GpuStreamer::Message *message = (GpuStreamer::Message *)ipMessage;
-    printf("Scene::processGpuStreammingDoneMessage \n" );
+    //printf("Scene::processGpuStreammingDoneMessage \n" );
 
     unsigned int defId = message->mAffectedDefinitionId;
 
@@ -573,6 +589,9 @@ void Scene::update()
     //clear all draw list...
     mDefaultLayer.clear();
     mLayers.clear();
+
+    gNumberOfFileStreamerPostOnThisFrame = 0;
+    gNumberOfGpuStreamerPostOnThisFrame = 0;
 
     // update stats...
     utils::Timer _t;

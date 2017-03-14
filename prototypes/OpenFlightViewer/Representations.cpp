@@ -61,14 +61,21 @@ bool Representation::hasFenceSync() const
 
 bool Representation::isFenceSignaled() const
 {
-    bool r = true;
-    if (hasFenceSync())
-    {
-        GLint result = GL_UNSIGNALED;
-        glGetSynciv(fenceSync(), GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
-        r = result == GL_SIGNALED;
-    }
-    return r;
+    //bool r = true;
+    //if (hasFenceSync())
+    //{
+    //    GLint result = GL_UNSIGNALED;
+    //    glGetSynciv(fenceSync(), GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
+    //    r = result == GL_SIGNALED;
+    //}
+    //return r;
+
+    if(hasFenceSync())
+    { glClientWaitSync(fenceSync(), GL_SYNC_FLUSH_COMMANDS_BIT, long long(30000000000) ); }
+
+    /*if(hasFenceSync())
+    { glWaitSync(fenceSync(), 0, GL_TIMEOUT_IGNORED); }*/
+    return true;
 }
 
 void Representation::setFenceSync(GLsync iFs)

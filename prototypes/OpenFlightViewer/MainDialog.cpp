@@ -126,10 +126,7 @@ void Viewer::draw()
     
     // devrait tout remplacer ce qui suit par
     // mpScene->draw...
-    
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-
+ 
     for(size_t i = 0; i < mpScene->mDefaultLayer.size(); ++i)
     {
         mpScene->mDefaultLayer[i]->draw();
@@ -158,6 +155,9 @@ void Viewer::draw()
 
         // draw other layers
         {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
             glEnable(GL_STENCIL_TEST);
             glDisable(GL_DEPTH_TEST);
             glStencilFunc(GL_EQUAL,1,1);
@@ -176,7 +176,7 @@ void Viewer::draw()
 
         glDisable(GL_STENCIL_TEST);
         glEnable(GL_DEPTH_TEST);
-    }    
+    }
 }
 
 //------------------------------------------------------------------------------
