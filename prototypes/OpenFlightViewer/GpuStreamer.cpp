@@ -7,11 +7,14 @@
 
 using namespace std;
 
+const double gMaxUploadPerSecond = 1000.0; //MegaBytes;
+
 //------------------------------------------------------------------------------
 GpuStreamer::GpuStreamer() :
 mMakeCurrentNeeded(true),
 mGLContext(0),
-mDC(0)
+mDC(0),
+mMegaBytesUploadedPerSecond(0)
 {
 }
 
@@ -54,9 +57,10 @@ realisim::treeD::Texture GpuStreamer::createTexture(Image* ipIm)
     }
     
     t.set(ipIm->mpPayload, size, internalFormat, format, datatype);
-    t.generateMipmap(true);
-    t.setMagnificationFilter(GL_LINEAR);
-    t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
+    //t.generateMipmap(true);
+    //t.setMagnificationFilter(GL_LINEAR);
+    //t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
+    t.setFilter(GL_LINEAR);
 
     return t;
 }
@@ -64,40 +68,29 @@ realisim::treeD::Texture GpuStreamer::createTexture(Image* ipIm)
 //------------------------------------------------------------------------------
 void GpuStreamer::postMessage(GpuStreamer::Message *iMessage)
 {
-    // do not insert the same request twice...
-    unsigned int definitionId = 0;
-    switch (iMessage->mMessageType)
-    {
-    case mtTexture:
-        definitionId = ((Image*)iMessage->mpData)->getId();
-        break;
-    case mtCreateModel:
-    {
-        IDefinition* def = dynamic_cast<IDefinition*>(iMessage->mpModelNode);
-        if (def)
-        {
-            definitionId = def->getId();
-        }
-    }break;
-    default: break;
-    }
-
-    mPendingRequestsMutex.lock();
-    auto it = mPendingRequests.insert(definitionId);
-    mPendingRequestsMutex.unlock();
-    
-    if(it.second == true)
-    { mRequestQueue.post(iMessage); }
-    else
-    {
-        //printf("GpuStreamer::postMessage - message with defId: %d, was already present\n", definitionId);
-        delete iMessage;
-    }
+    mRequestQueue.post(iMessage);
 }
 
 //------------------------------------------------------------------------------
 void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
 {
+    if (mMegaBytesUploadedPerSecond > gMaxUploadPerSecond)
+    {
+        //sleep until next second
+        chrono::high_resolution_clock::time_point now =
+            chrono::high_resolution_clock::now();
+        chrono::high_resolution_clock::time_point later =
+            now + std::chrono::seconds(1);
+        std::this_thread::sleep_until( later );
+    }
+
+    if (mTimer.getElapsed() > 1.0)
+    { 
+        printf("megabytes uploaded to GPU per second: %f, message in queue: %d\n", mMegaBytesUploadedPerSecond, mRequestQueue.getNumberOfMessageInQueue());
+        mMegaBytesUploadedPerSecond = 0.0;
+        mTimer.start();
+    }
+
     if (mMakeCurrentNeeded)
     {
         mMakeCurrentNeeded = !wglMakeCurrent(mDC, mGLContext);
@@ -130,6 +123,11 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
             doneMessage->mAffectedDefinitionId = defId;
             doneMessage->mpData = ipIm;
             doneMessage->mTexture = tex;
+
+            mMegaBytesUploadedPerSecond += ipIm->mSizeInBytes / (1024.0*1024.0);
+
+            //unload image... it wont be needed after
+            ipIm->unload();
         }break;
         case mtCreateModel:
         {
@@ -143,6 +141,11 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
 
             doneMessage->mAffectedDefinitionId = defId;
             doneMessage->mpData = model;
+
+            // BAD BAD approximation...
+            const int approxNbVertices = modelNode->mFaces.size() * 3;
+            const int approxVerticesSizeInBytes = approxNbVertices * 4; //they are doubles...
+            mMegaBytesUploadedPerSecond += approxVerticesSizeInBytes * 4 / (1024*1024.0); //4 times the number of vertices, because color, normal and texture coords...
             
         }break;
         default : break;
@@ -174,20 +177,6 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
         {
             delete doneMessage;
         }
-
-        ////remove request from unique file request
-
-        //
-        // MOVE THIS WHOLE PENDING REQUEST TO THE SENDER!!!!
-        //
-        //mPendingRequestsMutex.lock();
-        //auto itToErase = mPendingRequests.find(defId);
-        //if(itToErase != mPendingRequests.end())
-        //{
-        //    mPendingRequests.erase(itToErase);
-        //}
-        //mPendingRequestsMutex.unlock();
-
     } 
     else
     {

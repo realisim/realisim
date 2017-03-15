@@ -34,58 +34,14 @@ namespace  {
 //----------------
 //--- Representation
 //----------------
-Representation::Representation() :
-    mFenceSync(0)
+Representation::Representation()
 {}
 
 Representation::~Representation()
 {}
 
-void Representation::deleteFenceSync()
-{
-    if (hasFenceSync())
-    {
-        glDeleteSync(fenceSync());
-        mFenceSync = 0;
-    }
-}
-
 void Representation::draw()
 {}
-
-GLsync Representation::fenceSync() const
-{ return mFenceSync; }
-
-bool Representation::hasFenceSync() const
-{ return mFenceSync != 0; }
-
-bool Representation::isFenceSignaled() const
-{
-    //bool r = true;
-    //if (hasFenceSync())
-    //{
-    //    GLint result = GL_UNSIGNALED;
-    //    glGetSynciv(fenceSync(), GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
-    //    r = result == GL_SIGNALED;
-    //}
-    //return r;
-
-    if(hasFenceSync())
-    { glClientWaitSync(fenceSync(), GL_SYNC_FLUSH_COMMANDS_BIT, long long(30000000000) ); }
-
-    /*if(hasFenceSync())
-    { glWaitSync(fenceSync(), 0, GL_TIMEOUT_IGNORED); }*/
-    return true;
-}
-
-void Representation::setFenceSync(GLsync iFs)
-{
-    if (hasFenceSync())
-    {
-        deleteFenceSync();
-    }
-    mFenceSync = iFs;
-}
 
 //-------------------------------------------------------------------------------------
 //--- BoundingBox

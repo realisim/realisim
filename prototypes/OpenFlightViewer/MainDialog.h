@@ -110,6 +110,7 @@ protected:
     
     //Data
     bool mFreeRunning;
+    realisim::utils::Timer mFrameTimer;
     Hub mHub;
     Scene *mpScene;
     int mTimerId;

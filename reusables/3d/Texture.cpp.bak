@@ -356,8 +356,8 @@ void Texture::set(void* iPtr, const vector<int>& iS,
       setFormat(iFormat);      
       resize( iS );
         
-      glPushAttrib(GL_ENABLE_BIT);
-      glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+      //glPushAttrib(GL_ENABLE_BIT);
+      //glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
       glEnable(GL_TEXTURE_2D);
       glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousId);
       glBindTexture(GL_TEXTURE_2D, getId());
@@ -370,8 +370,9 @@ void Texture::set(void* iPtr, const vector<int>& iS,
       glTexImage2D(GL_TEXTURE_2D, 0, getInternalFormat(), width(), height(),
         0, getFormat(), getDataType(), iPtr );
       glBindTexture(GL_TEXTURE_2D, previousId);
-      glPopClientAttrib();
-      glPopAttrib();
+      //glPopClientAttrib();
+      //glPopAttrib();
+      glDisable(GL_TEXTURE_2D);
       break;
     case 3:
       if( !isValid() ) glGenTextures(1, &mpGuts->mTextureId);

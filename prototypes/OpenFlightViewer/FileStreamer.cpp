@@ -11,7 +11,8 @@
 using namespace std;
 
 //------------------------------------------------------------------------------
-FileStreamer::FileStreamer()
+FileStreamer::FileStreamer() : 
+    mMegaBytesLoadedPerSecond(0.0)
 {
     using placeholders::_1;
     function<void(MessageQueue::Message*)> f =
@@ -66,15 +67,7 @@ RgbImage* FileStreamer::loadRgbImage(const std::string& iFilenamePath)
 //------------------------------------------------------------------------------
 void FileStreamer::postRequest(FileStreamer::Request *iRequest)
 {
-    // do not insert the same file twice...
-    auto it = mPendingFileRequests.insert(iRequest->mFilenamePath);
-    
-    if(it.second == true)
-    { mRequestQueue.post(iRequest); }
-    else
-    {
-        delete iRequest;
-    }
+    mRequestQueue.post(iRequest);
 }
 
 //------------------------------------------------------------------------------
@@ -92,11 +85,21 @@ void FileStreamer::processMessage(MessageQueue::Message* ipRequest)
            toString(r->mRequestType).c_str(),
            r->mFilenamePath.c_str() );*/
     
+    if (mTimer.getElapsed() > 1.0)
+    { 
+        printf("megabytes loaded from disk per second: %f, queue size: %d\n", mMegaBytesLoadedPerSecond, mRequestQueue.getNumberOfMessageInQueue() );
+        mMegaBytesLoadedPerSecond = 0.0;
+        mTimer.start();
+    }
+
     void* dataPtr = nullptr;
     switch (r->mRequestType)
     {
         case rtLoadFlt: dataPtr = loadFlt(r->mFilenamePath); break;
-        case rtLoadRgbImage: dataPtr = loadRgbImage(r->mFilenamePath); break;
+        case rtLoadRgbImage: 
+            dataPtr = loadRgbImage(r->mFilenamePath);
+            mMegaBytesLoadedPerSecond += ((RgbImage*)dataPtr)->getPixelSizeX() * ((RgbImage*)dataPtr)->getPixelSizeY() * ((RgbImage*)dataPtr)->getBytesPerPixel() / (1024*1024.0);
+            break;
         default: break;
     }
         
@@ -110,13 +113,6 @@ void FileStreamer::processMessage(MessageQueue::Message* ipRequest)
         d->mAffectedDefinitionId = r->mAffectedDefinitionId;
         d->mpData = dataPtr;
         it->second->post( d );
-    }
-    
-    //remove request from unique file request
-    auto itToErase = mPendingFileRequests.find(r->mFilenamePath);
-    if(itToErase != mPendingFileRequests.end())
-    {
-        mPendingFileRequests.erase(itToErase);
     }
 }
 

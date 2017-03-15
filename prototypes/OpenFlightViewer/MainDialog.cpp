@@ -346,7 +346,7 @@ mTimerId(0)
 //        std::this_thread::sleep_for( std::chrono::seconds(2) );
 //}
 
-    mTimerId = startTimer(15);
+    mTimerId = startTimer(0);
 }
 
 //-----------------------------------------------------------------------------
@@ -485,9 +485,12 @@ void MainDialog::navigatorItemActivated(QTreeWidgetItem *ipItem, int iColumn)
     {
         IGraphicNode* gn = itGraphicNode->second;
         const BB3d& positionnedAABB = gn->getPositionnedAABB();
-
-        centerCameraOn( positionnedAABB.getCenter(), 
-            (positionnedAABB.getMax() - positionnedAABB.getMin()).norm() );
+        if (positionnedAABB.isValid())
+        {
+            centerCameraOn( positionnedAABB.getCenter(), 
+                (positionnedAABB.getMax() - positionnedAABB.getMin()).norm() );
+        }
+        
     }
     updateUi();
 }
@@ -586,8 +589,6 @@ void MainDialog::toggleFreeRunning()
 #ifdef WIN32
     wglSwapIntervalEXT(mFreeRunning ? 0 : 1);
 #endif
-    killTimer(mTimerId);
-    mTimerId = mFreeRunning ? startTimer(0) : startTimer(15);
 }
 
 //-----------------------------------------------------------------------------
@@ -607,10 +608,13 @@ void MainDialog::timerEvent(QTimerEvent *ipE)
         b.setCamera( mpViewer->getCamera() );
 
         mpScene->update();
-        
-        mpViewer->update();
-
         updateUiAtHighFrequency();
+        
+        if (mFrameTimer.getElapsed() > 1/60.0 || mFreeRunning)
+        {
+            mpViewer->updateGL();
+            mFrameTimer.start();
+        }
     }
 }
 

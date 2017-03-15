@@ -3,6 +3,7 @@
 #include "MessageQueue.h"
 #include <map>
 #include <set>
+#include "Utils/Timer.h"
 
 class IGraphicNode;
 class RgbImage;
@@ -44,5 +45,6 @@ private:
 
     MessageQueue mRequestQueue;
     std::map<void*, MessageQueue*> mSenderToDoneQueue;
-    std::set<std::string> mPendingFileRequests;
+    double mMegaBytesLoadedPerSecond;
+    realisim::utils::Timer mTimer;
 };

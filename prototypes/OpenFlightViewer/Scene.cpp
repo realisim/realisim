@@ -12,12 +12,6 @@
 using namespace realisim;
     using namespace math;
 
-const int gMaxGpuStreamerPostPerFrame = 1;
-int gNumberOfGpuStreamerPostOnThisFrame = 0;
-
-const int gMaxFileStreamerPostPerFrame = 1;
-int gNumberOfFileStreamerPostOnThisFrame = 0;
-
 Scene::Scene(Hub* ipHub) :
 mpHub(ipHub),
 mpRoot(nullptr)
@@ -286,31 +280,24 @@ void Scene::createModelRepresentation(ModelNode *iNode)
                     {
                         canCreateRepresentation = false;
 
-                        if (gNumberOfFileStreamerPostOnThisFrame < gMaxFileStreamerPostPerFrame)
+                        // image is not on gpu, lets ask filestreamer to
+                        // load it the image to memory, then we will upload to gpu...
+                        //
+                        // first lets make sure, we have not already send a request for
+                        // that image
+                        //
+                        if (mLoadTextureRequests.find(im->getId()) == mLoadTextureRequests.end())
                         {
-                            // image is not on gpu, lets ask filestreamer to
-                            // load it
-                            //
                             FileStreamer& fs = getHub().getFileStreamer();
                             FileStreamer::Request *r = new FileStreamer::Request(this);
                             r->mRequestType = FileStreamer::rtLoadRgbImage;
                             r->mFilenamePath = im->mFilenamePath;
                             r->mAffectedDefinitionId = im->getId();
                             fs.postRequest(r);
-                            gNumberOfFileStreamerPostOnThisFrame++;
+
+                            mLoadTextureRequests.insert(im->getId());
                         }
-                    }
-                    else
-                    {
-                        //check that the fence has been signaled... else wait some more
-                        realisim::treeD::Texture t = it->second;
-                        canCreateRepresentation = t.isFenceSignaled();
-                        if (canCreateRepresentation)
-                        {                            
-                            t.deleteFenceSync();
-                        }
-                        else
-                        { printf("----------------the fence was not signaled!!!\n"); }
+                        
                     }
                 }
             }
@@ -318,9 +305,10 @@ void Scene::createModelRepresentation(ModelNode *iNode)
             if(canCreateRepresentation)
             {
 
-                if (gNumberOfGpuStreamerPostOnThisFrame < gMaxGpuStreamerPostPerFrame)
+                // send a request to the gpuStreamer to create the model
+
+                if (mLoadModelRequests.find(def->getId()) == mLoadModelRequests.end())
                 {
-                    // send a request to the gpuStreamer to create the model
                     GpuStreamer &gs = getHub().getGpuStreamer();
                     GpuStreamer::Message *m = new GpuStreamer::Message(this);
                     m->mMessageType = GpuStreamer::mtCreateModel;
@@ -329,12 +317,8 @@ void Scene::createModelRepresentation(ModelNode *iNode)
                     m->mpImageIdToTexture = &mImageIdToTexture;
                     gs.postMessage(m);
 
-                    gNumberOfGpuStreamerPostOnThisFrame++;
+                    mLoadModelRequests.insert(def->getId());
                 }
-
-                /*Representations::Model *model = new Representations::Model;
-                model->create(iNode, mImageIdToTexture);
-                mDefinitionIdToRepresentation.insert( make_pair(def->getId(), model) );*/
             }
         }
     }
@@ -391,19 +375,10 @@ void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Repre
         if(itModel != mDefinitionIdToRepresentation.end()) 
         {
             Representations::Representation *rep = itModel->second;
-
-            if(rep->isFenceSignaled())
-            {
-                if(mn->isVisible())
-                { 
-                    spf.mNumberOfModelDisplayed++;
-                    ipCurrentLayer->push_back( rep );
-                }
-                rep->deleteFenceSync();
-            }
-            else
-            {
-                printf("-----------Representations::Model fence was not yet signaled...\n");
+            if(mn->isVisible())
+            { 
+                spf.mNumberOfModelDisplayed++;
+                ipCurrentLayer->push_back( rep );
             }
         }
         else
@@ -486,8 +461,6 @@ void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
     if(loadedIm->isValid() && im != nullptr)
     {
         im->mpPayload = loadedIm->giveOwnershipOfImageData();
-        //addToTextureLibrary(im);
-        //im->unload();
     }
     else
     {
@@ -501,13 +474,13 @@ void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
         unsigned char *payload = new unsigned char[im->mSizeInBytes];
         memset(payload, 255, im->mSizeInBytes);
         im->mpPayload = payload;
-
-        //addToTextureLibrary(im);
-        //im->unload();
-        //assert(false && "image was not loaded or definition was not found...");
-    }
+    }    
     
+
     //time to upload image to gpu... lets ask GpuStreamer
+    //
+    // mLoadImageRequest will be remove once the texture has been loaded to GPU.
+    //    
     GpuStreamer& gs = mpHub->getGpuStreamer();
     GpuStreamer::Message *m = new GpuStreamer::Message(this);
     m->mMessageType = GpuStreamer::mtTexture;
@@ -532,7 +505,7 @@ void Scene::processGpuStreammingDoneMessage(MessageQueue::Message* ipMessage)
 
     case GpuStreamer::mtTexture:
     {        
-        Image *loadedIm = (Image*)message->mpData;
+        //Image *loadedIm = (Image*)message->mpData;
 
         auto it = mImageIdToTexture.find(defId);
         if(it == mImageIdToTexture.end())
@@ -540,7 +513,10 @@ void Scene::processGpuStreammingDoneMessage(MessageQueue::Message* ipMessage)
             mImageIdToTexture.insert( make_pair(defId, message->mTexture) );
         }
 
-        loadedIm->unload();
+        /*loadedIm->unload();*/
+
+        //remove that image for the list of ImageRequest
+        mLoadTextureRequests.erase(defId);
     }break;
 
     case GpuStreamer::mtCreateModel:
@@ -548,9 +524,7 @@ void Scene::processGpuStreammingDoneMessage(MessageQueue::Message* ipMessage)
         Representations::Model *model = (Representations::Model *)message->mpData;
         mDefinitionIdToRepresentation.insert(make_pair(defId, model));
 
-        //check for insertion... if it fails... delete it? or move that
-        //check to somewhere better...
-
+        mLoadModelRequests.erase(defId);
     }break;
 
     default: break;
@@ -589,9 +563,6 @@ void Scene::update()
     //clear all draw list...
     mDefaultLayer.clear();
     mLayers.clear();
-
-    gNumberOfFileStreamerPostOnThisFrame = 0;
-    gNumberOfGpuStreamerPostOnThisFrame = 0;
 
     // update stats...
     utils::Timer _t;

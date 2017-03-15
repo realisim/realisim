@@ -78,6 +78,8 @@ void addToTextureLibrary(Image*); //meuh! que faire avec ça!!!
     std::unordered_map<unsigned int, Representations::BoundingBox*> mDefinitionIdToBoundingBox;
     std::unordered_map<unsigned int, Representations::Representation*> mDefinitionIdToRepresentation;
     std::unordered_map<unsigned int, realisim::treeD::Texture> mImageIdToTexture;
+    std::set<unsigned int> mLoadTextureRequests;
+    std::set<unsigned int> mLoadModelRequests;
     
     std::vector<ModelNode*> mNeedsRepresentationCreation;
     std::vector<IGraphicNode*> mNeedsBBoxRepresentationCreation;

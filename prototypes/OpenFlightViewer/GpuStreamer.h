@@ -50,9 +50,8 @@ private:
     bool mMakeCurrentNeeded;
     MessageQueue mRequestQueue;
     std::map<void*, MessageQueue*> mSenderToDoneQueue;
-    std::mutex mPendingRequestsMutex; // MOVE THIS WHOLE PENDING REQUEST TO THE SENDER!!!!
-    std::set<unsigned int> mPendingRequests;
     HGLRC mGLContext;
     HDC mDC;
     realisim::utils::Timer mTimer;
+    double mMegaBytesUploadedPerSecond;
 };
