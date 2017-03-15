@@ -1,5 +1,9 @@
+#include "Broker.h"
 #include "Definitions.h"
 #include <deque>
+#include "ImageLoader.h"
+#include "FileStreamer.h"
+#include "GpuStreamer.h"
 #include "math/Matrix4.h"
 #include "Representations.h"
 #include "Scene.h"
@@ -8,16 +12,32 @@
 using namespace realisim;
     using namespace math;
 
-Scene::Scene() : mpRoot(nullptr)
-{}
+Scene::Scene(Hub* ipHub) :
+mpHub(ipHub),
+mpRoot(nullptr)
+{
+    //register fileStreamingDoneQueue to the fileStreamer
+    FileStreamer& fs = getHub().getFileStreamer();
+    using placeholders::_1;
+    mFileLoadingDoneQueue.setProcessingFunction(
+        std::bind( &Scene::processFileLoadingDoneMessage, this, _1));
+    fs.registerDoneQueue(this, &mFileLoadingDoneQueue);
+
+    //register gpuStreamingDoneQueue to the gpuStream
+    GpuStreamer& gs = getHub().getGpuStreamer();
+    using placeholders::_1;
+    mGpuStreamingDoneQueue.setProcessingFunction(
+        std::bind( &Scene::processGpuStreammingDoneMessage, this, _1));
+    gs.registerDoneQueue(this, &mGpuStreamingDoneQueue);
+}
 
 //----------------------------------------
 Scene::~Scene()
 {
+    clear();
+    
     if(mpRoot)
     { delete mpRoot; }
-    
-    mDefinitionIdToRepresentation.clear();
 }
 
 //------------------------------------------------------------------------------
@@ -28,82 +48,114 @@ void Scene::addNode(IGraphicNode* iNode)
     
     mpRoot->mChilds.push_back(iNode);
     
-    filterRenderables(iNode);
+    //populate the id to definition map
+    utils::Timer _t;
+    addToDefinitionMap(iNode);
+    printf("time to addToDefinitionMap %f\n", _t.getElapsed() );
     
-//    appliquer les filtres sur interfaces ici afin de creer les sous
-//    arbres...
-//    
-//    faire un methode getParent<T> qui retourne le premier parent de type T.
-    
-    mNeedsRepresentationCreation.push_back(iNode);
+    Broker& b = getHub().getBroker();
+    StatsPerFrame& spf = b.getStatsPerFrame();
+    spf.mTotalNumberOfIGraphicNode += countChilds(iNode);
+
     mNeedsTransformUpdate.push_back(iNode);
 }
 
 //------------------------------------------------------------------------------
-void Scene::addToTextureLibrary(Image *iIm)
+void Scene::addToDefinitionMap(IGraphicNode *iNode)
 {
-    IDefinition *def = dynamic_cast<IDefinition*>(iIm);
-    auto it = mImageIdToTexture.find(def->mId);
-    if(it == mImageIdToTexture.end())
+    if(iNode == nullptr) return;
+    
+    switch (iNode->mNodeType)
     {
-        realisim::treeD::Texture t;
-
-        realisim::math::Vector2i size(iIm->mWidth, iIm->mHeight);
-        GLenum internalFormat = GL_SRGB8_ALPHA8;
-        GLenum format = GL_RGBA;
-        GLenum datatype = GL_UNSIGNED_BYTE;
-        
-        switch(iIm->mNumberOfChannels)
+        // tte library contains all the images...
+        case IGraphicNode::ntLibrary:
         {
-            case 1:
-                internalFormat = GL_R8;
-                format = GL_RED;
-                break;
-            case 2:
-                internalFormat = GL_RG8;
-                format = GL_RG;
-                break;
-            case 3:
-                //internalFormat = GL_SRGB8;
-                internalFormat = GL_RGB8;
-                format = GL_RGB;
-                break;
-            case 4:
-                //internalFormat = GL_SRGB8_ALPHA8;
-                internalFormat = GL_RGBA8;
-                format = GL_RGBA;
-                break;
-            default: break;
-        }
-
-        t.set(iIm->mpPayload, size, internalFormat, format, datatype);
-        t.generateMipmap(true);
-        t.setFilter(GL_LINEAR_MIPMAP_LINEAR);
-        
-        mImageIdToTexture.insert( make_pair(def->mId, t) );
+            LibraryNode* ln = dynamic_cast<LibraryNode*>(iNode);
+            assert(ln);
+            for(size_t i = 0; i < ln->mImages.size(); ++i)
+            {
+                Image *im = ln->mImages[i];
+                auto it = mIdToDefinition.insert( make_pair(im->getId(), im) );
+                // just validate that there is no duplicate...
+                // if there is a duplicate we should understand why..
+                // It could be possible if we reuse nodes, but in that case
+                // nodes should have a refcount, so only the last deleted instance
+                // frees up memory...
+                assert(it.second);
+            }
+            
+        }break;
+        default: break;
+    }
+    
+    for(size_t i = 0; i < iNode->mChilds.size(); ++i)
+    {
+        addToDefinitionMap(iNode->mChilds[i]);
     }
 }
 
 //------------------------------------------------------------------------------
-Representations::Model* Scene::checkAndCreateRepresentation(ModelNode *iNode)
-{
-    Representations::Model  *model = nullptr;
-    
-    const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
-    auto repIt = mDefinitionIdToRepresentation.find(def->mId);
-    if(repIt == mDefinitionIdToRepresentation.end())
-    {
-        model = new Representations::Model(iNode, mImageIdToTexture);
-        mDefinitionIdToRepresentation.insert( make_pair(def->mId, model) );
-    }
-    else
-    {
-        model = dynamic_cast<Representations::Model*>(repIt->second);
-    }
-    
-    //this should be moved in the culling phase
-    return model;
-}
+//void Scene::addToTextureLibrary(Image *iIm)
+//{
+//    IDefinition *def = dynamic_cast<IDefinition*>(iIm);
+//    auto it = mImageIdToTexture.find(def->getId());
+//    if(it == mImageIdToTexture.end())
+//    {
+//        realisim::treeD::Texture t;
+//
+//        realisim::math::Vector2i size(iIm->mWidth, iIm->mHeight);
+//        GLenum internalFormat = GL_SRGB8_ALPHA8;
+//        GLenum format = GL_RGBA;
+//        GLenum datatype = GL_UNSIGNED_BYTE;
+//        
+//        switch(iIm->mNumberOfChannels)
+//        {
+//            case 1:
+//                internalFormat = GL_R8;
+//                format = GL_RED;
+//                break;
+//            case 2:
+//                internalFormat = GL_RG8;
+//                format = GL_RG;
+//                break;
+//            case 3:
+//                //internalFormat = GL_SRGB8;
+//                internalFormat = GL_RGB8;
+//                format = GL_RGB;
+//                break;
+//            case 4:
+//                //internalFormat = GL_SRGB8_ALPHA8;
+//                internalFormat = GL_RGBA8;
+//                format = GL_RGBA;
+//                break;
+//            default: break;
+//        }
+//
+//        t.set(iIm->mpPayload, size, internalFormat, format, datatype);
+//        t.generateMipmap(true);
+//        t.setMagnificationFilter(GL_LINEAR);
+//        t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
+//        
+//        mImageIdToTexture.insert( make_pair(def->getId(), t) );
+//    }
+//}
+
+////------------------------------------------------------------------------------
+//void Scene::checkAndCreateRepresentation(ModelNode *iNode)
+//{
+//    const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
+//    auto repIt = mDefinitionIdToRepresentation.find(def->getId());
+//    if(repIt == mDefinitionIdToRepresentation.end())
+//    {
+//        check if model can be created... meaning that images
+//        have been uploaded to gpu...
+//        if not, send a request to the fileStreamer to load the image.
+//        
+//        Representations::Model  *model = nullptr;
+//        model = new Representations::Model(iNode, mImageIdToTexture);
+//        mDefinitionIdToRepresentation.insert( make_pair(def->getId(), model) );
+//    }
+//}
 
 //------------------------------------------------------------------------------
 void Scene::clear()
@@ -114,146 +166,276 @@ void Scene::clear()
         mpRoot = nullptr;
     }
     
-    auto it = mDefinitionIdToRepresentation.begin();
-    for(; it != mDefinitionIdToRepresentation.end(); ++it)
+    // delete all boundingboxes
     {
-        delete it->second;
+        auto it = mDefinitionIdToBoundingBox.begin();
+        for(; it != mDefinitionIdToBoundingBox.end(); ++it)
+        {
+            delete it->second;
+        }
     }
+
+    // delete all representation
+    {
+        auto it = mDefinitionIdToRepresentation.begin();
+        for(; it != mDefinitionIdToRepresentation.end(); ++it)
+        {
+            delete it->second;
+        }
+    }
+    
+    mIdToDefinition.clear();
+    mDefinitionIdToBoundingBox.clear();
     mDefinitionIdToRepresentation.clear();
     mImageIdToTexture.clear();
     
     mNeedsRepresentationCreation.clear();
+    mNeedsBBoxRepresentationCreation.clear();
     mNeedsTransformUpdate.clear();
     
-    mRenderableFilter = Filter();
-    
-    mToDraw.clear();
+    mDefaultLayer.clear();
+    mLayers.clear();
+
+    //clear stats
+    Broker& b = getHub().getBroker();
+    StatsPerFrame& spf = b.getStatsPerFrame();
+    spf.clear();
+
 }
 
 //------------------------------------------------------------------------------
-void Scene::createRepresentations(IGraphicNode *iNode)
+int Scene::countChilds(const IGraphicNode* ipCurrentNode) const
 {
-    if(iNode != nullptr)
+    int r = 0;
+    countChilds(ipCurrentNode, r);
+    return r;
+
+}
+
+//------------------------------------------------------------------------------
+void Scene::countChilds(const IGraphicNode* ipCurrentNode, int& iCurrentCount) const
+{
+    if(ipCurrentNode == nullptr) {return;}
+
+    iCurrentCount += (int)ipCurrentNode->mChilds.size();
+    for(size_t i = 0; i < ipCurrentNode->mChilds.size(); ++i)
     {
-        deque<IGraphicNode*> q;
-        q.push_back(iNode);
-        while(!q.empty())
-        {
-            IGraphicNode* n = q.front();
-            q.pop_front();
-            
-            for(int i = 0; i < n->mChilds.size(); ++i)
-            { q.push_back(n->mChilds[i]); }
-            
-            switch (n->mNodeType)
-            {
-                case IGraphicNode::ntGroup: break;
-                case IGraphicNode::ntModel:
-                {
-                    ModelNode* modelNode = dynamic_cast<ModelNode*>(n);
-                    mToDraw.push_back( checkAndCreateRepresentation(modelNode) );
-                } break;
-                default: break;
-            }
-        }
+        countChilds(ipCurrentNode->mChilds[i], iCurrentCount);
     }
 }
 
 //------------------------------------------------------------------------------
-void Scene::filterRenderables(IGraphicNode* iNode)
+void Scene::createBoundingBoxRepresentation(IGraphicNode* ipNode)
 {
-    if(iNode != nullptr)
+    const IDefinition *def = dynamic_cast<const IDefinition*>(ipNode);
+
+    auto repIt = mDefinitionIdToBoundingBox.find(def->getId());
+    if(repIt == mDefinitionIdToBoundingBox.end())
     {
-        deque<IGraphicNode*> q;
-        q.push_back(iNode);
-        while(!q.empty())
-        {
-            IGraphicNode* n = q.front();
-            q.pop_front();
-            
-            for(int i = 0; i < n->mChilds.size(); ++i)
-            { q.push_back(n->mChilds[i]); }
-     
-            IRenderable *r = dynamic_cast<IRenderable*>(n);
-            if(r)
-            {
-                IRenderable *p = n->getFirstParent<IRenderable>();
-                if(p)
-                {
-                    Filter *f = mRenderableFilter.find(p);
-                    f->addChild(r);
-                }
-                else
-                {
-                    mRenderableFilter.addChild( r );
-                }
-                    
-            }
-        }
+        Representations::BoundingBox *bbox = new Representations::BoundingBox;
+        bbox->create(ipNode);
+        mDefinitionIdToBoundingBox.insert( make_pair(def->getId(), bbox) );   
     }
 }
 
 //------------------------------------------------------------------------------
-void Scene::loadLibraries(IGraphicNode* iNode)
+void Scene::createModelRepresentation(ModelNode *iNode)
 {
-    realisim::utils::Timer __t;
-    
-    if(iNode != nullptr)
+    const IDefinition *def = dynamic_cast<const IDefinition*>(iNode);
+
+    auto repIt = mDefinitionIdToRepresentation.find(def->getId());
+    if(repIt == mDefinitionIdToRepresentation.end())
     {
-        deque<IGraphicNode*> q;
-        q.push_back(iNode);
-        while(!q.empty())
+        // instance creation
+        if( iNode->isInstantiated() )
         {
-            IGraphicNode* n = q.front();
-            q.pop_front();
-            
-            for(int i = 0; i < n->mChilds.size(); ++i)
-            { q.push_back(n->mChilds[i]); }
-            
-            switch (n->mNodeType)
+            auto instantiatedFromRepIt = mDefinitionIdToRepresentation.find(def->getInstantiatedFromId());
+
+            // check just in case the instance would try to be created before the original
+            // model is created...
+            //
+            if (instantiatedFromRepIt != mDefinitionIdToRepresentation.end())
             {
-                case IGraphicNode::ntLibrary:
+                Representations::Model *instantiatedFrom = (Representations::Model*)(instantiatedFromRepIt->second);
+                Representations::Model *model = new Representations::Model;
+                model->createInstance(iNode, instantiatedFrom);
+                mDefinitionIdToRepresentation.insert( make_pair(def->getId(), model) );            
+            }
+        }
+        else
+        {
+            //        check if model can be created... meaning that images
+            //            have been uploaded to gpu and properly created!
+            //          
+            //            if not, send a request to the fileStreamer to load the image.
+            bool canCreateRepresentation = true;
+            for(int i = 0; i < iNode->mFaces.size() && canCreateRepresentation; ++i)
+            {
+                Face *f = iNode->mFaces[i];
+                if(f->mpMaterial && f->mpMaterial->mpImage)
                 {
-                    LibraryNode *lib = dynamic_cast<LibraryNode*>(n);
-                    assert(lib);
-                    //load all images and create representation
-                    for(size_t i = 0; i < lib->mImages.size(); ++i)
+                    Image *im = f->mpMaterial->mpImage;
+                    auto it = mImageIdToTexture.find(im->getId());
+                    if(it == mImageIdToTexture.end())
                     {
-                        Image* im = lib->mImages[i];
-                        if( !im->isLoaded() )
+                        canCreateRepresentation = false;
+
+                        // image is not on gpu, lets ask filestreamer to
+                        // load it the image to memory, then we will upload to gpu...
+                        //
+                        // first lets make sure, we have not already send a request for
+                        // that image
+                        //
+                        if (mLoadTextureRequests.find(im->getId()) == mLoadTextureRequests.end())
                         {
-                            im->load();
-                            
-                            //
-                            addToTextureLibrary(im);
-                            
+                            FileStreamer& fs = getHub().getFileStreamer();
+                            FileStreamer::Request *r = new FileStreamer::Request(this);
+                            r->mRequestType = FileStreamer::rtLoadRgbImage;
+                            r->mFilenamePath = im->mFilenamePath;
+                            r->mAffectedDefinitionId = im->getId();
+                            fs.postRequest(r);
 
-                            //--- save image to disk.
-                            //QImage::Format f;
-                            //if(im->mNumberOfChannels == 1)
-                            //{ continue; }
-                            //
-                            //assert(im->mNumberOfChannels != 2);
-                            //if(im->mNumberOfChannels == 3)
-                            //    f = QImage::Format_RGB888;
-                            //if(im->mNumberOfChannels == 4)
-                            //    f = QImage::Format_RGBA8888;
-                            //QImage qim(im->mpPayload,
-                            //          im->mWidth,
-                            //          im->mHeight,
-                            //          f);
-
-                            //QString name = "./testImage_" + QString::number(i) + ".png";
-                            //qim.save(name, "PNG");
+                            mLoadTextureRequests.insert(im->getId());
                         }
+                        
                     }
-                } break;
-                default: break;
+                }
+            }
+
+            if(canCreateRepresentation)
+            {
+
+                // send a request to the gpuStreamer to create the model
+
+                if (mLoadModelRequests.find(def->getId()) == mLoadModelRequests.end())
+                {
+                    GpuStreamer &gs = getHub().getGpuStreamer();
+                    GpuStreamer::Message *m = new GpuStreamer::Message(this);
+                    m->mMessageType = GpuStreamer::mtCreateModel;
+                    m->mAffectedDefinitionId = def->getId();
+                    m->mpModelNode = iNode;
+                    m->mpImageIdToTexture = &mImageIdToTexture;
+                    gs.postMessage(m);
+
+                    mLoadModelRequests.insert(def->getId());
+                }
             }
         }
     }
-    
-    printf("temps pour Scene::loadLibraries: %.4f(sec)\n", __t.getElapsed());
+}
+
+//------------------------------------------------------------------------------
+IDefinition* Scene::findDefinition(unsigned int iId)
+{
+    auto it = mIdToDefinition.find(iId);
+    return it != mIdToDefinition.end() ? it->second : nullptr;
+}
+
+//------------------------------------------------------------------------------
+IGraphicNode* Scene::getRoot() const
+{ return mpRoot; }
+
+//----------------------------------------
+void Scene::prepareFrame(IGraphicNode* iNode, std::vector<Representations::Representation*> *ipCurrentLayer)
+{
+    //depth First...
+    if(iNode == nullptr) {return;}
+
+    Broker& b = getHub().getBroker();
+    StatsPerFrame& spf = b.getStatsPerFrame();
+    spf.mNumberOfIGraphicNodeVisited++;
+
+    //perform culling, lod, switches and most of the scenegraph logic...
+
+    //fill layers
+    bool recurseInChilds = true;
+    switch (iNode->mNodeType)
+    {
+    case IGraphicNode::ntGroup:
+    {
+        GroupNode* gn = dynamic_cast<GroupNode*>(iNode);
+        if (gn->isLayered())
+        {
+            //add layer if it does not exist and make it current
+            auto itLayer = mLayers.insert( 
+                make_pair(gn->getLayerIndex(), vector<Representations::Representation*>() ) );
+
+            // itLayer is the pair<iterator, bool> returned by insert.
+            // itLayer.first is the iterator to the pair<int, vector>, so
+            // itLayer.first->second is the vector of representation, namely the list
+            // representing the layer.
+            //
+            ipCurrentLayer = &(itLayer.first->second);
+        }
+    }break;
+    case IGraphicNode::IGraphicNode::ntModel:
+    {
+        ModelNode* mn = dynamic_cast<ModelNode*>(iNode);
+        auto itModel = mDefinitionIdToRepresentation.find(mn->getId());
+        if(itModel != mDefinitionIdToRepresentation.end()) 
+        {
+            Representations::Representation *rep = itModel->second;
+            if(mn->isVisible())
+            { 
+                spf.mNumberOfModelDisplayed++;
+                ipCurrentLayer->push_back( rep );
+            }
+        }
+        else
+        {
+            // this model does not have a representation, lets
+            // put it in the list of the ones that need a rep creation...
+            //
+            mNeedsRepresentationCreation.push_back(mn);
+        }
+
+        spf.mNumberOfPolygons += mn->mFaces.size();
+    }break;
+    case IGraphicNode::ntLevelOfDetail:
+    {
+        //evaluate lod and if failure, do not recurse...
+        Broker& b = getHub().getBroker();
+        Point3d cameraPos = b.getCamera().getPos();
+        
+        LevelOfDetailNode* lod = dynamic_cast<LevelOfDetailNode*>(iNode);
+        double lodDistance = (lod->getPositionnedLodCenter() - cameraPos).fastNorm();
+
+        recurseInChilds = false;
+        if( lodDistance >= lod->getSwitchOutDistance() && lodDistance <= lod->getSwitchInDistance() )
+        { recurseInChilds = true; }
+        
+    }break;
+    default: break;
+    }
+
+
+    // add bounding box to draw list
+    if (iNode->isBoundingBoxVisible())
+    {
+        IDefinition *def = dynamic_cast<IDefinition*>(iNode);
+        if (def)
+        {
+            auto itBBox = mDefinitionIdToBoundingBox.find(def->getId());
+            if(itBBox != mDefinitionIdToBoundingBox.end()) 
+            { 
+                spf.mNumberOfModelDisplayed++;
+                ipCurrentLayer->push_back( itBBox->second );
+            }
+            else
+            { mNeedsBBoxRepresentationCreation.push_back(iNode); }
+        }
+        
+    }
+
+
+    // recurse on all childs
+    if (recurseInChilds)
+    {
+        for (size_t i = 0; i < iNode->mChilds.size(); ++i)
+        {
+            prepareFrame(  iNode->mChilds[i], ipCurrentLayer );
+        }
+    }
 }
 
 //----------------------------------------
@@ -263,89 +445,185 @@ void Scene::performCulling(IGraphicNode* iNode)
 }
 
 //----------------------------------------
+void Scene::processFileLoadingDoneMessage(MessageQueue::Message* ipMessage)
+{
+    FileStreamer::Request *r = (FileStreamer::Request *)ipMessage;
+    /*printf("Scene::processFileLoadingDoneMessage %s\n",
+           r->mFilenamePath.c_str() );*/
+    
+    RgbImage *loadedIm = (RgbImage*)r->mpData;
+    
+    // find the image associated with the request that we are currently handling.
+    IDefinition* def = findDefinition(r->mAffectedDefinitionId);
+    Image *im = dynamic_cast<Image*>(def);
+    assert(im);
+    
+    if(loadedIm->isValid() && im != nullptr)
+    {
+        im->mpPayload = loadedIm->giveOwnershipOfImageData();
+    }
+    else
+    {
+        // loaded image is not valid... maybe not present or else...
+        // lets replace it by a dummy image...
+        im->mWidth = 64;
+        im->mHeight = 64;
+        im->mNumberOfChannels = 3;
+        im->mBitsPerChannel = 8;
+        im->mSizeInBytes = im->mWidth * im->mHeight * im->mNumberOfChannels * im->mBitsPerChannel / 8;
+        unsigned char *payload = new unsigned char[im->mSizeInBytes];
+        memset(payload, 255, im->mSizeInBytes);
+        im->mpPayload = payload;
+    }    
+    
+
+    //time to upload image to gpu... lets ask GpuStreamer
+    //
+    // mLoadImageRequest will be remove once the texture has been loaded to GPU.
+    //    
+    GpuStreamer& gs = mpHub->getGpuStreamer();
+    GpuStreamer::Message *m = new GpuStreamer::Message(this);
+    m->mMessageType = GpuStreamer::mtTexture;
+    m->mAffectedDefinitionId = im->getId();
+    m->mpData = im;  // this is where we need COPY_ON_WRITE!!!!
+    gs.postMessage(m);
+
+    delete loadedIm;
+}
+
+//----------------------------------------
+void Scene::processGpuStreammingDoneMessage(MessageQueue::Message* ipMessage)
+{
+    // add the texture to the texture library.
+    GpuStreamer::Message *message = (GpuStreamer::Message *)ipMessage;
+    //printf("Scene::processGpuStreammingDoneMessage \n" );
+
+    unsigned int defId = message->mAffectedDefinitionId;
+
+    switch (message->mMessageType)
+    {
+
+    case GpuStreamer::mtTexture:
+    {        
+        //Image *loadedIm = (Image*)message->mpData;
+
+        auto it = mImageIdToTexture.find(defId);
+        if(it == mImageIdToTexture.end())
+        {
+            mImageIdToTexture.insert( make_pair(defId, message->mTexture) );
+        }
+
+        /*loadedIm->unload();*/
+
+        //remove that image for the list of ImageRequest
+        mLoadTextureRequests.erase(defId);
+    }break;
+
+    case GpuStreamer::mtCreateModel:
+    {
+        Representations::Model *model = (Representations::Model *)message->mpData;
+        mDefinitionIdToRepresentation.insert(make_pair(defId, model));
+
+        mLoadModelRequests.erase(defId);
+    }break;
+
+    default: break;
+    }
+    
+}
+
+//----------------------------------------
 void Scene::update()
 {
+    //clear per frame stats...
+    Broker& b = getHub().getBroker();
+    StatsPerFrame& spf = b.getStatsPerFrame();
+    spf.clearPerFrameStats();
+
+    //process fileStreamingDoneQueue
+    mFileLoadingDoneQueue.processMessages();
+    mGpuStreamingDoneQueue.processMessages();
+    
     for(size_t i = 0; i < mNeedsTransformUpdate.size(); ++i)
     {
-        updateTransform(&mRenderableFilter);
+        updateTransform( mNeedsTransformUpdate[i] );
+        updateBoundingBoxes( mNeedsTransformUpdate[i] );
+        updateLod(mNeedsTransformUpdate[i]);
     }
     mNeedsTransformUpdate.clear();
     
     for(size_t i = 0; i < mNeedsRepresentationCreation.size(); ++i)
-    {
-        loadLibraries(mNeedsRepresentationCreation[i]);
-        createRepresentations(mNeedsRepresentationCreation[i]);
-    }
+    { createModelRepresentation(mNeedsRepresentationCreation[i]); }
     mNeedsRepresentationCreation.clear();
     
-//    performCulling(mpRoot);
+    for(size_t i = 0; i < mNeedsBBoxRepresentationCreation.size(); ++i)
+    { createBoundingBoxRepresentation(mNeedsBBoxRepresentationCreation[i]); }
+    mNeedsBBoxRepresentationCreation.clear();
+
+    //clear all draw list...
+    mDefaultLayer.clear();
+    mLayers.clear();
+
+    // update stats...
+    utils::Timer _t;
+    prepareFrame(mpRoot, &mDefaultLayer);
+    spf.mTimeToPrepareFrame = _t.getElapsed();
 }
 
 //----------------------------------------
-void Scene::updateTransform(Filter* iFilterNode)
+void Scene::updateBoundingBoxes(IGraphicNode* ipNode)
 {
-    IRenderable* renderable = iFilterNode->mpData;
-    IRenderable* parent = iFilterNode->mpParent ? iFilterNode->mpParent->mpData : nullptr;
-    if(renderable && renderable->mIsTransformDirty)
+    //depth first...
+    for (size_t i = 0; i < ipNode->mChilds.size(); ++i)
     {
-        Matrix4 parentWorldTransform = parent != nullptr ?
-            parent->mWorldTransform : Matrix4();
-        renderable->mWorldTransform = parentWorldTransform * renderable->mParentTransform;
-        
-        renderable->mIsTransformDirty = false;
-        
-        for(size_t i = 0; i < iFilterNode->mChilds.size(); ++i)
-        { updateTransform(iFilterNode->mChilds[i]); }
+        updateBoundingBoxes( ipNode->mChilds[i] );
+    }
+
+    ipNode->updateBoundingBoxes();
+}
+
+//----------------------------------------
+void Scene::updateLod(IGraphicNode* ipNode)
+{
+    //depth first...
+    for (size_t i = 0; i < ipNode->mChilds.size(); ++i)
+    {
+        updateLod( ipNode->mChilds[i] );
+    }
+
+    LevelOfDetailNode *lod = dynamic_cast<LevelOfDetailNode*>(ipNode);
+    if (lod)
+    {
+        Point3d o = lod->getOriginalLodCenter();        
+        lod->setPositionnedLodCenter( lod->mWorldTransform * o );
     }
 }
 
-
-//---------------
-//--- Filter
-//---------------
-Scene::Filter::Filter() : mpData(new GroupNode()),
-mpParent(nullptr)
-{}
-
 //----------------------------------------
-Scene::Filter::~Filter()
+void Scene::updateTransform(IGraphicNode* ipNode)
 {
-    for(size_t i = 0; i < mChilds.size(); ++i)
+    //find first iRenderable parent, to get parentTransform
+    //IRenderable *parent = ipNode->getFirstParent<IRenderable>();
+    IGraphicNode *parent = ipNode->mpParent;
+    Matrix4 parentTransform;
+    if (parent != nullptr)
     {
-        delete mChilds[i];
+        parentTransform = parent->mWorldTransform;
     }
-    mChilds.clear();
+
+    updateTransform(ipNode, parentTransform);
 }
 
 //----------------------------------------
-void Scene::Filter::addChild(IRenderable *iR)
+void Scene::updateTransform(IGraphicNode* ipNode, Matrix4 iParentWorldTransform)
 {
-    Filter *f = new Filter();
-    f->mpData = iR;
-    f->mpParent = this;
-    mChilds.push_back(f);
-}
-
-//----------------------------------------
-// try to find iR with a breadth first search
-// starting on this.
-Scene::Filter* Scene::Filter::find(IRenderable *iR)
-{
-    Filter* found = nullptr;
-    deque<Filter*> q;
-    q.push_back(this);
-    while(!q.empty() && found == nullptr)
+    if (ipNode->mIsTransformDirty)
     {
-        Filter* n = q.front();
-        q.pop_front();
-        
-        for(int i = 0; i < n->mChilds.size(); ++i)
-        { q.push_back(n->mChilds[i]); }
-        
-        if(n->mpData == iR)
-        { found = n; }
+        ipNode->mWorldTransform = iParentWorldTransform * ipNode->mParentTransform;
+        iParentWorldTransform = ipNode->mWorldTransform;
+        ipNode->mIsTransformDirty = false;
     }
-    
-    assert(found != nullptr);
-    return found;
+
+    for(size_t i = 0; i < ipNode->mChilds.size(); ++i)
+    { updateTransform(ipNode->mChilds[i], iParentWorldTransform); }
 }

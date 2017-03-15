@@ -585,7 +585,7 @@ namespace math
   { 
       std::stringstream iss;
       iss << std::fixed << std::setprecision(iPrecision);
-      iss << "(" << x() << ", " << y() << "," << z() << ")";
+      iss << "(" << x() << ", " << y() << ", " << z() << ")";
       return iss.str();
   }
 

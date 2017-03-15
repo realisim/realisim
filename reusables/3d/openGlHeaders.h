@@ -6,6 +6,7 @@
     #include <Windows.h>
     #include <GL/glew.h> //nécessaire pour l'utilisation de GL_BGRA
     #include <gl/GLU.h>
+    #include <GL/wglew.h>
 #endif
 
 #ifdef __APPLE__

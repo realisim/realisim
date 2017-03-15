@@ -20,16 +20,53 @@ public:
     IGraphicNode();
     virtual ~IGraphicNode() = 0;
     
+    enum nodeType{ ntExternalRef, ntGroup, ntLevelOfDetail, ntLibrary, ntLod, 
+        ntModel, ntOpenFlight, ntSwitch, ntUndefined};
+
+    struct Path
+    {
+        Path() = delete;
+        explicit Path(IGraphicNode*);
+        Path(const Path&) = delete;
+        Path& operator=(const Path&) = delete;
+        ~Path() = default;
+
+        std::vector<IGraphicNode*> mParents;
+    };
+
     virtual void addChild(IGraphicNode*);
+    int decrementUseCount();
+    void incrementUseCount();
+    const realisim::math::BB3d& getAABB() const {return mAxisAlignedBoundingBox;}
+    const realisim::math::BB3d& getPositionnedAABB() const {return mPositionnedAxisAlignedBoundingBox;}
     template<typename T> T* getFirstParent();
-    
-    enum nodeType{ ntUndefined, ntGroup, ntLibrary, ntLod, ntModel, ntOpenFlight, ntSwitch};
-    
+    int getUseCount() const;
+    bool isBoundingBoxVisible() const {return mIsBoundingBoxVisible;}
+    bool isMarkedForDeletion() const {return mMarkedForDeletion;}
+    void markedForDeletion(bool iV) {mMarkedForDeletion = iV;}
+    void setAABB(const realisim::math::BB3d& iAABB) {mAxisAlignedBoundingBox = iAABB;}
+    void setBoundingBoxVisible(bool iS) {mIsBoundingBoxVisible = iS;}
+    void updateBoundingBoxes();
+
     IGraphicNode* mpParent;
     std::vector<IGraphicNode*> mChilds; //owned
     
     nodeType mNodeType;
     std::string mName;
+
+    bool mIsTransformDirty;
+    realisim::math::Matrix4 mParentTransform;
+    realisim::math::Matrix4 mWorldTransform;    
+
+protected:
+    void incrementUseCount(IGraphicNode*, int);
+
+    int mUseCount;
+    bool mMarkedForDeletion;
+    bool mIsBoundingBoxVisible;
+    //    realisim::math::BB3d mOrientedBoundingBox;
+    realisim::math::BB3d mAxisAlignedBoundingBox;
+    realisim::math::BB3d mPositionnedAxisAlignedBoundingBox;
 };
 
 //--------------------------------------------------------
@@ -54,22 +91,25 @@ T* IGraphicNode::getFirstParent()
 class IRenderable
 {
 public:
-    IRenderable() : mIsTransformDirty(true) {}
+    IRenderable();
     virtual ~IRenderable() = 0;
     
-    bool mIsTransformDirty;
-    realisim::math::Matrix4 mParentTransform;
-    realisim::math::Matrix4 mWorldTransform;
-    
-//    realisim::math::BB3d mOriginalBoundingBox;
-//    realisim::math::BB3d mOrientedBoundingBox;
-//    realisim::math::BB3d mAxisAlignedBoundingBox;
+    bool isVisible() const;
+    void setAsVisible(bool);    
+
+    protected:
+        void setAsVisible(IGraphicNode*, bool);
+
+        bool mIsVisible;    
 };
 
 
 //--------------------------------------------------------
 //--- IDefinitions
 //--------------------------------------------------------
+// Note on instance:
+//
+//
 class IDefinition
 {
 public:
@@ -78,8 +118,15 @@ public:
     IDefinition& operator=(const IDefinition&) = delete;
     virtual ~IDefinition();
 
+    unsigned int getId() const;
+    unsigned int getInstantiatedFromId() const;
+    void setAsInstanceOf(unsigned int);
+    bool isInstantiated() const;
+
+protected:
     static unsigned int mIdCounter;
     unsigned int mId;
+    unsigned int mInstantiatedFromId;
 };
 
 //--------------------------------------------------------
@@ -110,9 +157,11 @@ public:
     Image& operator=(const Image&) = delete;
     virtual ~Image() override;
     
+//void clear();
     bool isLoaded() const {return mpPayload != nullptr; };
     void loadMetaData();
     void load();
+    void unload();
     
     std::string mFilenamePath;
     int mWidth;
@@ -199,19 +248,64 @@ public IGraphicNode,
 public IRenderable
 {
 public:
-    ModelNode() : IDefinition(), IGraphicNode(), IRenderable() { mNodeType = ntModel; }
+    ModelNode();
     virtual ~ModelNode() override;
     
+    void addFace(Face*);
+    void setAsInstanceOf(ModelNode*);
+
     std::vector<Mesh*> mMeshes; //owned
     std::vector<Face*> mFaces; //owned
+
+protected:
+    ModelNode *mpInstancedFrom;    
 };
 
 //--------------------------------------------------------
 class GroupNode : public IDefinition, public IGraphicNode, public IRenderable
 {
 public:
-    GroupNode() : IDefinition(), IGraphicNode(), IRenderable() { mNodeType = ntGroup; }
+    GroupNode() : IDefinition(), IGraphicNode(), IRenderable(),
+        mLayerIndex(0)
+        { mNodeType = ntGroup; }
     virtual ~GroupNode() override {};
+
+    bool isLayered() const { return getLayerIndex() != 0; }
+    int getLayerIndex() const {return mLayerIndex;}
+    void setLayerIndex(int i) {mLayerIndex = i;}
+
+private:
+    int mLayerIndex;
+};
+
+
+//--------------------------------------------------------
+// Bon... on hérite de IRenderable parce qu'il faut la transform world pour
+// faire le calcul du positionnedLodCenter... Techniquement, lod ne devrait pas
+// etre un renderable... Decrait séparer Irenderable en deux? une partie pour
+// pour le positionnement IPositionnable et IRenderable???
+//
+class LevelOfDetailNode : public IDefinition, public IGraphicNode, public IRenderable
+{
+public:
+    LevelOfDetailNode();
+    virtual ~LevelOfDetailNode() override {};
+
+    double getSwitchInDistance() const {return mSitchInDistance;}
+    double getSwitchOutDistance() const {return mSitchOutDistance;}
+    const realisim::math::Point3d& getOriginalLodCenter() const {return mOriginalLodCenter;}
+    const realisim::math::Point3d& getPositionnedLodCenter() const {return mPositionnedLodCenter;}
+
+    void setSwitchInDistance(double iD) {mSitchInDistance = iD;}
+    void setSwitchOutDistance(double iD) {mSitchOutDistance = iD;}
+    void setOriginalLodCenter(const realisim::math::Point3d& iC) {mOriginalLodCenter = iC;}
+    void setPositionnedLodCenter(const realisim::math::Point3d& iC) {mPositionnedLodCenter = iC;}
+
+private:
+    double mSitchInDistance;
+    double mSitchOutDistance;
+    realisim::math::Point3d mOriginalLodCenter;
+    realisim::math::Point3d mPositionnedLodCenter;
 };
 
 

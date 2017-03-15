@@ -177,6 +177,8 @@ void Viewer::draw()
         glDisable(GL_STENCIL_TEST);
         glEnable(GL_DEPTH_TEST);
     }
+
+    glFinish();
 }
 
 //------------------------------------------------------------------------------

@@ -18,13 +18,13 @@
  origin for all SGI images is the lower left hand corner. The first scanline 
  (row 0) is always the bottom row of the image.
 ------------------------------------------------------------------------------*/
-class RgbImageLoader
+class RgbImage //renommer a RgbImage
 {
 public:
-    RgbImageLoader();
-    RgbImageLoader(const RgbImageLoader&) = delete;
-    RgbImageLoader& operator=(const RgbImageLoader&) = delete;
-    ~RgbImageLoader();
+    RgbImage();
+    RgbImage(const RgbImage&) = delete;
+    RgbImage& operator=(const RgbImage&) = delete;
+    ~RgbImage();
     
     void clear();
     int getBytesPerPixel() const;

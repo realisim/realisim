@@ -59,7 +59,7 @@ Widget3d::~Widget3d()
 //-----------------------------------------------------------------------------
 void Widget3d::beginFrame()
 {
-    makeCurrent();
+    //makeCurrent();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
     
@@ -187,7 +187,7 @@ void Widget3d::mouseDoubleClickEvent( QMouseEvent* e )
 //-----------------------------------------------------------------------------
 void Widget3d::mouseMoveEvent(QMouseEvent *e)
 {
-    makeCurrent();
+    //makeCurrent();
     
     if( mMousePressed && !isAnimatingCamera() ) //deplacement de la camera
     {
@@ -234,7 +234,7 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
 //-----------------------------------------------------------------------------
 void Widget3d::mousePressEvent(QMouseEvent *e)
 {
-    makeCurrent();
+    //makeCurrent();
     
     mMousePressed = true;
     mMousePosX = e->x();
@@ -244,7 +244,7 @@ void Widget3d::mousePressEvent(QMouseEvent *e)
 //-----------------------------------------------------------------------------
 void Widget3d::mouseReleaseEvent(QMouseEvent *e)
 {
-    makeCurrent();
+    //makeCurrent();
     
     mMousePressed = false;
 }
@@ -258,8 +258,8 @@ Widget3d::paintGL()
     //replacer les lumieres
     Vector4d pos(50.0, 30.0, 5.0, 0.0);
     if( mAbsoluteUpVector == auvZ )
-    { pos.set(400, 280, 1000, 0.0); }
-    GLfloat position[]  = {pos.x(), pos.y(), pos.z(), pos.w() };
+    { pos.set(1000, 100, 200, 0.0); }
+    GLfloat position[]  = {(float)pos.x(), (float)pos.y(), (float)pos.z(), (float)pos.w() };
     glLightfv(GL_LIGHT0, GL_POSITION, position);
     
     draw();
@@ -501,9 +501,18 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
         math::interpolate( m1, m2, t );
         Vector3d interpolatedLook = toVector(mOldCam.getLook()) * (1 - t) +
         toVector(mNewCam.getLook()) * t;
+
+        // Y
+        Vector3d interpolatedUp = Vector3d( iterationMatrix(1, 0), iterationMatrix(1, 1), iterationMatrix(1, 2) );
+        if( mAbsoluteUpVector == auvZ )
+        { 
+            //grab first column
+            interpolatedUp = Vector3d( iterationMatrix(0, 1), iterationMatrix(1, 1), iterationMatrix(2, 1) );
+        }
+
         mCam.set( toPoint(iterationMatrix.getTranslationAsVector()),
                  toPoint(interpolatedLook),
-                 Vector3d( iterationMatrix(1, 0), iterationMatrix(1, 1), iterationMatrix(1, 2) ) );
+                 interpolatedUp );
         
         //--- animation de la projection
         Camera::Projection iProj = mNewCam.getProjection();
@@ -577,7 +586,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
 //-----------------------------------------------------------------------------
 void Widget3d::wheelEvent(QWheelEvent* ipE)
 {
-    makeCurrent();
+    //makeCurrent();
     
     if( isAnimatingCamera() ) { return; }
     

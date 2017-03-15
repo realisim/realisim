@@ -9,11 +9,12 @@
 
 using namespace std;
 
-RgbImageLoader::RgbImageLoader() :
+RgbImage::RgbImage() :
 mFilenamePath(),
 mpImageData(nullptr),
 mIsValid(false),
 mHasOwnershipOfImageData(true),
+mMagicNumber(0),
 mStorage(0),
 mBytesPerPixel(0),
 mDimension(0),
@@ -27,17 +28,17 @@ mColorMapId(0)
 {}
 
 //------------------------------------------------------------------------------
-RgbImageLoader::~RgbImageLoader()
+RgbImage::~RgbImage()
 {
     clear();
 }
 
 //------------------------------------------------------------------------------
-void RgbImageLoader::clear()
+void RgbImage::clear()
 {
     if(mpImageData != nullptr && hasOwnershipOfImageData())
     {
-        delete mpImageData;
+        delete[] mpImageData;
     }
     
     mIsValid = false;
@@ -55,7 +56,7 @@ void RgbImageLoader::clear()
 }
 
 //------------------------------------------------------------------------------
-void RgbImageLoader::decompress(const std::string &iRleData, unsigned char *iDest)
+void RgbImage::decompress(const std::string &iRleData, unsigned char *iDest)
 {
     int rleIndex = 0;
     int count = 0;
@@ -80,71 +81,71 @@ void RgbImageLoader::decompress(const std::string &iRleData, unsigned char *iDes
 }
 
 //------------------------------------------------------------------------------
-int RgbImageLoader::getBytesPerPixel() const
+int RgbImage::getBytesPerPixel() const
 { return mBytesPerPixel; }
 
 //------------------------------------------------------------------------------
-int RgbImageLoader::getColorMapId() const
+int RgbImage::getColorMapId() const
 { return mColorMapId; }
 
 //------------------------------------------------------------------------------
-int RgbImageLoader::getDimension() const
+int RgbImage::getDimension() const
 { return mDimension; }
 
 //------------------------------------------------------------------------------
-const std::string& RgbImageLoader::getFilenamePath() const
+const std::string& RgbImage::getFilenamePath() const
 { return mFilenamePath; }
 
 //------------------------------------------------------------------------------
-unsigned char* RgbImageLoader::getImageData() const
+unsigned char* RgbImage::getImageData() const
 { return mpImageData; }
 
 //------------------------------------------------------------------------------
-std::string RgbImageLoader::getImageName() const
+std::string RgbImage::getImageName() const
 { return mImageName; }
 
 //------------------------------------------------------------------------------
-int RgbImageLoader::getMaximumPixelValue() const
+int RgbImage::getMaximumPixelValue() const
 { return mMaximumPixelValue; }
 
 //------------------------------------------------------------------------------
-int RgbImageLoader::getMinumumPixelValue() const
+int RgbImage::getMinumumPixelValue() const
 { return mMinumumPixelValue; }
 
 //------------------------------------------------------------------------------
-int RgbImageLoader::getNumberOfChannels() const
+int RgbImage::getNumberOfChannels() const
 { return mNumberOfChannels; }
 
 //------------------------------------------------------------------------------
-int RgbImageLoader::getPixelSizeX() const
+int RgbImage::getPixelSizeX() const
 { return mPixelSizeX; }
 
 //------------------------------------------------------------------------------
-int RgbImageLoader::getPixelSizeY() const
+int RgbImage::getPixelSizeY() const
 { return mPixelSizeY; }
 
 //------------------------------------------------------------------------------
-int RgbImageLoader::getStorage() const
+int RgbImage::getStorage() const
 { return mStorage; }
 
 //------------------------------------------------------------------------------
-bool RgbImageLoader::hasImageData() const
+bool RgbImage::hasImageData() const
 { return mpImageData != nullptr; }
 
 //------------------------------------------------------------------------------
-bool RgbImageLoader::hasOwnershipOfImageData() const
+bool RgbImage::hasOwnershipOfImageData() const
 { return mHasOwnershipOfImageData; }
 
 //------------------------------------------------------------------------------
-bool RgbImageLoader::isRleEncoded() const
+bool RgbImage::isRleEncoded() const
 { return getStorage() == 1; }
 
 //------------------------------------------------------------------------------
-bool RgbImageLoader::isValid() const
+bool RgbImage::isValid() const
 { return mIsValid; }
 
 //------------------------------------------------------------------------------
-void RgbImageLoader::load()
+void RgbImage::load()
 {
     clear();
     // Parse the file
@@ -172,7 +173,7 @@ void RgbImageLoader::load()
 }
 
 //------------------------------------------------------------------------------
-void RgbImageLoader::loadHeader()
+void RgbImage::loadHeader()
 {
     clear();
     // Parse the file
@@ -186,7 +187,7 @@ void RgbImageLoader::loadHeader()
 }
 
 //------------------------------------------------------------------------------
-bool RgbImageLoader::loadHeader(ifstream& ifs)
+bool RgbImage::loadHeader(ifstream& ifs)
 {
     // see specification
     Realisim::Utils::StreamUtility su;
@@ -217,21 +218,24 @@ bool RgbImageLoader::loadHeader(ifstream& ifs)
     
     ifs.seekg(512); //go to end of header.
     
-    // a few assumption and checks
-    assert(getBytesPerPixel() == 1 );
-    
-    if( getBytesPerPixel() != 1 )
+    // a few assumption and checks if the image was read properly
+    if (ok)
     {
-        ok = false;
-        clear();
-        printf("RgbImageLoader::loadHeader - current SGI RGB format is not supported.\n");
+        //assert(getBytesPerPixel() == 1 );
+
+        if( getBytesPerPixel() != 1 )
+        {
+            ok = false;
+            clear();
+            printf("RgbImageLoader::loadHeader - current SGI RGB format (more than 8 bits per channel) is not supported for image %s.\n", getFilenamePath().c_str() );
+        }
     }
     
     return ok;
 }
 
 //------------------------------------------------------------------------------
-unsigned char* RgbImageLoader::giveOwnershipOfImageData()
+unsigned char* RgbImage::giveOwnershipOfImageData()
 {
     mHasOwnershipOfImageData = false;
     return mpImageData;
@@ -239,7 +243,7 @@ unsigned char* RgbImageLoader::giveOwnershipOfImageData()
 
 //------------------------------------------------------------------------------
 // see documentation (link in h file).
-bool RgbImageLoader::parseAsRle(std::ifstream &ifs)
+bool RgbImage::parseAsRle(std::ifstream &ifs)
 {
     bool ok = true;
     
@@ -321,7 +325,7 @@ bool RgbImageLoader::parseAsRle(std::ifstream &ifs)
     return ok;
 }
 //------------------------------------------------------------------------------
-bool RgbImageLoader::parseAsVerbatim(std::ifstream &ifs)
+bool RgbImage::parseAsVerbatim(std::ifstream &ifs)
 {
     bool ok = true;
     
@@ -362,7 +366,7 @@ bool RgbImageLoader::parseAsVerbatim(std::ifstream &ifs)
 
 
 //------------------------------------------------------------------------------
-void RgbImageLoader::setFilenamePath(const std::string& iV)
+void RgbImage::setFilenamePath(const std::string& iV)
 { mFilenamePath = iV; }
 
 

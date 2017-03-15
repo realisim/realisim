@@ -10,13 +10,43 @@
 #ifndef MainDialog_hh
 #define MainDialog_hh
 
-#include "openFlight/OpenFlightReader.h"
+#include "Broker.h"
+#include "FileStreamer.h"
+#include "GpuStreamer.h"
+#include "Hub.h"
+#include "MessageQueue.h"
+#include <QDockWidget>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QMainWindow>
+#include <QOpenGLContext>
 #include <QTimerEvent>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
+#include <QWindow>
 #include "3d/Widget3d.h"
 #include "Scene.h"
+#include "Utils/Statistics.h"
 
+class IGraphicNode;
+namespace Representations{ class Representation; }
+
+class SharedGlWindow : public QWindow
+{
+public:
+    explicit SharedGlWindow(QWindow* ipParent, QOpenGLContext* ipSharedContext, GpuStreamer *ipGpuStreamer);
+
+protected:
+    void exposeEvent(QExposeEvent *event) override;
+    HGLRC openGlNativeHandle() const;
+    HDC openGlNativeDC() const;
+
+    QOpenGLContext *mpContext;
+    QOpenGLContext *mpSharedGlContext;
+    GpuStreamer *mpGpuStreamer;
+};
+
+//-------------------------------------------------------------
 class Viewer : public realisim::treeD::Widget3d
 {
 public:
@@ -33,7 +63,7 @@ private:
     virtual void keyPressEvent(QKeyEvent*) override;    
     void setScene(const Scene* ipScene) {mpScene = ipScene;}
     void togglePolygonMode();
-    void updateRepresentations();
+    //void updateRepresentations();
     
     //--- data
     const Scene *mpScene;
@@ -49,21 +79,50 @@ public:
     ~MainDialog(){};
     
 protected slots:
+    void navigatorItemActivated(QTreeWidgetItem *, int);
+    void navigatorCurrentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *);
     void newFile();
     void openFile();
     
 protected:
+    void centerCameraOn(realisim::math::Point3d, double iRadius);
+    void createInfoPanel(QWidget*);
     void createMenus();
     virtual void keyPressEvent(QKeyEvent*) override;
+    void fillInfoLabel();
+    void processFileLoadingDoneMessage(MessageQueue::Message*);
     void timerEvent(QTimerEvent*) override;
     void toggleFreeRunning();
+    void refreshNavigator();
+    void refreshNavigator(IGraphicNode*, QTreeWidgetItem*);
+    void resetCamera();
+    void updateUi();
+    void updateUiAtHighFrequency();
     
+    // ui
     Viewer* mpViewer;
+    SharedGlWindow* mpSharedGlWindow;
+    QDockWidget* mpToolsWidget;
+    QTreeWidget* mpNavigator;
+    QWidget* mpInfoPanel;
+    QLabel* mpInfoLabel;
+    QLabel* mpStatsPerFrameLabel;
+    std::map<QTreeWidgetItem*, IGraphicNode*> mNavigatorItemToGraphicNode; //this should be done with model/view from qt... but doing this quickly...
     
     //Data
     bool mFreeRunning;
-    Scene mScene;
+    realisim::utils::Timer mFrameTimer;
+    realisim::utils::Timer mInterUpdateTimer;
+    realisim::utils::Statistics mInterUpdateStats;
+    Hub mHub;
+    Scene *mpScene;
     int mTimerId;
+  
+    Broker mBroker;
+    //threading
+    FileStreamer mFileStreamer;
+    GpuStreamer mGpuStreamer;
+    MessageQueue mFileLoadingDoneQueue;
 };
 
 #endif

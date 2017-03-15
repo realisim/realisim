@@ -1,9 +1,12 @@
 
 PROJECT(OpenFlightViewer)
-
-#output apps in bin/clouds
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/OpenFlightViewer)
+
+#--------------------------------------------------------------------------------
+# -DMESSAGE_QUEUE_NO_THREADING: will remove all threading from messagequeues
+#		it will be mono thread (mostly filestreamer and gpustreamer)
+#--------------------------------------------------------------------------------
+#add_definitions(-DMESSAGE_QUEUE_NO_THREADING)
 
 SET( SOURCES ${SOURCES} "./CMakeLists.txt" )
 

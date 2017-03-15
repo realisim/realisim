@@ -7,30 +7,54 @@
 
 namespace Representations
 {
+    //-------------------------------------------------------------------------
     class Representation
     {
     public:
         Representation();
+        Representation(const Representation&) = delete;
+        Representation& operator=(const Representation&) = delete;
         virtual ~Representation();
-        
+       
         virtual void draw();
+
+
+    protected:
     };
     
+    //-------------------------------------------------------------------------
+    class BoundingBox : public Representation
+    {
+    public:
+        BoundingBox() = default;
+        virtual ~BoundingBox() = default;
+
+        void create(IGraphicNode*);
+        virtual void draw() override;
+
+    protected:
+        IGraphicNode* mpGraphicNode;
+    };
+
+    //-------------------------------------------------------------------------
     class Model : public Representation
     {
     public:
-        Model() = delete;
-        
-        explicit Model(ModelNode*,
-                       const std::unordered_map<unsigned int, realisim::treeD::Texture>& iTextureLibrary);
-        
+        Model();               
         virtual ~Model();
+
+        void create(ModelNode*,
+            const std::unordered_map<unsigned int, realisim::treeD::Texture>& iTextureLibrary);
+        void createInstance(ModelNode*, Model*);
         void draw() override;
         
+        
+
     protected:
-        ModelNode* mpModel; //faut mettre des shared_ptr... mais bon c'est un proto...
+        ModelNode* mpModelNode; //faut mettre des shared_ptr... mais bon c'est un proto...
         GLuint mDisplayList;
-        const std::unordered_map<unsigned int, realisim::treeD::Texture>& mTextureLibrary;
+         
         //std::vector<realisim::treeD::Texture> mTextures; multitexturing?
     };
+
 }
