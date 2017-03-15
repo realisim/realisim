@@ -59,7 +59,7 @@ Widget3d::~Widget3d()
 //-----------------------------------------------------------------------------
 void Widget3d::beginFrame()
 {
-    makeCurrent();
+    //makeCurrent();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
     
@@ -187,7 +187,7 @@ void Widget3d::mouseDoubleClickEvent( QMouseEvent* e )
 //-----------------------------------------------------------------------------
 void Widget3d::mouseMoveEvent(QMouseEvent *e)
 {
-    makeCurrent();
+    //makeCurrent();
     
     if( mMousePressed && !isAnimatingCamera() ) //deplacement de la camera
     {
@@ -234,7 +234,7 @@ void Widget3d::mouseMoveEvent(QMouseEvent *e)
 //-----------------------------------------------------------------------------
 void Widget3d::mousePressEvent(QMouseEvent *e)
 {
-    makeCurrent();
+    //makeCurrent();
     
     mMousePressed = true;
     mMousePosX = e->x();
@@ -244,7 +244,7 @@ void Widget3d::mousePressEvent(QMouseEvent *e)
 //-----------------------------------------------------------------------------
 void Widget3d::mouseReleaseEvent(QMouseEvent *e)
 {
-    makeCurrent();
+    //makeCurrent();
     
     mMousePressed = false;
 }
@@ -586,7 +586,7 @@ void Widget3d::timerEvent( QTimerEvent* ipE )
 //-----------------------------------------------------------------------------
 void Widget3d::wheelEvent(QWheelEvent* ipE)
 {
-    makeCurrent();
+    //makeCurrent();
     
     if( isAnimatingCamera() ) { return; }
     

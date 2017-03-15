@@ -334,18 +334,8 @@ mTimerId(0)
     mpToolsWidget->resize(1080, 768);
 
     createMenus();
-    
-//{
-//        MessageQueue mq;
-//        mq.startInThread();
-//        std::this_thread::sleep_for( std::chrono::seconds(4) );
-//        mq.post( new MessageQueue::Message(this) );
-//        mq.post( new MessageQueue::Message(this) );
-//        mq.post( new MessageQueue::Message(this) );
-//        mq.post( new MessageQueue::Message(this) );
-//        std::this_thread::sleep_for( std::chrono::seconds(2) );
-//}
 
+    mInterUpdateTimer.start();
     mTimerId = startTimer(0);
 }
 
@@ -596,6 +586,16 @@ void MainDialog::timerEvent(QTimerEvent *ipE)
 {
     if(ipE->timerId() == mTimerId)
     {
+        mInterUpdateStats.add(mInterUpdateTimer.getElapsed());
+
+        // Pump the streamer queue when threading is disabled
+        //
+#ifdef MESSAGE_QUEUE_NO_THREADING
+        mFileStreamer.processNextMessage();
+        mGpuStreamer.processNextMessage();
+#endif // MESSAGE_QUEUE_NO_THREADING
+
+
         mFileLoadingDoneQueue.processNextMessage();
         
 
@@ -610,10 +610,12 @@ void MainDialog::timerEvent(QTimerEvent *ipE)
         mpScene->update();
         updateUiAtHighFrequency();
         
-        if (mFrameTimer.getElapsed() > 1/60.0 || mFreeRunning)
+        if (mFrameTimer.getElapsed() + mInterUpdateStats.getMean() > 1/60.0 || mFreeRunning)
         {
             mpViewer->updateGL();
             mFrameTimer.start();
+            mInterUpdateTimer.start();
+            mInterUpdateStats.clear();
         }
     }
 }

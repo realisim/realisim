@@ -39,6 +39,9 @@ public:
     };
 
     void postMessage(Message*);
+#ifdef MESSAGE_QUEUE_NO_THREADING
+    void processNextMessage();
+#endif // MESSAGE_QUEUE_NO_THREADING
     void registerDoneQueue(void *ipRequester, MessageQueue* ipDoneQueue);
     void setGLContext(HDC, HGLRC);
 

@@ -71,6 +71,14 @@ void FileStreamer::postRequest(FileStreamer::Request *iRequest)
 }
 
 //------------------------------------------------------------------------------
+#ifdef MESSAGE_QUEUE_NO_THREADING
+void FileStreamer::processNextMessage()
+{
+    mRequestQueue.processNextMessage();
+}
+#endif // MESSAGE_QUEUE_NO_THREADING
+
+//------------------------------------------------------------------------------
 void FileStreamer::registerDoneQueue(void *ipRequester, MessageQueue *ipDoneQueue)
 {
     mSenderToDoneQueue.insert( make_pair(ipRequester, ipDoneQueue) );

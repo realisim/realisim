@@ -26,6 +26,7 @@
 #include <QWindow>
 #include "3d/Widget3d.h"
 #include "Scene.h"
+#include "Utils/Statistics.h"
 
 class IGraphicNode;
 namespace Representations{ class Representation; }
@@ -111,6 +112,8 @@ protected:
     //Data
     bool mFreeRunning;
     realisim::utils::Timer mFrameTimer;
+    realisim::utils::Timer mInterUpdateTimer;
+    realisim::utils::Statistics mInterUpdateStats;
     Hub mHub;
     Scene *mpScene;
     int mTimerId;

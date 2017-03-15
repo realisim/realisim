@@ -153,13 +153,15 @@ void MessageQueue::setState(MessageQueue::state iState)
 //------------------------------------------------------------------------------
 void MessageQueue::startInThread()
 {
+#ifndef MESSAGE_QUEUE_NO_THREADING
     //early out
     if(getState() != sIdle) return;
-    
+
     mMutex.lock();
     setState(sRunning);
     mThread = std::thread(&MessageQueue::threadLoop, this);
     mMutex.unlock();
+#endif // !MESSAGE_QUEUE_NO_THREADING
 }
 
 //------------------------------------------------------------------------------

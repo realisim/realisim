@@ -57,10 +57,12 @@ realisim::treeD::Texture GpuStreamer::createTexture(Image* ipIm)
     }
     
     t.set(ipIm->mpPayload, size, internalFormat, format, datatype);
-    //t.generateMipmap(true);
-    //t.setMagnificationFilter(GL_LINEAR);
-    //t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
-    t.setFilter(GL_LINEAR);
+
+    // generateMipmap IS A SERIOUS PERF KILLER
+    t.generateMipmap(true);
+    t.setMagnificationFilter(GL_LINEAR);
+    t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
+    t.setWrapMode(GL_REPEAT);
 
     return t;
 }
@@ -70,6 +72,14 @@ void GpuStreamer::postMessage(GpuStreamer::Message *iMessage)
 {
     mRequestQueue.post(iMessage);
 }
+
+//------------------------------------------------------------------------------
+#ifdef MESSAGE_QUEUE_NO_THREADING
+void GpuStreamer::processNextMessage()
+{
+    mRequestQueue.processNextMessage();
+}
+#endif // MESSAGE_QUEUE_NO_THREADING
 
 //------------------------------------------------------------------------------
 void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
@@ -117,7 +127,6 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
             realisim::treeD::Texture tex;
 
             tex = createTexture(ipIm);
-            //tex.setFenceSync(glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0));
             fenceSync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
             doneMessage->mAffectedDefinitionId = defId;
@@ -136,16 +145,15 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
 
             Representations::Model *model = new Representations::Model;
             model->create(modelNode, *imageIdToTexture);
-            //model->setFenceSync(  glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0) );
             fenceSync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
             doneMessage->mAffectedDefinitionId = defId;
             doneMessage->mpData = model;
 
-            // BAD BAD approximation...
-            const int approxNbVertices = modelNode->mFaces.size() * 3;
-            const int approxVerticesSizeInBytes = approxNbVertices * 4; //they are doubles...
-            mMegaBytesUploadedPerSecond += approxVerticesSizeInBytes * 4 / (1024*1024.0); //4 times the number of vertices, because color, normal and texture coords...
+            //// BAD BAD approximation...
+            //const int approxNbVertices = modelNode->mFaces.size() * 3;
+            //const int approxVerticesSizeInBytes = approxNbVertices * 4; //they are doubles...
+            //mMegaBytesUploadedPerSecond += approxVerticesSizeInBytes * 4 / (1024*1024.0); //4 times the number of vertices, because color, normal and texture coords...
             
         }break;
         default : break;
@@ -154,13 +162,13 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
         //wait on the sync
         if (fenceSync)
         {
-            /*GLint result = GL_UNSIGNALED;
+            GLint result = GL_UNSIGNALED;
             glGetSynciv(fenceSync, GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
             while (result != GL_SIGNALED) 
             {
                 glGetSynciv(fenceSync, GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
-            }*/
-            glClientWaitSync(fenceSync, GL_SYNC_FLUSH_COMMANDS_BIT, long long(30000000000) );
+            }
+            //glClientWaitSync(fenceSync, GL_SYNC_FLUSH_COMMANDS_BIT, long long(30000000000) );
 
             glDeleteSync(fenceSync);
         }
