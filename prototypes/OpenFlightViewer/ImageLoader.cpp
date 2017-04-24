@@ -190,8 +190,8 @@ void RgbImage::loadHeader()
 bool RgbImage::loadHeader(ifstream& ifs)
 {
     // see specification
-    Realisim::Utils::StreamUtility su;
-    su.setStreamFormat(Realisim::Utils::StreamUtility::eBigEndian);
+    realisim::utils::StreamUtility su;
+    su.setStreamFormat(realisim::utils::StreamUtility::eBigEndian);
     
     bool ok = true;
     ok &= su.readInt16(ifs, &mMagicNumber);
@@ -247,8 +247,8 @@ bool RgbImage::parseAsRle(std::ifstream &ifs)
 {
     bool ok = true;
     
-    Realisim::Utils::StreamUtility su;
-    su.setStreamFormat(Realisim::Utils::StreamUtility::eBigEndian);
+    realisim::utils::StreamUtility su;
+    su.setStreamFormat(realisim::utils::StreamUtility::eBigEndian);
     
     const int numChannels = getNumberOfChannels();
     const int sx = getPixelSizeX();
@@ -331,8 +331,8 @@ bool RgbImage::parseAsVerbatim(std::ifstream &ifs)
     
     //each channel is stored one after the other... so lets read each of them
     //separately and repack them in rgb or rgba format on the fly.
-    Realisim::Utils::StreamUtility su;
-    su.setStreamFormat(Realisim::Utils::StreamUtility::eBigEndian);
+    realisim::utils::StreamUtility su;
+    su.setStreamFormat(realisim::utils::StreamUtility::eBigEndian);
         
     //read all data at once, it is faster and enables using openmp
     string rawData;
