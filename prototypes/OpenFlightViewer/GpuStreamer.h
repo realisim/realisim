@@ -49,6 +49,7 @@ private:
     realisim::treeD::Texture createTexture(Image*);
     void processMessage(MessageQueue::Message*);
     std::string toString(messageType);
+    void waitOnFenceSync(GLsync);
 
     bool mMakeCurrentNeeded;
     MessageQueue mRequestQueue;

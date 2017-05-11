@@ -49,8 +49,8 @@ realisim::treeD::Texture GpuStreamer::createTexture(Image* ipIm)
             format = GL_RGB;
             break;
         case 4:
-            //internalFormat = GL_SRGB8_ALPHA8;
-            internalFormat = GL_RGBA8;
+            internalFormat = GL_SRGB8_ALPHA8;
+            //internalFormat = GL_RGBA8;
             format = GL_RGBA;
             break;
         default: break;
@@ -59,9 +59,9 @@ realisim::treeD::Texture GpuStreamer::createTexture(Image* ipIm)
     t.set(ipIm->mpPayload, size, internalFormat, format, datatype);
 
     // generateMipmap IS A SERIOUS PERF KILLER
-    t.generateMipmap(true);
+    //t.generateMipmap(true);
     t.setMagnificationFilter(GL_LINEAR);
-    t.setMinificationFilter(GL_LINEAR_MIPMAP_LINEAR);
+    t.setMinificationFilter(GL_LINEAR);
     t.setWrapMode(GL_REPEAT);
 
     return t;
@@ -162,15 +162,20 @@ void GpuStreamer::processMessage(MessageQueue::Message* ipMessage)
         //wait on the sync
         if (fenceSync)
         {
-            GLint result = GL_UNSIGNALED;
+
+            waitOnFenceSync(fenceSync);
+            /*GLint result = GL_UNSIGNALED;
             glGetSynciv(fenceSync, GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
             while (result != GL_SIGNALED) 
             {
                 glGetSynciv(fenceSync, GL_SYNC_STATUS, sizeof(GLint), NULL, &result);
-            }
+            }*/
+
+
+
             //glClientWaitSync(fenceSync, GL_SYNC_FLUSH_COMMANDS_BIT, long long(30000000000) );
 
-            glDeleteSync(fenceSync);
+            //glDeleteSync(fenceSync);
         }
         //glFlush();
         //glFinish();
@@ -222,6 +227,44 @@ string GpuStreamer::toString(messageType iMt)
         default: break;
     }
     return r;
+}
+
+//------------------------------------------------------------------------------
+void GpuStreamer::waitOnFenceSync(GLsync sync)
+{
+    std::string m;
+    const int timeoutInMs = 30 * 1000 * 1000;
+    GLenum result = GL_WAIT_FAILED;
+
+    while (!(result == GL_ALREADY_SIGNALED ||
+        result == GL_CONDITION_SATISFIED) )
+    {
+        result = glClientWaitSync(sync, GL_SYNC_FLUSH_COMMANDS_BIT, timeoutInMs);
+        switch (result)
+        {
+        case GL_ALREADY_SIGNALED:
+            m = "GL_ALREADY_SIGNALED";
+            glDeleteSync(sync);
+            sync = 0;
+            break;
+        case GL_TIMEOUT_EXPIRED:
+            m = "GL_TIMEOUT_EXPIRED";
+            break;
+        case GL_CONDITION_SATISFIED:
+            m = "GL_CONDITION_SATISFIED";
+            glDeleteSync(sync);
+            sync = 0;
+
+            break;
+        case GL_WAIT_FAILED:
+        {
+            m = "GL_WAIT_FAILED";
+        }break;
+        default: assert(0); break;
+        }
+
+        printf("waitOnFenceSync: %s\n", m.c_str());
+    }
 }
 
 //------------------------------------------------------------------------------
